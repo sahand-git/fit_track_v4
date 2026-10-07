@@ -39,12 +39,21 @@ export interface FoodItem {
   carbs: number;
   fat: number;
   category?: string;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number; // mg
+  potassium?: number; // mg
+  calcium?: number; // mg
+  iron?: number; // mg
+  vitaminC?: number; // mg
 }
 
 export interface LoggedMeal {
   id: string;
   foodId: string;
   name: string;
+  brand?: string;
+  category?: string;
   mealType: MealType;
   servings: number;
   servingSize: string;
@@ -53,6 +62,13 @@ export interface LoggedMeal {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  potassium?: number;
+  calcium?: number;
+  iron?: number;
+  vitaminC?: number;
   timestamp: string; // ISO string
 }
 

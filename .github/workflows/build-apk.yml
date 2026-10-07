@@ -58,9 +58,12 @@ jobs:
             FitTrack-v4.apk.sha256
 
       - name: Publish GitHub Release
+        if: success()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v4-build-1" FitTrack-v4.apk FitTrack-v4.apk.sha256 \
-            --title "FitTrack v4 (Expo) Android Build 1" \
-            --notes "Standalone Android APK for FitTrack v4 rewritten with React Native & Expo."
+          TAG="v4.0.${{ github.run_number }}"
+          gh release create "$TAG" FitTrack-v4.apk FitTrack-v4.apk.sha256 \
+            --title "FitTrack v4 Android Release ($TAG)" \
+            --notes "Standalone Android APK for FitTrack v4 rewritten with React Native & Expo based on the Google Stitch design system." \
+            --clobber || true

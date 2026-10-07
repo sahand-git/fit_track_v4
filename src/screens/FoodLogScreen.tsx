@@ -20,6 +20,7 @@ import {
 } from 'lucide-react-native';
 import { DailyLog, LoggedMeal, MealType, FoodItem } from '../types';
 import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
+import { FoodDetailsModal } from '../components/FoodDetailsModal';
 import * as Haptics from 'expo-haptics';
 
 interface FoodLogScreenProps {
@@ -45,6 +46,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [servingsCount, setServingsCount] = useState<number>(1);
+  const [inspectingMeal, setInspectingMeal] = useState<LoggedMeal | null>(null);
 
   // Date navigation
   const handlePrevDay = () => {
@@ -93,6 +95,8 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       id: `meal_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       foodId: selectedFood.id,
       name: selectedFood.name,
+      brand: selectedFood.brand,
+      category: selectedFood.category,
       mealType: activeMealType,
       servings: servingsCount,
       servingSize: selectedFood.servingSize,
@@ -101,6 +105,12 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       protein: Math.round(selectedFood.protein * servingsCount * 10) / 10,
       carbs: Math.round(selectedFood.carbs * servingsCount * 10) / 10,
       fat: Math.round(selectedFood.fat * servingsCount * 10) / 10,
+      fiber: selectedFood.fiber ? Math.round(selectedFood.fiber * servingsCount * 10) / 10 : undefined,
+      sugar: selectedFood.sugar ? Math.round(selectedFood.sugar * servingsCount * 10) / 10 : undefined,
+      sodium: selectedFood.sodium ? Math.round(selectedFood.sodium * servingsCount) : undefined,
+      potassium: selectedFood.potassium ? Math.round(selectedFood.potassium * servingsCount) : undefined,
+      calcium: selectedFood.calcium ? Math.round(selectedFood.calcium * servingsCount) : undefined,
+      iron: selectedFood.iron ? Math.round(selectedFood.iron * servingsCount * 10) / 10 : undefined,
       timestamp: new Date().toISOString(),
     };
 
@@ -111,6 +121,36 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   const handleDelete = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     onRemoveMeal(id);
+  };
+
+  const handleUpdateInspectingServings = (newServings: number) => {
+    if (!inspectingMeal) return;
+    const baseServings = inspectingMeal.servings > 0 ? inspectingMeal.servings : 1;
+    const baseKcal = inspectingMeal.calories / baseServings;
+    const baseProtein = inspectingMeal.protein / baseServings;
+    const baseCarbs = inspectingMeal.carbs / baseServings;
+    const baseFat = inspectingMeal.fat / baseServings;
+    const baseGrams = inspectingMeal.servingGrams / baseServings;
+
+    const updatedMeal: LoggedMeal = {
+      ...inspectingMeal,
+      servings: newServings,
+      calories: Math.round(baseKcal * newServings),
+      protein: Math.round(baseProtein * newServings * 10) / 10,
+      carbs: Math.round(baseCarbs * newServings * 10) / 10,
+      fat: Math.round(baseFat * newServings * 10) / 10,
+      servingGrams: Math.round(baseGrams * newServings),
+      fiber: inspectingMeal.fiber ? Math.round((inspectingMeal.fiber / baseServings) * newServings * 10) / 10 : undefined,
+      sugar: inspectingMeal.sugar ? Math.round((inspectingMeal.sugar / baseServings) * newServings * 10) / 10 : undefined,
+      sodium: inspectingMeal.sodium ? Math.round((inspectingMeal.sodium / baseServings) * newServings) : undefined,
+      potassium: inspectingMeal.potassium ? Math.round((inspectingMeal.potassium / baseServings) * newServings) : undefined,
+      calcium: inspectingMeal.calcium ? Math.round((inspectingMeal.calcium / baseServings) * newServings) : undefined,
+      iron: inspectingMeal.iron ? Math.round((inspectingMeal.iron / baseServings) * newServings * 10) / 10 : undefined,
+    };
+
+    onRemoveMeal(inspectingMeal.id);
+    onAddMeal(updatedMeal);
+    setInspectingMeal(null);
   };
 
   const mealCategories: { key: MealType; label: string }[] = [
@@ -188,7 +228,15 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                 <Text style={styles.emptyPrompt}>No food logged for {cat.label.toLowerCase()}</Text>
               ) : (
                 categoryMeals.map((item) => (
-                  <View key={item.id} style={styles.foodRow}>
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.foodRow}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      setInspectingMeal(item);
+                    }}
+                    activeOpacity={0.7}
+                  >
                     <View style={styles.foodInfo}>
                       <Text style={styles.foodName}>{item.name}</Text>
                       <Text style={styles.foodPortion}>
@@ -202,12 +250,15 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                       <Text style={styles.foodKcal}>{item.calories} kcal</Text>
                       <TouchableOpacity
                         style={styles.deleteBtn}
-                        onPress={() => handleDelete(item.id)}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item.id);
+                        }}
                       >
                         <Trash2 size={16} color="#EF4444" />
                       </TouchableOpacity>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 ))
               )}
             </View>
@@ -302,6 +353,21 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
           </View>
         </View>
       </Modal>
+
+      {/* Rich Food Details & Nutrition Facts Modal */}
+      <FoodDetailsModal
+        visible={inspectingMeal !== null}
+        item={inspectingMeal}
+        isLogged={true}
+        onClose={() => setInspectingMeal(null)}
+        onSave={handleUpdateInspectingServings}
+        onDelete={() => {
+          if (inspectingMeal) {
+            handleDelete(inspectingMeal.id);
+            setInspectingMeal(null);
+          }
+        }}
+      />
     </View>
   );
 };
@@ -368,7 +434,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 40,
+    paddingBottom: 110,
     gap: 12,
   },
   mealGroupCard: {

@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   screenTitle: {
     fontSize: 22,
