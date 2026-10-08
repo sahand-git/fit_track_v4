@@ -38,16 +38,21 @@ jobs:
       - name: Generate Android native project (Expo Prebuild)
         run: npx expo prebuild --platform android --clean
 
-      - name: Build Android APK with Gradle
+      - name: Build Standalone Release APK with Gradle
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
       - name: Prepare APK download
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk FitTrack-v4.apk
+          if [ -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk FitTrack-v4.apk
+          else
+            find android/app/build/outputs/apk -name "*.apk" | head -n 1 | xargs -I {} cp {} FitTrack-v4.apk
+          fi
           sha256sum FitTrack-v4.apk > FitTrack-v4.apk.sha256
+          ls -lh FitTrack-v4.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -58,12 +63,14 @@ jobs:
             FitTrack-v4.apk.sha256
 
       - name: Publish GitHub Release
-        if: success()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          TAG="v4.0.${{ github.run_number }}"
-          gh release create "$TAG" FitTrack-v4.apk FitTrack-v4.apk.sha256 \
-            --title "FitTrack v4 Android Release ($TAG)" \
-            --notes "Standalone Android APK for FitTrack v4 rewritten with React Native & Expo based on the Google Stitch design system." \
-            --clobber || true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v4-standalone-apk
+          name: FitTrack v4 Standalone Release
+          body: |
+            ## FitTrack v4 (Expo & React Native) — Offline Standalone APK
+            - **Google Stitch Design System** (5-Tab Floating Navigation Dock, Barcode Scanner, Nutrition Insights, Weight Trajectory, Food Details Modal, and Adaptive Hydration).
+            - **Pre-packaged Release Bundle**: Contains offline Hermes bytecode and all assets embedded directly in the APK. No Metro bundler or development server needed.
+          files: |
+            FitTrack-v4.apk
+            FitTrack-v4.apk.sha256
