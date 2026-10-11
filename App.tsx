@@ -256,7 +256,6 @@ export default function App() {
             <CoachScreen
               profile={profile}
               log={log}
-              onBack={() => handleSwitchTab('today')}
             />
           )}
 

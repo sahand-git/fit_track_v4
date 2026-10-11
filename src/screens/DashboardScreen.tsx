@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { AppText as Text } from '../components/AppText';
 import {
@@ -75,21 +76,21 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     onOpenAddFood(meal);
   };
 
-  const handleOpenLogFood = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  const handleOpenFloatingAddFood = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     onOpenAddFood();
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Editorial Header */}
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.dateLabel}>{todayLabel}</Text>
-          <Text style={styles.screenTitle}>{t('Today')}</Text>
-        </View>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Editorial Header */}
+        <View style={styles.header}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.dateLabel}>{todayLabel}</Text>
+            <Text style={styles.screenTitle}>{t('Today')}</Text>
+          </View>
 
-        <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.profileBtn}
             onPress={onOpenProfile}
@@ -99,181 +100,184 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           >
             <User size={18} color={theme.colors.textPrimary} />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.logCtaBtn}
-            onPress={handleOpenLogFood}
-            activeOpacity={0.8}
-            accessibilityLabel={t('Log food')}
-            accessibilityRole="button"
-          >
-            <Plus size={16} color={theme.colors.textInverted} />
-            <Text style={styles.logCtaText}>{t('Log food')}</Text>
-          </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Hero Calorie Budget Focus */}
-      <View style={styles.heroSection}>
-        <CalorieRing
-          consumed={consumedCalories}
-          target={profile.targetCalories}
-          proteinConsumed={consumedProtein}
+        {/* Hero Calorie Budget Focus */}
+        <View style={styles.heroSection}>
+          <CalorieRing
+            consumed={consumedCalories}
+            target={profile.targetCalories}
+            proteinConsumed={consumedProtein}
+            proteinTarget={profile.targetProtein}
+          />
+        </View>
+
+        {/* Nutrients Bar */}
+        <MacroCards
+          calorieTarget={profile.targetCalories}
+          calorieConsumed={consumedCalories}
           proteinTarget={profile.targetProtein}
+          proteinConsumed={consumedProtein}
+          carbsTarget={profile.targetCarbs}
+          carbsConsumed={consumedCarbs}
+          fatTarget={profile.targetFat}
+          fatConsumed={consumedFat}
         />
-      </View>
 
-      {/* Nutrients Bar */}
-      <MacroCards
-        calorieTarget={profile.targetCalories}
-        calorieConsumed={consumedCalories}
-        proteinTarget={profile.targetProtein}
-        proteinConsumed={consumedProtein}
-        carbsTarget={profile.targetCarbs}
-        carbsConsumed={consumedCarbs}
-        fatTarget={profile.targetFat}
-        fatConsumed={consumedFat}
-      />
+        {/* Hydration Row */}
+        <WaterTracker
+          glasses={log.waterGlasses}
+          target={profile.waterTargetGlasses}
+          onUpdate={onUpdateWater}
+        />
 
-      {/* Hydration Row */}
-      <WaterTracker
-        glasses={log.waterGlasses}
-        target={profile.waterTargetGlasses}
-        onUpdate={onUpdateWater}
-      />
-
-      {/* Vitamins & Supplements Section (Below Water Tracker) */}
-      <View style={styles.supplementsContainer}>
-        {supplementRoutine.length === 0 ? (
-          /* Slim row if routine is empty */
-          <TouchableOpacity
-            style={styles.slimRoutineRow}
-            onPress={onOpenSupplements}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-          >
-            <View style={styles.slimRoutineLeft}>
-              <View style={styles.pillIconBox}>
-                <Pill size={15} color={theme.colors.primary} />
-              </View>
-              <Text style={styles.slimRoutineText}>{t('Track vitamins & supplements')}</Text>
-            </View>
-            <ChevronRight size={16} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-        ) : (
-          /* Checklists with small Manage link if routine has items */
-          <View style={styles.routineCard}>
-            <View style={styles.routineHeader}>
-              <View style={styles.routineTitleRow}>
-                <Pill size={16} color={theme.colors.primary} />
-                <Text style={styles.routineTitle}>{t('Vitamins & supplements')}</Text>
-                <Text style={styles.routineCount}>
-                  {takenSupplementIds.size}/{supplementRoutine.length}
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                onPress={onOpenSupplements}
-                style={styles.manageBtn}
-                accessibilityRole="button"
-              >
-                <Text style={styles.manageBtnText}>{t('Manage')}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.routineItemsList}>
-              {supplementRoutine.map((item) => {
-                const isTaken = takenSupplementIds.has(item.id);
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.routineItemRow}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                      onToggleSupplement(item.id, !isTaken);
-                    }}
-                    disabled={isFuture}
-                    activeOpacity={0.7}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: isTaken }}
-                  >
-                    <View style={styles.checkboxCircle}>
-                      {isTaken ? (
-                        <CheckCircle2 size={19} color={theme.colors.primary} />
-                      ) : (
-                        <Circle size={19} color={theme.colors.textMuted} />
-                      )}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.routineItemName, isTaken && styles.routineItemNameTaken]}>
-                        {item.name}
-                      </Text>
-                      {item.dose ? (
-                        <Text style={styles.routineItemDose}>{item.dose}</Text>
-                      ) : null}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* Meals Ledger Header */}
-      <View style={styles.mealsHeader}>
-        <Text style={styles.sectionHeading}>{t('Today’s Meals')}</Text>
-        <TouchableOpacity
-          onPress={() => onNavigateToMeals()}
-          style={styles.seeAllBtn}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.seeAllText}>{t('View diary')}</Text>
-          <ChevronRight size={14} color={theme.colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Meals Ledger List */}
-      <View style={styles.mealsList}>
-        {mealTypes.map((m, index) => {
-          const mealsOfCategory = log.meals.filter((item) => item.mealType === m.key);
-          const cals = mealsOfCategory.reduce((sum, item) => sum + item.calories, 0);
-          const isLast = index === mealTypes.length - 1;
-
-          return (
+        {/* Vitamins & Supplements Section (Below Water Tracker) */}
+        <View style={styles.supplementsContainer}>
+          {supplementRoutine.length === 0 ? (
+            /* Slim row if routine is empty */
             <TouchableOpacity
-              key={m.key}
-              style={[styles.mealRow, isLast && styles.mealRowLast]}
-              onPress={() => handleQuickAdd(m.key)}
+              style={styles.slimRoutineRow}
+              onPress={onOpenSupplements}
               activeOpacity={0.7}
-              accessibilityLabel={`Add to ${m.label}`}
               accessibilityRole="button"
             >
-              <View style={styles.mealLeft}>
-                <View style={styles.mealIconBox}>
-                  <Utensils size={14} color={theme.colors.secondary} />
+              <View style={styles.slimRoutineLeft}>
+                <View style={styles.pillIconBox}>
+                  <Pill size={15} color={theme.colors.primary} />
                 </View>
-                <View>
-                  <Text style={styles.mealName}>{m.label}</Text>
-                  <Text style={styles.mealSub}>
-                    {mealsOfCategory.length > 0
-                      ? `${mealsOfCategory.length} ${t('item')}${mealsOfCategory.length > 1 ? 's' : ''}`
-                      : t('Tap to log food')}
+                <Text style={styles.slimRoutineText}>{t('Track vitamins & supplements')}</Text>
+              </View>
+              <ChevronRight size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          ) : (
+            /* Checklists with small Manage link if routine has items */
+            <View style={styles.routineCard}>
+              <View style={styles.routineHeader}>
+                <View style={styles.routineTitleRow}>
+                  <Pill size={16} color={theme.colors.primary} />
+                  <Text style={styles.routineTitle}>{t('Vitamins & supplements')}</Text>
+                  <Text style={styles.routineCount}>
+                    {takenSupplementIds.size}/{supplementRoutine.length}
                   </Text>
                 </View>
+
+                <TouchableOpacity
+                  onPress={onOpenSupplements}
+                  style={styles.manageBtn}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.manageBtnText}>{t('Manage')}</Text>
+                </TouchableOpacity>
               </View>
 
-              <View style={styles.mealRight}>
-                {cals > 0 && <Text style={styles.mealCals}>{cals} kcal</Text>}
-                <View style={styles.plusIconCircle}>
-                  <Plus size={14} color={theme.colors.primary} />
-                </View>
+              <View style={styles.routineItemsList}>
+                {supplementRoutine.map((item) => {
+                  const isTaken = takenSupplementIds.has(item.id);
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.routineItemRow}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        onToggleSupplement(item.id, !isTaken);
+                      }}
+                      disabled={isFuture}
+                      activeOpacity={0.7}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: isTaken }}
+                    >
+                      <View style={styles.checkboxCircle}>
+                        {isTaken ? (
+                          <CheckCircle2 size={19} color={theme.colors.primary} />
+                        ) : (
+                          <Circle size={19} color={theme.colors.textMuted} />
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.routineItemName, isTaken && styles.routineItemNameTaken]}>
+                          {item.name}
+                        </Text>
+                        {item.dose ? (
+                          <Text style={styles.routineItemDose}>{item.dose}</Text>
+                        ) : null}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </ScrollView>
+            </View>
+          )}
+        </View>
+
+        {/* Meals Ledger Header */}
+        <View style={styles.mealsHeader}>
+          <Text style={styles.sectionHeading}>{t('Today’s Meals')}</Text>
+          <TouchableOpacity
+            onPress={() => onNavigateToMeals()}
+            style={styles.seeAllBtn}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.seeAllText}>{t('View diary')}</Text>
+            <ChevronRight size={14} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Meals Ledger List */}
+        <View style={styles.mealsList}>
+          {mealTypes.map((m, index) => {
+            const mealsOfCategory = log.meals.filter((item) => item.mealType === m.key);
+            const cals = mealsOfCategory.reduce((sum, item) => sum + item.calories, 0);
+            const isLast = index === mealTypes.length - 1;
+
+            return (
+              <TouchableOpacity
+                key={m.key}
+                style={[styles.mealRow, isLast && styles.mealRowLast]}
+                onPress={() => handleQuickAdd(m.key)}
+                activeOpacity={0.7}
+                accessibilityLabel={`Add to ${m.label}`}
+                accessibilityRole="button"
+              >
+                <View style={styles.mealLeft}>
+                  <View style={styles.mealIconBox}>
+                    <Utensils size={14} color={theme.colors.secondary} />
+                  </View>
+                  <View>
+                    <Text style={styles.mealName}>{m.label}</Text>
+                    <Text style={styles.mealSub}>
+                      {mealsOfCategory.length > 0
+                        ? `${mealsOfCategory.length} ${t('item')}${mealsOfCategory.length > 1 ? 's' : ''}`
+                        : t('Tap to log food')}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.mealRight}>
+                  {cals > 0 && <Text style={styles.mealCals}>{cals} kcal</Text>}
+                  <View style={styles.plusIconCircle}>
+                    <Plus size={14} color={theme.colors.primary} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+
+      {/* Floating "+ Add food" Action Button */}
+      {!isFuture && (
+        <TouchableOpacity
+          style={styles.floatingAddBtn}
+          onPress={handleOpenFloatingAddFood}
+          activeOpacity={0.88}
+          accessibilityLabel={t('Add food')}
+          accessibilityRole="button"
+        >
+          <Plus size={18} color={theme.colors.textInverted} strokeWidth={2.4} />
+          <Text style={styles.floatingAddBtnText}>{t('Add food')}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 };
 
@@ -285,19 +289,14 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    paddingBottom: 110,
+    paddingBottom: 160,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     marginBottom: theme.spacing.lg,
     paddingHorizontal: 2,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   profileBtn: {
     width: 38,
@@ -325,22 +324,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     letterSpacing: -0.5,
     marginTop: 2,
-  },
-  logCtaBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: theme.radius.full,
-    ...theme.shadow.subtle,
-  },
-  logCtaText: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.textInverted,
   },
   heroSection: {
     backgroundColor: theme.colors.surface,
@@ -543,5 +526,26 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  floatingAddBtn: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 86 : 76,
+    right: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: theme.radius.full,
+    ...theme.shadow.floating,
+    zIndex: 10,
+    elevation: 6,
+  },
+  floatingAddBtnText: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.textInverted,
   },
 });

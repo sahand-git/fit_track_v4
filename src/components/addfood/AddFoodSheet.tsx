@@ -148,7 +148,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       setIsScanningBarcode(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (err: any) {
-      setBarcodeError(err?.message || 'Could not find food for this barcode.');
+      setBarcodeError(err?.message || t('Could not find food for this barcode.'));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     } finally {
       setBarcodeLoading(false);
@@ -241,7 +241,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       setPhotoResult(analysis);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (err: any) {
-      setPhotoError(err?.message || 'Failed to analyze meal photo.');
+      setPhotoError(err?.message || t('Failed to analyze meal photo.'));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     } finally {
       setPhotoLoading(false);
@@ -263,7 +263,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       setDescribeResult(result);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (err: any) {
-      setDescribeError(err?.message || 'Could not estimate meal nutrition.');
+      setDescribeError(err?.message || t('Could not estimate meal nutrition.'));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     } finally {
       setDescribeLoading(false);

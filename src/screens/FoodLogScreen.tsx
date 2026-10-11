@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { AppText as Text } from '../components/AppText';
 import {
@@ -288,6 +289,23 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
         })}
       </ScrollView>
 
+      {/* Floating "+ Add food" Action Button */}
+      {!isFuture && (
+        <TouchableOpacity
+          style={styles.floatingAddBtn}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            openAddSheet('breakfast');
+          }}
+          activeOpacity={0.88}
+          accessibilityLabel={t('Add food')}
+          accessibilityRole="button"
+        >
+          <Plus size={18} color={theme.colors.textInverted} strokeWidth={2.4} />
+          <Text style={styles.floatingAddBtnText}>{t('Add food')}</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Calendar Picker Modal */}
       <CalendarPickerModal
         visible={calendarVisible}
@@ -414,7 +432,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    paddingBottom: 110,
+    paddingBottom: 160,
     gap: 16,
   },
   mealSection: {
@@ -512,5 +530,26 @@ const styles = StyleSheet.create({
   },
   deleteBtn: {
     padding: 2,
+  },
+  floatingAddBtn: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 86 : 76,
+    right: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: theme.radius.full,
+    ...theme.shadow.floating,
+    zIndex: 10,
+    elevation: 6,
+  },
+  floatingAddBtnText: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.textInverted,
   },
 });

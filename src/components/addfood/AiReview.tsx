@@ -184,7 +184,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
                   <Text style={styles.itemKcal}>{nut.calories} kcal</Text>
                   <View style={[styles.confBadge, { backgroundColor: badgeColors.bg }]}>
                     <Text style={[styles.confBadgeText, { color: badgeColors.text }]}>
-                      {entry.item.confidence}
+                      {t(entry.item.confidence)}
                     </Text>
                   </View>
                 </View>

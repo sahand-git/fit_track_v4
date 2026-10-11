@@ -78,18 +78,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const activityOptions: { key: ActivityLevel; label: string; desc: string }[] = [
-    { key: 'sedentary', label: 'Sedentary', desc: 'Desk job, little to no exercise' },
-    { key: 'light', label: 'Lightly Active', desc: 'Light exercise 1–3 days a week' },
-    { key: 'moderate', label: 'Moderately Active', desc: 'Moderate training 3–5 days a week' },
-    { key: 'very_active', label: 'Very Active', desc: 'Intense training 6–7 days a week' },
+    { key: 'sedentary', label: t('Sedentary'), desc: t('Desk job, little to no exercise') },
+    { key: 'light', label: t('Lightly Active'), desc: t('Light exercise 1–3 days a week') },
+    { key: 'moderate', label: t('Moderately Active'), desc: t('Moderate training 3–5 days a week') },
+    { key: 'very_active', label: t('Very Active'), desc: t('Intense training 6–7 days a week') },
   ];
 
   const goalOptions: { key: FitnessGoal; label: string; desc: string }[] = [
-    { key: 'fat_loss_aggressive', label: 'Aggressive Fat Loss', desc: '−500 kcal daily deficit' },
-    { key: 'fat_loss_moderate', label: 'Steady Fat Loss', desc: '−300 kcal sustainable deficit' },
-    { key: 'maintenance', label: 'Maintain Weight', desc: 'Energy balance & recomposition' },
-    { key: 'lean_bulk', label: 'Lean Bulk', desc: '+250 kcal controlled surplus' },
-    { key: 'muscle_gain', label: 'Muscle Gain', desc: '+450 kcal muscle building' },
+    { key: 'fat_loss_aggressive', label: t('Aggressive Fat Loss'), desc: t('−500 kcal daily deficit') },
+    { key: 'fat_loss_moderate', label: t('Steady Fat Loss'), desc: t('−300 kcal sustainable deficit') },
+    { key: 'maintenance', label: t('Maintain Weight'), desc: t('Energy balance & recomposition') },
+    { key: 'lean_bulk', label: t('Lean Bulk'), desc: t('+250 kcal controlled surplus') },
+    { key: 'muscle_gain', label: t('Muscle Gain'), desc: t('+450 kcal muscle building') },
   ];
 
   return (
@@ -108,10 +108,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       <Text style={styles.screenTitle}>{t('Profile & Goals')}</Text>
       <Text style={styles.screenSubtitle}>
-        Calibrated with the Mifflin-St Jeor metabolic formula.
+        {t('Calibrated with the Mifflin-St Jeor metabolic formula.')}
       </Text>
 
-      {/* Language Selector (Moved from Tools) */}
+      {/* Language Selector */}
       <View style={styles.languageCard}>
         <View style={styles.languageHeader}>
           <Globe2 size={18} color={theme.colors.secondary} />
@@ -242,7 +242,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               activeOpacity={0.7}
             >
               <Text style={[styles.genderBtnText, gender === g && styles.genderBtnTextActive]}>
-                {g.charAt(0).toUpperCase() + g.slice(1)}
+                {g === 'male' ? t('Male') : t('Female')}
               </Text>
             </TouchableOpacity>
           ))}
