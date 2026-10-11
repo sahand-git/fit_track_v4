@@ -434,8 +434,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dateTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontFamily: theme.fonts.serif,
+    fontSize: 18,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   summaryBar: {
@@ -451,11 +452,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryValue: {
+    fontFamily: theme.fonts.sans,
     fontSize: 15,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   summaryLabel: {
+    fontFamily: theme.fonts.sans,
     fontSize: 11,
     color: theme.colors.textMuted,
     marginTop: 2,
@@ -482,8 +485,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   categoryTitle: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontFamily: theme.fonts.serif,
+    fontSize: 18,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   categoryKcal: {
@@ -586,7 +590,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   modalTitle: {
-    fontSize: 17,
+    fontFamily: theme.fonts.serif,
+    fontSize: 20,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },

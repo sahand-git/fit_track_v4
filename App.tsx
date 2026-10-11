@@ -9,13 +9,11 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import {
+  LayoutDashboard,
   BookOpen,
-  LineChart,
-  Barcode,
+  Plus,
   TrendingUp,
   User,
-  LayoutDashboard,
-  UtensilsCrossed,
 } from 'lucide-react-native';
 import { UserProfile, DailyLog, LoggedMeal, MealType } from './src/types';
 import {
@@ -32,20 +30,17 @@ import { OnboardingModal } from './src/components/OnboardingModal';
 import { getTodayDateString } from './src/utils/dateUtils';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { FoodLogScreen } from './src/screens/FoodLogScreen';
-import { InsightsScreen } from './src/screens/InsightsScreen';
 import { ScannerScreen } from './src/screens/ScannerScreen';
 import { ProgressScreen } from './src/screens/ProgressScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { theme } from './src/theme';
 import * as Haptics from 'expo-haptics';
 
-type Tab = 'diary' | 'insights' | 'scanner' | 'progress' | 'profile';
-type DiarySubView = 'dashboard' | 'log';
+type Tab = 'today' | 'diary' | 'scan' | 'progress' | 'profile';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('diary');
-  const [diaryView, setDiaryView] = useState<DiarySubView>('dashboard');
-  const [previousTab, setPreviousTab] = useState<Tab>('diary');
+  const [activeTab, setActiveTab] = useState<Tab>('today');
+  const [previousTab, setPreviousTab] = useState<Tab>('today');
 
   const [profile, setProfile] = useState<UserProfile>(getDefaultProfile());
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
@@ -101,18 +96,17 @@ export default function App() {
   const handleSaveProfile = async (newProfile: UserProfile) => {
     await saveUserProfile(newProfile);
     setProfile(newProfile);
-    setActiveTab('diary');
+    setActiveTab('today');
   };
 
   const handleNavigateToMeals = (targetMeal?: MealType) => {
     if (targetMeal) setInitialMealForAdd(targetMeal);
-    setDiaryView('log');
     setActiveTab('diary');
   };
 
   const switchTab = (tab: Tab) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (tab === 'scanner') {
+    if (tab === 'scan') {
       setPreviousTab(activeTab);
     }
     setActiveTab(tab);
@@ -128,100 +122,45 @@ export default function App() {
 
       {/* Main Screen Body */}
       <View style={styles.main}>
-        {/* Tab 1: DIARY (Dashboard / Food Log Switcher) */}
-        {activeTab === 'diary' && (
-          <View style={styles.diaryContainer}>
-            {/* Top Sub-Navigation Pill Header */}
-            <View style={styles.diarySegmentBar}>
-              <TouchableOpacity
-                style={[
-                  styles.segmentBtn,
-                  diaryView === 'dashboard' && styles.segmentBtnActive,
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setDiaryView('dashboard');
-                }}
-                activeOpacity={0.7}
-              >
-                <LayoutDashboard
-                  size={15}
-                  color={diaryView === 'dashboard' ? theme.colors.primary : theme.colors.textMuted}
-                />
-                <Text
-                  style={[
-                    styles.segmentText,
-                    diaryView === 'dashboard' && styles.segmentTextActive,
-                  ]}
-                >
-                  Overview
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.segmentBtn,
-                  diaryView === 'log' && styles.segmentBtnActive,
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setDiaryView('log');
-                }}
-                activeOpacity={0.7}
-              >
-                <UtensilsCrossed
-                  size={15}
-                  color={diaryView === 'log' ? theme.colors.primary : theme.colors.textMuted}
-                />
-                <Text
-                  style={[
-                    styles.segmentText,
-                    diaryView === 'log' && styles.segmentTextActive,
-                  ]}
-                >
-                  Food Diary
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Screen View */}
-            {diaryView === 'dashboard' ? (
-              <DashboardScreen
-                profile={profile}
-                log={log}
-                onUpdateWater={handleUpdateWater}
-                onNavigateToMeals={handleNavigateToMeals}
-              />
-            ) : (
-              <FoodLogScreen
-                selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
-                log={log}
-                onAddMeal={handleAddMeal}
-                onUpdateMeal={handleUpdateMeal}
-                onRemoveMeal={handleRemoveMeal}
-                initialMealType={initialMealForAdd}
-              />
-            )}
-          </View>
+        {/* Tab 1: TODAY DASHBOARD */}
+        {activeTab === 'today' && (
+          <DashboardScreen
+            profile={profile}
+            log={log}
+            onUpdateWater={handleUpdateWater}
+            onNavigateToMeals={handleNavigateToMeals}
+            onOpenChooser={() => {
+              setPreviousTab('today');
+              setActiveTab('scan');
+            }}
+          />
         )}
 
-        {/* Tab 2: INSIGHTS */}
-        {activeTab === 'insights' && <InsightsScreen profile={profile} />}
+        {/* Tab 2: FOOD DIARY */}
+        {activeTab === 'diary' && (
+          <FoodLogScreen
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            log={log}
+            onAddMeal={handleAddMeal}
+            onUpdateMeal={handleUpdateMeal}
+            onRemoveMeal={handleRemoveMeal}
+            initialMealType={initialMealForAdd}
+          />
+        )}
 
-        {/* Tab 3: SCANNER */}
-        {activeTab === 'scanner' && (
+        {/* Tab 3: FOOD LOGGING CHOOSER (Scan Barcode, Meal Photo, Manual Search) */}
+        {activeTab === 'scan' && (
           <ScannerScreen
             onBack={() => setActiveTab(previousTab)}
             onAddMeal={(meal) => {
               handleAddMeal(meal);
               setActiveTab('diary');
-              setDiaryView('log');
             }}
           />
         )}
 
-        {/* Tab 4: PROGRESS */}
+        {/* Tab 4: PROGRESS & INSIGHTS */}
         {activeTab === 'progress' && <ProgressScreen profile={profile} />}
 
         {/* Tab 5: PROFILE */}
@@ -230,16 +169,39 @@ export default function App() {
         )}
       </View>
 
-      {/* Calm Bottom Navigation Bar */}
-      {activeTab !== 'scanner' && (
+      {/* Editorial Ledger Bottom Navigation Dock */}
+      {activeTab !== 'scan' && (
         <View style={styles.dockContainer}>
           <View style={styles.bottomNav}>
-            {/* 1. Diary */}
+            {/* 1. Today */}
+            <TouchableOpacity
+              style={styles.navBtn}
+              onPress={() => switchTab('today')}
+              activeOpacity={0.7}
+              accessibilityLabel="Today"
+              accessibilityRole="button"
+            >
+              <LayoutDashboard
+                size={20}
+                color={activeTab === 'today' ? theme.colors.primary : theme.colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.navLabel,
+                  activeTab === 'today' && styles.navLabelActive,
+                ]}
+              >
+                Today
+              </Text>
+            </TouchableOpacity>
+
+            {/* 2. Diary */}
             <TouchableOpacity
               style={styles.navBtn}
               onPress={() => switchTab('diary')}
               activeOpacity={0.7}
               accessibilityLabel="Diary"
+              accessibilityRole="button"
             >
               <BookOpen
                 size={20}
@@ -255,38 +217,18 @@ export default function App() {
               </Text>
             </TouchableOpacity>
 
-            {/* 2. Insights */}
+            {/* 3. Log Food (Centered Action Button) */}
             <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() => switchTab('insights')}
-              activeOpacity={0.7}
-              accessibilityLabel="Insights"
+              style={styles.logNavBtn}
+              onPress={() => switchTab('scan')}
+              activeOpacity={0.8}
+              accessibilityLabel="Log food"
+              accessibilityRole="button"
             >
-              <LineChart
-                size={20}
-                color={activeTab === 'insights' ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.navLabel,
-                  activeTab === 'insights' && styles.navLabelActive,
-                ]}
-              >
-                Insights
-              </Text>
-            </TouchableOpacity>
-
-            {/* 3. Barcode Lookup (Balanced, non-dominating) */}
-            <TouchableOpacity
-              style={styles.scannerNavBtn}
-              onPress={() => switchTab('scanner')}
-              activeOpacity={0.7}
-              accessibilityLabel="Lookup Barcode"
-            >
-              <View style={styles.scannerIconBox}>
-                <Barcode size={18} color={theme.colors.textInverted} />
+              <View style={styles.logIconBox}>
+                <Plus size={20} color={theme.colors.textInverted} />
               </View>
-              <Text style={styles.scannerNavLabel}>Lookup</Text>
+              <Text style={styles.logNavLabel}>Log food</Text>
             </TouchableOpacity>
 
             {/* 4. Progress */}
@@ -295,6 +237,7 @@ export default function App() {
               onPress={() => switchTab('progress')}
               activeOpacity={0.7}
               accessibilityLabel="Progress"
+              accessibilityRole="button"
             >
               <TrendingUp
                 size={20}
@@ -316,6 +259,7 @@ export default function App() {
               onPress={() => switchTab('profile')}
               activeOpacity={0.7}
               accessibilityLabel="Profile"
+              accessibilityRole="button"
             >
               <User
                 size={20}
@@ -346,40 +290,6 @@ const styles = StyleSheet.create({
   main: {
     flex: 1,
   },
-  diaryContainer: {
-    flex: 1,
-  },
-  diarySegmentBar: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.surface,
-    marginHorizontal: theme.spacing.md,
-    marginVertical: 8,
-    padding: 3,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  segmentBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 7,
-    borderRadius: theme.radius.sm,
-    gap: 6,
-  },
-  segmentBtnActive: {
-    backgroundColor: theme.colors.primaryLight,
-  },
-  segmentText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: theme.colors.textMuted,
-  },
-  segmentTextActive: {
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
   dockContainer: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 18 : 10,
@@ -392,7 +302,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.xl,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    paddingVertical: 6,
+    paddingVertical: 7,
     paddingHorizontal: 6,
     justifyContent: 'space-around',
     alignItems: 'center',
@@ -406,6 +316,7 @@ const styles = StyleSheet.create({
     minWidth: 50,
   },
   navLabel: {
+    fontFamily: theme.fonts.sans,
     fontSize: 11,
     fontWeight: '500',
     color: theme.colors.textMuted,
@@ -415,24 +326,26 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: '600',
   },
-  scannerNavBtn: {
+  logNavBtn: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 2,
-    minWidth: 50,
+    minWidth: 54,
   },
-  scannerIconBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  logIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    ...theme.shadow.subtle,
   },
-  scannerNavLabel: {
+  logNavLabel: {
+    fontFamily: theme.fonts.sans,
     fontSize: 11,
-    fontWeight: '500',
-    color: theme.colors.textSecondary,
+    fontWeight: '600',
+    color: theme.colors.primary,
     marginTop: 2,
   },
 });

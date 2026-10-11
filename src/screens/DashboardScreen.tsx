@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { Plus, ChevronRight } from 'lucide-react-native';
+import { Plus, ChevronRight, Utensils } from 'lucide-react-native';
 import { UserProfile, DailyLog, MealType } from '../types';
 import { CalorieRing } from '../components/CalorieRing';
 import { MacroCards } from '../components/MacroCards';
@@ -13,6 +13,7 @@ interface DashboardScreenProps {
   log: DailyLog;
   onUpdateWater: (delta: number) => void;
   onNavigateToMeals: (targetMeal?: MealType) => void;
+  onOpenChooser?: () => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -20,6 +21,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   log,
   onUpdateWater,
   onNavigateToMeals,
+  onOpenChooser,
 }) => {
   const consumedCalories = log.meals.reduce((sum, m) => sum + m.calories, 0);
   const consumedProtein = log.meals.reduce((sum, m) => sum + m.protein, 0);
@@ -33,9 +35,24 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     { key: 'snack', label: 'Snacks' },
   ];
 
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+
   const handleQuickAdd = (meal: MealType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onNavigateToMeals(meal);
+  };
+
+  const handleOpenLog = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (onOpenChooser) {
+      onOpenChooser();
+    } else {
+      onNavigateToMeals('lunch');
+    }
   };
 
   return (
@@ -43,21 +60,23 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       {/* Editorial Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.dateLabel}>Daily Overview</Text>
-          <Text style={styles.userName}>Good day, {profile.name}</Text>
+          <Text style={styles.dateLabel}>{todayLabel}</Text>
+          <Text style={styles.screenTitle}>Today</Text>
         </View>
+
         <TouchableOpacity
           style={styles.logCtaBtn}
-          onPress={() => onNavigateToMeals('lunch')}
-          accessibilityLabel="Log Food"
+          onPress={handleOpenLog}
+          activeOpacity={0.8}
+          accessibilityLabel="Log food"
           accessibilityRole="button"
         >
           <Plus size={16} color={theme.colors.textInverted} />
-          <Text style={styles.logCtaText}>Log Food</Text>
+          <Text style={styles.logCtaText}>Log food</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Hero: Calorie Focus */}
+      {/* Hero Calorie Budget Focus */}
       <View style={styles.heroSection}>
         <CalorieRing
           consumed={consumedCalories}
@@ -67,7 +86,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         />
       </View>
 
-      {/* Secondary: Nutrients Bar */}
+      {/* Nutrients Bar */}
       <MacroCards
         calorieTarget={profile.targetCalories}
         calorieConsumed={consumedCalories}
@@ -79,46 +98,54 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         fatConsumed={consumedFat}
       />
 
-      {/* Tertiary: Water Intake Row */}
+      {/* Hydration Row */}
       <WaterTracker
         glasses={log.waterGlasses}
         target={profile.waterTargetGlasses}
         onUpdate={onUpdateWater}
       />
 
-      {/* Meals Overview & Quick Access */}
+      {/* Meals Ledger Header */}
       <View style={styles.mealsHeader}>
-        <Text style={styles.sectionHeading}>Today's Meals</Text>
+        <Text style={styles.sectionHeading}>Today’s Meals</Text>
         <TouchableOpacity
           onPress={() => onNavigateToMeals()}
           style={styles.seeAllBtn}
+          activeOpacity={0.7}
         >
           <Text style={styles.seeAllText}>View diary</Text>
           <ChevronRight size={14} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
+      {/* Meals Ledger List */}
       <View style={styles.mealsList}>
-        {mealTypes.map((m) => {
+        {mealTypes.map((m, index) => {
           const mealsOfCategory = log.meals.filter((item) => item.mealType === m.key);
           const cals = mealsOfCategory.reduce((sum, item) => sum + item.calories, 0);
+          const isLast = index === mealTypes.length - 1;
 
           return (
             <TouchableOpacity
               key={m.key}
-              style={styles.mealRow}
+              style={[styles.mealRow, isLast && styles.mealRowLast]}
               onPress={() => handleQuickAdd(m.key)}
               activeOpacity={0.7}
               accessibilityLabel={`Add to ${m.label}`}
               accessibilityRole="button"
             >
-              <View>
-                <Text style={styles.mealName}>{m.label}</Text>
-                <Text style={styles.mealSub}>
-                  {mealsOfCategory.length > 0
-                    ? `${mealsOfCategory.length} item${mealsOfCategory.length > 1 ? 's' : ''} logged`
-                    : 'Tap to log food'}
-                </Text>
+              <View style={styles.mealLeft}>
+                <View style={styles.mealIconBox}>
+                  <Utensils size={14} color={theme.colors.secondary} />
+                </View>
+                <View>
+                  <Text style={styles.mealName}>{m.label}</Text>
+                  <Text style={styles.mealSub}>
+                    {mealsOfCategory.length > 0
+                      ? `${mealsOfCategory.length} item${mealsOfCategory.length > 1 ? 's' : ''} logged`
+                      : 'Tap to log food'}
+                  </Text>
+                </View>
               </View>
 
               <View style={styles.mealRight}>
@@ -148,21 +175,24 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     marginBottom: theme.spacing.lg,
+    paddingHorizontal: 2,
   },
   dateLabel: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '500',
-    color: theme.colors.textMuted,
+    color: theme.colors.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
-  userName: {
-    fontSize: 22,
+  screenTitle: {
+    fontFamily: theme.fonts.serif,
+    fontSize: 32,
     fontWeight: '700',
     color: theme.colors.textPrimary,
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
     marginTop: 2,
   },
   logCtaBtn: {
@@ -170,12 +200,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: theme.radius.full,
     ...theme.shadow.subtle,
   },
   logCtaText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.textInverted,
@@ -194,14 +225,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 18,
-    marginBottom: 8,
+    marginTop: 20,
+    marginBottom: 10,
+    paddingHorizontal: 2,
   },
   sectionHeading: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontFamily: theme.fonts.serif,
+    fontSize: 20,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   seeAllBtn: {
     flexDirection: 'row',
@@ -209,6 +242,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   seeAllText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
     fontWeight: '500',
     color: theme.colors.primary,
@@ -230,12 +264,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
+  mealRowLast: {
+    borderBottomWidth: 0,
+  },
+  mealLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  mealIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   mealName: {
+    fontFamily: theme.fonts.sans,
     fontSize: 15,
     fontWeight: '600',
     color: theme.colors.textPrimary,
   },
   mealSub: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
@@ -246,6 +298,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   mealCals: {
+    fontFamily: theme.fonts.sans,
     fontSize: 14,
     fontWeight: '600',
     color: theme.colors.textSecondary,

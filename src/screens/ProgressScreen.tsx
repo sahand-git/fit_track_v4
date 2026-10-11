@@ -18,11 +18,13 @@ import {
   Calendar,
   X,
   Check,
+  Flame,
 } from 'lucide-react-native';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 import { UserProfile, WeightEntry } from '../types';
 import { loadWeightHistory, addWeightEntry, removeWeightEntry } from '../storage/storage';
 import { getTodayDateString, formatDisplayDate } from '../utils/dateUtils';
+import { InsightsScreen } from './InsightsScreen';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 
@@ -32,6 +34,7 @@ interface ProgressScreenProps {
 }
 
 export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdateWeight }) => {
+  const [subTab, setSubTab] = useState<'weight' | 'nutrition'>('weight');
   const [history, setHistory] = useState<WeightEntry[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [inputWeight, setInputWeight] = useState(profile ? String(profile.weightKg) : '75');
@@ -142,152 +145,191 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.headerSubtitle}>Progress</Text>
-          <Text style={styles.headerTitle}>Body Weight</Text>
-        </View>
+    <View style={styles.container}>
+      {/* Top Ledger Segment Bar */}
+      <View style={styles.segmentBar}>
         <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => setModalVisible(true)}
-          accessibilityLabel="Record weight"
-          accessibilityRole="button"
+          style={[styles.segmentBtn, subTab === 'weight' && styles.segmentBtnActive]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setSubTab('weight');
+          }}
+          activeOpacity={0.7}
         >
-          <Plus size={15} color={theme.colors.textInverted} />
-          <Text style={styles.addBtnText}>Log Weight</Text>
+          <Scale size={14} color={subTab === 'weight' ? theme.colors.primary : theme.colors.textMuted} />
+          <Text style={[styles.segmentText, subTab === 'weight' && styles.segmentTextActive]}>
+            Body Weight
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.segmentBtn, subTab === 'nutrition' && styles.segmentBtnActive]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setSubTab('nutrition');
+          }}
+          activeOpacity={0.7}
+        >
+          <Flame size={14} color={subTab === 'nutrition' ? theme.colors.primary : theme.colors.textMuted} />
+          <Text style={[styles.segmentText, subTab === 'nutrition' && styles.segmentTextActive]}>
+            Weekly Nutrition
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Current Weight Focus Card */}
-      <View style={styles.heroCard}>
-        <View style={styles.heroTop}>
-          <View>
-            <Text style={styles.heroLabel}>Current Weight</Text>
-            <View style={styles.heroValueRow}>
-              <Text style={styles.heroValue}>{currentWeight}</Text>
-              <Text style={styles.heroUnit}>kg</Text>
+      {subTab === 'nutrition' ? (
+        <InsightsScreen profile={profile} />
+      ) : (
+        <ScrollView contentContainerStyle={styles.content}>
+          {/* Header */}
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.headerSubtitle}>Progress</Text>
+              <Text style={styles.headerTitle}>Body Weight</Text>
             </View>
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={() => setModalVisible(true)}
+              accessibilityLabel="Record weight"
+              accessibilityRole="button"
+            >
+              <Plus size={15} color={theme.colors.textInverted} />
+              <Text style={styles.addBtnText}>Log weight</Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.heroRight}>
-            <View style={[styles.deltaBadge, totalDelta <= 0 ? styles.deltaLoss : styles.deltaGain]}>
-              {totalDelta <= 0 ? (
-                <TrendingDown size={14} color={theme.colors.primary} />
-              ) : (
-                <TrendingUp size={14} color={theme.colors.accent} />
-              )}
-              <Text style={[styles.deltaBadgeText, totalDelta <= 0 ? { color: theme.colors.primary } : { color: theme.colors.accent }]}>
-                {totalDelta > 0 ? `+${totalDelta}` : `${totalDelta}`} kg
+          {/* Current Weight Focus Card */}
+          <View style={styles.heroCard}>
+            <View style={styles.heroTop}>
+              <View>
+                <Text style={styles.heroLabel}>Current Weight</Text>
+                <View style={styles.heroValueRow}>
+                  <Text style={styles.heroValue}>{currentWeight}</Text>
+                  <Text style={styles.heroUnit}>kg</Text>
+                </View>
+              </View>
+
+              <View style={styles.heroRight}>
+                <View style={[styles.deltaBadge, totalDelta <= 0 ? styles.deltaLoss : styles.deltaGain]}>
+                  {totalDelta <= 0 ? (
+                    <TrendingDown size={14} color={theme.colors.primary} />
+                  ) : (
+                    <TrendingUp size={14} color={theme.colors.accent} />
+                  )}
+                  <Text style={[styles.deltaBadgeText, totalDelta <= 0 ? { color: theme.colors.primary } : { color: theme.colors.accent }]}>
+                    {totalDelta > 0 ? `+${totalDelta}` : `${totalDelta}`} kg
+                  </Text>
+                </View>
+                <Text style={styles.deltaSub}>Net change</Text>
+              </View>
+            </View>
+
+            {/* BMI Meta */}
+            <View style={styles.bmiStrip}>
+              <Text style={styles.bmiText}>
+                BMI: <Text style={styles.boldText}>{bmi}</Text> •{' '}
+                {parseFloat(bmi) < 18.5
+                  ? 'Underweight'
+                  : parseFloat(bmi) < 25
+                  ? 'Healthy Weight'
+                  : parseFloat(bmi) < 30
+                  ? 'Overweight'
+                  : 'Obese'}
               </Text>
             </View>
-            <Text style={styles.deltaSub}>Net change</Text>
           </View>
-        </View>
 
-        {/* BMI Meta */}
-        <View style={styles.bmiStrip}>
-          <Text style={styles.bmiText}>
-            BMI: <Text style={styles.boldText}>{bmi}</Text> •{' '}
-            {parseFloat(bmi) < 18.5
-              ? 'Underweight'
-              : parseFloat(bmi) < 25
-              ? 'Healthy Weight'
-              : parseFloat(bmi) < 30
-              ? 'Overweight'
-              : 'Obese'}
-          </Text>
-        </View>
-      </View>
-
-      {/* Trajectory Card */}
-      <View style={styles.chartCard}>
-        <View style={styles.chartTop}>
-          <Text style={styles.chartTitle}>Trajectory Curve</Text>
-          <Text style={styles.chartSubtitle}>
-            {history.length > 0 ? `${history.length} logged weigh-in${history.length > 1 ? 's' : ''}` : 'No history yet'}
-          </Text>
-        </View>
-
-        {renderChart()}
-      </View>
-
-      {/* Real History List */}
-      <View style={styles.historySection}>
-        <Text style={styles.sectionTitle}>Recorded Entries</Text>
-
-        {history.length === 0 ? (
-          <View style={styles.emptyHistoryBox}>
-            <Scale size={28} color={theme.colors.textMuted} />
-            <Text style={styles.emptyHistoryTitle}>No weight entries logged yet</Text>
-            <Text style={styles.emptyHistoryBody}>
-              Tap "Log Weight" above to track your weight across weeks.
-            </Text>
-          </View>
-        ) : (
-          [...history].reverse().map((entry) => (
-            <View key={entry.id} style={styles.historyRow}>
-              <View style={styles.historyDateBox}>
-                <Calendar size={14} color={theme.colors.textMuted} />
-                <Text style={styles.historyDate}>{formatDisplayDate(entry.date)}</Text>
-              </View>
-
-              <View style={styles.historyRight}>
-                <Text style={styles.historyWeight}>{entry.weightKg} kg</Text>
-                {entry.note ? <Text style={styles.historyNote}>{entry.note}</Text> : null}
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() => handleDeleteEntry(entry.id)}
-                  accessibilityLabel="Delete entry"
-                >
-                  <Trash2 size={15} color={theme.colors.danger} />
-                </TouchableOpacity>
-              </View>
+          {/* Trajectory Card */}
+          <View style={styles.chartCard}>
+            <View style={styles.chartTop}>
+              <Text style={styles.chartTitle}>Trajectory Curve</Text>
+              <Text style={styles.chartSubtitle}>
+                {history.length > 0 ? `${history.length} logged weigh-in${history.length > 1 ? 's' : ''}` : 'No history yet'}
+              </Text>
             </View>
-          ))
-        )}
-      </View>
 
-      {/* Log Weight Modal */}
+            {renderChart()}
+          </View>
+
+          {/* Real History List */}
+          <View style={styles.historySection}>
+            <Text style={styles.sectionTitle}>Recorded Entries</Text>
+
+            {history.length === 0 ? (
+              <View style={styles.emptyHistoryBox}>
+                <Scale size={28} color={theme.colors.textMuted} />
+                <Text style={styles.emptyHistoryTitle}>No weight entries logged yet</Text>
+                <Text style={styles.emptyHistoryBody}>
+                  Tap "Log weight" above to track your weight across weeks.
+                </Text>
+              </View>
+            ) : (
+              [...history].reverse().map((entry) => (
+                <View key={entry.id} style={styles.historyRow}>
+                  <View style={styles.historyDateBox}>
+                    <Calendar size={14} color={theme.colors.textMuted} />
+                    <Text style={styles.historyDate}>{formatDisplayDate(entry.date)}</Text>
+                  </View>
+
+                  <View style={styles.historyRight}>
+                    <Text style={styles.historyWeight}>{entry.weightKg} kg</Text>
+                    {entry.note ? <Text style={styles.historyNote}>{entry.note}</Text> : null}
+                    <TouchableOpacity
+                      style={styles.deleteBtn}
+                      onPress={() => handleDeleteEntry(entry.id)}
+                      accessibilityLabel="Delete entry"
+                    >
+                      <Trash2 size={14} color={theme.colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        </ScrollView>
+      )}
+
+      {/* LOG WEIGHT MODAL */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Record Weigh-in</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <X size={18} color={theme.colors.textSecondary} />
+                <X size={20} color={theme.colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalLabel}>Weight (kg)</Text>
-            <TextInput
-              style={styles.modalInput}
-              keyboardType="numeric"
-              placeholder="e.g. 74.5"
-              placeholderTextColor={theme.colors.textMuted}
-              value={inputWeight}
-              onChangeText={setInputWeight}
-              autoFocus
-            />
+            <View style={styles.modalInputGroup}>
+              <Text style={styles.modalLabel}>Weight (kg)</Text>
+              <TextInput
+                style={styles.modalInput}
+                keyboardType="numeric"
+                value={inputWeight}
+                onChangeText={setInputWeight}
+                autoFocus
+              />
+            </View>
 
-            <Text style={styles.modalLabel}>Note (optional)</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g. Morning fasting"
-              placeholderTextColor={theme.colors.textMuted}
-              value={inputNote}
-              onChangeText={setInputNote}
-            />
+            <View style={styles.modalInputGroup}>
+              <Text style={styles.modalLabel}>Note (optional)</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. Morning, post-workout"
+                placeholderTextColor={theme.colors.textMuted}
+                value={inputNote}
+                onChangeText={setInputNote}
+              />
+            </View>
 
             <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveWeight}>
               <Check size={16} color={theme.colors.textInverted} />
-              <Text style={styles.modalSaveBtnText}>Save Entry</Text>
+              <Text style={styles.modalSaveText}>Save Weigh-in</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 };
 
@@ -295,6 +337,39 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  segmentBar: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.surface,
+    marginHorizontal: theme.spacing.md,
+    marginTop: 10,
+    marginBottom: 6,
+    padding: 3,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  segmentBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 7,
+    borderRadius: theme.radius.sm,
+    gap: 6,
+  },
+  segmentBtnActive: {
+    backgroundColor: theme.colors.primaryLight,
+  },
+  segmentText: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.colors.textMuted,
+  },
+  segmentTextActive: {
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   content: {
     paddingHorizontal: theme.spacing.md,
@@ -305,17 +380,19 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
   headerSubtitle: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '500',
-    color: theme.colors.textMuted,
+    color: theme.colors.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   headerTitle: {
-    fontSize: 22,
+    fontFamily: theme.fonts.serif,
+    fontSize: 26,
     fontWeight: '700',
     color: theme.colors.textPrimary,
     letterSpacing: -0.4,
@@ -326,12 +403,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     borderRadius: theme.radius.full,
     ...theme.shadow.subtle,
   },
   addBtnText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textInverted,
@@ -351,6 +429,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heroLabel: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     color: theme.colors.textMuted,
     fontWeight: '500',
@@ -362,12 +441,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   heroValue: {
-    fontSize: 34,
+    fontFamily: theme.fonts.serif,
+    fontSize: 36,
     fontWeight: '700',
     color: theme.colors.textPrimary,
     letterSpacing: -0.6,
   },
   heroUnit: {
+    fontFamily: theme.fonts.sans,
     fontSize: 15,
     fontWeight: '500',
     color: theme.colors.textMuted,
@@ -391,10 +472,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accentLight,
   },
   deltaBadgeText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '700',
   },
   deltaSub: {
+    fontFamily: theme.fonts.sans,
     fontSize: 10,
     color: theme.colors.textMuted,
   },
@@ -406,6 +489,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   bmiText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     color: theme.colors.textSecondary,
   },
@@ -428,11 +512,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chartTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: theme.fonts.serif,
+    fontSize: 16,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   chartSubtitle: {
+    fontFamily: theme.fonts.sans,
     fontSize: 11,
     color: theme.colors.textMuted,
   },
@@ -447,12 +533,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   chartEmptyTitle: {
-    fontSize: 13,
+    fontFamily: theme.fonts.serif,
+    fontSize: 14,
     fontWeight: '600',
-    color: theme.colors.textSecondary,
-    marginTop: 4,
+    color: theme.colors.textPrimary,
   },
   chartEmptySubtitle: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     color: theme.colors.textMuted,
     textAlign: 'center',
@@ -461,39 +548,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontFamily: theme.fonts.serif,
+    fontSize: 18,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
-    marginBottom: 2,
-  },
-  emptyHistoryBox: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: 6,
-  },
-  emptyHistoryTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  emptyHistoryBody: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 16,
+    marginBottom: 4,
   },
   historyRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
+    padding: 14,
     borderRadius: theme.radius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
@@ -503,9 +570,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   historyDate: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
-    color: theme.colors.textPrimary,
-    fontWeight: '500',
+    color: theme.colors.textSecondary,
   },
   historyRight: {
     flexDirection: 'row',
@@ -513,68 +580,104 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   historyWeight: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: theme.fonts.serif,
+    fontSize: 15,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   historyNote: {
-    fontSize: 11,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   deleteBtn: {
-    padding: 2,
+    padding: 4,
+  },
+  emptyHistoryBox: {
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 4,
+  },
+  emptyHistoryTitle: {
+    fontFamily: theme.fonts.serif,
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  emptyHistoryBody: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
   },
   modalBackdrop: {
     flex: 1,
     backgroundColor: theme.colors.backdrop,
+    alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
   modalCard: {
+    width: '100%',
+    maxWidth: 380,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.xl,
     padding: theme.spacing.lg,
-    gap: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 14,
     ...theme.shadow.floating,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
   },
   modalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontFamily: theme.fonts.serif,
+    fontSize: 20,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
   },
+  modalInputGroup: {
+    gap: 6,
+  },
   modalLabel: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
   },
   modalInput: {
+    fontFamily: theme.fonts.sans,
     backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    fontSize: 14,
     color: theme.colors.textPrimary,
-    fontSize: 15,
   },
   modalSaveBtn: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 12,
+    borderRadius: theme.radius.md,
     marginTop: 6,
-    ...theme.shadow.subtle,
   },
-  modalSaveBtnText: {
-    color: theme.colors.textInverted,
-    fontWeight: '600',
+  modalSaveText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textInverted,
   },
 });

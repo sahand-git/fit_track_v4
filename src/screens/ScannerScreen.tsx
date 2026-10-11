@@ -10,6 +10,7 @@ import {
   Image,
   Alert,
   Platform,
+  FlatList,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -23,12 +24,13 @@ import {
   AlertTriangle,
   Sparkles,
   Key,
-  RefreshCw,
   Info,
+  Utensils,
 } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { LoggedMeal, MealType, FoodItem } from '../types';
+import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
 import { lookupBarcodeWithFallbacks } from '../services/barcodeService';
 import {
   analyzeMealImage,
@@ -45,7 +47,11 @@ interface ScannerScreenProps {
   onAddMeal: (meal: LoggedMeal) => void;
 }
 
-type ScanMode = 'menu' | 'live_barcode' | 'manual_barcode' | 'plate_photo';
+type ScanMode = 'menu' | 'live_barcode' | 'manual_barcode' | 'plate_photo' | 'food_search';
+
+interface EditablePlateItem extends PlateAnalysisItem {
+  multiplier: number;
+}
 
 export const ScannerScreen: React.FC<ScannerScreenProps> = ({
   onBack,
@@ -68,11 +74,18 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [plateStatus, setPlateStatus] = useState<'idle' | 'analyzing' | 'done' | 'error'>('idle');
   const [plateResult, setPlateResult] = useState<PlateAnalysisResult | null>(null);
+  const [editablePlateItems, setEditablePlateItems] = useState<EditablePlateItem[]>([]);
   const [plateError, setPlateError] = useState<string | null>(null);
   const [geminiKeyInput, setGeminiKeyInput] = useState('');
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [isLoggedPlate, setIsLoggedPlate] = useState(false);
+
+  // Food Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchedFood, setSearchedFood] = useState<FoodItem | null>(null);
+  const [searchServings, setSearchServings] = useState(1);
+  const [isLoggedSearch, setIsLoggedSearch] = useState(false);
 
   useEffect(() => {
     async function checkKey() {
@@ -141,7 +154,7 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
       brand: matchedFood.brand,
       category: matchedFood.category,
       mealType: selectedMeal,
-      servings,
+      servings: servings,
       servingSize: matchedFood.servingSize,
       servingGrams: Math.round(matchedFood.servingGrams * servings),
       calories: Math.round(matchedFood.calories * servings),
@@ -162,6 +175,7 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
   const handlePickPlateImage = async (fromCamera: boolean) => {
     setPlateError(null);
     setPlateResult(null);
+    setEditablePlateItems([]);
 
     let result: ImagePicker.ImagePickerResult;
     if (fromCamera) {
@@ -209,6 +223,7 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
     try {
       const analysis = await analyzeMealImage(base64);
       setPlateResult(analysis);
+      setEditablePlateItems(analysis.items.map((it) => ({ ...it, multiplier: 1 })));
       setPlateStatus('done');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (err: any) {
@@ -216,6 +231,17 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
       setPlateError(err?.message || 'Could not analyze meal image.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     }
+  };
+
+  const handleUpdateItemMultiplier = (index: number, delta: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setEditablePlateItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item;
+        const newMultiplier = Math.max(0.25, Math.round((item.multiplier + delta) * 100) / 100);
+        return { ...item, multiplier: newMultiplier };
+      })
+    );
   };
 
   const handleSaveGeminiKey = async () => {
@@ -226,23 +252,24 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
   };
 
   const handleLogAnalyzedPlate = () => {
-    if (!plateResult || plateResult.items.length === 0) return;
+    if (editablePlateItems.length === 0) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setIsLoggedPlate(true);
 
-    plateResult.items.forEach((item, idx) => {
+    editablePlateItems.forEach((item, idx) => {
+      const m = item.multiplier;
       const meal: LoggedMeal = {
         id: `plate_${Date.now()}_${idx}`,
         foodId: `ai_plate_${idx}`,
         name: item.name,
         mealType: selectedMeal,
-        servings: 1,
+        servings: m,
         servingSize: item.portionEstimate,
-        servingGrams: item.grams,
-        calories: item.calories,
-        protein: item.protein,
-        carbs: item.carbs,
-        fat: item.fat,
+        servingGrams: Math.round(item.grams * m),
+        calories: Math.round(item.calories * m),
+        protein: Math.round(item.protein * m * 10) / 10,
+        carbs: Math.round(item.carbs * m * 10) / 10,
+        fat: Math.round(item.fat * m * 10) / 10,
         timestamp: new Date().toISOString(),
       };
       onAddMeal(meal);
@@ -253,6 +280,57 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
       onBack();
     }, 600);
   };
+
+  // --- FOOD SEARCH HANDLERS ---
+  const filteredFoods = VERIFIED_FOOD_DATABASE.filter(
+    (f) =>
+      f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (f.category && f.category.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const handleLogSearchedFood = () => {
+    if (!searchedFood) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    setIsLoggedSearch(true);
+
+    const meal: LoggedMeal = {
+      id: `manual_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      foodId: searchedFood.id,
+      name: searchedFood.name,
+      brand: searchedFood.brand,
+      category: searchedFood.category,
+      mealType: selectedMeal,
+      servings: searchServings,
+      servingSize: searchedFood.servingSize,
+      servingGrams: Math.round(searchedFood.servingGrams * searchServings),
+      calories: Math.round(searchedFood.calories * searchServings),
+      protein: Math.round(searchedFood.protein * searchServings * 10) / 10,
+      carbs: Math.round(searchedFood.carbs * searchServings * 10) / 10,
+      fat: Math.round(searchedFood.fat * searchServings * 10) / 10,
+      timestamp: new Date().toISOString(),
+    };
+
+    onAddMeal(meal);
+    setTimeout(() => {
+      setIsLoggedSearch(false);
+      onBack();
+    }, 600);
+  };
+
+  // Totals for plate analysis with adjusted multipliers
+  const currentTotalCalories = editablePlateItems.reduce(
+    (sum, it) => sum + Math.round(it.calories * it.multiplier),
+    0
+  );
+  const currentTotalProtein = Math.round(
+    editablePlateItems.reduce((sum, it) => sum + it.protein * it.multiplier, 0) * 10
+  ) / 10;
+  const currentTotalCarbs = Math.round(
+    editablePlateItems.reduce((sum, it) => sum + it.carbs * it.multiplier, 0) * 10
+  ) / 10;
+  const currentTotalFat = Math.round(
+    editablePlateItems.reduce((sum, it) => sum + it.fat * it.multiplier, 0) * 10
+  ) / 10;
 
   return (
     <View style={styles.container}>
@@ -273,33 +351,35 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {mode === 'menu'
-            ? 'Food Scanner'
+            ? 'Log food'
             : mode === 'live_barcode'
-            ? 'Live Camera Scanner'
+            ? 'Scan barcode'
             : mode === 'manual_barcode'
-            ? 'Barcode Lookup'
-            : 'Meal Photo Analysis'}
+            ? 'Barcode lookup'
+            : mode === 'food_search'
+            ? 'Food search'
+            : 'Analyze meal photo'}
         </Text>
         <View style={{ width: 36 }} />
       </View>
 
-      {/* VIEW 1: SELECTION MENU */}
+      {/* VIEW 1: FOOD LOGGING CHOOSER */}
       {mode === 'menu' && (
         <ScrollView contentContainerStyle={styles.menuContent}>
           <Text style={styles.menuIntro}>
-            Choose how you would like to log food:
+            Select how you would like to record your nutrition:
           </Text>
 
-          {/* Option A: Barcode Scanning */}
+          {/* Option 1: Barcode Scanning */}
           <View style={styles.optionBlock}>
             <View style={styles.optionHeader}>
               <View style={styles.optionIconBox}>
                 <BarcodeIcon size={20} color={theme.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.optionHeading}>Packaged Food Barcode</Text>
+                <Text style={styles.optionHeading}>Scan barcode</Text>
                 <Text style={styles.optionSub}>
-                  Scan UPC barcode on packaging or enter digits manually.
+                  Use your camera on packaged goods or type the UPC/EAN code directly.
                 </Text>
               </View>
             </View>
@@ -310,8 +390,8 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
                 onPress={handleStartLiveScan}
                 activeOpacity={0.8}
               >
-                <CameraIcon size={16} color={theme.colors.textInverted} />
-                <Text style={styles.primaryActionText}>Scan Live with Camera</Text>
+                <CameraIcon size={15} color={theme.colors.textInverted} />
+                <Text style={styles.primaryActionText}>Scan with camera</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -319,22 +399,22 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
                 onPress={() => setMode('manual_barcode')}
                 activeOpacity={0.7}
               >
-                <Search size={15} color={theme.colors.textPrimary} />
-                <Text style={styles.secondaryActionText}>Enter Barcode</Text>
+                <Search size={14} color={theme.colors.textPrimary} />
+                <Text style={styles.secondaryActionText}>Enter digits</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Option B: AI Meal Photo Analysis */}
+          {/* Option 2: AI Meal Photo Analysis */}
           <View style={styles.optionBlock}>
             <View style={styles.optionHeader}>
               <View style={[styles.optionIconBox, { backgroundColor: theme.colors.accentLight }]}>
                 <Sparkles size={20} color={theme.colors.accent} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.optionHeading}>Meal Photo Analysis</Text>
+                <Text style={styles.optionHeading}>Analyze meal photo</Text>
                 <Text style={styles.optionSub}>
-                  Estimate nutrition from a photo of home-cooked plates or restaurant meals.
+                  Estimate nutrition from a photo of home-cooked plates or restaurant dishes.
                 </Text>
               </View>
             </View>
@@ -345,8 +425,8 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
                 onPress={() => handlePickPlateImage(true)}
                 activeOpacity={0.8}
               >
-                <CameraIcon size={16} color={theme.colors.textInverted} />
-                <Text style={styles.primaryActionText}>Take Plate Photo</Text>
+                <CameraIcon size={15} color={theme.colors.textInverted} />
+                <Text style={styles.primaryActionText}>Take plate photo</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -354,7 +434,7 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
                 onPress={() => handlePickPlateImage(false)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.secondaryActionText}>Choose from Gallery</Text>
+                <Text style={styles.secondaryActionText}>From gallery</Text>
               </TouchableOpacity>
             </View>
 
@@ -367,7 +447,38 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
                   : 'Requires Google Gemini Vision key for on-device analysis.'}
               </Text>
               <TouchableOpacity onPress={() => setShowKeyModal(true)}>
-                <Text style={styles.providerKeyLink}>{hasApiKey ? 'Change Key' : 'Setup Key'}</Text>
+                <Text style={styles.providerKeyLink}>{hasApiKey ? 'Change key' : 'Setup key'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Option 3: Manual Food Search */}
+          <View style={styles.optionBlock}>
+            <View style={styles.optionHeader}>
+              <View style={[styles.optionIconBox, { backgroundColor: theme.colors.secondaryLight }]}>
+                <Utensils size={18} color={theme.colors.secondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.optionHeading}>Manual food search</Text>
+                <Text style={styles.optionSub}>
+                  Look up whole foods and verified ingredients from the local database.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={[styles.primaryActionBtn, { backgroundColor: theme.colors.primary }]}
+                onPress={() => {
+                  setSearchQuery('');
+                  setSearchedFood(null);
+                  setSearchServings(1);
+                  setMode('food_search');
+                }}
+                activeOpacity={0.8}
+              >
+                <Search size={15} color={theme.colors.textInverted} />
+                <Text style={styles.primaryActionText}>Search food database</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -425,7 +536,7 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
             <View style={styles.searchRow}>
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. 011110001027 or 894700010328"
+                placeholder="e.g. 011110001027 or 748927028669"
                 placeholderTextColor={theme.colors.textMuted}
                 value={barcodeInput}
                 onChangeText={setBarcodeInput}
@@ -528,7 +639,7 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
         </ScrollView>
       )}
 
-      {/* VIEW 4: AI PLATE PHOTO ANALYSIS */}
+      {/* VIEW 4: MEAL PHOTO REVIEW WITH EDITABLE PORTION CONTROLS */}
       {mode === 'plate_photo' && (
         <ScrollView contentContainerStyle={styles.subContent}>
           {selectedImageUri && (
@@ -538,7 +649,7 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
           {plateStatus === 'analyzing' && (
             <View style={styles.statusBox}>
               <ActivityIndicator size="small" color={theme.colors.accent} />
-              <Text style={styles.statusText}>Analyzing plate components and portions with AI...</Text>
+              <Text style={styles.statusText}>Analyzing meal components and portions...</Text>
             </View>
           )}
 
@@ -548,7 +659,7 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
               <Text style={styles.errorText}>{plateError}</Text>
               {!hasApiKey && (
                 <TouchableOpacity
-                  style={[styles.primaryActionBtn, { marginTop: 10 }]}
+                  style={[styles.primaryActionBtn, { marginTop: 12 }]}
                   onPress={() => setShowKeyModal(true)}
                 >
                   <Key size={15} color={theme.colors.textInverted} />
@@ -570,26 +681,63 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
               </View>
 
               <Text style={styles.productName}>{plateResult.mealName}</Text>
-              <Text style={styles.totalKcalBanner}>
-                Estimated Total: {plateResult.totalCalories} kcal (P: {plateResult.totalProtein}g • C: {plateResult.totalCarbs}g • F: {plateResult.totalFat}g)
-              </Text>
 
-              <Text style={styles.detectedHeading}>Detected Plate Items (Confirm below):</Text>
-              {plateResult.items.map((it, idx) => (
-                <View key={idx} style={styles.plateItemRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.plateItemName}>{it.name}</Text>
-                    <Text style={styles.plateItemPortion}>
-                      Est: {it.portionEstimate} (~{it.grams}g)
-                    </Text>
+              {/* Dynamic Nutrition Totals Banner */}
+              <View style={styles.nutritionBanner}>
+                <Text style={styles.nutritionBannerTitle}>
+                  Estimated Total: {currentTotalCalories} kcal
+                </Text>
+                <Text style={styles.nutritionBannerSub}>
+                  Protein: {currentTotalProtein}g • Carbs: {currentTotalCarbs}g • Fat: {currentTotalFat}g
+                </Text>
+              </View>
+
+              {/* Detected Plate Items with Editable Portion Controls */}
+              <Text style={styles.detectedHeading}>Detected items (Adjust portions below):</Text>
+              {editablePlateItems.map((it, idx) => {
+                const itemKcal = Math.round(it.calories * it.multiplier);
+                const itemGrams = Math.round(it.grams * it.multiplier);
+
+                return (
+                  <View key={idx} style={styles.plateItemCard}>
+                    <View style={styles.plateItemTop}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.plateItemName}>{it.name}</Text>
+                        <Text style={styles.plateItemPortion}>
+                          {it.portionEstimate} (~{itemGrams}g)
+                        </Text>
+                      </View>
+                      <Text style={styles.plateItemKcal}>{itemKcal} kcal</Text>
+                    </View>
+
+                    {/* Editable Portion Controls */}
+                    <View style={styles.itemMultiplierRow}>
+                      <Text style={styles.portionAdjustLabel}>Portion scale:</Text>
+                      <View style={styles.stepperControls}>
+                        <TouchableOpacity
+                          style={styles.stepBtn}
+                          onPress={() => handleUpdateItemMultiplier(idx, -0.25)}
+                          accessibilityLabel={`Decrease portion for ${it.name}`}
+                        >
+                          <Minus size={13} color={theme.colors.textPrimary} />
+                        </TouchableOpacity>
+                        <Text style={styles.stepCount}>{it.multiplier}x</Text>
+                        <TouchableOpacity
+                          style={styles.stepBtn}
+                          onPress={() => handleUpdateItemMultiplier(idx, 0.25)}
+                          accessibilityLabel={`Increase portion for ${it.name}`}
+                        >
+                          <Plus size={13} color={theme.colors.textPrimary} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   </View>
-                  <Text style={styles.plateItemKcal}>{it.calories} kcal</Text>
-                </View>
-              ))}
+                );
+              })}
 
               <Text style={styles.disclaimerText}>{plateResult.disclaimer}</Text>
 
-              {/* Meal Category Selection */}
+              {/* Meal Slot Selection */}
               <View style={styles.chipsRow}>
                 {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((m) => (
                   <TouchableOpacity
@@ -618,7 +766,153 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
         </ScrollView>
       )}
 
-      {/* GEMINI KEY CONFIGURATION DIALOG */}
+      {/* VIEW 5: MANUAL FOOD SEARCH FLOW */}
+      {mode === 'food_search' && (
+        <View style={styles.searchFlowContainer}>
+          <View style={styles.searchHeaderBox}>
+            <View style={styles.searchRow}>
+              <Search size={16} color={theme.colors.textMuted} />
+              <TextInput
+                style={[styles.textInput, { flex: 1 }]}
+                placeholder="Search food by name or category..."
+                placeholderTextColor={theme.colors.textMuted}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus={!searchedFood}
+              />
+            </View>
+          </View>
+
+          {searchedFood ? (
+            <ScrollView contentContainerStyle={styles.subContent}>
+              <View style={styles.resultCard}>
+                <View style={styles.resultBadgeRow}>
+                  <View style={styles.matchBadge}>
+                    <Utensils size={13} color={theme.colors.primary} />
+                    <Text style={styles.matchBadgeText}>{searchedFood.category || 'Database'}</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.productName}>{searchedFood.name}</Text>
+                {searchedFood.brand ? <Text style={styles.brandSubtitle}>{searchedFood.brand}</Text> : null}
+
+                <View style={styles.portionInfo}>
+                  <Text style={styles.portionText}>
+                    {searchedFood.servingSize} ({Math.round(searchedFood.servingGrams * searchServings)}g)
+                  </Text>
+                  <Text style={styles.kcalHighlight}>
+                    {Math.round(searchedFood.calories * searchServings)} kcal
+                  </Text>
+                </View>
+
+                {/* Macro Row */}
+                <View style={styles.searchMacroRow}>
+                  <Text style={styles.searchMacroText}>
+                    P: {Math.round(searchedFood.protein * searchServings * 10) / 10}g
+                  </Text>
+                  <Text style={styles.searchMacroText}>
+                    C: {Math.round(searchedFood.carbs * searchServings * 10) / 10}g
+                  </Text>
+                  <Text style={styles.searchMacroText}>
+                    F: {Math.round(searchedFood.fat * searchServings * 10) / 10}g
+                  </Text>
+                </View>
+
+                {/* Servings Stepper */}
+                <View style={styles.stepperRow}>
+                  <Text style={styles.stepperLabel}>Portion Servings:</Text>
+                  <View style={styles.stepperControls}>
+                    <TouchableOpacity
+                      style={styles.stepBtn}
+                      onPress={() => setSearchServings((s) => Math.max(0.5, s - 0.5))}
+                    >
+                      <Minus size={14} color={theme.colors.textPrimary} />
+                    </TouchableOpacity>
+                    <Text style={styles.stepCount}>{searchServings}</Text>
+                    <TouchableOpacity
+                      style={styles.stepBtn}
+                      onPress={() => setSearchServings((s) => s + 0.5)}
+                    >
+                      <Plus size={14} color={theme.colors.textPrimary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Meal Category Selection */}
+                <View style={styles.chipsRow}>
+                  {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((m) => (
+                    <TouchableOpacity
+                      key={m}
+                      style={[styles.chip, selectedMeal === m && styles.chipActive]}
+                      onPress={() => setSelectedMeal(m)}
+                    >
+                      <Text style={[styles.chipText, selectedMeal === m && styles.chipTextActive]}>
+                        {m.charAt(0).toUpperCase() + m.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <View style={styles.actionRow}>
+                  <TouchableOpacity
+                    style={styles.secondaryActionBtn}
+                    onPress={() => setSearchedFood(null)}
+                  >
+                    <Text style={styles.secondaryActionText}>Choose Different Food</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.primaryActionBtn, isLoggedSearch && { backgroundColor: theme.colors.primaryHover }]}
+                    onPress={handleLogSearchedFood}
+                  >
+                    <Check size={16} color={theme.colors.textInverted} />
+                    <Text style={styles.primaryActionText}>
+                      {isLoggedSearch ? 'Logged to Diary' : 'Add to Diary'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          ) : (
+            <FlatList
+              data={filteredFoods}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContent}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.foodListItem}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                    setSearchedFood(item);
+                    setSearchServings(1);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.foodItemName}>{item.name}</Text>
+                    <Text style={styles.foodItemServing}>
+                      {item.servingSize} • {item.calories} kcal
+                    </Text>
+                  </View>
+                  <View style={styles.selectCircle}>
+                    <Plus size={14} color={theme.colors.primary} />
+                  </View>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateTitle}>No foods found</Text>
+                  <Text style={styles.emptyStateSub}>
+                    Try searching for ingredients like "egg", "chicken", "rice", or "apple".
+                  </Text>
+                </View>
+              }
+            />
+          )}
+        </View>
+      )}
+
+      {/* GEMINI KEY CONFIGURATION MODAL */}
       {showKeyModal && (
         <View style={styles.keyDialogBackdrop}>
           <View style={styles.keyDialogCard}>
@@ -665,8 +959,8 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: 14,
     borderBottomWidth: 1,
@@ -681,51 +975,56 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontFamily: theme.fonts.serif,
+    fontSize: 20,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   menuContent: {
     padding: theme.spacing.md,
+    paddingBottom: 100,
     gap: 16,
   },
   menuIntro: {
+    fontFamily: theme.fonts.sans,
     fontSize: 14,
     color: theme.colors.textSecondary,
     marginBottom: 4,
+    lineHeight: 20,
   },
   optionBlock: {
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.xl,
+    borderRadius: theme.radius.lg,
     padding: theme.spacing.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    gap: 14,
     ...theme.shadow.subtle,
   },
   optionHeader: {
     flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
+    gap: 14,
+    marginBottom: 16,
   },
   optionIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   optionHeading: {
-    fontSize: 16,
+    fontFamily: theme.fonts.serif,
+    fontSize: 18,
     fontWeight: '700',
     color: theme.colors.textPrimary,
+    marginBottom: 4,
   },
   optionSub: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: theme.colors.textSecondary,
     lineHeight: 18,
-    marginTop: 2,
   },
   actionRow: {
     flexDirection: 'row',
@@ -733,30 +1032,35 @@ const styles = StyleSheet.create({
   },
   primaryActionBtn: {
     flex: 1,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    paddingVertical: 11,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 12,
+    borderRadius: theme.radius.md,
+    ...theme.shadow.subtle,
   },
   primaryActionText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.textInverted,
   },
   secondaryActionBtn: {
     flex: 1,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: theme.radius.md,
-    paddingVertical: 11,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 12,
+    borderRadius: theme.radius.md,
   },
   secondaryActionText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.textPrimary,
@@ -765,82 +1069,87 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingTop: 4,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
   },
   providerText: {
-    flex: 1,
+    fontFamily: theme.fonts.sans,
     fontSize: 11,
     color: theme.colors.textMuted,
+    flex: 1,
   },
   providerKeyLink: {
+    fontFamily: theme.fonts.sans,
     fontSize: 11,
     fontWeight: '600',
-    color: theme.colors.primary,
+    color: theme.colors.accent,
   },
   cameraContainer: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#000000',
   },
   overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   reticleFrame: {
     width: 260,
-    height: 180,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
+    height: 160,
     borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   overlayInstruction: {
-    color: '#FFF',
+    fontFamily: theme.fonts.sans,
+    color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '500',
     marginTop: 20,
-    textAlign: 'center',
+    fontWeight: '500',
   },
   cancelOverlayBtn: {
-    marginTop: 24,
+    marginTop: 30,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: theme.radius.full,
   },
   cancelOverlayText: {
-    color: '#FFF',
+    fontFamily: theme.fonts.sans,
+    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
   },
   webFallbackContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-    gap: 12,
+    justifyContent: 'center',
+    padding: 30,
+    backgroundColor: theme.colors.surface,
   },
   webFallbackTitle: {
-    fontSize: 17,
+    fontFamily: theme.fonts.serif,
+    fontSize: 20,
     fontWeight: '700',
     color: theme.colors.textPrimary,
+    marginTop: 14,
+    marginBottom: 8,
   },
   webFallbackBody: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 19,
+    marginBottom: 20,
   },
   subContent: {
     padding: theme.spacing.md,
-    gap: 14,
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   inputCard: {
     backgroundColor: theme.colors.surface,
@@ -848,20 +1157,28 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    marginBottom: 16,
   },
   inputCardLabel: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     color: theme.colors.textSecondary,
     marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   searchRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   textInput: {
+    fontFamily: theme.fonts.sans,
     flex: 1,
     backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -869,148 +1186,167 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   searchSubmitBtn: {
-    backgroundColor: theme.colors.primary,
+    width: 44,
+    height: 44,
     borderRadius: theme.radius.md,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   statusBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    padding: 16,
-    justifyContent: 'center',
+    padding: 14,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginVertical: 12,
   },
   statusText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
     color: theme.colors.textSecondary,
   },
   errorBox: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
     padding: 16,
+    backgroundColor: theme.colors.dangerLight,
+    borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.accentBorder,
-    alignItems: 'center',
-    gap: 6,
+    borderColor: theme.colors.border,
+    marginVertical: 12,
   },
   errorText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
+    color: theme.colors.danger,
+    lineHeight: 18,
   },
   resultCard: {
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.xl,
+    borderRadius: theme.radius.lg,
     padding: theme.spacing.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    gap: 10,
     ...theme.shadow.subtle,
   },
   resultBadgeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 10,
   },
   matchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     backgroundColor: theme.colors.primaryLight,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: theme.radius.full,
   },
   matchBadgeText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 11,
     fontWeight: '600',
     color: theme.colors.primary,
   },
   upcLabel: {
+    fontFamily: theme.fonts.sans,
     fontSize: 11,
     color: theme.colors.textMuted,
   },
   productName: {
-    fontSize: 18,
+    fontFamily: theme.fonts.serif,
+    fontSize: 22,
     fontWeight: '700',
     color: theme.colors.textPrimary,
+    letterSpacing: -0.3,
   },
   brandSubtitle: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   portionInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    paddingVertical: 8,
+    marginVertical: 14,
+    paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderBottomWidth: 1,
+    borderColor: theme.colors.border,
   },
   portionText: {
-    fontSize: 13,
+    fontFamily: theme.fonts.sans,
+    fontSize: 14,
     color: theme.colors.textSecondary,
   },
   kcalHighlight: {
+    fontFamily: theme.fonts.serif,
     fontSize: 22,
     fontWeight: '700',
-    color: theme.colors.textPrimary,
+    color: theme.colors.primary,
   },
   stepperRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    marginBottom: 16,
   },
   stepperLabel: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
     color: theme.colors.textPrimary,
   },
   stepperControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: theme.radius.sm,
     gap: 8,
-    padding: 3,
   },
   stepBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: theme.colors.surface,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepCount: {
-    fontSize: 13,
+    fontFamily: theme.fonts.sans,
+    fontSize: 15,
     fontWeight: '600',
     color: theme.colors.textPrimary,
-    minWidth: 20,
+    minWidth: 36,
     textAlign: 'center',
   },
   chipsRow: {
     flexDirection: 'row',
     gap: 6,
-    marginVertical: 4,
+    marginBottom: 18,
   },
   chip: {
     flex: 1,
-    backgroundColor: theme.colors.surfaceSubtle,
+    paddingVertical: 8,
     borderRadius: theme.radius.sm,
-    paddingVertical: 7,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     alignItems: 'center',
   },
   chipActive: {
     backgroundColor: theme.colors.primaryLight,
-    borderWidth: 1,
-    borderColor: theme.colors.primaryBorder,
+    borderColor: theme.colors.primary,
   },
   chipText: {
-    fontSize: 11,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
     color: theme.colors.textSecondary,
     fontWeight: '500',
   },
@@ -1020,49 +1356,165 @@ const styles = StyleSheet.create({
   },
   previewImage: {
     width: '100%',
-    height: 180,
+    height: 220,
     borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surfaceSubtle,
+    marginBottom: 16,
   },
-  totalKcalBanner: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.accent,
+  nutritionBanner: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.md,
+    padding: 12,
+    marginVertical: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  nutritionBannerTitle: {
+    fontFamily: theme.fonts.serif,
+    fontSize: 17,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: 2,
+  },
+  nutritionBannerSub: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    color: theme.colors.textSecondary,
   },
   detectedHeading: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.textPrimary,
-    marginTop: 4,
+    marginTop: 8,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  plateItemRow: {
+  plateItemCard: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.md,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  plateItemTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
   },
   plateItemName: {
+    fontFamily: theme.fonts.sans,
     fontSize: 14,
     fontWeight: '600',
     color: theme.colors.textPrimary,
   },
   plateItemPortion: {
-    fontSize: 11,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
   plateItemKcal: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: theme.fonts.serif,
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  itemMultiplierRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  portionAdjustLabel: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
     color: theme.colors.textSecondary,
   },
   disclaimerText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 11,
     color: theme.colors.textMuted,
     fontStyle: 'italic',
-    marginTop: 4,
+    lineHeight: 16,
+    marginVertical: 12,
+  },
+  searchFlowContainer: {
+    flex: 1,
+  },
+  searchHeaderBox: {
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  listContent: {
+    padding: theme.spacing.md,
+    paddingBottom: 100,
+  },
+  foodListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    padding: 14,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: 8,
+  },
+  foodItemName: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  foodItemServing: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  selectCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchMacroRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 14,
+  },
+  searchMacroText: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateTitle: {
+    fontFamily: theme.fonts.serif,
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: 6,
+  },
+  emptyStateSub: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   keyDialogBackdrop: {
     position: 'absolute',
@@ -1071,36 +1523,48 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: theme.colors.backdrop,
+    alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
   keyDialogCard: {
+    width: '100%',
+    maxWidth: 380,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.xl,
+    borderRadius: theme.radius.lg,
     padding: theme.spacing.lg,
-    gap: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadow.floating,
   },
   keyDialogTitle: {
-    fontSize: 16,
+    fontFamily: theme.fonts.serif,
+    fontSize: 20,
     fontWeight: '700',
     color: theme.colors.textPrimary,
+    marginBottom: 8,
   },
   keyDialogSub: {
-    fontSize: 12,
+    fontFamily: theme.fonts.sans,
+    fontSize: 13,
     color: theme.colors.textSecondary,
     lineHeight: 18,
+    marginBottom: 14,
   },
   keyInput: {
+    fontFamily: theme.fonts.sans,
     backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
     color: theme.colors.textPrimary,
+    marginBottom: 16,
   },
   keyDialogActions: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 6,
   },
 });

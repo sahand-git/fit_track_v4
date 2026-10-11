@@ -225,14 +225,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerSubtitle: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '500',
-    color: theme.colors.textMuted,
+    color: theme.colors.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   headerTitle: {
-    fontSize: 22,
+    fontFamily: theme.fonts.serif,
+    fontSize: 26,
     fontWeight: '700',
     color: theme.colors.textPrimary,
     letterSpacing: -0.4,
@@ -250,6 +252,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   rangeBadgeText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '500',
     color: theme.colors.textSecondary,
@@ -273,6 +276,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statLabel: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '500',
     color: theme.colors.textMuted,
@@ -284,16 +288,19 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   statValue: {
-    fontSize: 26,
+    fontFamily: theme.fonts.serif,
+    fontSize: 28,
     fontWeight: '700',
-    color: theme.colors.textPrimary,
+    color: theme.colors.primary,
   },
   statUnit: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     color: theme.colors.textMuted,
     fontWeight: '500',
   },
   statSub: {
+    fontFamily: theme.fonts.sans,
     fontSize: 11,
     color: theme.colors.textMuted,
     marginTop: 4,
@@ -313,8 +320,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   chartTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: theme.fonts.serif,
+    fontSize: 16,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   targetLabel: {

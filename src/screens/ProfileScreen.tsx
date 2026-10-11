@@ -245,12 +245,14 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   screenTitle: {
-    fontSize: 22,
+    fontFamily: theme.fonts.serif,
+    fontSize: 26,
     fontWeight: '700',
     color: theme.colors.textPrimary,
     letterSpacing: -0.4,
   },
   screenSubtitle: {
+    fontFamily: theme.fonts.sans,
     fontSize: 13,
     color: theme.colors.textMuted,
     marginTop: -8,
@@ -265,6 +267,7 @@ const styles = StyleSheet.create({
     ...theme.shadow.subtle,
   },
   previewTitle: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textMuted,
@@ -272,9 +275,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   previewKcal: {
-    fontSize: 34,
+    fontFamily: theme.fonts.serif,
+    fontSize: 36,
     fontWeight: '700',
-    color: theme.colors.textPrimary,
+    color: theme.colors.primary,
     marginVertical: 4,
     letterSpacing: -0.6,
   },
@@ -311,8 +315,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sectionHeader: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: theme.fonts.serif,
+    fontSize: 16,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: 2,
   },

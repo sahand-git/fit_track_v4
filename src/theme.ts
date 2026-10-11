@@ -1,114 +1,152 @@
+import { Platform } from 'react-native';
+
 /**
- * FitTrack v4 — Botanical Warm Minimal Design System
+ * FitTrack v4 — Editorial Ledger Design System
  * 
- * Calm, confident, premium wellness identity.
- * - Soft neutral background (#FAF9F6)
- * - Deep legible text (#1C1D1B)
- * - Botanical forest green primary (#2E5A44)
- * - Restrained warm accent (#D97746, terra cotta)
- * - Crisp, clean surfaces and subtle dividers without aggressive card borders
+ * Inspired by Google Stitch "FitTrack Editorial Ledger":
+ * - Warm ivory background (#FAF7F2)
+ * - Deep forest green primary (#1E3A2F)
+ * - Muted sage secondary (#7A9283)
+ * - Restrained terracotta accent (#C1664C)
+ * - Charcoal text (#1F2421)
+ * - Newsreader serif for display headlines & Inter sans for body and controls
+ * - Generous spacing, fine dividers, clear reading order, and fewer repeated cards
  */
 
+const serifFont = Platform.select({
+  ios: 'Georgia',
+  android: 'serif',
+  web: 'Newsreader, Georgia, "Times New Roman", serif',
+  default: 'serif',
+});
+
+const sansFont = Platform.select({
+  ios: 'System',
+  android: 'sans-serif',
+  web: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  default: 'sans-serif',
+});
+
 export const theme = {
+  fonts: {
+    serif: serifFont,
+    sans: sansFont,
+  },
+
   colors: {
-    // Canvas & Surfaces
-    background: '#FAF9F6',       // Warm alabaster / linen
+    // Canvas & Surfaces — Warm ivory and fine parchment
+    background: '#FAF7F2',       // Warm ivory background
     surface: '#FFFFFF',          // Clean white surface
-    surfaceSubtle: '#F4F2EC',    // Soft sand tint for secondary chips / bars
+    surfaceSubtle: '#F3EFE6',    // Warm parchment ledger tint
     surfaceElevated: '#FFFFFF',  // Floating sheets & modals
     
-    // Dividers & Outlines
-    border: '#E8E5DF',           // Gentle organic divider
-    borderStrong: '#D5D1C7',     // Interactive outline
-    borderFocus: '#2E5A44',      // Botanical green focus
+    // Dividers & Outlines — Fine ledger rules
+    border: '#E5E0D5',           // Delicate ledger rule
+    borderStrong: '#CEC7B8',     // Interactive outline
+    borderFocus: '#1E3A2F',      // Deep forest green focus
     
-    // Typography
-    textPrimary: '#1E201D',      // Deep charcoal / nearly black
-    textSecondary: '#545852',    // Balanced slate / sage grey
-    textMuted: '#848880',        // Subdued supporting text
-    textInverted: '#FFFFFF',     // Contrast white for primary buttons
+    // Typography — Charcoal & Muted Sage
+    textPrimary: '#1F2421',      // Charcoal text
+    textSecondary: '#555F58',    // Muted charcoal / slate
+    textMuted: '#7E8A82',        // Muted sage grey
+    textInverted: '#FFFFFF',     // Contrast white
     
-    // Brand Botanical Primary
-    primary: '#2E5A44',          // Deep botanical forest green
-    primaryHover: '#244736',     // Pressed / hover state
-    primaryLight: '#EDF3EE',     // Very soft sage wash
-    primaryBorder: '#C8D9CD',    // Delicate botanical accent line
+    // Primary Brand — Deep Forest Green
+    primary: '#1E3A2F',          // Deep forest green
+    primaryHover: '#162C23',     // Dark pressed state
+    primaryLight: '#EBF2ED',     // Soft forest wash
+    primaryBorder: '#BDD2C6',    // Subtle botanical edge
     
-    // Restrained Warm Accent
-    accent: '#C86D44',           // Warm terracotta / clay (used sparingly)
-    accentLight: '#FAF0EB',      // Gentle clay wash
-    accentBorder: '#ECCEC0',     // Subtle terracotta border
+    // Secondary — Muted Sage
+    secondary: '#7A9283',        // Muted sage
+    secondaryLight: '#F0F4F1',   // Soft sage wash
+    secondaryBorder: '#C8D5CD',
+    
+    // Restrained Warm Accent — Terracotta
+    accent: '#C1664C',           // Restrained terracotta accent
+    accentLight: '#FBF1EE',      // Gentle terracotta wash
+    accentBorder: '#E8C8BE',     // Terracotta outline
     
     // Functional States
-    danger: '#B93E3E',           // Crimson / deep brick red
-    dangerLight: '#FAEDED',      // Red wash
-    warning: '#C97D1A',          // Muted ochre amber
-    warningLight: '#FDF7EB',     
-    success: '#2E5A44',          // Same botanical tone
+    danger: '#B83A3A',
+    dangerLight: '#FAEDED',
+    warning: '#BA7720',
+    warningLight: '#FDF7EB',
+    success: '#1E3A2F',
     
-    // Nutrient Spectrum (Subtle, unified & harmonious)
-    macroProtein: '#2E5A44',     // Deep green
-    macroProteinLight: '#EDF3EE',
-    macroCarbs: '#C86D44',       // Terracotta
-    macroCarbsLight: '#FAF0EB',
-    macroFat: '#56667A',         // Slate blue-grey
-    macroFatLight: '#EFF2F6',
+    // Nutrient Spectrum (Editorial harmony)
+    macroProtein: '#1E3A2F',     // Deep forest green
+    macroProteinLight: '#EBF2ED',
+    macroCarbs: '#C1664C',       // Terracotta
+    macroCarbsLight: '#FBF1EE',
+    macroFat: '#7A9283',         // Muted sage
+    macroFatLight: '#F0F4F1',
     
     // Hydration
-    water: '#3A748A',            // Deep slate-cyan mineral water
-    waterLight: '#ECF4F7',
+    water: '#3B6B78',            // Deep slate-cyan mineral water
+    waterLight: '#EDF5F7',
     
     // Overlay backdrop
-    backdrop: 'rgba(28, 29, 27, 0.45)',
+    backdrop: 'rgba(31, 36, 33, 0.45)',
   },
 
   typography: {
-    // Clean, modern scale with comfortable line heights
+    // Editorial Newsreader display styles
     display: {
+      fontFamily: serifFont,
       fontSize: 32,
       fontWeight: '700' as const,
       letterSpacing: -0.6,
       lineHeight: 38,
     },
     title1: {
+      fontFamily: serifFont,
       fontSize: 24,
       fontWeight: '700' as const,
       letterSpacing: -0.4,
       lineHeight: 30,
     },
     title2: {
+      fontFamily: serifFont,
       fontSize: 20,
       fontWeight: '600' as const,
       letterSpacing: -0.3,
       lineHeight: 26,
     },
     title3: {
+      fontFamily: sansFont,
       fontSize: 16,
       fontWeight: '600' as const,
       letterSpacing: -0.2,
       lineHeight: 22,
     },
+    // Inter body and controls
     body: {
+      fontFamily: sansFont,
       fontSize: 15,
       fontWeight: '400' as const,
       lineHeight: 22,
     },
     bodyMedium: {
+      fontFamily: sansFont,
       fontSize: 15,
       fontWeight: '500' as const,
       lineHeight: 22,
     },
     callout: {
+      fontFamily: sansFont,
       fontSize: 13,
       fontWeight: '500' as const,
       lineHeight: 18,
     },
     caption: {
+      fontFamily: sansFont,
       fontSize: 12,
       fontWeight: '400' as const,
       lineHeight: 16,
     },
     captionMedium: {
+      fontFamily: sansFont,
       fontSize: 12,
       fontWeight: '600' as const,
       lineHeight: 16,
@@ -136,18 +174,18 @@ export const theme = {
 
   shadow: {
     subtle: {
-      shadowColor: '#1E201D',
-      shadowOffset: { width: 0, height: 2 },
+      shadowColor: '#1F2421',
+      shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.04,
-      shadowRadius: 8,
+      shadowRadius: 6,
       elevation: 2,
     },
     floating: {
-      shadowColor: '#1E201D',
+      shadowColor: '#1F2421',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.08,
-      shadowRadius: 16,
-      elevation: 6,
+      shadowRadius: 14,
+      elevation: 5,
     },
   },
 };
