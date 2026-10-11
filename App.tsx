@@ -10,8 +10,8 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import {
   BookOpen,
-  Sparkles,
-  QrCode,
+  LineChart,
+  Barcode,
   TrendingUp,
   User,
   LayoutDashboard,
@@ -36,6 +36,7 @@ import { InsightsScreen } from './src/screens/InsightsScreen';
 import { ScannerScreen } from './src/screens/ScannerScreen';
 import { ProgressScreen } from './src/screens/ProgressScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
+import { theme } from './src/theme';
 import * as Haptics from 'expo-haptics';
 
 type Tab = 'diary' | 'insights' | 'scanner' | 'progress' | 'profile';
@@ -123,7 +124,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       {/* Main Screen Body */}
       <View style={styles.main}>
@@ -145,7 +146,7 @@ export default function App() {
               >
                 <LayoutDashboard
                   size={15}
-                  color={diaryView === 'dashboard' ? '#10B981' : '#64748B'}
+                  color={diaryView === 'dashboard' ? theme.colors.primary : theme.colors.textMuted}
                 />
                 <Text
                   style={[
@@ -170,7 +171,7 @@ export default function App() {
               >
                 <UtensilsCrossed
                   size={15}
-                  color={diaryView === 'log' ? '#10B981' : '#64748B'}
+                  color={diaryView === 'log' ? theme.colors.primary : theme.colors.textMuted}
                 />
                 <Text
                   style={[
@@ -208,7 +209,7 @@ export default function App() {
         {/* Tab 2: INSIGHTS */}
         {activeTab === 'insights' && <InsightsScreen profile={profile} />}
 
-        {/* Tab 3: SCANNER (Barcode & AI Camera Viewfinder) */}
+        {/* Tab 3: SCANNER */}
         {activeTab === 'scanner' && (
           <ScannerScreen
             onBack={() => setActiveTab(previousTab)}
@@ -220,28 +221,29 @@ export default function App() {
           />
         )}
 
-        {/* Tab 4: PROGRESS (Trajectory & Body Metrics) */}
+        {/* Tab 4: PROGRESS */}
         {activeTab === 'progress' && <ProgressScreen profile={profile} />}
 
-        {/* Tab 5: PROFILE (Goals & Macro Setup) */}
+        {/* Tab 5: PROFILE */}
         {activeTab === 'profile' && (
           <ProfileScreen profile={profile} onSaveProfile={handleSaveProfile} />
         )}
       </View>
 
-      {/* Floating Bottom 5-Tab Navigation Dock (Hidden on Scanner full-screen) */}
+      {/* Calm Bottom Navigation Bar */}
       {activeTab !== 'scanner' && (
         <View style={styles.dockContainer}>
           <View style={styles.bottomNav}>
             {/* 1. Diary */}
             <TouchableOpacity
-              style={[styles.navBtn, activeTab === 'diary' && styles.navBtnActive]}
+              style={styles.navBtn}
               onPress={() => switchTab('diary')}
               activeOpacity={0.7}
+              accessibilityLabel="Diary"
             >
               <BookOpen
-                size={22}
-                color={activeTab === 'diary' ? '#10B981' : '#64748B'}
+                size={20}
+                color={activeTab === 'diary' ? theme.colors.primary : theme.colors.textMuted}
               />
               <Text
                 style={[
@@ -255,42 +257,48 @@ export default function App() {
 
             {/* 2. Insights */}
             <TouchableOpacity
-              style={[styles.navBtn, activeTab === 'insights' && styles.navBtnActive]}
+              style={styles.navBtn}
               onPress={() => switchTab('insights')}
               activeOpacity={0.7}
+              accessibilityLabel="Insights"
             >
-              <Sparkles
-                size={22}
-                color={activeTab === 'insights' ? '#FA5D29' : '#64748B'}
+              <LineChart
+                size={20}
+                color={activeTab === 'insights' ? theme.colors.primary : theme.colors.textMuted}
               />
               <Text
                 style={[
                   styles.navLabel,
-                  activeTab === 'insights' && { color: '#FA5D29', fontWeight: '700' },
+                  activeTab === 'insights' && styles.navLabelActive,
                 ]}
               >
                 Insights
               </Text>
             </TouchableOpacity>
 
-            {/* 3. Center Elevated Scanner Button */}
+            {/* 3. Barcode Lookup (Balanced, non-dominating) */}
             <TouchableOpacity
-              style={styles.scannerCenterBtn}
+              style={styles.scannerNavBtn}
               onPress={() => switchTab('scanner')}
-              activeOpacity={0.85}
+              activeOpacity={0.7}
+              accessibilityLabel="Lookup Barcode"
             >
-              <QrCode size={26} color="#FFFFFF" />
+              <View style={styles.scannerIconBox}>
+                <Barcode size={18} color={theme.colors.textInverted} />
+              </View>
+              <Text style={styles.scannerNavLabel}>Lookup</Text>
             </TouchableOpacity>
 
             {/* 4. Progress */}
             <TouchableOpacity
-              style={[styles.navBtn, activeTab === 'progress' && styles.navBtnActive]}
+              style={styles.navBtn}
               onPress={() => switchTab('progress')}
               activeOpacity={0.7}
+              accessibilityLabel="Progress"
             >
               <TrendingUp
-                size={22}
-                color={activeTab === 'progress' ? '#10B981' : '#64748B'}
+                size={20}
+                color={activeTab === 'progress' ? theme.colors.primary : theme.colors.textMuted}
               />
               <Text
                 style={[
@@ -304,13 +312,14 @@ export default function App() {
 
             {/* 5. Profile */}
             <TouchableOpacity
-              style={[styles.navBtn, activeTab === 'profile' && styles.navBtnActive]}
+              style={styles.navBtn}
               onPress={() => switchTab('profile')}
               activeOpacity={0.7}
+              accessibilityLabel="Profile"
             >
               <User
-                size={22}
-                color={activeTab === 'profile' ? '#10B981' : '#64748B'}
+                size={20}
+                color={activeTab === 'profile' ? theme.colors.primary : theme.colors.textMuted}
               />
               <Text
                 style={[
@@ -331,7 +340,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090D16',
+    backgroundColor: theme.colors.background,
     paddingTop: Platform.OS === 'android' ? 35 : 0,
   },
   main: {
@@ -342,13 +351,13 @@ const styles = StyleSheet.create({
   },
   diarySegmentBar: {
     flexDirection: 'row',
-    backgroundColor: '#0F172A',
-    marginHorizontal: 16,
+    backgroundColor: theme.colors.surface,
+    marginHorizontal: theme.spacing.md,
     marginVertical: 8,
-    padding: 4,
-    borderRadius: 14,
+    padding: 3,
+    borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: theme.colors.border,
   },
   segmentBtn: {
     flex: 1,
@@ -356,79 +365,74 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 7,
-    borderRadius: 10,
+    borderRadius: theme.radius.sm,
     gap: 6,
   },
   segmentBtnActive: {
-    backgroundColor: '#1E293B',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
+    backgroundColor: theme.colors.primaryLight,
   },
   segmentText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.colors.textMuted,
   },
   segmentTextActive: {
-    color: '#F8FAFC',
-    fontWeight: '700',
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   dockContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 20 : 12,
+    bottom: Platform.OS === 'ios' ? 18 : 10,
     left: 14,
     right: 14,
   },
   bottomNav: {
     flexDirection: 'row',
-    backgroundColor: '#0F172A',
-    borderRadius: 24,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    borderColor: theme.colors.border,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
     justifyContent: 'space-around',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 12,
+    ...theme.shadow.floating,
   },
   navBtn: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 4,
-    paddingHorizontal: 10,
-    minWidth: 54,
-  },
-  navBtnActive: {
-    // subtle active indicator
+    paddingHorizontal: 8,
+    minWidth: 50,
   },
   navLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '500',
+    color: theme.colors.textMuted,
     marginTop: 3,
   },
   navLabelActive: {
-    color: '#10B981',
-    fontWeight: '700',
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
-  scannerCenterBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FA5D29',
+  scannerNavBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -28,
-    borderWidth: 3.5,
-    borderColor: '#090D16',
-    shadowColor: '#FA5D29',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
-    elevation: 14,
+    paddingVertical: 2,
+    minWidth: 50,
+  },
+  scannerIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scannerNavLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
 });

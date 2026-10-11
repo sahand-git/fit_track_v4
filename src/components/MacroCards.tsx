@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { theme } from '../theme';
 
 interface MacroCardsProps {
   calorieTarget: number;
@@ -13,8 +14,6 @@ interface MacroCardsProps {
 }
 
 export const MacroCards: React.FC<MacroCardsProps> = ({
-  calorieTarget,
-  calorieConsumed,
   proteinTarget,
   proteinConsumed,
   carbsTarget,
@@ -22,64 +21,46 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
   fatTarget,
   fatConsumed,
 }) => {
-  const cards = [
+  const macros = [
     {
-      label: 'Daily Target',
-      value: calorieTarget,
-      consumed: calorieConsumed,
-      unit: 'kcal',
-      color: '#10B981', // Emerald
+      name: 'Protein',
+      consumed: Math.round(proteinConsumed),
+      target: proteinTarget,
+      color: theme.colors.macroProtein,
     },
     {
-      label: 'Protein',
-      value: proteinTarget,
-      consumed: Math.round(proteinConsumed * 10) / 10,
-      unit: 'g',
-      color: '#F59E0B', // Amber
+      name: 'Carbs',
+      consumed: Math.round(carbsConsumed),
+      target: carbsTarget,
+      color: theme.colors.macroCarbs,
     },
     {
-      label: 'Carbohydrates',
-      value: carbsTarget,
-      consumed: Math.round(carbsConsumed * 10) / 10,
-      unit: 'g',
-      color: '#06B6D4', // Cyan
-    },
-    {
-      label: 'Fat',
-      value: fatTarget,
-      consumed: Math.round(fatConsumed * 10) / 10,
-      unit: 'g',
-      color: '#EC4899', // Pink
+      name: 'Fat',
+      consumed: Math.round(fatConsumed),
+      target: fatTarget,
+      color: theme.colors.macroFat,
     },
   ];
 
   return (
-    <View style={styles.grid}>
-      {cards.map((card, idx) => {
-        const pct = card.value > 0 ? Math.min((card.consumed / card.value) * 100, 100) : 0;
+    <View style={styles.container}>
+      {macros.map((m) => {
+        const pct = m.target > 0 ? Math.min((m.consumed / m.target) * 100, 100) : 0;
         return (
-          <View key={idx} style={styles.card}>
-            {/* Top: Label */}
-            <Text style={styles.cardLabel} numberOfLines={1}>
-              {card.label}
-            </Text>
-
-            {/* Middle: Prominent Value */}
-            <View style={styles.valueRow}>
-              <Text style={styles.cardValue}>{card.consumed}</Text>
-              <Text style={styles.cardDivider}>/</Text>
-              <Text style={styles.cardTarget}>{card.value}</Text>
+          <View key={m.name} style={styles.macroCol}>
+            <View style={styles.headerRow}>
+              <Text style={styles.macroName}>{m.name}</Text>
+              <Text style={styles.macroNumbers}>
+                <Text style={styles.consumedText}>{m.consumed}</Text>
+                <Text style={styles.targetText}> / {m.target}g</Text>
+              </Text>
             </View>
 
-            {/* Bottom: Unit */}
-            <Text style={styles.cardUnit}>{card.unit}</Text>
-
-            {/* Progress Bar */}
-            <View style={styles.progressTrack}>
+            <View style={styles.track}>
               <View
                 style={[
-                  styles.progressBar,
-                  { width: `${pct}%`, backgroundColor: card.color },
+                  styles.bar,
+                  { width: `${pct}%`, backgroundColor: m.color },
                 ]}
               />
             </View>
@@ -91,65 +72,47 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
 };
 
 const styles = StyleSheet.create({
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginVertical: 12,
-  },
-  card: {
-    flex: 1,
-    minWidth: '46%',
-    backgroundColor: '#131B2E',
-    borderRadius: 16,
-    padding: 14,
+  container: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: theme.colors.border,
+    gap: 12,
+    marginVertical: 10,
+    ...theme.shadow.subtle,
   },
-  cardLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#94A3B8',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  macroCol: {
+    gap: 6,
   },
-  valueRow: {
+  headerRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'baseline',
-    gap: 3,
   },
-  cardValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#F8FAFC',
-  },
-  cardDivider: {
-    fontSize: 14,
-    color: '#475569',
-    fontWeight: '600',
-  },
-  cardTarget: {
+  macroName: {
     fontSize: 13,
-    color: '#64748B',
     fontWeight: '600',
+    color: theme.colors.textPrimary,
   },
-  cardUnit: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#64748B',
-    marginTop: 2,
-    textTransform: 'lowercase',
+  macroNumbers: {
+    fontSize: 12,
   },
-  progressTrack: {
-    height: 4,
-    backgroundColor: '#1E293B',
-    borderRadius: 2,
-    marginTop: 10,
+  consumedText: {
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  targetText: {
+    color: theme.colors.textMuted,
+  },
+  track: {
+    height: 6,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: 3,
     overflow: 'hidden',
   },
-  progressBar: {
+  bar: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
   },
 });

@@ -7,13 +7,10 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
-import { User, Activity, Target, Save, Check } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal } from '../types';
-import {
-  calculateTargets,
-  ACTIVITY_MULTIPLIERS,
-  GOAL_ADJUSTMENTS,
-} from '../utils/calculator';
+import { calculateTargets } from '../utils/calculator';
+import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 
 interface ProfileScreenProps {
@@ -68,70 +65,62 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const activityOptions: { key: ActivityLevel; label: string; desc: string }[] = [
-    { key: 'sedentary', label: 'Sedentary', desc: 'Little to no exercise (1.2x)' },
-    { key: 'light', label: 'Lightly Active', desc: 'Exercise 1-3 days/wk (1.375x)' },
-    { key: 'moderate', label: 'Moderately Active', desc: 'Exercise 3-5 days/wk (1.55x)' },
-    { key: 'very_active', label: 'Very Active', desc: 'Hard training 6-7 days/wk (1.725x)' },
-    { key: 'athlete', label: 'Athlete', desc: 'Heavy sports or physical job (1.9x)' },
+    { key: 'sedentary', label: 'Sedentary', desc: 'Desk job, little to no exercise' },
+    { key: 'light', label: 'Lightly Active', desc: 'Light exercise 1–3 days a week' },
+    { key: 'moderate', label: 'Moderately Active', desc: 'Moderate training 3–5 days a week' },
+    { key: 'very_active', label: 'Very Active', desc: 'Intense training 6–7 days a week' },
   ];
 
   const goalOptions: { key: FitnessGoal; label: string; desc: string }[] = [
-    { key: 'fat_loss_aggressive', label: 'Aggressive Fat Loss', desc: '-500 kcal/day' },
-    { key: 'fat_loss_moderate', label: 'Steady Fat Loss', desc: '-300 kcal/day' },
-    { key: 'maintenance', label: 'Maintain Weight', desc: 'Recomposition / 0 delta' },
-    { key: 'lean_bulk', label: 'Lean Bulk', desc: '+250 kcal/day' },
-    { key: 'muscle_gain', label: 'Muscle Gain', desc: '+450 kcal/day' },
+    { key: 'fat_loss_aggressive', label: 'Aggressive Fat Loss', desc: '−500 kcal daily deficit' },
+    { key: 'fat_loss_moderate', label: 'Steady Fat Loss', desc: '−300 kcal sustainable deficit' },
+    { key: 'maintenance', label: 'Maintain Weight', desc: 'Energy balance & recomposition' },
+    { key: 'lean_bulk', label: 'Lean Bulk', desc: '+250 kcal controlled surplus' },
+    { key: 'muscle_gain', label: 'Muscle Gain', desc: '+450 kcal muscle building' },
   ];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.screenTitle}>Profile & Target Setup</Text>
+      <Text style={styles.screenTitle}>Profile & Goals</Text>
       <Text style={styles.screenSubtitle}>
-        Mifflin-St Jeor metabolic calorie budget and nutrient calculation
+        Calibrated with the Mifflin-St Jeor metabolic formula.
       </Text>
 
-      {/* Calculated Target Summary Card */}
+      {/* Daily Target Estimation Summary Card */}
       <View style={styles.targetPreviewCard}>
-        <Text style={styles.previewTitle}>Calculated Daily Target & Nutrients</Text>
-        <View style={styles.previewGrid}>
-          <View style={styles.previewBox}>
-            <Text style={styles.previewBoxLabel}>Daily Target</Text>
-            <Text style={styles.previewBoxValue}>{liveTargets.targetCalories}</Text>
-            <Text style={styles.previewBoxUnit}>kcal</Text>
-          </View>
-          <View style={styles.previewBox}>
-            <Text style={styles.previewBoxLabel}>Protein</Text>
-            <Text style={[styles.previewBoxValue, { color: '#F59E0B' }]}>
-              {liveTargets.targetProtein}
-            </Text>
-            <Text style={styles.previewBoxUnit}>g</Text>
-          </View>
-          <View style={styles.previewBox}>
-            <Text style={styles.previewBoxLabel}>Carbohydrates</Text>
-            <Text style={[styles.previewBoxValue, { color: '#06B6D4' }]}>
-              {liveTargets.targetCarbs}
-            </Text>
-            <Text style={styles.previewBoxUnit}>g</Text>
-          </View>
-          <View style={styles.previewBox}>
-            <Text style={styles.previewBoxLabel}>Fat</Text>
-            <Text style={[styles.previewBoxValue, { color: '#EC4899' }]}>
-              {liveTargets.targetFat}
-            </Text>
-            <Text style={styles.previewBoxUnit}>g</Text>
-          </View>
-        </View>
-        <Text style={styles.bmrFootnote}>
+        <Text style={styles.previewTitle}>Estimated Daily Target</Text>
+        <Text style={styles.previewKcal}>{liveTargets.targetCalories} kcal</Text>
+        <Text style={styles.previewMeta}>
           BMR: {liveTargets.bmr} kcal • TDEE: {liveTargets.tdee} kcal
         </Text>
+
+        <View style={styles.macroStrip}>
+          <View style={styles.macroStripItem}>
+            <Text style={[styles.macroVal, { color: theme.colors.macroProtein }]}>
+              {liveTargets.targetProtein}g
+            </Text>
+            <Text style={styles.macroLabel}>Protein</Text>
+          </View>
+          <View style={styles.macroDivider} />
+          <View style={styles.macroStripItem}>
+            <Text style={[styles.macroVal, { color: theme.colors.macroCarbs }]}>
+              {liveTargets.targetCarbs}g
+            </Text>
+            <Text style={styles.macroLabel}>Carbs</Text>
+          </View>
+          <View style={styles.macroDivider} />
+          <View style={styles.macroStripItem}>
+            <Text style={[styles.macroVal, { color: theme.colors.macroFat }]}>
+              {liveTargets.targetFat}g
+            </Text>
+            <Text style={styles.macroLabel}>Fat</Text>
+          </View>
+        </View>
       </View>
 
-      {/* Biometric Inputs */}
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionTitleRow}>
-          <User size={18} color="#10B981" />
-          <Text style={styles.sectionTitle}>Body Stats</Text>
-        </View>
+      {/* Body Stats Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>Body Measurements</Text>
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Name</Text>
@@ -140,7 +129,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             value={name}
             onChangeText={setName}
             placeholder="Your name"
-            placeholderTextColor="#64748B"
+            placeholderTextColor={theme.colors.textMuted}
           />
         </View>
 
@@ -153,7 +142,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               onChangeText={setWeightKg}
               keyboardType="numeric"
               placeholder="75"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={theme.colors.textMuted}
             />
           </View>
           <View style={[styles.inputGroup, { flex: 1 }]}>
@@ -164,7 +153,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               onChangeText={setHeightCm}
               keyboardType="numeric"
               placeholder="178"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={theme.colors.textMuted}
             />
           </View>
           <View style={[styles.inputGroup, { flex: 1 }]}>
@@ -175,19 +164,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               onChangeText={setAge}
               keyboardType="numeric"
               placeholder="26"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={theme.colors.textMuted}
             />
           </View>
         </View>
 
-        {/* Gender Toggle */}
-        <Text style={styles.inputLabel}>Biological Gender</Text>
+        {/* Biological Sex Toggle */}
+        <Text style={styles.inputLabel}>Biological Sex</Text>
         <View style={styles.genderRow}>
           {(['male', 'female'] as Gender[]).map((g) => (
             <TouchableOpacity
               key={g}
               style={[styles.genderBtn, gender === g && styles.genderBtnActive]}
               onPress={() => setGender(g)}
+              activeOpacity={0.7}
             >
               <Text style={[styles.genderBtnText, gender === g && styles.genderBtnTextActive]}>
                 {g.charAt(0).toUpperCase() + g.slice(1)}
@@ -198,11 +188,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       </View>
 
       {/* Activity Level Selector */}
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionTitleRow}>
-          <Activity size={18} color="#06B6D4" />
-          <Text style={styles.sectionTitle}>Activity Level</Text>
-        </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>Activity Level</Text>
         {activityOptions.map((act) => (
           <TouchableOpacity
             key={act.key}
@@ -214,17 +201,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <Text style={styles.optionLabel}>{act.label}</Text>
               <Text style={styles.optionDesc}>{act.desc}</Text>
             </View>
-            {activityLevel === act.key && <Check size={18} color="#10B981" />}
+            {activityLevel === act.key && <Check size={16} color={theme.colors.primary} />}
           </TouchableOpacity>
         ))}
       </View>
 
       {/* Fitness Goal Selector */}
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionTitleRow}>
-          <Target size={18} color="#F59E0B" />
-          <Text style={styles.sectionTitle}>Fitness Goal</Text>
-        </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>Nutritional Goal</Text>
         {goalOptions.map((g) => (
           <TouchableOpacity
             key={g.key}
@@ -236,15 +220,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <Text style={styles.optionLabel}>{g.label}</Text>
               <Text style={styles.optionDesc}>{g.desc}</Text>
             </View>
-            {goal === g.key && <Check size={18} color="#10B981" />}
+            {goal === g.key && <Check size={16} color={theme.colors.primary} />}
           </TouchableOpacity>
         ))}
       </View>
 
       {/* Save Button */}
-      <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
-        <Save size={18} color="#FFFFFF" />
-        <Text style={styles.saveBtnText}>Save & Apply Targets</Text>
+      <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
+        <Text style={styles.saveBtnText}>Save Targets</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -253,96 +236,88 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090D16',
+    backgroundColor: theme.colors.background,
   },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
     paddingBottom: 110,
+    gap: 16,
   },
   screenTitle: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#F8FAFC',
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    letterSpacing: -0.4,
   },
   screenSubtitle: {
     fontSize: 13,
-    color: '#64748B',
-    marginTop: 4,
-    marginBottom: 16,
+    color: theme.colors.textMuted,
+    marginTop: -8,
   },
   targetPreviewCard: {
-    backgroundColor: '#131B2E',
-    borderRadius: 18,
-    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.lg,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    marginBottom: 16,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    ...theme.shadow.subtle,
   },
   previewTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#94A3B8',
-    marginBottom: 12,
-  },
-  previewGrid: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  previewBox: {
-    flex: 1,
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
-    padding: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-  },
-  previewBoxLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  previewBoxValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#F8FAFC',
-  },
-  previewBoxUnit: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#64748B',
-    marginTop: 2,
-  },
-  bmrFootnote: {
     fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-    marginTop: 12,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
-  sectionCard: {
-    backgroundColor: '#131B2E',
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    marginBottom: 16,
+  previewKcal: {
+    fontSize: 34,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginVertical: 4,
+    letterSpacing: -0.6,
   },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  previewMeta: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
     marginBottom: 14,
   },
-  sectionTitle: {
-    fontSize: 16,
+  macroStrip: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingTop: 14,
+  },
+  macroStripItem: {
+    alignItems: 'center',
+  },
+  macroVal: {
+    fontSize: 17,
     fontWeight: '700',
-    color: '#F8FAFC',
+  },
+  macroLabel: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
+  macroDivider: {
+    width: 1,
+    backgroundColor: theme.colors.border,
+  },
+  section: {
+    gap: 10,
+  },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    marginBottom: 2,
   },
   inputGroup: {
-    marginBottom: 12,
+    gap: 6,
   },
   rowInputs: {
     flexDirection: 'row',
@@ -350,16 +325,15 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#94A3B8',
-    marginBottom: 6,
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
   },
   input: {
-    backgroundColor: '#0F172A',
-    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    color: '#F8FAFC',
+    borderColor: theme.colors.border,
+    color: theme.colors.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
@@ -367,68 +341,65 @@ const styles = StyleSheet.create({
   genderRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 6,
   },
   genderBtn: {
     flex: 1,
-    backgroundColor: '#0F172A',
-    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: theme.colors.border,
     paddingVertical: 10,
     alignItems: 'center',
   },
   genderBtnActive: {
-    borderColor: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryLight,
   },
   genderBtnText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#94A3B8',
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
   },
   genderBtnTextActive: {
-    color: '#10B981',
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   optionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
     padding: 12,
-    marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: theme.colors.border,
   },
   optionRowActive: {
-    borderColor: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryLight,
   },
   optionLabel: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#F8FAFC',
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
   },
   optionDesc: {
-    fontSize: 11,
-    color: '#64748B',
+    fontSize: 12,
+    color: theme.colors.textMuted,
     marginTop: 2,
   },
   saveBtn: {
-    backgroundColor: '#10B981',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderRadius: 14,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.md,
     paddingVertical: 14,
-    marginTop: 6,
-    marginBottom: 30,
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 20,
+    ...theme.shadow.subtle,
   },
   saveBtnText: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '600',
+    color: theme.colors.textInverted,
   },
 });

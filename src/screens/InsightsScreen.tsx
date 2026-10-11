@@ -3,8 +3,6 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-nati
 import {
   Flame,
   Dumbbell,
-  Sparkles,
-  Award,
   Calendar,
   AlertCircle,
 } from 'lucide-react-native';
@@ -44,7 +42,6 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
   const calorieTarget = profile?.targetCalories || 2000;
   const proteinTarget = profile?.targetProtein || 140;
 
-  // Real calculations over the 7 days
   const activeDays = daysLogs.filter((d) => d.log.meals.length > 0);
   const totalCaloriesLogged = daysLogs.reduce((sum, d) => {
     return sum + d.log.meals.reduce((mSum, m) => mSum + m.calories, 0);
@@ -77,69 +74,54 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Top Header */}
+      {/* Header */}
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.headerSubtitle}>7-DAY SUMMARY</Text>
+          <Text style={styles.headerSubtitle}>Weekly Review</Text>
           <Text style={styles.headerTitle}>Nutrition Insights</Text>
         </View>
         <View style={styles.rangeBadge}>
-          <Calendar size={14} color={theme.colors.primary} />
+          <Calendar size={13} color={theme.colors.textMuted} />
           <Text style={styles.rangeBadgeText}>Last 7 Days</Text>
         </View>
       </View>
 
-      {/* Quick Stats Grid */}
+      {/* Quick Averages Grid */}
       <View style={styles.statsGrid}>
-        {/* Stat 1: Daily Average Calories */}
         <View style={styles.statCard}>
           <View style={styles.statTop}>
-            <Text style={styles.statLabel}>AVG LOGGED CALORIES</Text>
-            <View style={[styles.statIconBox, { backgroundColor: theme.colors.accentLight }]}>
-              <Flame size={15} color={theme.colors.accent} />
-            </View>
+            <Text style={styles.statLabel}>Daily Average</Text>
+            <Flame size={15} color={theme.colors.accent} />
           </View>
           <View style={styles.statValueRow}>
             <Text style={styles.statValue}>{dailyAvgCalories}</Text>
-            <Text style={styles.statUnit}>kcal/day</Text>
+            <Text style={styles.statUnit}>kcal</Text>
           </View>
           <Text style={styles.statSub}>
-            {activeDays.length > 0
-              ? `Across ${activeDays.length} active day(s)`
-              : 'No meals logged yet'}
+            {activeDays.length > 0 ? `${activeDays.length} of 7 days logged` : 'No data yet'}
           </Text>
         </View>
 
-        {/* Stat 2: Daily Average Protein */}
         <View style={styles.statCard}>
           <View style={styles.statTop}>
-            <Text style={styles.statLabel}>AVG PROTEIN</Text>
-            <View style={[styles.statIconBox, { backgroundColor: theme.colors.primaryLight }]}>
-              <Dumbbell size={15} color={theme.colors.primary} />
-            </View>
+            <Text style={styles.statLabel}>Avg Protein</Text>
+            <Dumbbell size={15} color={theme.colors.primary} />
           </View>
           <View style={styles.statValueRow}>
             <Text style={styles.statValue}>{dailyAvgProtein}</Text>
-            <Text style={styles.statUnit}>g/day</Text>
+            <Text style={styles.statUnit}>g</Text>
           </View>
           <Text style={styles.statSub}>Target: {proteinTarget}g</Text>
         </View>
       </View>
 
-      {/* Weekly 7-Day Calorie Bar Chart */}
+      {/* 7-Day Calorie Chart */}
       <View style={styles.chartCard}>
         <View style={styles.chartHeader}>
-          <View>
-            <Text style={styles.chartTitle}>7-Day Calorie Intake</Text>
-            <Text style={styles.chartSubtitle}>Computed directly from your diary</Text>
-          </View>
-          <View style={styles.targetPill}>
-            <View style={styles.targetDot} />
-            <Text style={styles.targetPillText}>{calorieTarget} kcal Target</Text>
-          </View>
+          <Text style={styles.chartTitle}>7-Day Intake Trend</Text>
+          <Text style={styles.targetLabel}>{calorieTarget} kcal target</Text>
         </View>
 
-        {/* 7 Bars */}
         <View style={styles.barChartContainer}>
           <View style={styles.barsRow}>
             {daysLogs.map((item, idx) => {
@@ -167,7 +149,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                         {
                           height: `${heightPct}%`,
                           backgroundColor: !hasData
-                            ? theme.colors.surfaceBorder
+                            ? theme.colors.surfaceSubtle
                             : dayKcal <= calorieTarget
                             ? theme.colors.primary
                             : theme.colors.accent,
@@ -185,68 +167,41 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
           </View>
         </View>
 
-        {/* Selected Day Details */}
         {selectedEntry && (
           <View style={styles.detailBanner}>
-            <View style={styles.detailLeft}>
-              <Text style={styles.detailDayText}>
-                {formatDisplayDate(selectedEntry.date)}: {selectedCalories} kcal
-              </Text>
-            </View>
+            <Text style={styles.detailDayText}>
+              {formatDisplayDate(selectedEntry.date)}: {selectedCalories} kcal
+            </Text>
             <Text style={styles.detailStatusText}>
               {selectedCalories === 0
                 ? 'No entries'
                 : selectedCalories <= calorieTarget
-                ? `${calorieTarget - selectedCalories} kcal under`
-                : `${selectedCalories - calorieTarget} kcal over`}
+                ? `${calorieTarget - selectedCalories} kcal under budget`
+                : `${selectedCalories - calorieTarget} kcal over budget`}
             </Text>
           </View>
         )}
       </View>
 
-      {/* Generated Analysis Observations */}
+      {/* Observations Section */}
       <View style={styles.insightsSection}>
-        <View style={styles.sectionHeader}>
-          <Sparkles size={16} color={theme.colors.primary} />
-          <Text style={styles.sectionTitle}>Diary Observations</Text>
-        </View>
+        <Text style={styles.sectionTitle}>Weekly Observations</Text>
 
         {activeDays.length === 0 ? (
           <View style={styles.emptyCard}>
-            <AlertCircle size={24} color={theme.colors.textMuted} />
+            <AlertCircle size={22} color={theme.colors.textMuted} />
             <Text style={styles.emptyTitle}>Not enough logged days yet</Text>
             <Text style={styles.emptyBody}>
-              Log meals over several days to unlock nutritional consistency reports and trend insights.
+              Log meals over several days to unlock consistency and habit trends.
             </Text>
           </View>
         ) : (
-          <>
-            <View style={styles.insightCard}>
-              <View style={[styles.insightIconBox, { backgroundColor: theme.colors.primaryLight }]}>
-                <Award size={18} color={theme.colors.primary} />
-              </View>
-              <View style={styles.insightContent}>
-                <Text style={styles.insightTitle}>Tracking Consistency</Text>
-                <Text style={styles.insightBody}>
-                  You have logged food on {activeDays.length} out of the last 7 days. Daily logging is the #1 predictor of meeting fitness goals.
-                </Text>
-              </View>
-            </View>
-
-            {dailyAvgProtein > 0 && (
-              <View style={styles.insightCard}>
-                <View style={[styles.insightIconBox, { backgroundColor: theme.colors.accentLight }]}>
-                  <Dumbbell size={18} color={theme.colors.accent} />
-                </View>
-                <View style={styles.insightContent}>
-                  <Text style={styles.insightTitle}>Protein Average</Text>
-                  <Text style={styles.insightBody}>
-                    Your average protein intake is {dailyAvgProtein}g/day (Target: {proteinTarget}g). {dailyAvgProtein >= proteinTarget ? 'Great job hitting your muscle synthesis target!' : 'Try adding a lean protein source like chicken breast or Greek yogurt.'}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </>
+          <View style={styles.observationCard}>
+            <Text style={styles.observationTitle}>Logging Consistency</Text>
+            <Text style={styles.observationBody}>
+              You have tracked food on {activeDays.length} out of the last 7 days. Consistency helps establish a clear metabolic baseline.
+            </Text>
+          </View>
         )}
       </View>
     </ScrollView>
@@ -259,26 +214,28 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
     paddingBottom: 110,
+    gap: 16,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
   headerSubtitle: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '500',
     color: theme.colors.textMuted,
-    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   headerTitle: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     color: theme.colors.textPrimary,
+    letterSpacing: -0.4,
     marginTop: 2,
   },
   rangeBadge: {
@@ -286,29 +243,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: theme.colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: theme.colors.surfaceBorder,
+    borderColor: theme.colors.border,
   },
   rangeBadgeText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
   },
   statsGrid: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 16,
   },
   statCard: {
     flex: 1,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.xl,
-    padding: 14,
+    padding: theme.spacing.md,
     borderWidth: 1,
-    borderColor: theme.colors.surfaceBorder,
+    borderColor: theme.colors.border,
+    ...theme.shadow.subtle,
   },
   statTop: {
     flexDirection: 'row',
@@ -316,46 +273,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statLabel: {
-    fontSize: 9,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '500',
     color: theme.colors.textMuted,
-    letterSpacing: 0.6,
-  },
-  statIconBox: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   statValueRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 4,
-    marginTop: 8,
+    marginTop: 6,
   },
   statValue: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 26,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   statUnit: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
     color: theme.colors.textMuted,
+    fontWeight: '500',
   },
   statSub: {
-    fontSize: 10,
+    fontSize: 11,
     color: theme.colors.textMuted,
     marginTop: 4,
   },
   chartCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.xl,
-    padding: 16,
+    padding: theme.spacing.lg,
     borderWidth: 1,
-    borderColor: theme.colors.surfaceBorder,
-    marginBottom: 16,
+    borderColor: theme.colors.border,
+    ...theme.shadow.subtle,
   },
   chartHeader: {
     flexDirection: 'row',
@@ -364,60 +313,38 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   chartTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: theme.colors.textPrimary,
   },
-  chartSubtitle: {
+  targetLabel: {
     fontSize: 11,
     color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  targetPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.surfaceLight,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: theme.radius.full,
-  },
-  targetDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: theme.colors.primary,
-  },
-  targetPillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: theme.colors.textSecondary,
   },
   barChartContainer: {
-    height: 140,
+    height: 120,
     justifyContent: 'flex-end',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   barsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    height: 120,
+    height: 100,
   },
   barColumn: {
     flex: 1,
     alignItems: 'center',
-    height: 120,
+    height: 100,
     justifyContent: 'flex-end',
   },
   barTrack: {
-    width: 22,
-    height: 100,
-    backgroundColor: theme.colors.surfaceLight,
-    borderRadius: 11,
+    width: 18,
+    height: 80,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: 9,
     justifyContent: 'flex-end',
     overflow: 'hidden',
-    padding: 2,
   },
   barFill: {
     width: '100%',
@@ -425,101 +352,79 @@ const styles = StyleSheet.create({
   },
   barFillSelected: {
     borderWidth: 1.5,
-    borderColor: '#FFFFFF',
+    borderColor: theme.colors.textPrimary,
   },
   dayLabel: {
     fontSize: 11,
-    fontWeight: '600',
     color: theme.colors.textMuted,
     marginTop: 6,
   },
   dayLabelSelected: {
     color: theme.colors.textPrimary,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   detailBanner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: theme.colors.surfaceLight,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    backgroundColor: theme.colors.surfaceSubtle,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: theme.radius.md,
-  },
-  detailLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginTop: 4,
   },
   detailDayText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: theme.colors.textPrimary,
   },
   detailStatusText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.primary,
+    fontSize: 11,
+    color: theme.colors.textSecondary,
   },
   insightsSection: {
-    gap: 10,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
     color: theme.colors.textPrimary,
+    marginBottom: 2,
   },
   emptyCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
-    padding: 20,
+    padding: 18,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: theme.colors.surfaceBorder,
-    gap: 6,
+    borderColor: theme.colors.border,
+    gap: 4,
   },
   emptyTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: theme.colors.textPrimary,
   },
   emptyBody: {
     fontSize: 12,
     color: theme.colors.textMuted,
     textAlign: 'center',
-    lineHeight: 18,
   },
-  insightCard: {
+  observationCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
     padding: 14,
-    flexDirection: 'row',
-    gap: 12,
     borderWidth: 1,
-    borderColor: theme.colors.surfaceBorder,
+    borderColor: theme.colors.border,
+    gap: 4,
+    ...theme.shadow.subtle,
   },
-  insightIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  insightContent: {
-    flex: 1,
-  },
-  insightTitle: {
+  observationTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: theme.colors.textPrimary,
-    marginBottom: 4,
   },
-  insightBody: {
+  observationBody: {
     fontSize: 12,
     color: theme.colors.textSecondary,
     lineHeight: 18,

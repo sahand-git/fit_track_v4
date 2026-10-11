@@ -17,11 +17,13 @@ import {
   Search,
   X,
   Check,
+  Utensils,
 } from 'lucide-react-native';
 import { DailyLog, LoggedMeal, MealType, FoodItem } from '../types';
 import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
 import { FoodDetailsModal } from '../components/FoodDetailsModal';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
+import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 
 interface FoodLogScreenProps {
@@ -43,7 +45,6 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   onRemoveMeal,
   initialMealType = 'breakfast',
 }) => {
-  // Modal states
   const [modalVisible, setModalVisible] = useState(false);
   const [activeMealType, setActiveMealType] = useState<MealType>(initialMealType);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,7 +52,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   const [servingsCount, setServingsCount] = useState<number>(1);
   const [inspectingMeal, setInspectingMeal] = useState<LoggedMeal | null>(null);
 
-  // Date navigation using local date calculation
+  // Date navigation
   const handlePrevDay = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onSelectDate(addDaysToDateString(selectedDate, -1));
@@ -61,8 +62,6 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onSelectDate(addDaysToDateString(selectedDate, 1));
   };
-
-  const isToday = selectedDate === getTodayDateString();
 
   // Daily Totals
   const totalKcal = log.meals.reduce((sum, m) => sum + m.calories, 0);
@@ -104,12 +103,6 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       protein: Math.round(selectedFood.protein * servingsCount * 10) / 10,
       carbs: Math.round(selectedFood.carbs * servingsCount * 10) / 10,
       fat: Math.round(selectedFood.fat * servingsCount * 10) / 10,
-      fiber: selectedFood.fiber ? Math.round(selectedFood.fiber * servingsCount * 10) / 10 : undefined,
-      sugar: selectedFood.sugar ? Math.round(selectedFood.sugar * servingsCount * 10) / 10 : undefined,
-      sodium: selectedFood.sodium ? Math.round(selectedFood.sodium * servingsCount) : undefined,
-      potassium: selectedFood.potassium ? Math.round(selectedFood.potassium * servingsCount) : undefined,
-      calcium: selectedFood.calcium ? Math.round(selectedFood.calcium * servingsCount) : undefined,
-      iron: selectedFood.iron ? Math.round(selectedFood.iron * servingsCount * 10) / 10 : undefined,
       timestamp: new Date().toISOString(),
     };
 
@@ -139,12 +132,6 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       carbs: Math.round(baseCarbs * newServings * 10) / 10,
       fat: Math.round(baseFat * newServings * 10) / 10,
       servingGrams: Math.round(baseGrams * newServings),
-      fiber: inspectingMeal.fiber ? Math.round((inspectingMeal.fiber / baseServings) * newServings * 10) / 10 : undefined,
-      sugar: inspectingMeal.sugar ? Math.round((inspectingMeal.sugar / baseServings) * newServings * 10) / 10 : undefined,
-      sodium: inspectingMeal.sodium ? Math.round((inspectingMeal.sodium / baseServings) * newServings) : undefined,
-      potassium: inspectingMeal.potassium ? Math.round((inspectingMeal.potassium / baseServings) * newServings) : undefined,
-      calcium: inspectingMeal.calcium ? Math.round((inspectingMeal.calcium / baseServings) * newServings) : undefined,
-      iron: inspectingMeal.iron ? Math.round((inspectingMeal.iron / baseServings) * newServings * 10) / 10 : undefined,
     };
 
     if (onUpdateMeal) {
@@ -165,145 +152,183 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Date Navigator Header */}
+      {/* Calm Calendar Navigation */}
       <View style={styles.dateHeader}>
-        <TouchableOpacity style={styles.dateNavBtn} onPress={handlePrevDay}>
-          <ChevronLeft size={20} color="#94A3B8" />
+        <TouchableOpacity
+          style={styles.dateNavBtn}
+          onPress={handlePrevDay}
+          accessibilityLabel="Previous day"
+          accessibilityRole="button"
+        >
+          <ChevronLeft size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
-        <View style={styles.dateTitleContainer}>
-          <Text style={styles.dateTitle}>
-            {formatDisplayDate(selectedDate)}
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.dateNavBtn} onPress={handleNextDay}>
-          <ChevronRight size={20} color="#94A3B8" />
+
+        <Text style={styles.dateTitle}>{formatDisplayDate(selectedDate)}</Text>
+
+        <TouchableOpacity
+          style={styles.dateNavBtn}
+          onPress={handleNextDay}
+          accessibilityLabel="Next day"
+          accessibilityRole="button"
+        >
+          <ChevronRight size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      {/* Daily Total Summary Bar */}
+      {/* Understated Daily Summary Strip */}
       <View style={styles.summaryBar}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{totalKcal}</Text>
           <Text style={styles.summaryLabel}>kcal</Text>
         </View>
-        <View style={styles.summaryDivider} />
+        <View style={styles.divider} />
         <View style={styles.summaryItem}>
-          <Text style={[styles.summaryValue, { color: '#F59E0B' }]}>{totalProtein}g</Text>
+          <Text style={styles.summaryValue}>{totalProtein}g</Text>
           <Text style={styles.summaryLabel}>Protein</Text>
         </View>
-        <View style={styles.summaryDivider} />
+        <View style={styles.divider} />
         <View style={styles.summaryItem}>
-          <Text style={[styles.summaryValue, { color: '#06B6D4' }]}>{totalCarbs}g</Text>
+          <Text style={styles.summaryValue}>{totalCarbs}g</Text>
           <Text style={styles.summaryLabel}>Carbs</Text>
         </View>
-        <View style={styles.summaryDivider} />
+        <View style={styles.divider} />
         <View style={styles.summaryItem}>
-          <Text style={[styles.summaryValue, { color: '#EC4899' }]}>{totalFat}g</Text>
+          <Text style={styles.summaryValue}>{totalFat}g</Text>
           <Text style={styles.summaryLabel}>Fat</Text>
         </View>
       </View>
 
-      {/* Meal Groups */}
+      {/* Meal Groups Scroll List */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {mealCategories.map((cat) => {
           const categoryMeals = log.meals.filter((m) => m.mealType === cat.key);
           const categoryKcal = categoryMeals.reduce((s, m) => s + m.calories, 0);
 
           return (
-            <View key={cat.key} style={styles.mealGroupCard}>
-              <View style={styles.mealGroupHeader}>
+            <View key={cat.key} style={styles.mealSection}>
+              {/* Category Header */}
+              <View style={styles.mealSectionHeader}>
                 <View>
-                  <Text style={styles.mealGroupTitle}>{cat.label}</Text>
-                  <Text style={styles.mealGroupKcal}>{categoryKcal} kcal</Text>
+                  <Text style={styles.categoryTitle}>{cat.label}</Text>
+                  {categoryKcal > 0 && (
+                    <Text style={styles.categoryKcal}>{categoryKcal} kcal</Text>
+                  )}
                 </View>
+
                 <TouchableOpacity
                   style={styles.addFoodBtn}
                   onPress={() => openAddModal(cat.key)}
-                  activeOpacity={0.7}
+                  accessibilityLabel={`Add food to ${cat.label}`}
+                  accessibilityRole="button"
                 >
-                  <Plus size={16} color="#10B981" />
-                  <Text style={styles.addFoodBtnText}>Add Food</Text>
+                  <Plus size={14} color={theme.colors.primary} />
+                  <Text style={styles.addFoodBtnText}>Add</Text>
                 </TouchableOpacity>
               </View>
 
               {/* Items List */}
               {categoryMeals.length === 0 ? (
-                <Text style={styles.emptyPrompt}>No food logged for {cat.label.toLowerCase()}</Text>
+                <TouchableOpacity
+                  style={styles.emptyPromptBox}
+                  onPress={() => openAddModal(cat.key)}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.emptyPromptText}>
+                    No {cat.label.toLowerCase()} logged yet. Tap to add.
+                  </Text>
+                </TouchableOpacity>
               ) : (
-                categoryMeals.map((item) => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.foodRow}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                      setInspectingMeal(item);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.foodInfo}>
-                      <Text style={styles.foodName}>{item.name}</Text>
-                      <Text style={styles.foodPortion}>
-                        {item.servings} × {item.servingSize} ({item.servingGrams}g)
-                      </Text>
-                      <Text style={styles.foodMacros}>
-                        P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g
-                      </Text>
-                    </View>
-                    <View style={styles.foodActions}>
-                      <Text style={styles.foodKcal}>{item.calories} kcal</Text>
-                      <TouchableOpacity
-                        style={styles.deleteBtn}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleDelete(item.id);
-                        }}
-                      >
-                        <Trash2 size={16} color="#EF4444" />
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
-                ))
+                <View style={styles.foodListContainer}>
+                  {categoryMeals.map((item, idx) => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[
+                        styles.foodRow,
+                        idx > 0 && styles.foodRowBorder,
+                      ]}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        setInspectingMeal(item);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.foodInfo}>
+                        <Text style={styles.foodName}>{item.name}</Text>
+                        <Text style={styles.foodPortion}>
+                          {item.servings} × {item.servingSize}
+                        </Text>
+                        <Text style={styles.foodMacros}>
+                          P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g
+                        </Text>
+                      </View>
+
+                      <View style={styles.foodRight}>
+                        <Text style={styles.foodKcal}>{item.calories} kcal</Text>
+                        <TouchableOpacity
+                          style={styles.deleteBtn}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleDelete(item.id);
+                          }}
+                          accessibilityLabel={`Delete ${item.name}`}
+                          accessibilityRole="button"
+                        >
+                          <Trash2 size={15} color={theme.colors.danger} />
+                        </TouchableOpacity>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               )}
             </View>
           );
         })}
       </ScrollView>
 
-      {/* Add Food Modal */}
+      {/* Add Food Modal: Focused, clean, clear typography */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet}>
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 Add to {activeMealType.charAt(0).toUpperCase() + activeMealType.slice(1)}
               </Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <X size={22} color="#94A3B8" />
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                accessibilityLabel="Close"
+              >
+                <X size={20} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             {/* Search Input */}
             <View style={styles.searchBar}>
-              <Search size={18} color="#64748B" />
+              <Search size={16} color={theme.colors.textMuted} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search food (e.g. egg, whey, rice)..."
-                placeholderTextColor="#64748B"
+                placeholder="Search food name or category..."
+                placeholderTextColor={theme.colors.textMuted}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
+                autoFocus
               />
             </View>
 
-            {/* Selected Food Adjustment Bar */}
+            {/* Selected Food Confirmation Bar */}
             {selectedFood && (
               <View style={styles.selectedBox}>
                 <View style={styles.selectedTop}>
-                  <Text style={styles.selectedName}>{selectedFood.name}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.selectedName}>{selectedFood.name}</Text>
+                    <Text style={styles.selectedServingSub}>
+                      {selectedFood.servingSize} per serving
+                    </Text>
+                  </View>
                   <Text style={styles.selectedKcal}>
                     {Math.round(selectedFood.calories * servingsCount)} kcal
                   </Text>
                 </View>
+
                 <View style={styles.portionRow}>
                   <Text style={styles.portionLabel}>Servings:</Text>
                   <View style={styles.stepper}>
@@ -311,7 +336,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                       style={styles.stepBtn}
                       onPress={() => setServingsCount((prev) => Math.max(0.5, prev - 0.5))}
                     >
-                      <Text style={styles.stepBtnText}>-</Text>
+                      <Text style={styles.stepBtnText}>−</Text>
                     </TouchableOpacity>
                     <Text style={styles.stepValue}>{servingsCount}</Text>
                     <TouchableOpacity
@@ -322,25 +347,26 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                     </TouchableOpacity>
                   </View>
                 </View>
+
                 <TouchableOpacity style={styles.logConfirmBtn} onPress={handleSaveFood}>
-                  <Check size={18} color="#FFFFFF" />
-                  <Text style={styles.logConfirmBtnText}>Log Food</Text>
+                  <Check size={16} color={theme.colors.textInverted} />
+                  <Text style={styles.logConfirmBtnText}>Log to Diary</Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* Food List */}
+            {/* Food Search Results */}
             <FlatList
               data={filteredFoods}
               keyExtractor={(item) => item.id}
               contentContainerStyle={{ paddingBottom: 24 }}
               ListEmptyComponent={
-                <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-                  <Text style={{ color: '#94A3B8', fontSize: 14, fontWeight: '600' }}>
+                <View style={styles.emptySearchBox}>
+                  <Text style={styles.emptySearchTitle}>
                     No foods found matching "{searchQuery}"
                   </Text>
-                  <Text style={{ color: '#64748B', fontSize: 12, marginTop: 4 }}>
-                    Try searching for egg, chicken, rice, banana, etc.
+                  <Text style={styles.emptySearchSub}>
+                    Try searching for common foods like chicken, eggs, rice, or oats.
                   </Text>
                 </View>
               }
@@ -367,7 +393,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
         </View>
       </Modal>
 
-      {/* Rich Food Details & Nutrition Facts Modal */}
+      {/* Food Details & Serving Adjustment Modal */}
       <FoodDetailsModal
         visible={inspectingMeal !== null}
         item={inspectingMeal}
@@ -388,120 +414,128 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090D16',
+    backgroundColor: theme.colors.background,
   },
   dateHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   dateNavBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#131B2E',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dateTitleContainer: {
-    alignItems: 'center',
-  },
   dateTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#F8FAFC',
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
   },
   summaryBar: {
     flexDirection: 'row',
-    backgroundColor: '#131B2E',
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 8,
-    borderRadius: 14,
+    backgroundColor: theme.colors.surface,
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#1E293B',
+    paddingHorizontal: theme.spacing.md,
+    justifyContent: 'space-around',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   summaryItem: {
     alignItems: 'center',
   },
   summaryValue: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#F8FAFC',
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
   },
   summaryLabel: {
     fontSize: 11,
-    color: '#64748B',
+    color: theme.colors.textMuted,
     marginTop: 2,
   },
-  summaryDivider: {
+  divider: {
     width: 1,
-    backgroundColor: '#1E293B',
+    height: '60%',
+    alignSelf: 'center',
+    backgroundColor: theme.colors.border,
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
     paddingBottom: 110,
-    gap: 12,
+    gap: 16,
   },
-  mealGroupCard: {
-    backgroundColor: '#131B2E',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#1E293B',
+  mealSection: {
+    gap: 8,
   },
-  mealGroupHeader: {
+  mealSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+    alignItems: 'baseline',
+    paddingHorizontal: 4,
   },
-  mealGroupTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#F8FAFC',
+  categoryTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
   },
-  mealGroupKcal: {
+  categoryKcal: {
     fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
+    color: theme.colors.textMuted,
+    marginTop: 1,
   },
   addFoodBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.25)',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.primaryLight,
   },
   addFoodBtnText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#10B981',
+    fontWeight: '600',
+    color: theme.colors.primary,
   },
-  emptyPrompt: {
+  emptyPromptBox: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: theme.colors.borderStrong,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  emptyPromptText: {
     fontSize: 13,
-    color: '#475569',
-    fontStyle: 'italic',
-    paddingVertical: 8,
+    color: theme.colors.textMuted,
+  },
+  foodListContainer: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: 'hidden',
+    ...theme.shadow.subtle,
   },
   foodRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
+    paddingHorizontal: theme.spacing.md,
+  },
+  foodRowBorder: {
     borderTopWidth: 1,
-    borderTopColor: '#1E293B',
+    borderTopColor: theme.colors.border,
   },
   foodInfo: {
     flex: 1,
@@ -509,41 +543,41 @@ const styles = StyleSheet.create({
   foodName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
   },
   foodPortion: {
     fontSize: 12,
-    color: '#64748B',
+    color: theme.colors.textMuted,
     marginTop: 2,
   },
   foodMacros: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: theme.colors.textSecondary,
     marginTop: 2,
   },
-  foodActions: {
+  foodRight: {
     alignItems: 'flex-end',
     gap: 6,
   },
   foodKcal: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#F8FAFC',
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
   },
   deleteBtn: {
-    padding: 4,
+    padding: 2,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: theme.colors.backdrop,
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: '#0F172A',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: '82%',
-    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+    height: '84%',
+    padding: theme.spacing.md,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -552,122 +586,141 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
+    gap: 8,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.md,
     paddingHorizontal: 12,
     marginBottom: 12,
   },
   searchInput: {
     flex: 1,
-    color: '#F8FAFC',
-    fontSize: 14,
     paddingVertical: 10,
-    marginLeft: 8,
+    fontSize: 14,
+    color: theme.colors.textPrimary,
   },
   selectedBox: {
-    backgroundColor: '#1E293B',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
+    backgroundColor: theme.colors.primaryLight,
     borderWidth: 1,
-    borderColor: '#10B981',
+    borderColor: theme.colors.primaryBorder,
+    borderRadius: theme.radius.lg,
+    padding: 14,
+    marginBottom: 14,
+    gap: 10,
   },
   selectedTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'baseline',
   },
   selectedName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#F8FAFC',
-    flex: 1,
+    color: theme.colors.textPrimary,
+  },
+  selectedServingSub: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   selectedKcal: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#10B981',
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.primary,
   },
   portionRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    alignItems: 'center',
   },
   portionLabel: {
     fontSize: 13,
-    color: '#94A3B8',
     fontWeight: '600',
+    color: theme.colors.textSecondary,
   },
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryBorder,
   },
   stepBtn: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 4,
   },
   stepBtnText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#10B981',
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.primary,
   },
   stepValue: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#F8FAFC',
-    marginHorizontal: 8,
+    color: theme.colors.textPrimary,
+    minWidth: 24,
+    textAlign: 'center',
   },
   logConfirmBtn: {
-    backgroundColor: '#10B981',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 10,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.md,
     paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
   logConfirmBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
     fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textInverted,
   },
   searchItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 10,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: theme.colors.border,
   },
   searchItemSelected: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: theme.colors.primaryLight,
   },
   itemTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
   },
   itemSubtitle: {
     fontSize: 12,
-    color: '#64748B',
+    color: theme.colors.textMuted,
     marginTop: 2,
   },
   itemKcal: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#94A3B8',
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  emptySearchBox: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 4,
+  },
+  emptySearchTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  emptySearchSub: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
   },
 });
