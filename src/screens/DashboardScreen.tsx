@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity
+} from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import { Plus, ChevronRight, Utensils } from 'lucide-react-native';
 import { UserProfile, DailyLog, MealType } from '../types';
 import { CalorieRing } from '../components/CalorieRing';
@@ -7,6 +13,8 @@ import { MacroCards } from '../components/MacroCards';
 import { WaterTracker } from '../components/WaterTracker';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
+import { useLanguage } from '../i18n/I18nContext';
+import { formatDisplayDate } from '../utils/dateUtils';
 
 interface DashboardScreenProps {
   profile: UserProfile;
@@ -23,6 +31,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onNavigateToMeals,
   onOpenChooser,
 }) => {
+  const language = useLanguage();
   const consumedCalories = log.meals.reduce((sum, m) => sum + m.calories, 0);
   const consumedProtein = log.meals.reduce((sum, m) => sum + m.protein, 0);
   const consumedCarbs = log.meals.reduce((sum, m) => sum + m.carbs, 0);
@@ -35,11 +44,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     { key: 'snack', label: 'Snacks' },
   ];
 
-  const todayLabel = new Date().toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  });
+  const todayLabel = formatDisplayDate(log.date, language);
 
   const handleQuickAdd = (meal: MealType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -61,7 +66,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       <View style={styles.header}>
         <View>
           <Text style={styles.dateLabel}>{todayLabel}</Text>
-          <Text style={styles.screenTitle}>Today</Text>
+          <Text style={styles.screenTitle}>Nutrition</Text>
         </View>
 
         <TouchableOpacity

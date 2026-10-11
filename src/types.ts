@@ -10,6 +10,21 @@ export type FitnessGoal =
   | 'muscle_gain';
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type AppLanguage = 'en' | 'ar' | 'ckb';
+export type SupplementTime = 'morning' | 'afternoon' | 'evening' | 'bedtime';
+
+export interface SupplementRoutineItem {
+  id: string;
+  name: string;
+  dose: string;
+  time: SupplementTime;
+}
+
+export interface SupplementCheck {
+  itemId: string;
+  taken: boolean;
+  takenAt?: string;
+}
 
 export interface UserProfile {
   name: string;
@@ -26,6 +41,7 @@ export interface UserProfile {
   targetCarbs: number;
   targetFat: number;
   waterTargetGlasses: number;
+  language?: AppLanguage;
   isOnboarded?: boolean;
 }
 
@@ -87,4 +103,5 @@ export interface DailyLog {
   meals: LoggedMeal[];
   waterGlasses: number;
   steps: number;
+  supplements?: SupplementCheck[];
 }

@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserProfile, DailyLog, LoggedMeal } from '../types';
+import { UserProfile, DailyLog, LoggedMeal, SupplementCheck, SupplementRoutineItem } from '../types';
 import { getDefaultProfile } from '../utils/calculator';
 
 const PROFILE_KEY = '@fittrack_profile';
 const DAILY_LOG_PREFIX = '@fittrack_log_';
+const SUPPLEMENT_ROUTINE_KEY = '@fittrack_supplement_routine';
 
 export async function loadUserProfile(): Promise<UserProfile> {
   try {
@@ -39,7 +40,8 @@ export async function loadDailyLog(dateStr: string): Promise<DailyLog> {
         steps: 0,
       };
     }
-    return JSON.parse(raw) as DailyLog;
+    const parsed = JSON.parse(raw) as DailyLog;
+    return { ...parsed, supplements: parsed.supplements || [] };
   } catch (err) {
     console.error('Error loading daily log:', err);
     return {
@@ -90,6 +92,32 @@ export async function updateWater(dateStr: string, delta: number): Promise<Daily
   const updatedLog = { ...current, waterGlasses: updatedGlasses };
   await saveDailyLog(updatedLog);
   return updatedLog;
+}
+
+export async function loadSupplementRoutine(): Promise<SupplementRoutineItem[]> {
+  try {
+    const raw = await AsyncStorage.getItem(SUPPLEMENT_ROUTINE_KEY);
+    return raw ? JSON.parse(raw) as SupplementRoutineItem[] : [];
+  } catch (err) {
+    console.error('Error loading supplement routine:', err);
+    return [];
+  }
+}
+
+export async function saveSupplementRoutine(items: SupplementRoutineItem[]): Promise<void> {
+  await AsyncStorage.setItem(SUPPLEMENT_ROUTINE_KEY, JSON.stringify(items));
+}
+
+export async function setSupplementTaken(dateStr: string, itemId: string, taken: boolean): Promise<DailyLog> {
+  const current = await loadDailyLog(dateStr);
+  const supplements = current.supplements || [];
+  const existing = supplements.find(item => item.itemId === itemId);
+  const next: SupplementCheck[] = existing
+    ? supplements.map(item => item.itemId === itemId ? { ...item, taken, takenAt: taken ? new Date().toISOString() : undefined } : item)
+    : [...supplements, { itemId, taken, ...(taken ? { takenAt: new Date().toISOString() } : {}) }];
+  const updated = { ...current, supplements: next };
+  await saveDailyLog(updated);
+  return updated;
 }
 
 const WEIGHT_HISTORY_KEY = '@fittrack_weight_history';

@@ -1,3 +1,5 @@
+import { AppLanguage } from '../types';
+
 /**
  * Local date handling utilities to avoid UTC day-shift bugs.
  * Standard format is YYYY-MM-DD representing local device calendar date.
@@ -27,7 +29,7 @@ export function addDaysToDateString(dateStr: string, days: number): string {
   return formatDateToLocalString(date);
 }
 
-export function formatDisplayDate(dateStr: string): string {
+export function formatDisplayDate(dateStr: string, language: AppLanguage = 'en'): string {
   const today = getTodayDateString();
   const yesterday = addDaysToDateString(today, -1);
   const tomorrow = addDaysToDateString(today, 1);
@@ -37,11 +39,12 @@ export function formatDisplayDate(dateStr: string): string {
   if (dateStr === tomorrow) return 'Tomorrow';
 
   const date = parseLocalDateString(dateStr);
-  return date.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
+  const locale = language === 'ar' ? 'ar-IQ' : language === 'ckb' ? 'ckb-IQ' : undefined;
+  try {
+    return date.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
+  } catch {
+    return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
 }
 
 export function getPastDates(daysCount: number, fromDateStr?: string): string[] {

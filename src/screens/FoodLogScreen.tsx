@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   View,
-  Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   Modal,
   TextInput,
-  FlatList,
+  FlatList
 } from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,11 +19,17 @@ import {
   X,
   Check,
   Utensils,
+  CalendarDays,
+  Sparkles,
 } from 'lucide-react-native';
 import { DailyLog, LoggedMeal, MealType, FoodItem } from '../types';
 import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
 import { FoodDetailsModal } from '../components/FoodDetailsModal';
+import { CalendarPickerModal } from '../components/CalendarPickerModal';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
+import { estimateMealFromText, PlateAnalysisResult } from '../services/plateAnalysisService';
+import { useLanguage } from '../i18n/I18nContext';
+import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 
@@ -51,6 +58,17 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [servingsCount, setServingsCount] = useState<number>(1);
   const [inspectingMeal, setInspectingMeal] = useState<LoggedMeal | null>(null);
+  const [calendarVisible, setCalendarVisible] = useState(false);
+  const [aiModalVisible, setAiModalVisible] = useState(false);
+  const [aiDescription, setAiDescription] = useState('');
+  const [aiResult, setAiResult] = useState<PlateAnalysisResult | null>(null);
+  const [aiGrams, setAiGrams] = useState<number[]>([]);
+  const [aiMealType, setAiMealType] = useState<MealType>(initialMealType);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const language = useLanguage();
+  const t = (value: string) => translate(language, value);
+  const isFuture = selectedDate > getTodayDateString();
 
   // Date navigation
   const handlePrevDay = () => {
@@ -59,6 +77,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   };
 
   const handleNextDay = () => {
+    if (selectedDate >= getTodayDateString()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onSelectDate(addDaysToDateString(selectedDate, 1));
   };
@@ -77,6 +96,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   );
 
   const openAddModal = (mealType: MealType) => {
+    if (isFuture) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setActiveMealType(mealType);
     setSelectedFood(null);
@@ -86,7 +106,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   };
 
   const handleSaveFood = () => {
-    if (!selectedFood) return;
+    if (!selectedFood || isFuture) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
     const newMeal: LoggedMeal = {
@@ -108,6 +128,47 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
 
     onAddMeal(newMeal);
     setModalVisible(false);
+  };
+
+  const handleEstimate = async () => {
+    if (!aiDescription.trim() || aiBusy) return;
+    setAiBusy(true);
+    setAiError('');
+    setAiResult(null);
+    try {
+      const estimateLanguage = language === 'ar' ? 'Arabic' : language === 'ckb' ? 'Sorani Kurdish' : 'English';
+      const result = await estimateMealFromText(aiDescription, estimateLanguage);
+      setAiResult(result);
+      setAiGrams(result.items.map(item => item.grams));
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : 'Could not estimate this meal. Try again.');
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const handleLogEstimate = (index: number) => {
+    if (!aiResult || isFuture) return;
+    const item = aiResult.items[index];
+    const grams = Math.max(1, aiGrams[index] || item.grams);
+    const scale = grams / item.grams;
+    const meal: LoggedMeal = {
+      id: `ai_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      foodId: 'ai-estimate',
+      name: item.name,
+      mealType: aiMealType,
+      servings: 1,
+      servingSize: `${grams} g`,
+      servingGrams: grams,
+      calories: Math.round(item.calories * scale),
+      protein: Math.round(item.protein * scale * 10) / 10,
+      carbs: Math.round(item.carbs * scale * 10) / 10,
+      fat: Math.round(item.fat * scale * 10) / 10,
+      timestamp: new Date().toISOString(),
+    };
+    onAddMeal(meal);
+    setAiResult({ ...aiResult, items: aiResult.items.filter((_, i) => i !== index) });
+    setAiGrams(aiGrams.filter((_, i) => i !== index));
   };
 
   const handleDelete = (id: string) => {
@@ -155,7 +216,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       {/* Calm Calendar Navigation */}
       <View style={styles.dateHeader}>
         <TouchableOpacity
-          style={styles.dateNavBtn}
+          style={[styles.dateNavBtn, selectedDate >= getTodayDateString() && styles.disabledButton]}
           onPress={handlePrevDay}
           accessibilityLabel="Previous day"
           accessibilityRole="button"
@@ -163,17 +224,27 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
           <ChevronLeft size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
 
-        <Text style={styles.dateTitle}>{formatDisplayDate(selectedDate)}</Text>
+        <TouchableOpacity style={styles.datePickButton} onPress={() => setCalendarVisible(true)} accessibilityLabel={t('Choose date')} accessibilityRole="button">
+          <CalendarDays size={17} color={theme.colors.primary} />
+        <Text style={styles.dateTitle}>{formatDisplayDate(selectedDate, language)}</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.dateNavBtn}
           onPress={handleNextDay}
+          disabled={selectedDate >= getTodayDateString()}
           accessibilityLabel="Next day"
           accessibilityRole="button"
         >
           <ChevronRight size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity style={[styles.aiEntryButton, isFuture && styles.disabledButton]} onPress={() => { if (isFuture) return; setAiMealType(initialMealType); setAiModalVisible(true); }} disabled={isFuture} accessibilityRole="button">
+        <View style={styles.aiEntryIcon}><Sparkles size={17} color={theme.colors.accent} /></View>
+        <View style={styles.aiEntryCopy}><Text style={styles.aiEntryTitle}>Describe with AI</Text><Text style={styles.aiEntrySub}>Get an estimate, review portions, then log</Text></View>
+        <ChevronRight size={18} color={theme.colors.textMuted} />
+      </TouchableOpacity>
 
       {/* Understated Daily Summary Strip */}
       <View style={styles.summaryBar}>
@@ -287,7 +358,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
 
       {/* Add Food Modal: Focused, clean, clear typography */}
       <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalBackdrop}>
+        <View style={[styles.modalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
@@ -306,7 +377,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
               <Search size={16} color={theme.colors.textMuted} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search food name or category..."
+                placeholder={t('Search foods...')}
                 placeholderTextColor={theme.colors.textMuted}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -393,6 +464,71 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
         </View>
       </Modal>
 
+      <CalendarPickerModal
+        visible={calendarVisible}
+        selectedDate={selectedDate}
+        onClose={() => setCalendarVisible(false)}
+        onSelect={onSelectDate}
+      />
+
+      <Modal visible={aiModalVisible} animationType="slide" transparent onRequestClose={() => setAiModalVisible(false)}>
+        <View style={[styles.modalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
+          <View style={styles.aiModalSheet}>
+            <View style={styles.modalHeader}>
+              <View style={styles.aiModalTitleRow}><Sparkles size={18} color={theme.colors.accent} /><Text style={styles.modalTitle}>AI meal estimate</Text></View>
+              <TouchableOpacity onPress={() => setAiModalVisible(false)} accessibilityLabel={t('Close')}><X size={20} color={theme.colors.textSecondary} /></TouchableOpacity>
+            </View>
+            <Text style={styles.aiHelper}>These are estimates, not measurements. Adjust portions to improve accuracy.</Text>
+            <View style={styles.mealTypeRow}>
+              {mealCategories.map(category => (
+                <TouchableOpacity key={category.key} onPress={() => setAiMealType(category.key)} style={[styles.mealTypeChip, aiMealType === category.key && styles.mealTypeChipActive]}>
+                  <Text style={[styles.mealTypeText, aiMealType === category.key && styles.mealTypeTextActive]}>{category.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              style={styles.aiDescriptionInput}
+              value={aiDescription}
+              onChangeText={setAiDescription}
+              placeholder={t('Describe what you ate')}
+              placeholderTextColor={theme.colors.textMuted}
+              multiline
+              maxLength={1000}
+              editable={!aiBusy}
+            />
+            <TouchableOpacity style={[styles.estimateButton, (!aiDescription.trim() || aiBusy) && styles.disabledButton]} onPress={handleEstimate} disabled={!aiDescription.trim() || aiBusy}>
+              {aiBusy ? <ActivityIndicator size="small" color={theme.colors.textInverted} /> : <Sparkles size={16} color={theme.colors.textInverted} />}
+              <Text style={styles.estimateButtonText}>{aiBusy ? 'Estimating…' : 'Estimate nutrition'}</Text>
+            </TouchableOpacity>
+            {aiError ? <Text style={styles.aiError}>{aiError}</Text> : null}
+            {aiResult ? (
+              <ScrollView style={styles.aiResults} keyboardShouldPersistTaps="handled">
+                <Text style={styles.resultsTitle}>{aiResult.mealName} · {aiResult.items.reduce((sum, item, index) => sum + Math.round(item.calories * (Math.max(1, aiGrams[index] || item.grams) / item.grams)), 0)} kcal estimated</Text>
+                {aiResult.items.length === 0 ? <Text style={styles.aiHelper}>All foods added to diary.</Text> : null}
+                {aiResult.items.map((item, index) => {
+                  const grams = Math.max(1, aiGrams[index] || item.grams);
+                  const scale = grams / item.grams;
+                  return (
+                    <View key={`${item.name}_${index}`} style={styles.aiResultCard}>
+                      <View style={styles.resultTop}>
+                        <View style={{ flex: 1 }}><Text style={styles.resultName}>{item.name}</Text><Text style={styles.resultPortion}>{item.portionEstimate} · {item.confidence} confidence</Text></View>
+                        <Text style={styles.resultCalories}>{Math.round(item.calories * scale)} kcal</Text>
+                      </View>
+                      <Text style={styles.resultMacros}>P {Math.round(item.protein * scale)}g · C {Math.round(item.carbs * scale)}g · F {Math.round(item.fat * scale)}g</Text>
+                      <View style={styles.resultBottom}>
+                        <View style={styles.gramsInputRow}><Text style={styles.gramsLabel}>Portion (g)</Text><TextInput style={styles.gramsInput} value={String(grams)} keyboardType="number-pad" onChangeText={value => setAiGrams(current => current.map((amount, i) => i === index ? Math.max(1, Number(value) || 1) : amount))} /></View>
+                        <TouchableOpacity style={styles.logEstimateButton} onPress={() => handleLogEstimate(index)}><Plus size={14} color={theme.colors.textInverted} /><Text style={styles.logEstimateText}>Add to diary</Text></TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+                <Text style={styles.aiDisclaimer}>{aiResult.disclaimer}</Text>
+              </ScrollView>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
       {/* Food Details & Serving Adjustment Modal */}
       <FoodDetailsModal
         visible={inspectingMeal !== null}
@@ -433,12 +569,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  datePickButton: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 5, paddingVertical: 4 },
   dateTitle: {
     fontFamily: theme.fonts.serif,
     fontSize: 18,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
+  aiEntryButton: { flexDirection: 'row', alignItems: 'center', gap: 11, marginHorizontal: theme.spacing.md, marginTop: 10, padding: 11, backgroundColor: theme.colors.surface, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border },
+  disabledButton: { opacity: 0.5 },
+  aiEntryIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: theme.colors.accentLight, alignItems: 'center', justifyContent: 'center' },
+  aiEntryCopy: { flex: 1, gap: 2 },
+  aiEntryTitle: { color: theme.colors.textPrimary, fontSize: 13, fontWeight: '700' },
+  aiEntrySub: { color: theme.colors.textMuted, fontSize: 10 },
   summaryBar: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surface,
@@ -714,6 +857,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },
+  aiModalSheet: { backgroundColor: theme.colors.surface, borderTopLeftRadius: theme.radius.xl, borderTopRightRadius: theme.radius.xl, height: '88%', padding: theme.spacing.md },
+  aiModalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  aiHelper: { color: theme.colors.textMuted, fontSize: 12, lineHeight: 18, marginBottom: 10 },
+  mealTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  mealTypeChip: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: theme.radius.full, backgroundColor: theme.colors.surfaceSubtle },
+  mealTypeChipActive: { backgroundColor: theme.colors.primaryLight, borderWidth: 1, borderColor: theme.colors.primaryBorder },
+  mealTypeText: { color: theme.colors.textSecondary, fontSize: 11, fontWeight: '600' },
+  mealTypeTextActive: { color: theme.colors.primary },
+  aiDescriptionInput: { minHeight: 82, maxHeight: 120, padding: 12, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceSubtle, color: theme.colors.textPrimary, textAlignVertical: 'top', fontSize: 14 },
+  estimateButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: theme.colors.primary, borderRadius: theme.radius.md, paddingVertical: 12, marginTop: 9 },
+  estimateButtonText: { color: theme.colors.textInverted, fontSize: 13, fontWeight: '700' },
+  aiError: { color: theme.colors.danger, fontSize: 12, marginTop: 8 },
+  aiResults: { marginTop: 10, flexGrow: 0 },
+  resultsTitle: { color: theme.colors.textPrimary, fontSize: 15, fontWeight: '700', marginBottom: 8 },
+  aiResultCard: { padding: 11, marginBottom: 8, backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.md, gap: 6 },
+  resultTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  resultName: { color: theme.colors.textPrimary, fontSize: 13, fontWeight: '700' },
+  resultPortion: { color: theme.colors.textMuted, fontSize: 10, marginTop: 2 },
+  resultCalories: { color: theme.colors.primary, fontSize: 13, fontWeight: '700' },
+  resultMacros: { color: theme.colors.textSecondary, fontSize: 11 },
+  resultBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 3 },
+  gramsInputRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  gramsLabel: { color: theme.colors.textMuted, fontSize: 10 },
+  gramsInput: { width: 56, paddingHorizontal: 7, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: theme.colors.borderStrong, backgroundColor: theme.colors.surface, textAlign: 'center', color: theme.colors.textPrimary, fontSize: 12 },
+  logEstimateButton: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 8, borderRadius: theme.radius.sm, backgroundColor: theme.colors.primary },
+  logEstimateText: { color: theme.colors.textInverted, fontSize: 11, fontWeight: '700' },
+  aiDisclaimer: { color: theme.colors.textMuted, fontSize: 10, lineHeight: 15, marginTop: 4, marginBottom: 18 },
   emptySearchBox: {
     alignItems: 'center',
     paddingVertical: 24,
