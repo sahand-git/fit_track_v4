@@ -1,5 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet
+} from 'react-native';
+import { AppText as Text } from './AppText';
 import { Droplet, Plus, Minus } from 'lucide-react-native';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';

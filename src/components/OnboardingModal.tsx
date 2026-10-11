@@ -1,25 +1,30 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   TextInput,
   ScrollView,
-  SafeAreaView,
+  SafeAreaView
 } from 'react-native';
+import { AppText as Text } from './AppText';
 import { ArrowRight, Check } from 'lucide-react-native';
-import { Gender, ActivityLevel, FitnessGoal, UserProfile } from '../types';
+import { Gender, ActivityLevel, FitnessGoal, UserProfile, AppLanguage } from '../types';
+import { languageNames } from '../i18n/strings';
 import { calculateTargets } from '../utils/calculator';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
+import { useLanguage } from '../i18n/I18nContext';
 
 interface OnboardingModalProps {
   onComplete: (profile: UserProfile) => void;
+  onLanguageChange: (language: AppLanguage) => void;
 }
 
-export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) => {
+export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, onLanguageChange }) => {
+  const currentLanguage = useLanguage();
   const [step, setStep] = useState(1);
+  const [language, setLanguage] = useState<AppLanguage>('en');
   const [name, setName] = useState('');
   const [gender, setGender] = useState<Gender>('male');
   const [age, setAge] = useState('26');
@@ -46,6 +51,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
       goal,
       waterTargetGlasses: 8,
       isOnboarded: true,
+      language,
       ...targets,
     };
     onComplete(profile);
@@ -67,12 +73,22 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { direction: currentLanguage === 'en' ? 'ltr' : 'rtl' }]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Step Indicator */}
         <View style={styles.stepHeader}>
           <Text style={styles.badgeText}>Welcome to FitTrack</Text>
           <Text style={styles.stepCounter}>Step {step} of 3</Text>
+        </View>
+        <View style={styles.languageBlock}>
+          <Text style={styles.languageLabel}>Language</Text>
+          <View style={styles.languageRow}>
+            {(['en', 'ar', 'ckb'] as AppLanguage[]).map(option => (
+              <TouchableOpacity key={option} onPress={() => { setLanguage(option); onLanguageChange(option); }} style={[styles.languageChip, language === option && styles.languageChipActive]}>
+                <Text style={[styles.languageChipText, language === option && styles.languageChipTextActive]}>{languageNames[option]}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* STEP 1: Body Measurements */}
@@ -284,6 +300,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: theme.colors.textMuted,
   },
+  languageBlock: { gap: 7, marginBottom: 12 },
+  languageLabel: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: '600' },
+  languageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  languageChip: { paddingHorizontal: 11, paddingVertical: 8, borderRadius: theme.radius.full, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
+  languageChipActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryLight },
+  languageChipText: { color: theme.colors.textSecondary, fontSize: 11, fontWeight: '600' },
+  languageChipTextActive: { color: theme.colors.primary },
   stepContainer: {
     gap: 12,
   },

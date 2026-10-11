@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -10,8 +9,9 @@ import {
   Image,
   Alert,
   Platform,
-  FlatList,
+  FlatList
 } from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import {
   ArrowLeft,
   Barcode as BarcodeIcon,

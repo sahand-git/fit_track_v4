@@ -2,20 +2,20 @@ import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
-  Text,
   TouchableOpacity,
   SafeAreaView,
   Platform,
 } from 'react-native';
+import { AppText as Text } from './src/components/AppText';
 import { StatusBar } from 'expo-status-bar';
 import {
   LayoutDashboard,
   BookOpen,
   Plus,
   TrendingUp,
-  User,
+  Wrench,
 } from 'lucide-react-native';
-import { UserProfile, DailyLog, LoggedMeal, MealType } from './src/types';
+import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem } from './src/types';
 import {
   loadUserProfile,
   saveUserProfile,
@@ -24,6 +24,9 @@ import {
   updateMealInDay,
   removeMealFromDay,
   updateWater,
+  loadSupplementRoutine,
+  saveSupplementRoutine,
+  setSupplementTaken,
 } from './src/storage/storage';
 import { getDefaultProfile } from './src/utils/calculator';
 import { OnboardingModal } from './src/components/OnboardingModal';
@@ -33,16 +36,21 @@ import { FoodLogScreen } from './src/screens/FoodLogScreen';
 import { ScannerScreen } from './src/screens/ScannerScreen';
 import { ProgressScreen } from './src/screens/ProgressScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
+import { ToolsScreen } from './src/screens/ToolsScreen';
+import { SupplementsScreen } from './src/screens/SupplementsScreen';
+import { CoachScreen } from './src/screens/CoachScreen';
+import { I18nProvider } from './src/i18n/I18nContext';
 import { theme } from './src/theme';
 import * as Haptics from 'expo-haptics';
 
-type Tab = 'today' | 'diary' | 'scan' | 'progress' | 'profile';
+type Tab = 'today' | 'diary' | 'scan' | 'progress' | 'tools' | 'profile' | 'supplements' | 'coach';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [previousTab, setPreviousTab] = useState<Tab>('today');
 
   const [profile, setProfile] = useState<UserProfile>(getDefaultProfile());
+  const [appLanguage, setAppLanguage] = useState<AppLanguage>('en');
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
   const [log, setLog] = useState<DailyLog>({
     date: getTodayDateString(),
@@ -51,14 +59,18 @@ export default function App() {
     steps: 0,
   });
   const [initialMealForAdd, setInitialMealForAdd] = useState<MealType>('breakfast');
+  const [supplementRoutine, setSupplementRoutine] = useState<SupplementRoutineItem[]>([]);
+  const language = appLanguage;
 
   // Load initial profile and daily log
   useEffect(() => {
     async function init() {
       const p = await loadUserProfile();
       setProfile(p);
+      setAppLanguage(p.language || 'en');
       const l = await loadDailyLog(selectedDate);
       setLog(l);
+      setSupplementRoutine(await loadSupplementRoutine());
     }
     init();
   }, []);
@@ -74,11 +86,13 @@ export default function App() {
 
   // Handlers
   const handleUpdateWater = async (delta: number) => {
+    if (selectedDate > getTodayDateString()) return;
     const updated = await updateWater(selectedDate, delta);
     setLog(updated);
   };
 
   const handleAddMeal = async (meal: LoggedMeal) => {
+    if (selectedDate > getTodayDateString()) return;
     const updated = await addMealToDay(selectedDate, meal);
     setLog(updated);
   };
@@ -96,7 +110,33 @@ export default function App() {
   const handleSaveProfile = async (newProfile: UserProfile) => {
     await saveUserProfile(newProfile);
     setProfile(newProfile);
+    setAppLanguage(newProfile.language || 'en');
     setActiveTab('today');
+  };
+
+  const handleLanguageChange = async (nextLanguage: AppLanguage) => {
+    if (language === nextLanguage) return;
+    const updated = { ...profile, language: nextLanguage };
+    await saveUserProfile(updated);
+    setProfile(updated);
+    setAppLanguage(nextLanguage);
+  };
+
+  const handleAddSupplement = async (item: SupplementRoutineItem) => {
+    const updated = [...supplementRoutine, item];
+    setSupplementRoutine(updated);
+    await saveSupplementRoutine(updated);
+  };
+
+  const handleRemoveSupplement = async (id: string) => {
+    const updated = supplementRoutine.filter(item => item.id !== id);
+    setSupplementRoutine(updated);
+    await saveSupplementRoutine(updated);
+  };
+
+  const handleToggleSupplement = async (id: string, taken: boolean) => {
+    if (selectedDate > getTodayDateString()) return;
+    setLog(await setSupplementTaken(selectedDate, id, taken));
   };
 
   const handleNavigateToMeals = (targetMeal?: MealType) => {
@@ -112,12 +152,11 @@ export default function App() {
     setActiveTab(tab);
   };
 
-  if (!profile.isOnboarded) {
-    return <OnboardingModal onComplete={handleSaveProfile} />;
-  }
+  if (!profile.isOnboarded) return <I18nProvider language={language}><OnboardingModal onComplete={handleSaveProfile} onLanguageChange={setAppLanguage} /></I18nProvider>;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <I18nProvider language={language}>
+    <SafeAreaView style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
       <StatusBar style="dark" />
 
       {/* Main Screen Body */}
@@ -167,6 +206,13 @@ export default function App() {
         {activeTab === 'profile' && (
           <ProfileScreen profile={profile} onSaveProfile={handleSaveProfile} />
         )}
+        {activeTab === 'tools' && (
+          <ToolsScreen language={language} onLanguageChange={handleLanguageChange} onOpenVitamins={() => setActiveTab('supplements')} onOpenCoach={() => setActiveTab('coach')} onOpenProfile={() => setActiveTab('profile')} />
+        )}
+        {activeTab === 'supplements' && (
+          <SupplementsScreen selectedDate={selectedDate} routine={supplementRoutine} checks={log.supplements || []} onAdd={handleAddSupplement} onRemove={handleRemoveSupplement} onToggle={handleToggleSupplement} />
+        )}
+        {activeTab === 'coach' && <CoachScreen profile={profile} log={log} />}
       </View>
 
       {/* Editorial Ledger Bottom Navigation Dock */}
@@ -253,31 +299,32 @@ export default function App() {
               </Text>
             </TouchableOpacity>
 
-            {/* 5. Profile */}
+            {/* 5. Tools, AI coach, and profile */}
             <TouchableOpacity
               style={styles.navBtn}
-              onPress={() => switchTab('profile')}
+              onPress={() => switchTab('tools')}
               activeOpacity={0.7}
-              accessibilityLabel="Profile"
+              accessibilityLabel="Tools"
               accessibilityRole="button"
             >
-              <User
+              <Wrench
                 size={20}
-                color={activeTab === 'profile' ? theme.colors.primary : theme.colors.textMuted}
+                color={activeTab === 'tools' || activeTab === 'supplements' || activeTab === 'coach' || activeTab === 'profile' ? theme.colors.primary : theme.colors.textMuted}
               />
               <Text
                 style={[
                   styles.navLabel,
-                  activeTab === 'profile' && styles.navLabelActive,
+                  (activeTab === 'tools' || activeTab === 'supplements' || activeTab === 'coach' || activeTab === 'profile') && styles.navLabelActive,
                 ]}
               >
-                Profile
+                Tools
               </Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
     </SafeAreaView>
+    </I18nProvider>
   );
 }
 

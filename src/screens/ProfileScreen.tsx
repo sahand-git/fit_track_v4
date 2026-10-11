@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
+  TextInput
 } from 'react-native';
+import { AppText as Text } from '../components/AppText';
 import { Check } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal } from '../types';
 import { calculateTargets } from '../utils/calculator';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
+import { clearGeminiApiKey, getStoredGeminiApiKey, setStoredGeminiApiKey } from '../services/plateAnalysisService';
+import { useLanguage } from '../i18n/I18nContext';
+import { translate } from '../i18n/strings';
 
 interface ProfileScreenProps {
   profile: UserProfile;
@@ -22,6 +25,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   profile,
   onSaveProfile,
 }) => {
+  const language = useLanguage();
   const [name, setName] = useState(profile.name);
   const [age, setAge] = useState(profile.age.toString());
   const [gender, setGender] = useState<Gender>(profile.gender);
@@ -29,6 +33,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [heightCm, setHeightCm] = useState(profile.heightCm.toString());
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(profile.activityLevel);
   const [goal, setGoal] = useState<FitnessGoal>(profile.goal);
+  const [geminiKey, setGeminiKey] = useState('');
+  const [keySaved, setKeySaved] = useState(false);
+
+  useEffect(() => {
+    getStoredGeminiApiKey().then(key => { setGeminiKey(key || ''); setKeySaved(Boolean(key)); });
+  }, []);
+
+  const handleSaveGeminiKey = async () => {
+    if (geminiKey.trim()) {
+      await setStoredGeminiApiKey(geminiKey);
+      setKeySaved(true);
+    } else {
+      await clearGeminiApiKey();
+      setKeySaved(false);
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  };
 
   // Live preview of calculated targets (bounded to safe human ranges)
   const rawWeight = parseFloat(weightKg);
@@ -85,6 +106,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <Text style={styles.screenSubtitle}>
         Calibrated with the Mifflin-St Jeor metabolic formula.
       </Text>
+
+      <View style={styles.aiSettingsCard}>
+        <Text style={styles.sectionHeader}>AI features</Text>
+        <Text style={styles.aiKeyDescription}>A Gemini API key enables text meal estimates, plate scanning, and AI Coach. Requests send your prompt and the relevant meal or goal context to Google. Google usage limits and billing apply.</Text>
+        <TextInput
+          style={styles.input}
+          value={geminiKey}
+          onChangeText={value => { setGeminiKey(value); setKeySaved(false); }}
+          placeholder={translate(language, 'Gemini API key')}
+          placeholderTextColor={theme.colors.textMuted}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <TouchableOpacity style={styles.saveKeyBtn} onPress={handleSaveGeminiKey} activeOpacity={0.8}>
+          <Text style={styles.saveKeyText}>{keySaved ? 'API key saved' : geminiKey.trim() ? 'Save API key' : 'Remove API key'}</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Daily Target Estimation Summary Card */}
       <View style={styles.targetPreviewCard}>
@@ -314,6 +353,10 @@ const styles = StyleSheet.create({
   section: {
     gap: 10,
   },
+  aiSettingsCard: { gap: 10, padding: 14, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
+  aiKeyDescription: { color: theme.colors.textMuted, fontSize: 12, lineHeight: 18 },
+  saveKeyBtn: { borderRadius: theme.radius.md, paddingVertical: 10, alignItems: 'center', backgroundColor: theme.colors.primaryLight },
+  saveKeyText: { color: theme.colors.primary, fontSize: 13, fontWeight: '700' },
   sectionHeader: {
     fontFamily: theme.fonts.serif,
     fontSize: 16,

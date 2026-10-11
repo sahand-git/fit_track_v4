@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
+  ScrollView
 } from 'react-native';
+import { AppText as Text } from './AppText';
 import {
   X,
   Plus,
