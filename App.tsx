@@ -10,10 +10,9 @@ import { AppText as Text } from './src/components/AppText';
 import { StatusBar } from 'expo-status-bar';
 import {
   LayoutDashboard,
-  BookOpen,
-  Plus,
+  UtensilsCrossed,
+  Bot,
   TrendingUp,
-  Wrench,
 } from 'lucide-react-native';
 import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem } from './src/types';
 import {
@@ -33,21 +32,22 @@ import { OnboardingModal } from './src/components/OnboardingModal';
 import { getTodayDateString } from './src/utils/dateUtils';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { FoodLogScreen } from './src/screens/FoodLogScreen';
-import { ScannerScreen } from './src/screens/ScannerScreen';
 import { ProgressScreen } from './src/screens/ProgressScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
-import { ToolsScreen } from './src/screens/ToolsScreen';
 import { SupplementsScreen } from './src/screens/SupplementsScreen';
 import { CoachScreen } from './src/screens/CoachScreen';
+import { AddFoodSheet } from './src/components/addfood/AddFoodSheet';
 import { I18nProvider } from './src/i18n/I18nContext';
+import { translate } from './src/i18n/strings';
 import { theme } from './src/theme';
 import * as Haptics from 'expo-haptics';
 
-type Tab = 'today' | 'diary' | 'scan' | 'progress' | 'tools' | 'profile' | 'supplements' | 'coach';
+type Tab = 'today' | 'meals' | 'coach' | 'progress';
+type TemporaryScreen = 'none' | 'profile' | 'supplements';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('today');
-  const [previousTab, setPreviousTab] = useState<Tab>('today');
+  const [tempScreen, setTempScreen] = useState<TemporaryScreen>('none');
 
   const [profile, setProfile] = useState<UserProfile>(getDefaultProfile());
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en');
@@ -60,7 +60,19 @@ export default function App() {
   });
   const [initialMealForAdd, setInitialMealForAdd] = useState<MealType>('breakfast');
   const [supplementRoutine, setSupplementRoutine] = useState<SupplementRoutineItem[]>([]);
+
+  // AddFoodSheet modal state
+  const [addSheetConfig, setAddSheetConfig] = useState<{
+    visible: boolean;
+    targetDate: string;
+    mealType?: MealType;
+  }>({
+    visible: false,
+    targetDate: getTodayDateString(),
+  });
+
   const language = appLanguage;
+  const t = (str: string) => translate(language, str);
 
   // Load initial profile and daily log
   useEffect(() => {
@@ -86,15 +98,19 @@ export default function App() {
 
   // Handlers
   const handleUpdateWater = async (delta: number) => {
-    if (selectedDate > getTodayDateString()) return;
-    const updated = await updateWater(selectedDate, delta);
-    setLog(updated);
+    const today = getTodayDateString();
+    const updated = await updateWater(today, delta);
+    if (selectedDate === today) {
+      setLog(updated);
+    }
   };
 
-  const handleAddMeal = async (meal: LoggedMeal) => {
-    if (selectedDate > getTodayDateString()) return;
-    const updated = await addMealToDay(selectedDate, meal);
-    setLog(updated);
+  const handleAddMeal = async (meal: LoggedMeal, targetDate: string) => {
+    if (targetDate > getTodayDateString()) return;
+    const updated = await addMealToDay(targetDate, meal);
+    if (selectedDate === targetDate) {
+      setLog(updated);
+    }
   };
 
   const handleUpdateMeal = async (meal: LoggedMeal) => {
@@ -111,7 +127,9 @@ export default function App() {
     await saveUserProfile(newProfile);
     setProfile(newProfile);
     setAppLanguage(newProfile.language || 'en');
+    setTempScreen('none');
     setActiveTab('today');
+    setSelectedDate(getTodayDateString());
   };
 
   const handleLanguageChange = async (nextLanguage: AppLanguage) => {
@@ -129,201 +147,227 @@ export default function App() {
   };
 
   const handleRemoveSupplement = async (id: string) => {
-    const updated = supplementRoutine.filter(item => item.id !== id);
+    const updated = supplementRoutine.filter((item) => item.id !== id);
     setSupplementRoutine(updated);
     await saveSupplementRoutine(updated);
   };
 
   const handleToggleSupplement = async (id: string, taken: boolean) => {
     if (selectedDate > getTodayDateString()) return;
-    setLog(await setSupplementTaken(selectedDate, id, taken));
+    const updated = await setSupplementTaken(selectedDate, id, taken);
+    setLog(updated);
   };
 
   const handleNavigateToMeals = (targetMeal?: MealType) => {
     if (targetMeal) setInitialMealForAdd(targetMeal);
-    setActiveTab('diary');
+    setTempScreen('none');
+    setActiveTab('meals');
   };
 
-  const switchTab = (tab: Tab) => {
+  const handleSwitchTab = (tab: Tab) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (tab === 'scan') {
-      setPreviousTab(activeTab);
+    setTempScreen('none');
+    if (tab === 'today') {
+      setSelectedDate(getTodayDateString());
     }
     setActiveTab(tab);
   };
 
-  if (!profile.isOnboarded) return <I18nProvider language={language}><OnboardingModal onComplete={handleSaveProfile} onLanguageChange={setAppLanguage} /></I18nProvider>;
+  const handleOpenAddFoodToday = (mealType?: MealType) => {
+    setAddSheetConfig({
+      visible: true,
+      targetDate: getTodayDateString(),
+      mealType,
+    });
+  };
+
+  if (!profile.isOnboarded) {
+    return (
+      <I18nProvider language={language}>
+        <OnboardingModal onComplete={handleSaveProfile} onLanguageChange={setAppLanguage} />
+      </I18nProvider>
+    );
+  }
+
+  // Highlight 'today' if a temporary screen is open
+  const isHighlightToday = tempScreen !== 'none' || activeTab === 'today';
 
   return (
     <I18nProvider language={language}>
-    <SafeAreaView style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-      <StatusBar style="dark" />
+      <SafeAreaView style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
+        <StatusBar style="dark" />
 
-      {/* Main Screen Body */}
-      <View style={styles.main}>
-        {/* Tab 1: TODAY DASHBOARD */}
-        {activeTab === 'today' && (
-          <DashboardScreen
-            profile={profile}
-            log={log}
-            onUpdateWater={handleUpdateWater}
-            onNavigateToMeals={handleNavigateToMeals}
-            onOpenChooser={() => {
-              setPreviousTab('today');
-              setActiveTab('scan');
-            }}
-          />
-        )}
+        {/* Main Screen Body */}
+        <View style={styles.main}>
+          {/* Temporary Screen: Profile */}
+          {tempScreen === 'profile' && (
+            <ProfileScreen
+              profile={profile}
+              language={language}
+              onLanguageChange={handleLanguageChange}
+              onSaveProfile={handleSaveProfile}
+              onBack={() => setTempScreen('none')}
+            />
+          )}
 
-        {/* Tab 2: FOOD DIARY */}
-        {activeTab === 'diary' && (
-          <FoodLogScreen
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            log={log}
-            onAddMeal={handleAddMeal}
-            onUpdateMeal={handleUpdateMeal}
-            onRemoveMeal={handleRemoveMeal}
-            initialMealType={initialMealForAdd}
-          />
-        )}
+          {/* Temporary Screen: Supplements */}
+          {tempScreen === 'supplements' && (
+            <SupplementsScreen
+              selectedDate={selectedDate}
+              routine={supplementRoutine}
+              checks={log.supplements || []}
+              onAdd={handleAddSupplement}
+              onRemove={handleRemoveSupplement}
+              onToggle={handleToggleSupplement}
+              onBack={() => setTempScreen('none')}
+            />
+          )}
 
-        {/* Tab 3: FOOD LOGGING CHOOSER (Scan Barcode, Meal Photo, Manual Search) */}
-        {activeTab === 'scan' && (
-          <ScannerScreen
-            onBack={() => setActiveTab(previousTab)}
-            onAddMeal={(meal) => {
-              handleAddMeal(meal);
-              setActiveTab('diary');
-            }}
-          />
-        )}
+          {/* Tab 1: Today */}
+          {tempScreen === 'none' && activeTab === 'today' && (
+            <DashboardScreen
+              profile={profile}
+              log={log}
+              supplementRoutine={supplementRoutine}
+              onToggleSupplement={handleToggleSupplement}
+              onUpdateWater={handleUpdateWater}
+              onNavigateToMeals={handleNavigateToMeals}
+              onOpenAddFood={handleOpenAddFoodToday}
+              onOpenSupplements={() => setTempScreen('supplements')}
+              onOpenProfile={() => setTempScreen('profile')}
+            />
+          )}
 
-        {/* Tab 4: PROGRESS & INSIGHTS */}
-        {activeTab === 'progress' && <ProgressScreen profile={profile} />}
+          {/* Tab 2: Meals */}
+          {tempScreen === 'none' && activeTab === 'meals' && (
+            <FoodLogScreen
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              log={log}
+              onAddMeal={handleAddMeal}
+              onUpdateMeal={handleUpdateMeal}
+              onRemoveMeal={handleRemoveMeal}
+              initialMealType={initialMealForAdd}
+            />
+          )}
 
-        {/* Tab 5: PROFILE */}
-        {activeTab === 'profile' && (
-          <ProfileScreen profile={profile} onSaveProfile={handleSaveProfile} onBack={() => setActiveTab('tools')} />
-        )}
-        {activeTab === 'tools' && (
-          <ToolsScreen language={language} onLanguageChange={handleLanguageChange} onOpenVitamins={() => setActiveTab('supplements')} onOpenCoach={() => setActiveTab('coach')} onOpenProfile={() => setActiveTab('profile')} />
-        )}
-        {activeTab === 'supplements' && (
-          <SupplementsScreen selectedDate={selectedDate} routine={supplementRoutine} checks={log.supplements || []} onAdd={handleAddSupplement} onRemove={handleRemoveSupplement} onToggle={handleToggleSupplement} onBack={() => setActiveTab('tools')} />
-        )}
-        {activeTab === 'coach' && <CoachScreen profile={profile} log={log} onBack={() => setActiveTab('tools')} />}
-      </View>
+          {/* Tab 3: AI Coach */}
+          {tempScreen === 'none' && activeTab === 'coach' && (
+            <CoachScreen
+              profile={profile}
+              log={log}
+              onBack={() => handleSwitchTab('today')}
+            />
+          )}
 
-      {/* Editorial Ledger Bottom Navigation Dock */}
-      {activeTab !== 'scan' && (
+          {/* Tab 4: Progress */}
+          {tempScreen === 'none' && activeTab === 'progress' && (
+            <ProgressScreen profile={profile} />
+          )}
+        </View>
+
+        {/* Global AddFoodSheet for Today and quick actions */}
+        <AddFoodSheet
+          visible={addSheetConfig.visible}
+          mealType={addSheetConfig.mealType}
+          date={addSheetConfig.targetDate}
+          onClose={() => setAddSheetConfig((prev) => ({ ...prev, visible: false }))}
+          onAddMeal={handleAddMeal}
+        />
+
+        {/* Bottom Navigation Dock: Exactly 4 Tabs */}
         <View style={styles.dockContainer}>
           <View style={styles.bottomNav}>
             {/* 1. Today */}
             <TouchableOpacity
               style={styles.navBtn}
-              onPress={() => switchTab('today')}
+              onPress={() => handleSwitchTab('today')}
               activeOpacity={0.7}
-              accessibilityLabel="Today"
+              accessibilityLabel={t('Today')}
               accessibilityRole="button"
             >
               <LayoutDashboard
                 size={20}
-                color={activeTab === 'today' ? theme.colors.primary : theme.colors.textMuted}
+                color={isHighlightToday ? theme.colors.primary : theme.colors.textMuted}
               />
               <Text
                 style={[
                   styles.navLabel,
-                  activeTab === 'today' && styles.navLabelActive,
+                  isHighlightToday && styles.navLabelActive,
                 ]}
               >
-                Today
+                {t('Today')}
               </Text>
             </TouchableOpacity>
 
-            {/* 2. Diary */}
+            {/* 2. Meals */}
             <TouchableOpacity
               style={styles.navBtn}
-              onPress={() => switchTab('diary')}
+              onPress={() => handleSwitchTab('meals')}
               activeOpacity={0.7}
-              accessibilityLabel="Diary"
+              accessibilityLabel={t('Meals')}
               accessibilityRole="button"
             >
-              <BookOpen
+              <UtensilsCrossed
                 size={20}
-                color={activeTab === 'diary' ? theme.colors.primary : theme.colors.textMuted}
+                color={tempScreen === 'none' && activeTab === 'meals' ? theme.colors.primary : theme.colors.textMuted}
               />
               <Text
                 style={[
                   styles.navLabel,
-                  activeTab === 'diary' && styles.navLabelActive,
+                  tempScreen === 'none' && activeTab === 'meals' && styles.navLabelActive,
                 ]}
               >
-                Diary
+                {t('Meals')}
               </Text>
             </TouchableOpacity>
 
-            {/* 3. Log Food (Centered Action Button) */}
+            {/* 3. Coach */}
             <TouchableOpacity
-              style={styles.logNavBtn}
-              onPress={() => switchTab('scan')}
-              activeOpacity={0.8}
-              accessibilityLabel="Log food"
+              style={styles.navBtn}
+              onPress={() => handleSwitchTab('coach')}
+              activeOpacity={0.7}
+              accessibilityLabel={t('Coach')}
               accessibilityRole="button"
             >
-              <View style={styles.logIconBox}>
-                <Plus size={20} color={theme.colors.textInverted} />
-              </View>
-              <Text style={styles.logNavLabel}>Log food</Text>
+              <Bot
+                size={20}
+                color={tempScreen === 'none' && activeTab === 'coach' ? theme.colors.primary : theme.colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.navLabel,
+                  tempScreen === 'none' && activeTab === 'coach' && styles.navLabelActive,
+                ]}
+              >
+                {t('Coach')}
+              </Text>
             </TouchableOpacity>
 
             {/* 4. Progress */}
             <TouchableOpacity
               style={styles.navBtn}
-              onPress={() => switchTab('progress')}
+              onPress={() => handleSwitchTab('progress')}
               activeOpacity={0.7}
-              accessibilityLabel="Progress"
+              accessibilityLabel={t('Progress')}
               accessibilityRole="button"
             >
               <TrendingUp
                 size={20}
-                color={activeTab === 'progress' ? theme.colors.primary : theme.colors.textMuted}
+                color={tempScreen === 'none' && activeTab === 'progress' ? theme.colors.primary : theme.colors.textMuted}
               />
               <Text
                 style={[
                   styles.navLabel,
-                  activeTab === 'progress' && styles.navLabelActive,
+                  tempScreen === 'none' && activeTab === 'progress' && styles.navLabelActive,
                 ]}
               >
-                Progress
-              </Text>
-            </TouchableOpacity>
-
-            {/* 5. Tools, AI coach, and profile */}
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() => switchTab('tools')}
-              activeOpacity={0.7}
-              accessibilityLabel="Tools"
-              accessibilityRole="button"
-            >
-              <Wrench
-                size={20}
-                color={activeTab === 'tools' || activeTab === 'supplements' || activeTab === 'coach' || activeTab === 'profile' ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.navLabel,
-                  (activeTab === 'tools' || activeTab === 'supplements' || activeTab === 'coach' || activeTab === 'profile') && styles.navLabelActive,
-                ]}
-              >
-                Tools
+                {t('Progress')}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
-      )}
-    </SafeAreaView>
+      </SafeAreaView>
     </I18nProvider>
   );
 }
@@ -349,18 +393,18 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.xl,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    paddingVertical: 7,
-    paddingHorizontal: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     justifyContent: 'space-around',
     alignItems: 'center',
     ...theme.shadow.floating,
   },
   navBtn: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 4,
-    paddingHorizontal: 8,
-    minWidth: 50,
+    paddingHorizontal: 6,
   },
   navLabel: {
     fontFamily: theme.fonts.sans,
@@ -372,27 +416,5 @@ const styles = StyleSheet.create({
   navLabelActive: {
     color: theme.colors.primary,
     fontWeight: '600',
-  },
-  logNavBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 2,
-    minWidth: 54,
-  },
-  logIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...theme.shadow.subtle,
-  },
-  logNavLabel: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 11,
-    fontWeight: '600',
-    color: theme.colors.primary,
-    marginTop: 2,
   },
 });
