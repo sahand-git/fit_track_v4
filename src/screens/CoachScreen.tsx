@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { Bot, Send, Sparkles } from 'lucide-react-native';
+import { Bot, Send, Sparkles, ArrowLeft } from 'lucide-react-native';
 import { DailyLog, UserProfile } from '../types';
 import { AppText as Text } from '../components/AppText';
 import { translate } from '../i18n/strings';
@@ -10,10 +10,10 @@ import { getStoredGeminiApiKey } from '../services/plateAnalysisService';
 import { formatDisplayDate } from '../utils/dateUtils';
 import { theme } from '../theme';
 
-interface CoachScreenProps { profile: UserProfile; log: DailyLog }
+interface CoachScreenProps { profile: UserProfile; log: DailyLog; onBack?: () => void }
 interface Message { role: 'user' | 'coach'; text: string }
 
-export function CoachScreen({ profile, log }: CoachScreenProps) {
+export function CoachScreen({ profile, log, onBack }: CoachScreenProps) {
   const language = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -57,6 +57,11 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        {onBack && (
+          <TouchableOpacity onPress={onBack} style={{ padding: 6, marginRight: 6 }} accessibilityLabel={t('Back')}>
+            <ArrowLeft size={20} color={theme.colors.textPrimary} />
+          </TouchableOpacity>
+        )}
         <View style={styles.icon}><Bot size={20} color={theme.colors.primary} /></View>
         <View style={styles.headerCopy}>
           <Text style={styles.title}>AI Coach</Text>

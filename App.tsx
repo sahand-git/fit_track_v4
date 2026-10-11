@@ -204,15 +204,15 @@ export default function App() {
 
         {/* Tab 5: PROFILE */}
         {activeTab === 'profile' && (
-          <ProfileScreen profile={profile} onSaveProfile={handleSaveProfile} />
+          <ProfileScreen profile={profile} onSaveProfile={handleSaveProfile} onBack={() => setActiveTab('tools')} />
         )}
         {activeTab === 'tools' && (
           <ToolsScreen language={language} onLanguageChange={handleLanguageChange} onOpenVitamins={() => setActiveTab('supplements')} onOpenCoach={() => setActiveTab('coach')} onOpenProfile={() => setActiveTab('profile')} />
         )}
         {activeTab === 'supplements' && (
-          <SupplementsScreen selectedDate={selectedDate} routine={supplementRoutine} checks={log.supplements || []} onAdd={handleAddSupplement} onRemove={handleRemoveSupplement} onToggle={handleToggleSupplement} />
+          <SupplementsScreen selectedDate={selectedDate} routine={supplementRoutine} checks={log.supplements || []} onAdd={handleAddSupplement} onRemove={handleRemoveSupplement} onToggle={handleToggleSupplement} onBack={() => setActiveTab('tools')} />
         )}
-        {activeTab === 'coach' && <CoachScreen profile={profile} log={log} />}
+        {activeTab === 'coach' && <CoachScreen profile={profile} log={log} onBack={() => setActiveTab('tools')} />}
       </View>
 
       {/* Editorial Ledger Bottom Navigation Dock */}

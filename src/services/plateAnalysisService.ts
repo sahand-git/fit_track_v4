@@ -2,8 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FoodItem } from '../types';
 
 const GEMINI_API_KEY_STORAGE = '@fittrack_gemini_api_key';
-// Use the current stable multimodal Flash endpoint for both text and plate analysis.
-const GEMINI_MODEL = 'gemini-3.8-flash';
+// Use current stable multimodal Flash endpoint for both text and plate analysis.
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 async function requestGemini(parts: Array<Record<string, unknown>>, jsonResponse = false): Promise<string> {
   const apiKey = await getStoredGeminiApiKey();

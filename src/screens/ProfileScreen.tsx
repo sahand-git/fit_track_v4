@@ -7,7 +7,7 @@ import {
   TextInput
 } from 'react-native';
 import { AppText as Text } from '../components/AppText';
-import { Check } from 'lucide-react-native';
+import { Check, ArrowLeft } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal } from '../types';
 import { calculateTargets } from '../utils/calculator';
 import { theme } from '../theme';
@@ -19,11 +19,13 @@ import { translate } from '../i18n/strings';
 interface ProfileScreenProps {
   profile: UserProfile;
   onSaveProfile: (profile: UserProfile) => void;
+  onBack?: () => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   profile,
   onSaveProfile,
+  onBack,
 }) => {
   const language = useLanguage();
   const [name, setName] = useState(profile.name);
@@ -102,6 +104,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {onBack && (
+        <TouchableOpacity onPress={onBack} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }} accessibilityLabel={translate(language, 'Back')}>
+          <ArrowLeft size={18} color={theme.colors.textPrimary} />
+          <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.textPrimary }}>Back</Text>
+        </TouchableOpacity>
+      )}
       <Text style={styles.screenTitle}>Profile & Goals</Text>
       <Text style={styles.screenSubtitle}>
         Calibrated with the Mifflin-St Jeor metabolic formula.

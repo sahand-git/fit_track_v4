@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { CheckCircle2, Circle, Pill, Plus, Trash2 } from 'lucide-react-native';
+import { CheckCircle2, Circle, Pill, Plus, Trash2, ArrowLeft } from 'lucide-react-native';
 import { SupplementCheck, SupplementRoutineItem, SupplementTime } from '../types';
 import { AppText as Text } from '../components/AppText';
 import { translate } from '../i18n/strings';
@@ -15,12 +15,13 @@ interface SupplementsScreenProps {
   onAdd: (item: SupplementRoutineItem) => void;
   onRemove: (id: string) => void;
   onToggle: (id: string, taken: boolean) => void;
+  onBack?: () => void;
 }
 
 const timeOptions: SupplementTime[] = ['morning', 'afternoon', 'evening', 'bedtime'];
 const timeLabels: Record<SupplementTime, string> = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', bedtime: 'Bedtime' };
 
-export function SupplementsScreen({ selectedDate, routine, checks, onAdd, onRemove, onToggle }: SupplementsScreenProps) {
+export function SupplementsScreen({ selectedDate, routine, checks, onAdd, onRemove, onToggle, onBack }: SupplementsScreenProps) {
   const language = useLanguage();
   const [name, setName] = useState('');
   const [dose, setDose] = useState('');
@@ -40,6 +41,11 @@ export function SupplementsScreen({ selectedDate, routine, checks, onAdd, onRemo
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
+        {onBack && (
+          <TouchableOpacity onPress={onBack} style={{ padding: 6, marginRight: 6 }} accessibilityLabel={t('Back')}>
+            <ArrowLeft size={20} color={theme.colors.textPrimary} />
+          </TouchableOpacity>
+        )}
         <View style={styles.icon}><Pill size={19} color={theme.colors.primary} /></View>
         <View style={styles.headerCopy}>
           <Text style={styles.title}>Vitamins & supplements</Text>
