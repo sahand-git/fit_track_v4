@@ -23,10 +23,13 @@ import {
   saveUserProfile,
   loadDailyLog,
   addMealToDay,
+  updateMealInDay,
   removeMealFromDay,
   updateWater,
 } from './src/storage/storage';
 import { getDefaultProfile } from './src/utils/calculator';
+import { OnboardingModal } from './src/components/OnboardingModal';
+import { getTodayDateString } from './src/utils/dateUtils';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { FoodLogScreen } from './src/screens/FoodLogScreen';
 import { InsightsScreen } from './src/screens/InsightsScreen';
@@ -44,11 +47,9 @@ export default function App() {
   const [previousTab, setPreviousTab] = useState<Tab>('diary');
 
   const [profile, setProfile] = useState<UserProfile>(getDefaultProfile());
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
   const [log, setLog] = useState<DailyLog>({
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayDateString(),
     meals: [],
     waterGlasses: 0,
     steps: 0,
@@ -86,6 +87,11 @@ export default function App() {
     setLog(updated);
   };
 
+  const handleUpdateMeal = async (meal: LoggedMeal) => {
+    const updated = await updateMealInDay(selectedDate, meal);
+    setLog(updated);
+  };
+
   const handleRemoveMeal = async (mealId: string) => {
     const updated = await removeMealFromDay(selectedDate, mealId);
     setLog(updated);
@@ -110,6 +116,10 @@ export default function App() {
     }
     setActiveTab(tab);
   };
+
+  if (!profile.isOnboarded) {
+    return <OnboardingModal onComplete={handleSaveProfile} />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -187,6 +197,7 @@ export default function App() {
                 onSelectDate={setSelectedDate}
                 log={log}
                 onAddMeal={handleAddMeal}
+                onUpdateMeal={handleUpdateMeal}
                 onRemoveMeal={handleRemoveMeal}
                 initialMealType={initialMealForAdd}
               />
@@ -195,7 +206,7 @@ export default function App() {
         )}
 
         {/* Tab 2: INSIGHTS */}
-        {activeTab === 'insights' && <InsightsScreen />}
+        {activeTab === 'insights' && <InsightsScreen profile={profile} />}
 
         {/* Tab 3: SCANNER (Barcode & AI Camera Viewfinder) */}
         {activeTab === 'scanner' && (
@@ -210,7 +221,7 @@ export default function App() {
         )}
 
         {/* Tab 4: PROGRESS (Trajectory & Body Metrics) */}
-        {activeTab === 'progress' && <ProgressScreen />}
+        {activeTab === 'progress' && <ProgressScreen profile={profile} />}
 
         {/* Tab 5: PROFILE (Goals & Macro Setup) */}
         {activeTab === 'profile' && (

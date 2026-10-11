@@ -21,6 +21,7 @@ import {
 import { DailyLog, LoggedMeal, MealType, FoodItem } from '../types';
 import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
 import { FoodDetailsModal } from '../components/FoodDetailsModal';
+import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import * as Haptics from 'expo-haptics';
 
 interface FoodLogScreenProps {
@@ -28,6 +29,7 @@ interface FoodLogScreenProps {
   onSelectDate: (date: string) => void;
   log: DailyLog;
   onAddMeal: (meal: LoggedMeal) => void;
+  onUpdateMeal?: (meal: LoggedMeal) => void;
   onRemoveMeal: (mealId: string) => void;
   initialMealType?: MealType;
 }
@@ -37,6 +39,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   onSelectDate,
   log,
   onAddMeal,
+  onUpdateMeal,
   onRemoveMeal,
   initialMealType = 'breakfast',
 }) => {
@@ -48,22 +51,18 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   const [servingsCount, setServingsCount] = useState<number>(1);
   const [inspectingMeal, setInspectingMeal] = useState<LoggedMeal | null>(null);
 
-  // Date navigation
+  // Date navigation using local date calculation
   const handlePrevDay = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() - 1);
-    onSelectDate(d.toISOString().split('T')[0]);
+    onSelectDate(addDaysToDateString(selectedDate, -1));
   };
 
   const handleNextDay = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + 1);
-    onSelectDate(d.toISOString().split('T')[0]);
+    onSelectDate(addDaysToDateString(selectedDate, 1));
   };
 
-  const isToday = selectedDate === new Date().toISOString().split('T')[0];
+  const isToday = selectedDate === getTodayDateString();
 
   // Daily Totals
   const totalKcal = log.meals.reduce((sum, m) => sum + m.calories, 0);
@@ -148,8 +147,12 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       iron: inspectingMeal.iron ? Math.round((inspectingMeal.iron / baseServings) * newServings * 10) / 10 : undefined,
     };
 
-    onRemoveMeal(inspectingMeal.id);
-    onAddMeal(updatedMeal);
+    if (onUpdateMeal) {
+      onUpdateMeal(updatedMeal);
+    } else {
+      onRemoveMeal(inspectingMeal.id);
+      onAddMeal(updatedMeal);
+    }
     setInspectingMeal(null);
   };
 
@@ -169,7 +172,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
         </TouchableOpacity>
         <View style={styles.dateTitleContainer}>
           <Text style={styles.dateTitle}>
-            {isToday ? 'Today' : selectedDate}
+            {formatDisplayDate(selectedDate)}
           </Text>
         </View>
         <TouchableOpacity style={styles.dateNavBtn} onPress={handleNextDay}>
@@ -331,6 +334,16 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
               data={filteredFoods}
               keyExtractor={(item) => item.id}
               contentContainerStyle={{ paddingBottom: 24 }}
+              ListEmptyComponent={
+                <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                  <Text style={{ color: '#94A3B8', fontSize: 14, fontWeight: '600' }}>
+                    No foods found matching "{searchQuery}"
+                  </Text>
+                  <Text style={{ color: '#64748B', fontSize: 12, marginTop: 4 }}>
+                    Try searching for egg, chicken, rice, banana, etc.
+                  </Text>
+                </View>
+              }
               renderItem={({ item }) => {
                 const isSelected = selectedFood?.id === item.id;
                 return (

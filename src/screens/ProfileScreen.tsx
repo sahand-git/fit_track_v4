@@ -33,10 +33,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(profile.activityLevel);
   const [goal, setGoal] = useState<FitnessGoal>(profile.goal);
 
-  // Live preview of calculated targets
-  const numericWeight = parseFloat(weightKg) || 75;
-  const numericHeight = parseFloat(heightCm) || 178;
-  const numericAge = parseInt(age, 10) || 26;
+  // Live preview of calculated targets (bounded to safe human ranges)
+  const rawWeight = parseFloat(weightKg);
+  const numericWeight = isNaN(rawWeight) || rawWeight <= 0 ? 75 : Math.max(30, Math.min(300, rawWeight));
+  const rawHeight = parseFloat(heightCm);
+  const numericHeight = isNaN(rawHeight) || rawHeight <= 0 ? 178 : Math.max(100, Math.min(250, rawHeight));
+  const rawAge = parseInt(age, 10);
+  const numericAge = isNaN(rawAge) || rawAge <= 0 ? 26 : Math.max(14, Math.min(100, rawAge));
 
   const liveTargets = calculateTargets(
     gender,
@@ -51,13 +54,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     const updated: UserProfile = {
       ...profile,
-      name,
+      name: name.trim() || 'Athlete',
       age: numericAge,
       gender,
       weightKg: numericWeight,
       heightCm: numericHeight,
       activityLevel,
       goal,
+      isOnboarded: true,
       ...liveTargets,
     };
     onSaveProfile(updated);

@@ -1,34 +1,158 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Image,
+  TextInput,
+  Modal,
+  Alert,
 } from 'react-native';
 import {
-  Trophy,
   TrendingDown,
-  Flag,
-  Percent,
-  Dumbbell,
+  TrendingUp,
   Scale,
-  Camera,
-  ArrowUpRight,
-  ArrowDownRight,
+  Plus,
+  Trash2,
+  Calendar,
+  X,
+  Check,
+  Info,
 } from 'lucide-react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Line } from 'react-native-svg';
+import { UserProfile, WeightEntry } from '../types';
+import { loadWeightHistory, addWeightEntry, removeWeightEntry } from '../storage/storage';
+import { getTodayDateString, formatDisplayDate } from '../utils/dateUtils';
+import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 
-export const ProgressScreen: React.FC = () => {
-  const [activeRange, setActiveRange] = useState('1M');
+interface ProgressScreenProps {
+  profile?: UserProfile;
+  onUpdateWeight?: (weightKg: number) => void;
+}
 
-  const ranges = ['1W', '1M', '3M', '6M', '1Y', 'All'];
+export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdateWeight }) => {
+  const [history, setHistory] = useState<WeightEntry[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [inputWeight, setInputWeight] = useState(profile ? String(profile.weightKg) : '75');
+  const [inputNote, setInputNote] = useState('');
 
-  const handleSelectRange = (r: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setActiveRange(r);
+  useEffect(() => {
+    async function load() {
+      const data = await loadWeightHistory();
+      setHistory(data);
+    }
+    load();
+  }, []);
+
+  const currentWeight = history.length > 0 
+    ? history[history.length - 1].weightKg 
+    : (profile?.weightKg ?? 75);
+
+  const startWeight = history.length > 0 
+    ? history[0].weightKg 
+    : currentWeight;
+
+  const totalDelta = Math.round((currentWeight - startWeight) * 10) / 10;
+
+  const bmi = profile && profile.heightCm > 0
+    ? (currentWeight / Math.pow(profile.heightCm / 100, 2)).toFixed(1)
+    : '22.4';
+
+  const handleSaveWeight = async () => {
+    const num = parseFloat(inputWeight);
+    if (isNaN(num) || num < 25 || num > 350) {
+      Alert.alert('Invalid Weight', 'Please enter a realistic weight between 25 and 350 kg.');
+      return;
+    }
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    const today = getTodayDateString();
+    const entry: WeightEntry = {
+      id: `w_${Date.now()}`,
+      date: today,
+      weightKg: Math.round(num * 10) / 10,
+      note: inputNote.trim() || undefined,
+      timestamp: new Date().toISOString(),
+    };
+
+    const updated = await addWeightEntry(entry);
+    setHistory(updated);
+    if (onUpdateWeight) {
+      onUpdateWeight(num);
+    }
+    setModalVisible(false);
+    setInputNote('');
+  };
+
+  const handleDeleteEntry = async (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    const updated = await removeWeightEntry(id);
+    setHistory(updated);
+  };
+
+  // Generate dynamic SVG chart points if 2+ data points
+  const renderChart = () => {
+    if (history.length < 2) {
+      return (
+        <View style={styles.chartEmptyBox}>
+          <Scale size={28} color={theme.colors.textMuted} />
+          <Text style={styles.chartEmptyTitle}>Need at least 2 entries for trend chart</Text>
+          <Text style={styles.chartEmptySubtitle}>
+            Log your weight across multiple days to view your true trajectory curve.
+          </Text>
+        </View>
+      );
+    }
+
+    const minWeight = Math.min(...history.map(h => h.weightKg)) - 1;
+    const maxWeight = Math.max(...history.map(h => h.weightKg)) + 1;
+    const range = Math.max(1, maxWeight - minWeight);
+
+    const width = 320;
+    const height = 130;
+    const padding = 15;
+
+    const points = history.map((entry, idx) => {
+      const x = padding + (idx / (history.length - 1)) * (width - padding * 2);
+      const y = height - padding - ((entry.weightKg - minWeight) / range) * (height - padding * 2);
+      return { x, y, ...entry };
+    });
+
+    const pathD = points.reduce((acc, pt, idx) => {
+      return idx === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`;
+    }, '');
+
+    return (
+      <View style={styles.svgContainer}>
+        <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
+          <Defs>
+            <LinearGradient id="weightGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor={theme.colors.accent} stopOpacity="0.4" />
+              <Stop offset="100%" stopColor={theme.colors.background} stopOpacity="0" />
+            </LinearGradient>
+          </Defs>
+
+          {/* Gridline */}
+          <Line x1="0" y1={height / 2} x2={width} y2={height / 2} stroke={theme.colors.surfaceBorder} strokeDasharray="4 4" />
+
+          {/* Curve */}
+          <Path
+            d={pathD}
+            fill="none"
+            stroke={theme.colors.accent}
+            strokeWidth={3}
+            strokeLinecap="round"
+          />
+
+          {/* Points */}
+          {points.map((pt, idx) => (
+            <Circle key={idx} cx={pt.x} cy={pt.y} r={4} fill={theme.colors.accent} />
+          ))}
+        </Svg>
+      </View>
+    );
   };
 
   return (
@@ -36,11 +160,17 @@ export const ProgressScreen: React.FC = () => {
       {/* Top Header */}
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.headerSubtitle}>WEIGHT & PROGRESS</Text>
-          <Text style={styles.headerTitle}>Trajectory Tracker</Text>
+          <Text style={styles.headerSubtitle}>PROGRESS & BODY WEIGHT</Text>
+          <Text style={styles.headerTitle}>Weight History</Text>
         </View>
-        <TouchableOpacity style={styles.awardBtn}>
-          <Trophy size={18} color="#FA5D29" />
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => setModalVisible(true)}
+          accessibilityLabel="Log current weight"
+          accessibilityRole="button"
+        >
+          <Plus size={18} color="#FFFFFF" />
+          <Text style={styles.addBtnText}>Log Weight</Text>
         </TouchableOpacity>
       </View>
 
@@ -50,225 +180,125 @@ export const ProgressScreen: React.FC = () => {
           <View>
             <Text style={styles.heroLabel}>CURRENT WEIGHT</Text>
             <View style={styles.heroValueRow}>
-              <Text style={styles.heroValue}>72.4</Text>
+              <Text style={styles.heroValue}>{currentWeight}</Text>
               <Text style={styles.heroUnit}>kg</Text>
             </View>
           </View>
           <View style={styles.heroRight}>
-            <View style={styles.deltaBadge}>
-              <TrendingDown size={14} color="#00714D" />
-              <Text style={styles.deltaBadgeText}>-1.8 kg</Text>
+            <View style={[styles.deltaBadge, totalDelta <= 0 ? styles.deltaLoss : styles.deltaGain]}>
+              {totalDelta <= 0 ? (
+                <TrendingDown size={14} color={theme.colors.primary} />
+              ) : (
+                <TrendingUp size={14} color={theme.colors.amber} />
+              )}
+              <Text style={[styles.deltaBadgeText, totalDelta <= 0 ? { color: theme.colors.primary } : { color: theme.colors.amber }]}>
+                {totalDelta > 0 ? `+${totalDelta}` : `${totalDelta}`} kg
+              </Text>
             </View>
-            <Text style={styles.deltaSub}>Since Aug 1</Text>
+            <Text style={styles.deltaSub}>Overall delta</Text>
           </View>
         </View>
 
-        {/* Progress Track */}
-        <View style={styles.trackLabels}>
-          <Text style={styles.trackLabelLeft}>
-            Start: <Text style={styles.boldText}>74.2 kg</Text>
+        {/* BMI & Status */}
+        <View style={styles.bmiStrip}>
+          <Text style={styles.bmiText}>
+            BMI: <Text style={styles.boldText}>{bmi}</Text> •{' '}
+            {parseFloat(bmi) < 18.5
+              ? 'Underweight'
+              : parseFloat(bmi) < 25
+              ? 'Healthy Weight'
+              : parseFloat(bmi) < 30
+              ? 'Overweight'
+              : 'Obese'}
           </Text>
-          <Text style={styles.trackLabelRight}>
-            Target: <Text style={styles.boldText}>69.0 kg</Text>
-          </Text>
-        </View>
-
-        <View style={styles.trackBarContainer}>
-          <View style={[styles.trackBarFill, { width: '35%' }]} />
-        </View>
-
-        <View style={styles.trackFooter}>
-          <View style={styles.flagRow}>
-            <Flag size={13} color="#FA5D29" />
-            <Text style={styles.flagText}>3.4 kg to goal</Text>
-          </View>
-          <Text style={styles.percentText}>35% reached</Text>
         </View>
       </View>
 
-      {/* Time Range Filter Pills */}
-      <View style={styles.rangePillsRow}>
-        {ranges.map((r) => (
-          <TouchableOpacity
-            key={r}
-            style={[styles.rangePill, activeRange === r && styles.rangePillActive]}
-            onPress={() => handleSelectRange(r)}
-          >
-            <Text style={[styles.rangePillText, activeRange === r && styles.rangePillTextActive]}>
-              {r}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Interactive Trend Chart Card */}
+      {/* Chart Card */}
       <View style={styles.chartCard}>
         <View style={styles.chartTop}>
-          <View style={styles.chartTitleRow}>
-            <View style={styles.chartDot} />
-            <Text style={styles.chartTitle}>Trend Trajectory</Text>
-          </View>
-          <View style={styles.weeklyAvgBox}>
-            <Text style={styles.weeklyAvgLabel}>WEEKLY AVG</Text>
-            <Text style={styles.weeklyAvgValue}>-0.45 kg</Text>
-          </View>
-        </View>
-
-        {/* SVG Curve Chart */}
-        <View style={styles.svgContainer}>
-          <Svg width="100%" height={160} viewBox="0 0 340 160">
-            <Defs>
-              <LinearGradient id="weightGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <Stop offset="0%" stopColor="#FA5D29" stopOpacity="0.3" />
-                <Stop offset="100%" stopColor="#090D16" stopOpacity="0" />
-              </LinearGradient>
-            </Defs>
-
-            {/* Gridlines */}
-            <Line x1="0" y1="35" x2="340" y2="35" stroke="#1E293B" strokeDasharray="4 4" />
-            <Line x1="0" y1="85" x2="340" y2="85" stroke="#1E293B" strokeDasharray="4 4" />
-            <Line x1="0" y1="135" x2="340" y2="135" stroke="#1E293B" strokeDasharray="4 4" />
-
-            {/* Shaded Area */}
-            <Path
-              d="M 15 32 C 45 35, 75 48, 105 60 C 140 74, 175 78, 215 92 L 215 155 L 15 155 Z"
-              fill="url(#weightGrad)"
-            />
-
-            {/* Solid Weight Trajectory Line */}
-            <Path
-              d="M 15 32 C 45 35, 75 48, 105 60 C 140 74, 175 78, 215 92"
-              fill="none"
-              stroke="#FA5D29"
-              strokeWidth={3.5}
-              strokeLinecap="round"
-            />
-
-            {/* Projected Target Line */}
-            <Path
-              d="M 215 92 C 245 102, 280 126, 325 138"
-              fill="none"
-              stroke="#FA5D29"
-              strokeWidth={2.5}
-              strokeDasharray="5 5"
-              strokeOpacity={0.6}
-            />
-
-            {/* Milestones */}
-            <Circle cx="15" cy="32" r="4" fill="#94A3B8" />
-            <Circle cx="105" cy="60" r="3.5" fill="#FA5D29" />
-            <Circle cx="215" cy="92" r="6" fill="#FA5D29" />
-            <Circle cx="325" cy="138" r="4.5" fill="#10B981" />
-          </Svg>
-        </View>
-
-        {/* Timeline X-Axis Labels */}
-        <View style={styles.timelineRow}>
-          <Text style={styles.timelineLabel}>Sep 07</Text>
-          <Text style={styles.timelineLabel}>Sep 17</Text>
-          <Text style={styles.timelineLabel}>Sep 27</Text>
-          <Text style={[styles.timelineLabel, { color: '#FA5D29', fontWeight: '800' }]}>
-            Oct 07
-          </Text>
-          <Text style={[styles.timelineLabel, { color: '#10B981', fontWeight: '800' }]}>
-            Nov 01
+          <Text style={styles.chartTitle}>Weight Trend</Text>
+          <Text style={styles.chartSubtitle}>
+            {history.length > 0 ? `${history.length} weigh-in(s) recorded` : 'No data yet'}
           </Text>
         </View>
+
+        {renderChart()}
       </View>
 
-      {/* Body Composition Grid */}
-      <View style={styles.compositionSection}>
-        <View style={styles.compositionHeader}>
-          <Text style={styles.sectionTitle}>Body Composition</Text>
-          <Text style={styles.syncBadge}>Smart Scale Sync</Text>
-        </View>
+      {/* Real Weight History Log */}
+      <View style={styles.historySection}>
+        <Text style={styles.sectionTitle}>Recorded Entries</Text>
 
-        <View style={styles.compositionGrid}>
-          {/* BMI */}
-          <View style={styles.compCard}>
-            <View style={styles.compTop}>
-              <Text style={styles.compLabel}>BMI</Text>
-              <Scale size={15} color="#10B981" />
-            </View>
-            <Text style={styles.compValue}>22.4</Text>
-            <View style={styles.normalBadge}>
-              <Text style={styles.normalBadgeText}>Normal</Text>
-            </View>
-          </View>
-
-          {/* Body Fat */}
-          <View style={styles.compCard}>
-            <View style={styles.compTop}>
-              <Text style={styles.compLabel}>Body Fat</Text>
-              <Percent size={15} color="#FA5D29" />
-            </View>
-            <Text style={styles.compValue}>18.2%</Text>
-            <View style={styles.deltaSmallRow}>
-              <ArrowDownRight size={12} color="#10B981" />
-              <Text style={styles.deltaSmallText}>-1.1%</Text>
-            </View>
-          </View>
-
-          {/* Muscle Mass */}
-          <View style={styles.compCard}>
-            <View style={styles.compTop}>
-              <Text style={styles.compLabel}>Muscle</Text>
-              <Dumbbell size={15} color="#06B6D4" />
-            </View>
-            <Text style={styles.compValue}>
-              56.1<Text style={styles.compUnit}>kg</Text>
+        {history.length === 0 ? (
+          <View style={styles.emptyHistoryBox}>
+            <Scale size={32} color={theme.colors.textMuted} />
+            <Text style={styles.emptyHistoryTitle}>No weight entries logged yet</Text>
+            <Text style={styles.emptyHistoryBody}>
+              Tap the "Log Weight" button above to record your current weight and track your progress over time.
             </Text>
-            <View style={styles.deltaSmallRow}>
-              <ArrowUpRight size={12} color="#10B981" />
-              <Text style={styles.deltaSmallText}>+0.4 kg</Text>
-            </View>
           </View>
-        </View>
+        ) : (
+          [...history].reverse().map((entry) => (
+            <View key={entry.id} style={styles.historyRow}>
+              <View style={styles.historyDateBox}>
+                <Calendar size={14} color={theme.colors.textMuted} />
+                <Text style={styles.historyDate}>{formatDisplayDate(entry.date)}</Text>
+              </View>
+
+              <View style={styles.historyRight}>
+                <Text style={styles.historyWeight}>{entry.weightKg} kg</Text>
+                {entry.note ? <Text style={styles.historyNote}>{entry.note}</Text> : null}
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={() => handleDeleteEntry(entry.id)}
+                  accessibilityLabel="Delete entry"
+                >
+                  <Trash2 size={16} color={theme.colors.danger} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
+        )}
       </View>
 
-      {/* Photo Check-in Strip */}
-      <View style={styles.photoCard}>
-        <View style={styles.photoHeader}>
-          <Text style={styles.sectionTitle}>Photo Check-in</Text>
-          <TouchableOpacity>
-            <Text style={styles.compareText}>Compare</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.photosGrid}>
-          <View style={styles.photoBox}>
-            <Image
-              source={{
-                uri: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=300&q=80',
-              }}
-              style={styles.checkinPhoto}
-            />
-            <View style={styles.photoTag}>
-              <Text style={styles.photoTagTitle}>AUG 1 (DAY 1)</Text>
-              <Text style={styles.photoTagWeight}>74.2 kg</Text>
+      {/* Modal for Logging Weight */}
+      <Modal visible={modalVisible} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Record Weight</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <X size={20} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
             </View>
-          </View>
 
-          <View style={styles.photoBox}>
-            <Image
-              source={{
-                uri: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=300&q=80',
-              }}
-              style={styles.checkinPhoto}
+            <Text style={styles.modalLabel}>Weight (kg)</Text>
+            <TextInput
+              style={styles.modalInput}
+              keyboardType="numeric"
+              placeholder="e.g. 74.5"
+              placeholderTextColor={theme.colors.textMuted}
+              value={inputWeight}
+              onChangeText={setInputWeight}
             />
-            <View style={styles.photoTag}>
-              <Text style={styles.photoTagTitle}>OCT 7 (TODAY)</Text>
-              <Text style={styles.photoTagWeight}>72.4 kg</Text>
-            </View>
+
+            <Text style={styles.modalLabel}>Note (optional)</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="e.g. Morning fasting, post workout"
+              placeholderTextColor={theme.colors.textMuted}
+              value={inputNote}
+              onChangeText={setInputNote}
+            />
+
+            <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveWeight}>
+              <Check size={18} color="#FFFFFF" />
+              <Text style={styles.modalSaveBtnText}>Save Entry</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </View>
-
-      {/* Primary Log Weight CTA */}
-      <TouchableOpacity style={styles.logWeightBtn} activeOpacity={0.85}>
-        <Camera size={20} color="#FFFFFF" />
-        <Text style={styles.logWeightBtnText}>Log Weight & Photo</Text>
-      </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 };
@@ -276,7 +306,7 @@ export const ProgressScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090D16',
+    backgroundColor: theme.colors.background,
   },
   content: {
     paddingHorizontal: 16,
@@ -292,43 +322,47 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#64748B',
+    color: theme.colors.textMuted,
     letterSpacing: 1.2,
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
     marginTop: 2,
   },
-  awardBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#131B2E',
+  addBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#1E293B',
+    gap: 6,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: theme.radius.full,
+  },
+  addBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   heroCard: {
-    backgroundColor: '#131B2E',
-    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: theme.colors.surfaceBorder,
     marginBottom: 14,
   },
   heroTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   heroLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#64748B',
+    color: theme.colors.textMuted,
     letterSpacing: 0.6,
   },
   heroValueRow: {
@@ -340,12 +374,12 @@ const styles = StyleSheet.create({
   heroValue: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
   },
   heroUnit: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#64748B',
+    color: theme.colors.textMuted,
   },
   heroRight: {
     alignItems: 'flex-end',
@@ -355,100 +389,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(0, 113, 77, 0.2)',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 14,
+    borderRadius: theme.radius.full,
+  },
+  deltaLoss: {
+    backgroundColor: theme.colors.primaryLight,
+  },
+  deltaGain: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
   },
   deltaBadgeText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#4EDEA3',
   },
   deltaSub: {
     fontSize: 10,
-    color: '#64748B',
+    color: theme.colors.textMuted,
   },
-  trackLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
+  bmiStrip: {
+    backgroundColor: theme.colors.surfaceLight,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.radius.md,
+    marginTop: 6,
   },
-  trackLabelLeft: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  trackLabelRight: {
-    fontSize: 11,
-    color: '#64748B',
+  bmiText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
   },
   boldText: {
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
     fontWeight: '700',
-  },
-  trackBarContainer: {
-    height: 8,
-    backgroundColor: '#0F172A',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  trackBarFill: {
-    height: '100%',
-    backgroundColor: '#FA5D29',
-    borderRadius: 4,
-  },
-  trackFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  flagRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  flagText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FA5D29',
-  },
-  percentText: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  rangePillsRow: {
-    flexDirection: 'row',
-    backgroundColor: '#131B2E',
-    borderRadius: 14,
-    padding: 3,
-    marginBottom: 16,
-  },
-  rangePill: {
-    flex: 1,
-    paddingVertical: 7,
-    alignItems: 'center',
-    borderRadius: 12,
-  },
-  rangePillActive: {
-    backgroundColor: '#FA5D29',
-  },
-  rangePillText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  rangePillTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '800',
   },
   chartCard: {
-    backgroundColor: '#131B2E',
-    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: theme.colors.surfaceBorder,
     marginBottom: 16,
   },
   chartTop: {
@@ -457,203 +436,156 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  chartTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  chartDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FA5D29',
-  },
   chartTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
   },
-  weeklyAvgBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#0F172A',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  weeklyAvgLabel: {
-    fontSize: 9,
-    color: '#64748B',
-    fontWeight: '700',
-  },
-  weeklyAvgValue: {
+  chartSubtitle: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#F8FAFC',
+    color: theme.colors.textMuted,
   },
   svgContainer: {
-    height: 160,
+    height: 130,
     width: '100%',
+    marginVertical: 4,
   },
-  timelineRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  timelineLabel: {
-    fontSize: 10,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  compositionSection: {
-    marginBottom: 16,
-  },
-  compositionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  chartEmptyBox: {
     alignItems: 'center',
-    marginBottom: 10,
+    paddingVertical: 24,
+    gap: 6,
+  },
+  chartEmptyTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+  },
+  chartEmptySubtitle: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+  },
+  historySection: {
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
+    marginBottom: 4,
   },
-  syncBadge: {
-    fontSize: 10,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  compositionGrid: {
-    flexDirection: 'row',
+  emptyHistoryBox: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.surfaceBorder,
     gap: 8,
   },
-  compCard: {
-    flex: 1,
-    backgroundColor: '#131B2E',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#1E293B',
-  },
-  compTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  compLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#94A3B8',
-  },
-  compValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#F8FAFC',
-  },
-  compUnit: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  normalBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    borderRadius: 6,
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    alignSelf: 'flex-start',
-    marginTop: 6,
-  },
-  normalBadgeText: {
-    fontSize: 9,
+  emptyHistoryTitle: {
+    fontSize: 14,
     fontWeight: '700',
-    color: '#10B981',
+    color: theme.colors.textPrimary,
   },
-  deltaSmallRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    marginTop: 6,
-  },
-  deltaSmallText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#10B981',
-  },
-  photoCard: {
-    backgroundColor: '#131B2E',
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    marginBottom: 20,
-  },
-  photoHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  compareText: {
+  emptyHistoryBody: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#FA5D29',
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 18,
   },
-  photosGrid: {
+  historyRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.surfaceBorder,
+  },
+  historyDateBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  historyDate: {
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+    fontWeight: '600',
+  },
+  historyRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  historyWeight: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  historyNote: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+  },
+  deleteBtn: {
+    padding: 4,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.surfaceBorder,
     gap: 10,
   },
-  photoBox: {
-    flex: 1,
-    height: 180,
-    borderRadius: 14,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#0F172A',
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
   },
-  checkinPhoto: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.85,
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
   },
-  photoTag: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 8,
-    backgroundColor: 'rgba(9, 13, 22, 0.85)',
-  },
-  photoTagTitle: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#F8FAFC',
-    letterSpacing: 0.6,
-  },
-  photoTagWeight: {
+  modalLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#FA5D29',
-    marginTop: 1,
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
   },
-  logWeightBtn: {
-    backgroundColor: '#FA5D29',
+  modalInput: {
+    backgroundColor: theme.colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: theme.colors.surfaceBorder,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: theme.colors.textPrimary,
+    fontSize: 15,
+  },
+  modalSaveBtn: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.md,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderRadius: 14,
-    paddingVertical: 14,
-    shadowColor: '#FA5D29',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 4,
+    marginTop: 6,
   },
-  logWeightBtnText: {
+  modalSaveBtnText: {
     color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 15,
+    fontWeight: '700',
+    fontSize: 14,
   },
 });

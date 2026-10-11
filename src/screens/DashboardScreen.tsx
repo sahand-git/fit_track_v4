@@ -41,7 +41,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </View>
         <View style={styles.badge}>
           <Flame size={15} color="#10B981" />
-          <Text style={styles.badgeText}>Day Streak: 1</Text>
+          <Text style={styles.badgeText}>
+            {log.meals.length > 0 ? `${log.meals.length} Logged Today` : 'Start Today'}
+          </Text>
         </View>
       </View>
 

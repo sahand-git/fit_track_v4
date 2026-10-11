@@ -1,30 +1,29 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
-  Animated,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import {
   ArrowLeft,
   X,
-  Zap,
-  ZapOff,
-  Image as ImageIcon,
-  Keyboard,
+  Search,
+  Barcode,
   CheckCircle,
   Plus,
   Minus,
   Utensils,
   Check,
-  QrCode,
-  Sparkles,
+  AlertTriangle,
+  Info,
 } from 'lucide-react-native';
-import { LoggedMeal, MealType } from '../types';
+import { LoggedMeal, MealType, FoodItem } from '../types';
+import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
+import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 
 interface ScannerScreenProps {
@@ -36,64 +35,63 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
   onBack,
   onAddMeal,
 }) => {
-  const [isFlashOn, setIsFlashOn] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [matchedFood, setMatchedFood] = useState<FoodItem | null>(null);
+  const [searchStatus, setSearchStatus] = useState<'idle' | 'searching' | 'found' | 'not_found'>('idle');
   const [servings, setServings] = useState(1);
   const [selectedMeal, setSelectedMeal] = useState<MealType>('breakfast');
   const [isLogged, setIsLogged] = useState(false);
-  const [manualCode, setManualCode] = useState('');
-  const [showManualInput, setShowManualInput] = useState(false);
 
-  // Animated laser beam
-  const laserAnim = useRef(new Animated.Value(0)).current;
+  const handleLookupBarcode = (codeToLookup?: string) => {
+    const raw = (codeToLookup || barcodeInput).trim();
+    if (!raw) return;
 
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(laserAnim, {
-          toValue: 1,
-          duration: 1800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(laserAnim, {
-          toValue: 0,
-          duration: 1800,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-
-  const toggleFlash = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setIsFlashOn((prev) => !prev);
+    setSearchStatus('searching');
+
+    // Search local verified database by exact barcode or partial ID match
+    const match = VERIFIED_FOOD_DATABASE.find(
+      (f) => f.barcode === raw || f.id.toLowerCase() === raw.toLowerCase()
+    );
+
+    setTimeout(() => {
+      if (match) {
+        setMatchedFood(match);
+        setSearchStatus('found');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      } else {
+        setMatchedFood(null);
+        setSearchStatus('not_found');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      }
+    }, 250);
   };
 
-  const handleIncrement = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setServings((s) => Math.min(10, s + 1));
-  };
-
-  const handleDecrement = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setServings((s) => Math.max(1, s - 1));
+  const handleSelectQuickSample = (sampleBarcode: string) => {
+    setBarcodeInput(sampleBarcode);
+    handleLookupBarcode(sampleBarcode);
   };
 
   const handleLogProduct = () => {
+    if (!matchedFood) return;
+
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setIsLogged(true);
 
     const meal: LoggedMeal = {
-      id: `scanned_${Date.now()}`,
-      foodId: 'food_scanned_berry_yogurt',
-      name: 'Chobani® Greek Mixed Berry Yogurt',
+      id: `food_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      foodId: matchedFood.id,
+      name: matchedFood.name,
+      brand: matchedFood.brand,
+      category: matchedFood.category,
       mealType: selectedMeal,
       servings,
-      servingSize: '1 cup (150g)',
-      servingGrams: 150 * servings,
-      calories: 120 * servings,
-      protein: 12 * servings,
-      carbs: 14 * servings,
-      fat: 0 * servings,
+      servingSize: matchedFood.servingSize,
+      servingGrams: Math.round(matchedFood.servingGrams * servings),
+      calories: Math.round(matchedFood.calories * servings),
+      protein: Math.round(matchedFood.protein * servings * 10) / 10,
+      carbs: Math.round(matchedFood.carbs * servings * 10) / 10,
+      fat: Math.round(matchedFood.fat * servings * 10) / 10,
       timestamp: new Date().toISOString(),
     };
 
@@ -102,261 +100,230 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
     setTimeout(() => {
       setIsLogged(false);
       onBack();
-    }, 1200);
+    }, 800);
   };
 
-  const laserTranslate = laserAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-60, 60],
-  });
+  // Sample catalog barcodes from database
+  const sampleBarcodes = [
+    { label: 'Egg', code: '011110001027' },
+    { label: 'Chicken', code: '011110001010' },
+    { label: 'Whey Protein', code: '748927028669' },
+    { label: 'Greek Yogurt', code: '894700010328' },
+  ];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Top Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBtn} onPress={onBack}>
-          <ArrowLeft size={22} color="#F8FAFC" />
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={onBack}
+          accessibilityLabel="Back to Diary"
+          accessibilityRole="button"
+        >
+          <ArrowLeft size={22} color={theme.colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Barcode Scanner</Text>
-        <TouchableOpacity style={styles.headerBtn} onPress={onBack}>
-          <X size={22} color="#94A3B8" />
+        <Text style={styles.headerTitle}>Barcode Lookup</Text>
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={onBack}
+          accessibilityLabel="Close"
+          accessibilityRole="button"
+        >
+          <X size={22} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      {/* Viewfinder Section */}
-      <View style={styles.viewfinder}>
-        {/* Dark Vignette & Backdrop */}
-        <View style={styles.cameraBackdrop}>
-          <Image
-            source={{
-              uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
-            }}
-            style={styles.cameraImage}
-          />
-          <View style={styles.cameraOverlay} />
+      {/* Honest Scanner Status Banner */}
+      <View style={styles.noticeBanner}>
+        <Info size={18} color={theme.colors.cyan} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.noticeTitle}>Camera Scanner Notice</Text>
+          <Text style={styles.noticeBody}>
+            Live camera barcode scanning requires camera hardware permissions on physical devices. Enter the product UPC barcode below to instantly look up verified nutrition.
+          </Text>
         </View>
+      </View>
 
-        {/* Top Controls on Camera */}
-        <View style={styles.cameraControls}>
+      {/* Manual Barcode Input Card */}
+      <View style={styles.inputCard}>
+        <Text style={styles.inputCardLabel}>Enter Barcode / UPC Number</Text>
+        <View style={styles.searchRow}>
+          <View style={styles.searchBox}>
+            <Barcode size={18} color={theme.colors.textMuted} />
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 894700010328 or 011110001027"
+              placeholderTextColor={theme.colors.textMuted}
+              value={barcodeInput}
+              onChangeText={setBarcodeInput}
+              keyboardType="numeric"
+              returnKeyType="search"
+              onSubmitEditing={() => handleLookupBarcode()}
+            />
+          </View>
           <TouchableOpacity
-            style={[styles.cameraActionBtn, isFlashOn && styles.cameraActionBtnActive]}
-            onPress={toggleFlash}
+            style={styles.searchBtn}
+            onPress={() => handleLookupBarcode()}
+            accessibilityLabel="Look up barcode"
+            accessibilityRole="button"
           >
-            {isFlashOn ? <ZapOff size={16} color="#090D16" /> : <Zap size={16} color="#F8FAFC" />}
-            <Text style={[styles.cameraActionText, isFlashOn && styles.cameraActionTextActive]}>
-              {isFlashOn ? 'Flash On' : 'Flash'}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.cameraRightControls}>
-            <TouchableOpacity style={styles.iconCircleBtn}>
-              <ImageIcon size={18} color="#F8FAFC" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cameraActionBtn}
-              onPress={() => setShowManualInput(!showManualInput)}
-            >
-              <Keyboard size={16} color="#F8FAFC" />
-              <Text style={styles.cameraActionText}>Manual</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Reticle Target Window */}
-        <View style={styles.reticle}>
-          {/* Glowing Corners */}
-          <View style={[styles.corner, styles.cornerTL]} />
-          <View style={[styles.corner, styles.cornerTR]} />
-          <View style={[styles.corner, styles.cornerBL]} />
-          <View style={[styles.corner, styles.cornerBR]} />
-
-          {/* Animated Scanning Laser Beam */}
-          <Animated.View
-            style={[
-              styles.laser,
-              { transform: [{ translateY: laserTranslate }] },
-            ]}
-          />
-
-          {/* Scanning Live Badge */}
-          <View style={styles.scanningBadge}>
-            <View style={styles.pingDot} />
-            <Text style={styles.scanningBadgeText}>SCANNING LIVE</Text>
-          </View>
-        </View>
-
-        {/* Helper Capsule */}
-        <View style={styles.instructionCapsule}>
-          <QrCode size={16} color="#FA5D29" />
-          <Text style={styles.instructionText}>Align barcode within frame</Text>
-        </View>
-      </View>
-
-      {/* Manual Input Card (Optional) */}
-      {showManualInput && (
-        <View style={styles.manualInputCard}>
-          <TextInput
-            style={styles.manualInputField}
-            placeholder="Enter 12-digit UPC barcode..."
-            placeholderTextColor="#64748B"
-            keyboardType="numeric"
-            value={manualCode}
-            onChangeText={setManualCode}
-          />
-          <TouchableOpacity style={styles.manualSubmitBtn} onPress={handleLogProduct}>
-            <Text style={styles.manualSubmitBtnText}>Look Up</Text>
+            <Search size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-      )}
 
-      {/* Detected Product Match Card (Stitch Elevation) */}
-      <View style={styles.matchCard}>
-        {/* Card Header: Match Badge & UPC */}
-        <View style={styles.cardHeaderRow}>
-          <View style={styles.matchBadge}>
-            <CheckCircle size={15} color="#00714D" />
-            <Text style={styles.matchBadgeText}>100% Barcode Match</Text>
-          </View>
-          <Text style={styles.upcText}>UPC 8-94700-01032</Text>
-        </View>
-
-        {/* Product Identity */}
-        <View style={styles.productRow}>
-          <Image
-            source={{
-              uri: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=200&q=80',
-            }}
-            style={styles.productThumbnail}
-          />
-          <View style={styles.productInfo}>
-            <Text style={styles.brandTitle}>CHOBANI® GREEK</Text>
-            <Text style={styles.productName} numberOfLines={1}>
-              Mixed Berry Yogurt
-            </Text>
-            <Text style={styles.portionSubtitle}>Single Serve • 1 cup (150g)</Text>
-            <View style={styles.calorieRow}>
-              <Text style={styles.calorieNumber}>{120 * servings}</Text>
-              <Text style={styles.calorieUnit}>kcal</Text>
-              <Text style={styles.calorieDailyPct}>6% Daily Limit</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Macro Nutrients Pill Grid */}
-        <View style={styles.macroPillGrid}>
-          <View style={styles.macroPill}>
-            <View style={styles.macroPillHeader}>
-              <View style={[styles.macroDot, { backgroundColor: '#006C49' }]} />
-              <Text style={styles.macroPillLabel}>PROTEIN</Text>
-            </View>
-            <Text style={styles.macroPillVal}>
-              {12 * servings}
-              <Text style={styles.macroPillValUnit}>g</Text>
-            </Text>
-            <Text style={[styles.macroPillSub, { color: '#006C49' }]}>40% cals</Text>
-          </View>
-
-          <View style={styles.macroPill}>
-            <View style={styles.macroPillHeader}>
-              <View style={[styles.macroDot, { backgroundColor: '#FA5D29' }]} />
-              <Text style={styles.macroPillLabel}>CARBS</Text>
-            </View>
-            <Text style={styles.macroPillVal}>
-              {14 * servings}
-              <Text style={styles.macroPillValUnit}>g</Text>
-            </Text>
-            <Text style={styles.macroPillSub}>46% cals</Text>
-          </View>
-
-          <View style={styles.macroPill}>
-            <View style={styles.macroPillHeader}>
-              <View style={[styles.macroDot, { backgroundColor: '#3298DC' }]} />
-              <Text style={styles.macroPillLabel}>FAT</Text>
-            </View>
-            <Text style={styles.macroPillVal}>
-              {0 * servings}
-              <Text style={styles.macroPillValUnit}>g</Text>
-            </Text>
-            <Text style={styles.macroPillSub}>0% cals</Text>
-          </View>
-        </View>
-
-        {/* Meal Target & Stepper Drawer */}
-        <View style={styles.stepperRow}>
-          <View style={styles.stepperLeft}>
-            <View style={styles.mealIconCircle}>
-              <Utensils size={16} color="#FA5D29" />
-            </View>
-            <View>
-              <Text style={styles.stepperSubLabel}>LOG INTO</Text>
-              <Text style={styles.stepperMealLabel}>
-                {selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1)}
-              </Text>
-            </View>
-          </View>
-
-          {/* Serving Stepper */}
-          <View style={styles.stepperControls}>
-            <TouchableOpacity style={styles.stepperBtn} onPress={handleDecrement}>
-              <Minus size={15} color="#94A3B8" />
-            </TouchableOpacity>
-            <Text style={styles.stepperCountText}>
-              {servings === 1 ? '1 cup' : `${servings} cups`}
-            </Text>
-            <TouchableOpacity style={styles.stepperBtn} onPress={handleIncrement}>
-              <Plus size={15} color="#FA5D29" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Meal Category Switcher Chips */}
-        <View style={styles.chipsRow}>
-          {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((meal) => (
+        {/* Quick Sample Chips */}
+        <Text style={styles.quickSamplesLabel}>Try sample barcode from database:</Text>
+        <View style={styles.sampleChipsRow}>
+          {sampleBarcodes.map((item) => (
             <TouchableOpacity
-              key={meal}
-              style={[
-                styles.mealChip,
-                selectedMeal === meal && styles.mealChipActive,
-              ]}
-              onPress={() => setSelectedMeal(meal)}
+              key={item.code}
+              style={styles.sampleChip}
+              onPress={() => handleSelectQuickSample(item.code)}
             >
-              <Text
-                style={[
-                  styles.mealChipText,
-                  selectedMeal === meal && styles.mealChipTextActive,
-                ]}
-              >
-                {meal.charAt(0).toUpperCase() + meal.slice(1)}
-              </Text>
+              <Text style={styles.sampleChipText}>{item.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
-
-        {/* Primary CTA */}
-        <TouchableOpacity
-          style={[styles.primaryLogBtn, isLogged && styles.primaryLogBtnSuccess]}
-          onPress={handleLogProduct}
-          activeOpacity={0.85}
-        >
-          {isLogged ? (
-            <>
-              <Check size={20} color="#FFFFFF" />
-              <Text style={styles.primaryLogBtnText}>Logged to Food Diary!</Text>
-            </>
-          ) : (
-            <>
-              <Plus size={20} color="#FFFFFF" />
-              <Text style={styles.primaryLogBtnText}>Add to Food Diary</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        {/* OpenFoodFacts Verification Tag */}
-        <View style={styles.verifiedFootnote}>
-          <Sparkles size={14} color="#10B981" />
-          <Text style={styles.verifiedFootnoteText}>Verified OpenFoodFacts DB</Text>
-        </View>
       </View>
+
+      {/* Loading state */}
+      {searchStatus === 'searching' && (
+        <View style={styles.statusBox}>
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <Text style={styles.statusText}>Searching verified nutrition database...</Text>
+        </View>
+      )}
+
+      {/* Not Found State */}
+      {searchStatus === 'not_found' && (
+        <View style={styles.notFoundBox}>
+          <AlertTriangle size={24} color={theme.colors.amber} />
+          <Text style={styles.notFoundTitle}>Barcode Not Found</Text>
+          <Text style={styles.notFoundBody}>
+            No match for "{barcodeInput}" in the local verified database. Check the number or search for the item by name in the Food Diary tab.
+          </Text>
+        </View>
+      )}
+
+      {/* Found Product Card */}
+      {searchStatus === 'found' && matchedFood && (
+        <View style={styles.matchCard}>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.matchBadge}>
+              <CheckCircle size={15} color={theme.colors.primary} />
+              <Text style={styles.matchBadgeText}>Verified Match</Text>
+            </View>
+            <Text style={styles.upcText}>UPC {matchedFood.barcode || matchedFood.id}</Text>
+          </View>
+
+          <View style={styles.productInfo}>
+            {matchedFood.brand && (
+              <Text style={styles.brandTitle}>{matchedFood.brand.toUpperCase()}</Text>
+            )}
+            <Text style={styles.productName}>{matchedFood.name}</Text>
+            <Text style={styles.portionSubtitle}>
+              Serving: {matchedFood.servingSize} ({matchedFood.servingGrams}g)
+            </Text>
+
+            <View style={styles.calorieRow}>
+              <Text style={styles.calorieNumber}>
+                {Math.round(matchedFood.calories * servings)}
+              </Text>
+              <Text style={styles.calorieUnit}>kcal total</Text>
+            </View>
+          </View>
+
+          {/* Macro Pill Grid */}
+          <View style={styles.macroPillGrid}>
+            <View style={styles.macroPill}>
+              <Text style={styles.macroPillLabel}>PROTEIN</Text>
+              <Text style={[styles.macroPillVal, { color: theme.colors.amber }]}>
+                {Math.round(matchedFood.protein * servings * 10) / 10}g
+              </Text>
+            </View>
+            <View style={styles.macroPill}>
+              <Text style={styles.macroPillLabel}>CARBS</Text>
+              <Text style={[styles.macroPillVal, { color: theme.colors.cyan }]}>
+                {Math.round(matchedFood.carbs * servings * 10) / 10}g
+              </Text>
+            </View>
+            <View style={styles.macroPill}>
+              <Text style={styles.macroPillLabel}>FAT</Text>
+              <Text style={[styles.macroPillVal, { color: theme.colors.pink }]}>
+                {Math.round(matchedFood.fat * servings * 10) / 10}g
+              </Text>
+            </View>
+          </View>
+
+          {/* Servings Stepper */}
+          <View style={styles.stepperRow}>
+            <View style={styles.stepperLeft}>
+              <Utensils size={16} color={theme.colors.primary} />
+              <Text style={styles.stepperSubLabel}>Servings</Text>
+            </View>
+            <View style={styles.stepperControls}>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                onPress={() => setServings((s) => Math.max(0.5, s - 0.5))}
+                accessibilityLabel="Decrease servings"
+              >
+                <Minus size={15} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+              <Text style={styles.stepperCountText}>{servings}</Text>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                onPress={() => setServings((s) => s + 0.5)}
+                accessibilityLabel="Increase servings"
+              >
+                <Plus size={15} color={theme.colors.primary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Meal Target Chips */}
+          <View style={styles.chipsRow}>
+            {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((meal) => (
+              <TouchableOpacity
+                key={meal}
+                style={[
+                  styles.mealChip,
+                  selectedMeal === meal && styles.mealChipActive,
+                ]}
+                onPress={() => setSelectedMeal(meal)}
+              >
+                <Text
+                  style={[
+                    styles.mealChipText,
+                    selectedMeal === meal && styles.mealChipTextActive,
+                  ]}
+                >
+                  {meal.charAt(0).toUpperCase() + meal.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Primary Confirmation CTA */}
+          <TouchableOpacity
+            style={[styles.primaryLogBtn, isLogged && styles.primaryLogBtnSuccess]}
+            onPress={handleLogProduct}
+            activeOpacity={0.85}
+          >
+            {isLogged ? (
+              <>
+                <Check size={20} color="#FFFFFF" />
+                <Text style={styles.primaryLogBtnText}>Logged to Diary!</Text>
+              </>
+            ) : (
+              <>
+                <Plus size={20} color="#FFFFFF" />
+                <Text style={styles.primaryLogBtnText}>Log to Diary</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
   );
 };
@@ -364,230 +331,163 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090D16',
+    backgroundColor: theme.colors.background,
   },
   content: {
     paddingBottom: 40,
+    paddingHorizontal: 16,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
     paddingVertical: 12,
+    marginBottom: 8,
   },
   headerBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#131B2E',
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.surfaceBorder,
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
   },
-  viewfinder: {
-    position: 'relative',
-    width: '100%',
-    height: 320,
-    backgroundColor: '#000000',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  cameraBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  cameraImage: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.45,
-  },
-  cameraOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(9, 13, 22, 0.4)',
-  },
-  cameraControls: {
-    width: '100%',
+  noticeBanner: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    zIndex: 10,
+    gap: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.surfaceBorder,
+    borderRadius: theme.radius.lg,
+    padding: 14,
+    marginBottom: 16,
+    alignItems: 'flex-start',
   },
-  cameraActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(19, 27, 46, 0.75)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  cameraActionBtnActive: {
-    backgroundColor: '#FA5D29',
-  },
-  cameraActionText: {
-    fontSize: 11,
+  noticeTitle: {
+    fontSize: 13,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
+    marginBottom: 2,
+  },
+  noticeBody: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
+  },
+  inputCard: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.surfaceBorder,
+    borderRadius: theme.radius.lg,
+    padding: 16,
+    marginBottom: 16,
+  },
+  inputCardLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+    marginBottom: 10,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  cameraActionTextActive: {
-    color: '#090D16',
-  },
-  cameraRightControls: {
+  searchRow: {
     flexDirection: 'row',
     gap: 8,
   },
-  iconCircleBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(19, 27, 46, 0.75)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  reticle: {
-    width: 220,
-    height: 150,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: 28,
-    height: 28,
-    borderColor: '#FA5D29',
-  },
-  cornerTL: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 3.5,
-    borderLeftWidth: 3.5,
-    borderTopLeftRadius: 16,
-  },
-  cornerTR: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 3.5,
-    borderRightWidth: 3.5,
-    borderTopRightRadius: 16,
-  },
-  cornerBL: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 3.5,
-    borderLeftWidth: 3.5,
-    borderBottomLeftRadius: 16,
-  },
-  cornerBR: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 3.5,
-    borderRightWidth: 3.5,
-    borderBottomRightRadius: 16,
-  },
-  laser: {
-    width: 190,
-    height: 2.5,
-    backgroundColor: '#FA5D29',
-    borderRadius: 2,
-    shadowColor: '#FA5D29',
-    shadowOpacity: 0.9,
-    shadowRadius: 10,
-  },
-  scanningBadge: {
-    position: 'absolute',
-    top: -14,
+  searchBox: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#131B2E',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
+    gap: 8,
+    backgroundColor: theme.colors.surfaceLight,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: theme.colors.surfaceBorder,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: 12,
   },
-  pingDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
+  input: {
+    flex: 1,
+    paddingVertical: 10,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
   },
-  scanningBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#F8FAFC',
-    letterSpacing: 0.8,
+  searchBtn: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  instructionCapsule: {
+  quickSamplesLabel: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginTop: 14,
+    marginBottom: 8,
+  },
+  sampleChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  sampleChip: {
+    backgroundColor: theme.colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: theme.colors.surfaceBorder,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  sampleChipText: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+  },
+  statusBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(19, 27, 46, 0.85)',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    zIndex: 10,
-  },
-  instructionText: {
-    fontSize: 12,
-    color: '#F8FAFC',
-    fontWeight: '500',
-  },
-  manualInputCard: {
-    flexDirection: 'row',
     gap: 10,
-    paddingHorizontal: 16,
+    padding: 16,
+    justifyContent: 'center',
+  },
+  statusText: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+  },
+  notFoundBox: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderRadius: theme.radius.lg,
+    padding: 18,
+    alignItems: 'center',
+    gap: 8,
     marginVertical: 10,
   },
-  manualInputField: {
-    flex: 1,
-    backgroundColor: '#131B2E',
-    color: '#F8FAFC',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: '#1E293B',
-  },
-  manualSubmitBtn: {
-    backgroundColor: '#FA5D29',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-  },
-  manualSubmitBtnText: {
-    color: '#FFFFFF',
+  notFoundTitle: {
+    fontSize: 15,
     fontWeight: '700',
-    fontSize: 13,
+    color: theme.colors.textPrimary,
+  },
+  notFoundBody: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   matchCard: {
-    backgroundColor: '#131B2E',
-    marginHorizontal: 16,
-    marginTop: -20,
-    borderRadius: 22,
-    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    shadowColor: '#000000',
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
+    borderColor: theme.colors.primaryBorder,
+    marginTop: 8,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -599,72 +499,56 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(0, 108, 73, 0.15)',
+    backgroundColor: theme.colors.primaryLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: theme.radius.full,
   },
   matchBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#4EDEA3',
+    color: theme.colors.primary,
   },
   upcText: {
     fontSize: 11,
-    color: '#64748B',
-  },
-  productRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 14,
-  },
-  productThumbnail: {
-    width: 76,
-    height: 76,
-    borderRadius: 16,
-    backgroundColor: '#1E293B',
+    color: theme.colors.textMuted,
+    fontFamily: 'monospace',
   },
   productInfo: {
-    flex: 1,
+    marginBottom: 14,
   },
   brandTitle: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#FA5D29',
+    color: theme.colors.primary,
     letterSpacing: 0.8,
   },
   productName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
     marginTop: 2,
   },
   portionSubtitle: {
     fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
+    color: theme.colors.textMuted,
+    marginTop: 4,
   },
   calorieRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 4,
-    marginTop: 6,
+    gap: 6,
+    marginTop: 8,
   },
   calorieNumber: {
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
   },
   calorieUnit: {
-    fontSize: 12,
-    color: '#64748B',
+    fontSize: 13,
+    color: theme.colors.textMuted,
     fontWeight: '600',
-  },
-  calorieDailyPct: {
-    fontSize: 11,
-    color: '#10B981',
-    fontWeight: '700',
-    marginLeft: 6,
   },
   macroPillGrid: {
     flexDirection: 'row',
@@ -673,156 +557,105 @@ const styles = StyleSheet.create({
   },
   macroPill: {
     flex: 1,
-    backgroundColor: '#0F172A',
-    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.radius.md,
     padding: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#1E293B',
-  },
-  macroPillHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
-  },
-  macroDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    borderColor: theme.colors.surfaceBorder,
   },
   macroPillLabel: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#64748B',
+    color: theme.colors.textMuted,
+    marginBottom: 4,
   },
   macroPillVal: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#F8FAFC',
-  },
-  macroPillValUnit: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  macroPillSub: {
-    fontSize: 10,
-    color: '#64748B',
-    marginTop: 2,
-    fontWeight: '600',
   },
   stepperRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
-    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.radius.md,
     padding: 12,
-    marginBottom: 10,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: theme.colors.surfaceBorder,
   },
   stepperLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  mealIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(250, 93, 41, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
   },
   stepperSubLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#64748B',
-  },
-  stepperMealLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: theme.colors.textPrimary,
   },
   stepperControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
-    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.sm,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    gap: 10,
+    gap: 12,
   },
   stepperBtn: {
-    padding: 4,
+    padding: 6,
   },
   stepperCountText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#F8FAFC',
-    minWidth: 44,
+    color: theme.colors.textPrimary,
+    minWidth: 28,
     textAlign: 'center',
   },
   chipsRow: {
     flexDirection: 'row',
     gap: 6,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   mealChip: {
     flex: 1,
-    backgroundColor: '#0F172A',
-    borderRadius: 10,
+    backgroundColor: theme.colors.surfaceLight,
+    borderRadius: theme.radius.sm,
     paddingVertical: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: theme.colors.surfaceBorder,
   },
   mealChipActive: {
-    borderColor: '#FA5D29',
-    backgroundColor: 'rgba(250, 93, 41, 0.12)',
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryLight,
   },
   mealChipText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: theme.colors.textSecondary,
   },
   mealChipTextActive: {
-    color: '#FA5D29',
+    color: theme.colors.primary,
     fontWeight: '700',
   },
   primaryLogBtn: {
-    backgroundColor: '#FA5D29',
-    borderRadius: 14,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.md,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: '#FA5D29',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
   },
   primaryLogBtnSuccess: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#059669',
   },
   primaryLogBtnText: {
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontWeight: '700',
     fontSize: 15,
-  },
-  verifiedFootnote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 12,
-  },
-  verifiedFootnoteText: {
-    fontSize: 11,
-    color: '#10B981',
-    fontWeight: '600',
   },
 });

@@ -26,6 +26,7 @@ export interface UserProfile {
   targetCarbs: number;
   targetFat: number;
   waterTargetGlasses: number;
+  isOnboarded?: boolean;
 }
 
 export interface FoodItem {
@@ -39,6 +40,7 @@ export interface FoodItem {
   carbs: number;
   fat: number;
   category?: string;
+  barcode?: string;
   fiber?: number;
   sugar?: number;
   sodium?: number; // mg
@@ -46,6 +48,14 @@ export interface FoodItem {
   calcium?: number; // mg
   iron?: number; // mg
   vitaminC?: number; // mg
+}
+
+export interface WeightEntry {
+  id: string;
+  date: string; // YYYY-MM-DD
+  weightKg: number;
+  note?: string;
+  timestamp: string;
 }
 
 export interface LoggedMeal {
