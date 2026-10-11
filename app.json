@@ -21,6 +21,20 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "FitTrack needs access to your camera to scan barcodes and photograph meals."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FitTrack needs access to your photos to analyze meal images."
+        }
+      ]
+    ]
   }
 }
