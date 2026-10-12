@@ -8,10 +8,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, ArrowLeft, Globe2 } from 'lucide-react-native';
-import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage } from '../types';
+import { Check, ArrowLeft, Globe2, Bell } from 'lucide-react-native';
+import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
 import { GeminiKeyManager } from '../components/GeminiKeyManager';
+import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
 import { useLanguage } from '../i18n/I18nContext';
 import { languageNames, translate } from '../i18n/strings';
 import { theme } from '../theme';
@@ -20,6 +21,7 @@ import * as Haptics from 'expo-haptics';
 interface ProfileScreenProps {
   profile: UserProfile;
   language: AppLanguage;
+  supplementRoutine?: SupplementRoutineItem[];
   onLanguageChange: (language: AppLanguage) => void;
   onSaveProfile: (profile: UserProfile) => void;
   onBack?: () => void;
@@ -28,6 +30,7 @@ interface ProfileScreenProps {
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   profile,
   language,
+  supplementRoutine = [],
   onLanguageChange,
   onSaveProfile,
   onBack,
@@ -37,6 +40,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const bottomPadding = Math.max(110, insets.bottom + 76);
   const t = (str: string) => translate(currentLanguage, str);
 
+  const [remindersModalVisible, setRemindersModalVisible] = useState(false);
   const [name, setName] = useState(profile.name);
   const [age, setAge] = useState(profile.age.toString());
   const [gender, setGender] = useState<Gender>(profile.gender);
@@ -293,10 +297,40 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         ))}
       </View>
 
+      {/* Daily Reminders Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>{t('Daily Reminders')}</Text>
+        <TouchableOpacity
+          style={styles.optionRow}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setRemindersModalVisible(true);
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <Bell size={20} color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Configure Reminders')}</Text>
+              <Text style={styles.optionDesc}>
+                {t('Opt-in reminders for your habits and routines.')}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+
       {/* Save Button */}
       <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
         <Text style={styles.saveBtnText}>{t('Save Targets')}</Text>
       </TouchableOpacity>
+
+      <ReminderSettingsModal
+        visible={remindersModalVisible}
+        onClose={() => setRemindersModalVisible(false)}
+        routine={supplementRoutine}
+      />
     </ScrollView>
   );
 };

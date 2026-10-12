@@ -20,6 +20,7 @@ import {
   X,
   Check,
   Flame,
+  Info,
 } from 'lucide-react-native';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 import { UserProfile, WeightEntry } from '../types';
@@ -259,6 +260,14 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
             </View>
 
             {renderChart()}
+          </View>
+
+          {/* Scientific Fluctuation Notice */}
+          <View style={styles.disclaimerCard}>
+            <Info size={14} color={theme.colors.secondary} />
+            <Text style={styles.disclaimerText}>
+              {t('Day-to-day weight fluctuations naturally reflect hydration, sodium, and digestion rather than immediate changes in fat or muscle mass. Track multi-week trends for meaningful insight.')}
+            </Text>
           </View>
 
           {/* Real History List */}
@@ -553,6 +562,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textMuted,
     textAlign: 'center',
+  },
+  disclaimerCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 12,
+  },
+  disclaimerText: {
+    flex: 1,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
   },
   historySection: {
     gap: 8,

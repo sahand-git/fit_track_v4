@@ -37,46 +37,68 @@ export const CalorieRing: React.FC<CalorieRingProps> = ({
   const isOver = consumed > target;
 
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {/* Track */}
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={theme.colors.surfaceSubtle}
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
+    <View style={styles.wrapper}>
+      <View style={[styles.container, { width: size, height: size }]}>
+        <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {/* Track */}
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={theme.colors.surfaceSubtle}
+            strokeWidth={strokeWidth}
+            fill="none"
+          />
 
-        {/* Botanical Green Progress Arc */}
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={isOver ? theme.colors.accent : theme.colors.primary}
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={`${circumference}`}
-          strokeDashoffset={calorieOffset}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </Svg>
+          {/* Botanical Green Progress Arc */}
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={isOver ? theme.colors.accent : theme.colors.primary}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={`${circumference}`}
+            strokeDashoffset={calorieOffset}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        </Svg>
 
-      {/* Center Metrics: Natural, calm typography */}
-      <View style={styles.centerContent}>
-        <Text style={styles.remainingValue}>
-          {remaining.toLocaleString()}
-        </Text>
-        <Text style={styles.remainingLabel}>
-          {isOver ? t('kcal over budget') : t('kcal remaining')}
-        </Text>
-
-        <View style={styles.ratioPill}>
-          <Text style={styles.ratioText}>
-            {consumed.toLocaleString()} {t('of')} {target.toLocaleString()} {t('kcal')}
+        {/* Center Metrics: Natural, calm typography */}
+        <View style={styles.centerContent}>
+          <Text style={[styles.remainingValue, isOver && { color: theme.colors.accent }]}>
+            {remaining.toLocaleString()}
           </Text>
+          <Text style={styles.remainingLabel}>
+            {isOver ? t('kcal over budget') : t('kcal remaining')}
+          </Text>
+        </View>
+      </View>
+
+      {/* 3-Point Calorie Ledger: Consumed | Remaining | Daily Target */}
+      <View style={styles.ledgerRow}>
+        <View style={styles.ledgerCol}>
+          <Text style={styles.ledgerVal}>{consumed.toLocaleString()}</Text>
+          <Text style={styles.ledgerLbl}>{t('Consumed')}</Text>
+        </View>
+
+        <View style={styles.ledgerDivider} />
+
+        <View style={styles.ledgerCol}>
+          <Text style={[styles.ledgerVal, isOver && { color: theme.colors.accent }]}>
+            {remaining.toLocaleString()}
+          </Text>
+          <Text style={styles.ledgerLbl}>
+            {isOver ? t('Over') : t('Remaining')}
+          </Text>
+        </View>
+
+        <View style={styles.ledgerDivider} />
+
+        <View style={styles.ledgerCol}>
+          <Text style={styles.ledgerVal}>{target.toLocaleString()}</Text>
+          <Text style={styles.ledgerLbl}>{t('Daily Target')}</Text>
         </View>
       </View>
     </View>
@@ -84,6 +106,10 @@ export const CalorieRing: React.FC<CalorieRingProps> = ({
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    alignItems: 'center',
+    width: '100%',
+  },
   container: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -111,19 +137,39 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  ratioPill: {
-    marginTop: 10,
-    backgroundColor: theme.colors.surfaceSubtle,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: theme.radius.full,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+  ledgerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    maxWidth: 320,
+    marginTop: 18,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingHorizontal: 16,
   },
-  ratioText: {
+  ledgerCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  ledgerVal: {
+    fontFamily: theme.fonts.serif,
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  ledgerLbl: {
     fontFamily: theme.fonts.sans,
-    fontSize: 12,
-    color: theme.colors.textSecondary,
+    fontSize: 11,
     fontWeight: '500',
+    color: theme.colors.textMuted,
+    marginTop: 2,
+    letterSpacing: 0.3,
+  },
+  ledgerDivider: {
+    width: 1,
+    height: 22,
+    backgroundColor: theme.colors.border,
   },
 });

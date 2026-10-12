@@ -125,3 +125,23 @@ export interface DailyLog {
   supplements?: SupplementCheck[];
   dailySupplements?: LoggedDailySupplement[];
 }
+
+export interface TimeSetting {
+  hour: number;
+  minute: number;
+  enabled: boolean;
+}
+
+export interface WaterReminderSetting {
+  enabled: boolean;
+  intervalHours: number;
+  startHour: number;
+  endHour: number;
+}
+
+export interface ReminderSettings {
+  supplementsEnabled: boolean;
+  supplementTimes: Record<SupplementTime, TimeSetting>;
+  water: WaterReminderSetting;
+  meals: Record<MealType, TimeSetting>;
+}

@@ -233,3 +233,63 @@ export async function loadLogsForDates(dates: string[]): Promise<Record<string, 
   return result;
 }
 
+const REMINDER_SETTINGS_KEY = '@fittrack_reminder_settings';
+
+export const DEFAULT_REMINDER_SETTINGS: import('../types').ReminderSettings = {
+  supplementsEnabled: false,
+  supplementTimes: {
+    morning: { hour: 8, minute: 0, enabled: true },
+    afternoon: { hour: 13, minute: 0, enabled: true },
+    evening: { hour: 18, minute: 0, enabled: true },
+    bedtime: { hour: 21, minute: 30, enabled: true },
+  },
+  water: {
+    enabled: false,
+    intervalHours: 2,
+    startHour: 8,
+    endHour: 20,
+  },
+  meals: {
+    breakfast: { hour: 8, minute: 30, enabled: false },
+    lunch: { hour: 12, minute: 30, enabled: false },
+    dinner: { hour: 19, minute: 0, enabled: false },
+    snack: { hour: 16, minute: 0, enabled: false },
+  },
+};
+
+export async function loadReminderSettings(): Promise<import('../types').ReminderSettings> {
+  try {
+    const raw = await AsyncStorage.getItem(REMINDER_SETTINGS_KEY);
+    if (!raw) return DEFAULT_REMINDER_SETTINGS;
+    const parsed = JSON.parse(raw);
+    return {
+      ...DEFAULT_REMINDER_SETTINGS,
+      ...parsed,
+      supplementTimes: {
+        ...DEFAULT_REMINDER_SETTINGS.supplementTimes,
+        ...(parsed.supplementTimes || {}),
+      },
+      water: {
+        ...DEFAULT_REMINDER_SETTINGS.water,
+        ...(parsed.water || {}),
+      },
+      meals: {
+        ...DEFAULT_REMINDER_SETTINGS.meals,
+        ...(parsed.meals || {}),
+      },
+    };
+  } catch (err) {
+    console.error('Error loading reminder settings:', err);
+    return DEFAULT_REMINDER_SETTINGS;
+  }
+}
+
+export async function saveReminderSettings(settings: import('../types').ReminderSettings): Promise<void> {
+  try {
+    await AsyncStorage.setItem(REMINDER_SETTINGS_KEY, JSON.stringify(settings));
+  } catch (err) {
+    console.error('Error saving reminder settings:', err);
+  }
+}
+
+

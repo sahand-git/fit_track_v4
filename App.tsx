@@ -27,7 +27,9 @@ import {
   saveSupplementRoutine,
   saveDailySupplements,
   setSupplementTaken,
+  loadReminderSettings,
 } from './src/storage/storage';
+import { initNotificationService, scheduleSupplementReminders } from './src/services/notificationService';
 import { getDefaultProfile } from './src/utils/calculator';
 import { OnboardingModal } from './src/components/OnboardingModal';
 import { getTodayDateString } from './src/utils/dateUtils';
@@ -87,6 +89,7 @@ function FitTrackApp() {
   // Load initial profile and daily log
   useEffect(() => {
     async function init() {
+      await initNotificationService();
       const p = await loadUserProfile();
       setProfile(p);
       setAppLanguage(p.language || 'en');
@@ -151,6 +154,7 @@ function FitTrackApp() {
   };
 
   const handleUpdateDailySupplements = async (items: LoggedDailySupplement[]) => {
+    if (selectedDate > getTodayDateString()) return;
     const updated = await saveDailySupplements(selectedDate, items);
     setLog(updated);
   };
@@ -158,12 +162,24 @@ function FitTrackApp() {
   const handleUpdateRoutine = async (items: SupplementRoutineItem[]) => {
     setSupplementRoutine(items);
     await saveSupplementRoutine(items);
+    try {
+      const remSettings = await loadReminderSettings();
+      await scheduleSupplementReminders(remSettings, items, language);
+    } catch (e) {
+      console.warn('Error syncing reminders after routine update:', e);
+    }
   };
 
   const handleUpdateSupplement = async (item: SupplementRoutineItem) => {
     const updated = supplementRoutine.map((existing) => existing.id === item.id ? item : existing);
     setSupplementRoutine(updated);
     await saveSupplementRoutine(updated);
+    try {
+      const remSettings = await loadReminderSettings();
+      await scheduleSupplementReminders(remSettings, updated, language);
+    } catch (e) {
+      console.warn('Error syncing reminders after supplement update:', e);
+    }
   };
 
   const handleToggleSupplement = async (id: string, taken: boolean) => {
@@ -226,6 +242,7 @@ function FitTrackApp() {
             <ProfileScreen
               profile={profile}
               language={language}
+              supplementRoutine={supplementRoutine}
               onLanguageChange={handleLanguageChange}
               onSaveProfile={handleSaveProfile}
               onBack={() => setTempScreen('none')}
@@ -237,7 +254,7 @@ function FitTrackApp() {
             <SupplementsScreen
               selectedDate={selectedDate}
               routine={supplementRoutine}
-              dailySupplements={log.dailySupplements || []}
+              dailySupplements={log.dailySupplements}
               checks={log.supplements || []}
               onUpdateDailySupplements={handleUpdateDailySupplements}
               onUpdateRoutine={handleUpdateRoutine}

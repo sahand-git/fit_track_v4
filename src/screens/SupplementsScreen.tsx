@@ -28,6 +28,7 @@ import {
   Edit3,
   Calendar,
   AlertCircle,
+  Bell,
 } from 'lucide-react-native';
 import {
   SupplementCheck,
@@ -37,6 +38,7 @@ import {
   LoggedDailySupplement,
 } from '../types';
 import { AppText as Text } from '../components/AppText';
+import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
 import { translate } from '../i18n/strings';
 import { useLanguage } from '../i18n/I18nContext';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
@@ -51,7 +53,7 @@ import * as Haptics from 'expo-haptics';
 interface SupplementsScreenProps {
   selectedDate: string;
   routine: SupplementRoutineItem[];
-  dailySupplements: LoggedDailySupplement[];
+  dailySupplements?: LoggedDailySupplement[];
   checks?: SupplementCheck[];
   onUpdateDailySupplements: (items: LoggedDailySupplement[]) => Promise<void>;
   onUpdateRoutine: (items: SupplementRoutineItem[]) => Promise<void>;
@@ -135,6 +137,9 @@ export function SupplementsScreen({
 
   // In-app feedback toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Reminders Modal state
+  const [reminderModalVisible, setReminderModalVisible] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -501,6 +506,17 @@ export function SupplementsScreen({
           <Text style={styles.title}>{t('Vitamins & Supplements')}</Text>
           <Text style={styles.subtitle}>{formatDisplayDate(selectedDate, language)}</Text>
         </View>
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setReminderModalVisible(true);
+          }}
+          style={styles.reminderHeaderBtn}
+          accessibilityLabel={t('Reminders')}
+          accessibilityRole="button"
+        >
+          <Bell size={18} color={theme.colors.textPrimary} />
+        </TouchableOpacity>
       </View>
 
       {/* Future Date Read-Only Banner */}
@@ -553,7 +569,7 @@ export function SupplementsScreen({
             accessibilityRole="button"
           >
             <RotateCcw size={14} color={theme.colors.primary} />
-            <Text style={styles.actionStripBtnText}>{t('Load routine')}</Text>
+            <Text style={styles.actionStripBtnText} numberOfLines={2}>{t('Load routine')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -562,7 +578,7 @@ export function SupplementsScreen({
             accessibilityRole="button"
           >
             <BookmarkCheck size={14} color={theme.colors.secondary} />
-            <Text style={styles.actionStripBtnText}>{t('Save day as routine')}</Text>
+            <Text style={styles.actionStripBtnText} numberOfLines={2}>{t('Save day as routine')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -571,7 +587,7 @@ export function SupplementsScreen({
             accessibilityRole="button"
           >
             <Plus size={15} color={theme.colors.textInverted} strokeWidth={2.5} />
-            <Text style={styles.actionStripBtnPrimaryText}>{t('Add supplement')}</Text>
+            <Text style={styles.actionStripBtnPrimaryText} numberOfLines={2}>{t('Add supplement')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -587,14 +603,14 @@ export function SupplementsScreen({
               : t('No supplements added yet. Tap + to add items you take.')}
           </Text>
           {!isFuture && (
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
+            <View style={styles.emptyActionsRow}>
               {routine.length > 0 && (
                 <TouchableOpacity
                   style={[styles.actionStripBtn, { paddingVertical: 10, paddingHorizontal: 14 }]}
                   onPress={handleLoadRoutine}
                 >
                   <RotateCcw size={15} color={theme.colors.primary} />
-                  <Text style={styles.actionStripBtnText}>{t('Load routine')}</Text>
+                  <Text style={styles.actionStripBtnText} numberOfLines={2}>{t('Load routine')}</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -602,7 +618,7 @@ export function SupplementsScreen({
                 onPress={() => openAddModal()}
               >
                 <Plus size={16} color={theme.colors.textInverted} />
-                <Text style={styles.actionStripBtnPrimaryText}>{t('Browse catalog')}</Text>
+                <Text style={styles.actionStripBtnPrimaryText} numberOfLines={2}>{t('Browse catalog')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1171,6 +1187,12 @@ export function SupplementsScreen({
           </View>
         </View>
       </Modal>
+
+      <ReminderSettingsModal
+        visible={reminderModalVisible}
+        onClose={() => setReminderModalVisible(false)}
+        routine={routine}
+      />
     </View>
   );
 }
@@ -1305,6 +1327,13 @@ const styles = StyleSheet.create({
     padding: 6,
     marginRight: 2,
   },
+  reminderHeaderBtn: {
+    padding: 8,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
   iconBox: {
     width: 40,
     height: 40,
@@ -1405,12 +1434,14 @@ const styles = StyleSheet.create({
   },
   actionStrip: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     alignItems: 'center',
   },
   actionStripBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
@@ -1418,22 +1449,37 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: theme.radius.full,
+    minHeight: 40,
+    flexGrow: 1,
+    flexShrink: 1,
     ...theme.shadow.subtle,
   },
   actionStripBtnText: {
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textPrimary,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   actionStripBtnPrimary: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
-    marginLeft: 'auto',
+    flexGrow: 1.5,
   },
   actionStripBtnPrimaryText: {
     fontSize: 12,
     fontWeight: '700',
     color: theme.colors.textInverted,
+    textAlign: 'center',
+    flexShrink: 1,
+  },
+  emptyActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+    width: '100%',
+    justifyContent: 'center',
   },
   emptyCard: {
     alignItems: 'center',

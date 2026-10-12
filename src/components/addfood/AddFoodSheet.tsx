@@ -364,6 +364,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                   styles.segmentText,
                   activeTab === 'search' && styles.segmentTextActive,
                 ]}
+                numberOfLines={2}
               >
                 {t('Search')}
               </Text>
@@ -386,6 +387,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                   styles.segmentText,
                   activeTab === 'photo' && styles.segmentTextActive,
                 ]}
+                numberOfLines={2}
               >
                 {t('Analyze meal photo')}
               </Text>
@@ -408,6 +410,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                   styles.segmentText,
                   activeTab === 'describe' && styles.segmentTextActive,
                 ]}
+                numberOfLines={2}
               >
                 {t('Describe with AI')}
               </Text>
@@ -529,7 +532,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             <Text style={styles.selectedBrand}>{selectedFood.brand}</Text>
                           ) : null}
                           <Text style={styles.selectedPortion}>
-                            {selectedFood.servingSize} ({selectedFood.servingGrams}g)
+                            {selectedFood.servingSize} ({Math.round(selectedFood.servingGrams * servingsCount)}g)
+                          </Text>
+                          <Text style={styles.selectedMacrosPreview}>
+                            {`P: ${(selectedFood.protein * servingsCount).toFixed(1)}g • C: ${(selectedFood.carbs * servingsCount).toFixed(1)}g • F: ${(selectedFood.fat * servingsCount).toFixed(1)}g`}
                           </Text>
                         </View>
                         <Text style={styles.selectedKcal}>
@@ -569,9 +575,19 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
                   {/* Foods List */}
                   <ScrollView
-                    contentContainerStyle={styles.foodListScroll}
+                    contentContainerStyle={[
+                      styles.foodListScroll,
+                      { paddingBottom: Math.max(48, insets.bottom + 36) },
+                    ]}
                     keyboardShouldPersistTaps="handled"
                   >
+                    <View style={styles.listHeaderRow}>
+                      <Text style={styles.listHeaderTitle}>
+                        {searchQuery.trim().length > 0
+                          ? `${filteredFoods.length} ${t('results')}`
+                          : t('Common & Frequent Foods')}
+                      </Text>
+                    </View>
                     {filteredFoods.map((item) => (
                       <TouchableOpacity
                         key={item.id}
@@ -603,7 +619,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
           {/* TAB 2: AI MEAL PHOTO */}
           {activeTab === 'photo' && (
             <ScrollView
-              contentContainerStyle={styles.tabContentScroll}
+              contentContainerStyle={[
+                styles.tabContentScroll,
+                { paddingBottom: Math.max(48, insets.bottom + 36) },
+              ]}
               keyboardShouldPersistTaps="handled"
             >
               {!hasApiKey && (
@@ -672,7 +691,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
           {/* TAB 3: AI DESCRIBE */}
           {activeTab === 'describe' && (
             <ScrollView
-              contentContainerStyle={styles.tabContentScroll}
+              contentContainerStyle={[
+                styles.tabContentScroll,
+                { paddingBottom: Math.max(48, insets.bottom + 36) },
+              ]}
               keyboardShouldPersistTaps="handled"
             >
               {!hasApiKey && (
@@ -810,18 +832,23 @@ const styles = StyleSheet.create({
   },
   segmentedControl: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     backgroundColor: theme.colors.surfaceSubtle,
     borderRadius: theme.radius.md,
-    padding: 3,
-    gap: 4,
+    padding: 4,
+    gap: 6,
   },
   segmentBtn: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 90,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: 6,
     paddingVertical: 8,
+    paddingHorizontal: 8,
     borderRadius: theme.radius.sm,
   },
   segmentBtnActive: {
@@ -832,6 +859,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textMuted,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   segmentTextActive: {
     color: theme.colors.primary,
@@ -994,6 +1023,13 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
+  selectedMacrosPreview: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.primary,
+    marginTop: 4,
+  },
   selectedKcal: {
     fontSize: 16,
     fontWeight: '700',
@@ -1045,8 +1081,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.textInverted,
   },
+  listHeaderRow: {
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  listHeaderTitle: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
   foodListScroll: {
-    paddingTop: 8,
+    paddingTop: 4,
     paddingBottom: 20,
     gap: 6,
   },
