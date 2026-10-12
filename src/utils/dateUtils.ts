@@ -1,4 +1,5 @@
 import { AppLanguage } from '../types';
+import { translate } from '../i18n/strings';
 
 /**
  * Local date handling utilities to avoid UTC day-shift bugs.
@@ -34,9 +35,9 @@ export function formatDisplayDate(dateStr: string, language: AppLanguage = 'en')
   const yesterday = addDaysToDateString(today, -1);
   const tomorrow = addDaysToDateString(today, 1);
 
-  if (dateStr === today) return 'Today';
-  if (dateStr === yesterday) return 'Yesterday';
-  if (dateStr === tomorrow) return 'Tomorrow';
+  if (dateStr === today) return translate(language, 'Today');
+  if (dateStr === yesterday) return translate(language, 'Yesterday');
+  if (dateStr === tomorrow) return translate(language, 'Tomorrow');
 
   const date = parseLocalDateString(dateStr);
   const locale = language === 'ar' ? 'ar-IQ' : language === 'ckb' ? 'ckb-IQ' : undefined;

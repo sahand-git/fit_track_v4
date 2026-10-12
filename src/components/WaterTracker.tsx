@@ -6,6 +6,8 @@ import {
 } from 'react-native';
 import { AppText as Text } from './AppText';
 import { Droplet, Plus, Minus } from 'lucide-react-native';
+import { useLanguage } from '../i18n/I18nContext';
+import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 
@@ -20,6 +22,9 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
   target,
   onUpdate,
 }) => {
+  const language = useLanguage();
+  const t = (key: string) => translate(language, key);
+
   const currentLiters = ((glasses * 250) / 1000).toFixed(1);
   const targetLiters = ((target * 250) / 1000).toFixed(1);
 
@@ -41,9 +46,9 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
           <Droplet size={18} color={theme.colors.water} />
         </View>
         <View>
-          <Text style={styles.title}>Water Intake</Text>
+          <Text style={styles.title}>{t('Water Intake')}</Text>
           <Text style={styles.subtitle}>
-            {glasses} of {target} glasses ({currentLiters}L / {targetLiters}L)
+            {glasses} {t('of')} {target} {t('glasses')} ({currentLiters}L / {targetLiters}L)
           </Text>
         </View>
       </View>
@@ -53,7 +58,7 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
           style={[styles.btn, glasses === 0 && styles.btnDisabled]}
           onPress={handleSubtract}
           disabled={glasses === 0}
-          accessibilityLabel="Remove 1 glass of water"
+          accessibilityLabel={t('Remove 1 glass of water')}
           accessibilityRole="button"
         >
           <Minus size={15} color={glasses === 0 ? theme.colors.textMuted : theme.colors.textPrimary} />
@@ -62,7 +67,7 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
         <TouchableOpacity
           style={[styles.btn, styles.btnAdd]}
           onPress={handleAdd}
-          accessibilityLabel="Add 1 glass of water"
+          accessibilityLabel={t('Add 1 glass of water')}
           accessibilityRole="button"
         >
           <Plus size={15} color={theme.colors.textInverted} />

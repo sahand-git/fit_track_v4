@@ -1,37 +1,42 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  TextInput
+  TextInput,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { ArrowLeft, Check, Globe2 } from 'lucide-react-native';
+import { Check, ArrowLeft, Globe2 } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage } from '../types';
 import { calculateTargets } from '../utils/calculator';
-import { theme } from '../theme';
-import * as Haptics from 'expo-haptics';
-import { clearGeminiApiKey, getStoredGeminiApiKey, setStoredGeminiApiKey } from '../services/plateAnalysisService';
+import { GeminiKeyManager } from '../components/GeminiKeyManager';
 import { useLanguage } from '../i18n/I18nContext';
 import { languageNames, translate } from '../i18n/strings';
+import { theme } from '../theme';
+import * as Haptics from 'expo-haptics';
 
 interface ProfileScreenProps {
   profile: UserProfile;
-  onSaveProfile: (profile: UserProfile) => void;
   language: AppLanguage;
   onLanguageChange: (language: AppLanguage) => void;
-  onBack: () => void;
+  onSaveProfile: (profile: UserProfile) => void;
+  onBack?: () => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   profile,
-  onSaveProfile,
-  language: selectedLanguage,
+  language,
   onLanguageChange,
+  onSaveProfile,
   onBack,
 }) => {
-  const language = useLanguage();
+  const currentLanguage = useLanguage();
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(110, insets.bottom + 76);
+  const t = (str: string) => translate(currentLanguage, str);
+
   const [name, setName] = useState(profile.name);
   const [age, setAge] = useState(profile.age.toString());
   const [gender, setGender] = useState<Gender>(profile.gender);
@@ -39,23 +44,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [heightCm, setHeightCm] = useState(profile.heightCm.toString());
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(profile.activityLevel);
   const [goal, setGoal] = useState<FitnessGoal>(profile.goal);
-  const [geminiKey, setGeminiKey] = useState('');
-  const [keySaved, setKeySaved] = useState(false);
-
-  useEffect(() => {
-    getStoredGeminiApiKey().then(key => { setGeminiKey(key || ''); setKeySaved(Boolean(key)); });
-  }, []);
-
-  const handleSaveGeminiKey = async () => {
-    if (geminiKey.trim()) {
-      await setStoredGeminiApiKey(geminiKey);
-      setKeySaved(true);
-    } else {
-      await clearGeminiApiKey();
-      setKeySaved(false);
-    }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-  };
 
   // Live preview of calculated targets (bounded to safe human ranges)
   const rawWeight = parseFloat(weightKg);
@@ -85,6 +73,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       heightCm: numericHeight,
       activityLevel,
       goal,
+      language,
       isOnboarded: true,
       ...liveTargets,
     };
@@ -92,68 +81,85 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const activityOptions: { key: ActivityLevel; label: string; desc: string }[] = [
-    { key: 'sedentary', label: 'Sedentary', desc: 'Desk job, little to no exercise' },
-    { key: 'light', label: 'Lightly Active', desc: 'Light exercise 1–3 days a week' },
-    { key: 'moderate', label: 'Moderately Active', desc: 'Moderate training 3–5 days a week' },
-    { key: 'very_active', label: 'Very Active', desc: 'Intense training 6–7 days a week' },
+    { key: 'sedentary', label: t('Sedentary'), desc: t('Desk job, little to no exercise') },
+    { key: 'light', label: t('Lightly Active'), desc: t('Light exercise 1–3 days a week') },
+    { key: 'moderate', label: t('Moderately Active'), desc: t('Moderate training 3–5 days a week') },
+    { key: 'very_active', label: t('Very Active'), desc: t('Intense training 6–7 days a week') },
   ];
 
   const goalOptions: { key: FitnessGoal; label: string; desc: string }[] = [
-    { key: 'fat_loss_aggressive', label: 'Aggressive Fat Loss', desc: '−500 kcal daily deficit' },
-    { key: 'fat_loss_moderate', label: 'Steady Fat Loss', desc: '−300 kcal sustainable deficit' },
-    { key: 'maintenance', label: 'Maintain Weight', desc: 'Energy balance & recomposition' },
-    { key: 'lean_bulk', label: 'Lean Bulk', desc: '+250 kcal controlled surplus' },
-    { key: 'muscle_gain', label: 'Muscle Gain', desc: '+450 kcal muscle building' },
+    { key: 'fat_loss_aggressive', label: t('Aggressive Fat Loss'), desc: t('−500 kcal daily deficit') },
+    { key: 'fat_loss_moderate', label: t('Steady Fat Loss'), desc: t('−300 kcal sustainable deficit') },
+    { key: 'maintenance', label: t('Maintain Weight'), desc: t('Energy balance & recomposition') },
+    { key: 'lean_bulk', label: t('Lean Bulk'), desc: t('+250 kcal controlled surplus') },
+    { key: 'muscle_gain', label: t('Muscle Gain'), desc: t('+450 kcal muscle building') },
   ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.titleRow}>
-        <Text style={styles.screenTitle}>Profile & Goals</Text>
-        <TouchableOpacity onPress={onBack} style={styles.backButton} accessibilityRole="button" accessibilityLabel={translate(language, 'Back to Today')}>
-          <ArrowLeft size={20} color={theme.colors.textPrimary} />
+    <ScrollView
+      style={[styles.container, { direction: currentLanguage === 'en' ? 'ltr' : 'rtl' }]}
+      contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+    >
+      {onBack && (
+        <TouchableOpacity
+          onPress={onBack}
+          style={styles.backRow}
+          accessibilityLabel={t('Back')}
+          accessibilityRole="button"
+        >
+          <ArrowLeft size={18} color={theme.colors.textPrimary} />
+          <Text style={styles.backText}>{t('Back')}</Text>
         </TouchableOpacity>
-      </View>
+      )}
+
+      <Text style={styles.screenTitle}>{t('Profile & Goals')}</Text>
       <Text style={styles.screenSubtitle}>
-        Calibrated with the Mifflin-St Jeor metabolic formula.
+        {t('Calibrated with the Mifflin-St Jeor metabolic formula.')}
       </Text>
 
+      {/* Language Selector */}
       <View style={styles.languageCard}>
-        <View style={styles.languageHeader}><Globe2 size={18} color={theme.colors.secondary} /><Text style={styles.languageTitle}>Language</Text></View>
+        <View style={styles.languageHeader}>
+          <Globe2 size={18} color={theme.colors.secondary} />
+          <Text style={styles.languageTitle}>{t('Language')}</Text>
+        </View>
         <View style={styles.languageOptions}>
-          {(['en', 'ar', 'ckb'] as AppLanguage[]).map(option => (
-            <TouchableOpacity key={option} onPress={() => onLanguageChange(option)} style={[styles.languageOption, selectedLanguage === option && styles.languageOptionActive]} accessibilityRole="button" accessibilityState={{ selected: selectedLanguage === option }}>
-              <Text style={[styles.languageOptionText, selectedLanguage === option && styles.languageOptionTextActive]}>{languageNames[option]}</Text>
+          {(['en', 'ar', 'ckb'] as AppLanguage[]).map((option) => (
+            <TouchableOpacity
+              key={option}
+              onPress={() => onLanguageChange(option)}
+              style={[
+                styles.languageOption,
+                language === option && styles.languageOptionActive,
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: language === option }}
+            >
+              <Text
+                style={[
+                  styles.languageOptionText,
+                  language === option && styles.languageOptionTextActive,
+                ]}
+              >
+                {languageNames[option]}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
-        <Text style={styles.languageNote}>Language updates immediately. Arabic and Sorani use a right-to-left layout.</Text>
+        <Text style={styles.restartNote}>
+          {t('Language updates immediately. Arabic and Sorani use a right-to-left layout.')}
+        </Text>
       </View>
 
-      <View style={styles.aiSettingsCard}>
-        <Text style={styles.sectionHeader}>AI features</Text>
-        <Text style={styles.aiKeyDescription}>A Gemini API key enables text meal estimates, plate scanning, and AI Coach. Requests send your prompt and the relevant meal or goal context to Google. Google usage limits and billing apply.</Text>
-        <TextInput
-          style={styles.input}
-          value={geminiKey}
-          onChangeText={value => { setGeminiKey(value); setKeySaved(false); }}
-          placeholder={translate(language, 'Gemini API key')}
-          placeholderTextColor={theme.colors.textMuted}
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <TouchableOpacity style={styles.saveKeyBtn} onPress={handleSaveGeminiKey} activeOpacity={0.8}>
-          <Text style={styles.saveKeyText}>{keySaved ? 'API key saved' : geminiKey.trim() ? 'Save API key' : 'Remove API key'}</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Shared Gemini API Key Manager */}
+      <GeminiKeyManager />
 
       {/* Daily Target Estimation Summary Card */}
       <View style={styles.targetPreviewCard}>
-        <Text style={styles.previewTitle}>Estimated Daily Target</Text>
+        <Text style={styles.previewTitle}>{t('Estimated Daily Target')}</Text>
         <Text style={styles.previewKcal}>{liveTargets.targetCalories} kcal</Text>
         <Text style={styles.previewMeta}>
-          BMR: {liveTargets.bmr} kcal • TDEE: {liveTargets.tdee} kcal
+          {t('BMR')}: {liveTargets.bmr} kcal • {t('TDEE')}: {liveTargets.tdee} kcal
         </Text>
 
         <View style={styles.macroStrip}>
@@ -161,43 +167,43 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <Text style={[styles.macroVal, { color: theme.colors.macroProtein }]}>
               {liveTargets.targetProtein}g
             </Text>
-            <Text style={styles.macroLabel}>Protein</Text>
+            <Text style={styles.macroLabel}>{t('Protein')}</Text>
           </View>
           <View style={styles.macroDivider} />
           <View style={styles.macroStripItem}>
             <Text style={[styles.macroVal, { color: theme.colors.macroCarbs }]}>
               {liveTargets.targetCarbs}g
             </Text>
-            <Text style={styles.macroLabel}>Carbs</Text>
+            <Text style={styles.macroLabel}>{t('Carbs')}</Text>
           </View>
           <View style={styles.macroDivider} />
           <View style={styles.macroStripItem}>
             <Text style={[styles.macroVal, { color: theme.colors.macroFat }]}>
               {liveTargets.targetFat}g
             </Text>
-            <Text style={styles.macroLabel}>Fat</Text>
+            <Text style={styles.macroLabel}>{t('Fat')}</Text>
           </View>
         </View>
       </View>
 
       {/* Body Stats Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionHeader}>Body Measurements</Text>
+        <Text style={styles.sectionHeader}>{t('Body Measurements')}</Text>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Name</Text>
+          <Text style={styles.inputLabel}>{t('Name')}</Text>
           <TextInput
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="Your name"
+            placeholder={t('Name')}
             placeholderTextColor={theme.colors.textMuted}
           />
         </View>
 
         <View style={styles.rowInputs}>
           <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.inputLabel}>Weight (kg)</Text>
+            <Text style={styles.inputLabel}>{t('Weight (kg)')}</Text>
             <TextInput
               style={styles.input}
               value={weightKg}
@@ -208,7 +214,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             />
           </View>
           <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.inputLabel}>Height (cm)</Text>
+            <Text style={styles.inputLabel}>{t('Height (cm)')}</Text>
             <TextInput
               style={styles.input}
               value={heightCm}
@@ -219,7 +225,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             />
           </View>
           <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.inputLabel}>Age</Text>
+            <Text style={styles.inputLabel}>{t('Age')}</Text>
             <TextInput
               style={styles.input}
               value={age}
@@ -232,7 +238,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
 
         {/* Biological Sex Toggle */}
-        <Text style={styles.inputLabel}>Biological Sex</Text>
+        <Text style={styles.inputLabel}>{t('Biological Sex')}</Text>
         <View style={styles.genderRow}>
           {(['male', 'female'] as Gender[]).map((g) => (
             <TouchableOpacity
@@ -242,7 +248,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               activeOpacity={0.7}
             >
               <Text style={[styles.genderBtnText, gender === g && styles.genderBtnTextActive]}>
-                {g.charAt(0).toUpperCase() + g.slice(1)}
+                {g === 'male' ? t('Male') : t('Female')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -251,7 +257,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       {/* Activity Level Selector */}
       <View style={styles.section}>
-        <Text style={styles.sectionHeader}>Activity Level</Text>
+        <Text style={styles.sectionHeader}>{t('Activity Level')}</Text>
         {activityOptions.map((act) => (
           <TouchableOpacity
             key={act.key}
@@ -270,7 +276,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       {/* Fitness Goal Selector */}
       <View style={styles.section}>
-        <Text style={styles.sectionHeader}>Nutritional Goal</Text>
+        <Text style={styles.sectionHeader}>{t('Nutritional Goal')}</Text>
         {goalOptions.map((g) => (
           <TouchableOpacity
             key={g.key}
@@ -289,7 +295,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       {/* Save Button */}
       <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
-        <Text style={styles.saveBtnText}>Save Targets</Text>
+        <Text style={styles.saveBtnText}>{t('Save Targets')}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -303,8 +309,19 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    paddingBottom: 176,
+    paddingBottom: 110,
     gap: 16,
+  },
+  backRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  backText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
   },
   screenTitle: {
     fontFamily: theme.fonts.serif,
@@ -313,22 +330,61 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     letterSpacing: -0.4,
   },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  backButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
-  languageCard: { padding: 14, gap: 12, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface },
-  languageHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  languageTitle: { color: theme.colors.textPrimary, fontFamily: theme.fonts.serif, fontSize: 17, fontWeight: '700' },
-  languageOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  languageOption: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: theme.radius.full, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.background },
-  languageOptionActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryLight },
-  languageOptionText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: '600' },
-  languageOptionTextActive: { color: theme.colors.primary },
-  languageNote: { color: theme.colors.textMuted, fontSize: 11, lineHeight: 16 },
   screenSubtitle: {
     fontFamily: theme.fonts.sans,
     fontSize: 13,
     color: theme.colors.textMuted,
     marginTop: -8,
+  },
+  languageCard: {
+    padding: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.surface,
+    ...theme.shadow.subtle,
+  },
+  languageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  languageTitle: {
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.serif,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  languageOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  languageOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+  },
+  languageOptionActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryLight,
+  },
+  languageOptionText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  languageOptionTextActive: {
+    color: theme.colors.primary,
+  },
+  restartNote: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    lineHeight: 16,
   },
   targetPreviewCard: {
     backgroundColor: theme.colors.surface,
@@ -387,10 +443,6 @@ const styles = StyleSheet.create({
   section: {
     gap: 10,
   },
-  aiSettingsCard: { gap: 10, padding: 14, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
-  aiKeyDescription: { color: theme.colors.textMuted, fontSize: 12, lineHeight: 18 },
-  saveKeyBtn: { borderRadius: theme.radius.md, paddingVertical: 10, alignItems: 'center', backgroundColor: theme.colors.primaryLight },
-  saveKeyText: { color: theme.colors.primary, fontSize: 13, fontWeight: '700' },
   sectionHeader: {
     fontFamily: theme.fonts.serif,
     fontSize: 16,

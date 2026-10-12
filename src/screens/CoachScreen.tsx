@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bot, Send, Sparkles } from 'lucide-react-native';
 import { DailyLog, UserProfile } from '../types';
 import { AppText as Text } from '../components/AppText';
@@ -10,24 +11,39 @@ import { getStoredGeminiApiKey } from '../services/plateAnalysisService';
 import { formatDisplayDate } from '../utils/dateUtils';
 import { theme } from '../theme';
 
-interface CoachScreenProps { profile: UserProfile; log: DailyLog }
-interface Message { role: 'user' | 'coach'; text: string }
+interface CoachScreenProps {
+  profile: UserProfile;
+  log: DailyLog;
+}
+
+interface Message {
+  role: 'user' | 'coach';
+  text: string;
+}
 
 export function CoachScreen({ profile, log }: CoachScreenProps) {
   const language = useLanguage();
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [hasKey, setHasKey] = useState<boolean | null>(null);
+
+  const bottomPadding = Math.max(100, insets.bottom + 76);
+
   const totals = useMemo(() => log.meals.reduce((acc, meal) => ({
     calories: acc.calories + meal.calories,
     protein: acc.protein + meal.protein,
     carbs: acc.carbs + meal.carbs,
     fat: acc.fat + meal.fat,
   }), { calories: 0, protein: 0, carbs: 0, fat: 0 }), [log.meals]);
+
   const t = (value: string) => translate(language, value);
-  React.useEffect(() => { getStoredGeminiApiKey().then(key => setHasKey(Boolean(key))); }, []);
+
+  React.useEffect(() => {
+    getStoredGeminiApiKey().then(key => setHasKey(Boolean(key)));
+  }, []);
 
   const send = async (text: string) => {
     const trimmed = text.trim();
@@ -48,41 +64,63 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
       }, languageName);
       setMessages(current => [...current, { role: 'coach', text: reply }]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not reach the AI coach. Try again.');
+      setError(err instanceof Error ? err.message : t('Could not reach the AI coach. Try again.'));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: bottomPadding, direction: language === 'en' ? 'ltr' : 'rtl' }]}>
       <View style={styles.header}>
         <View style={styles.icon}><Bot size={20} color={theme.colors.primary} /></View>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>AI Coach</Text>
+          <Text style={styles.title}>{t('AI Coach')}</Text>
           <Text style={styles.subtitle}>{formatDisplayDate(log.date, language)} · {totals.calories} kcal</Text>
         </View>
       </View>
 
-      <View style={styles.disclaimer}><Text style={styles.disclaimerText}>AI guidance is educational, not medical advice.</Text></View>
-      {hasKey === false && <View style={styles.keyNotice}><Text style={styles.keyNoticeText}>Connect a Gemini API key in Profile to use AI features.</Text></View>}
+      <View style={styles.disclaimer}>
+        <Text style={styles.disclaimerText}>{t('AI guidance is educational, not medical advice.')}</Text>
+      </View>
+
+      {hasKey === false && (
+        <View style={styles.keyNotice}>
+          <Text style={styles.keyNoticeText}>{t('Connect a Gemini API key in Profile to use AI features.')}</Text>
+        </View>
+      )}
 
       <ScrollView style={styles.messages} contentContainerStyle={styles.messagesContent}>
         {messages.length === 0 ? (
           <View style={styles.welcomeCard}>
             <Sparkles size={22} color={theme.colors.secondary} />
-            <Text style={styles.welcomeTitle}>A clearer view of your day</Text>
-            <Text style={styles.welcomeCopy}>Ask about your meals, daily targets, or practical ways to build a balanced routine.</Text>
-            <TouchableOpacity style={styles.reviewButton} onPress={() => send('Give me a brief review of my nutrition log today, with one practical suggestion.')} disabled={busy}>
-              <Sparkles size={15} color={theme.colors.primary} /><Text style={styles.reviewText}>Get a daily review</Text>
+            <Text style={styles.welcomeTitle}>{t('A clearer view of your day')}</Text>
+            <Text style={styles.welcomeCopy}>
+              {t('Ask about your meals, daily targets, or practical ways to build a balanced routine.')}
+            </Text>
+            <TouchableOpacity
+              style={styles.reviewButton}
+              onPress={() => send(t('Give me a brief review of my nutrition log today, with one practical suggestion.'))}
+              disabled={busy}
+              accessibilityRole="button"
+            >
+              <Sparkles size={15} color={theme.colors.primary} />
+              <Text style={styles.reviewText}>{t('Get a daily review')}</Text>
             </TouchableOpacity>
           </View>
-        ) : messages.map((message, index) => (
-          <View key={`${message.role}_${index}`} style={[styles.bubble, message.role === 'user' ? styles.userBubble : styles.coachBubble]}>
-            <Text style={message.role === 'user' ? styles.userText : styles.coachText}>{message.text}</Text>
+        ) : (
+          messages.map((message, index) => (
+            <View key={`${message.role}_${index}`} style={[styles.bubble, message.role === 'user' ? styles.userBubble : styles.coachBubble]}>
+              <Text style={message.role === 'user' ? styles.userText : styles.coachText}>{message.text}</Text>
+            </View>
+          ))
+        )}
+        {busy && (
+          <View style={[styles.bubble, styles.coachBubble, styles.loadingBubble]}>
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <Text style={styles.coachText}>{t('Thinking…')}</Text>
           </View>
-        ))}
-        {busy && <View style={[styles.bubble, styles.coachBubble, styles.loadingBubble]}><ActivityIndicator size="small" color={theme.colors.primary} /><Text style={styles.coachText}>Thinking…</Text></View>}
+        )}
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </ScrollView>
 
@@ -98,8 +136,18 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
           returnKeyType="send"
           onSubmitEditing={() => send(input)}
         />
-        <TouchableOpacity style={[styles.sendButton, (!input.trim() || busy) && styles.sendDisabled]} onPress={() => send(input)} disabled={!input.trim() || busy} accessibilityLabel={t('Send')}>
-          {busy ? <ActivityIndicator size="small" color={theme.colors.textInverted} /> : <Send size={17} color={theme.colors.textInverted} />}
+        <TouchableOpacity
+          style={[styles.sendButton, (!input.trim() || busy) && styles.sendDisabled]}
+          onPress={() => send(input)}
+          disabled={!input.trim() || busy}
+          accessibilityLabel={t('Send')}
+          accessibilityRole="button"
+        >
+          {busy ? (
+            <ActivityIndicator size="small" color={theme.colors.textInverted} />
+          ) : (
+            <Send size={17} color={theme.colors.textInverted} />
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -107,7 +155,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing.md, paddingBottom: 176 },
+  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing.md },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   icon: { width: 42, height: 42, borderRadius: 15, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   headerCopy: { flex: 1 },

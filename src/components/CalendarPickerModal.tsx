@@ -51,7 +51,7 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
         <View style={styles.sheet}>
           <View style={styles.header}>
             <View style={styles.headerIcon}><CalendarDays size={18} color={theme.colors.primary} /></View>
-            <Text style={styles.title}>Choose date</Text>
+            <Text style={styles.title}>{t('Choose date')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityLabel={t('Close')}><X size={20} color={theme.colors.textSecondary} /></TouchableOpacity>
           </View>
           <View style={styles.monthRow}>
@@ -74,7 +74,7 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
                   disabled={!inMonth || future}
                   onPress={() => { onSelect(date); onClose(); }}
                   accessibilityRole="button"
-                  accessibilityLabel={`${date}${hasLog ? ', logged' : ''}`}
+                  accessibilityLabel={`${date}${hasLog ? `, ${t('logged')}` : ''}`}
                   accessibilityState={{ selected, disabled: !inMonth || future }}
                 >
                   <Text style={[styles.dayNumber, selected && styles.dayNumberSelected, future && styles.dayNumberFuture]}>{parsed.getDate()}</Text>
@@ -83,8 +83,8 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
               );
             })}
           </View>
-          <View style={styles.legend}><View style={styles.logDot} /><Text style={styles.legendText}>Day with activity</Text><View style={styles.legendSpacer} /><Text style={styles.legendText}>Future dates are unavailable</Text></View>
-          <TouchableOpacity style={styles.todayButton} onPress={() => { onSelect(today); onClose(); }}><Text style={styles.todayButtonText}>Today</Text></TouchableOpacity>
+          <View style={styles.legend}><View style={styles.logDot} /><Text style={styles.legendText}>{t('Day with activity')}</Text><View style={styles.legendSpacer} /><Text style={styles.legendText}>{t('Future dates are unavailable')}</Text></View>
+          <TouchableOpacity style={styles.todayButton} onPress={() => { onSelect(today); onClose(); }}><Text style={styles.todayButtonText}>{t('Today')}</Text></TouchableOpacity>
         </View>
       </View>
     </Modal>

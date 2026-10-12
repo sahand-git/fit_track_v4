@@ -31,7 +31,7 @@ assertEqual(
   'empty routine has zero progress',
 );
 
-assertEqual(translate('ar', 'kcal remaining'), 'السعرات المتبقية', 'Arabic calorie remainder label is translated');
-assertEqual(translate('ckb', 'kcal remaining'), 'کالۆری ماوە', 'Sorani calorie remainder label is translated');
-assertEqual(translate('ar', 'kcal over budget'), 'تجاوزت ميزانية السعرات', 'Arabic over-budget label is translated');
-assertEqual(translate('ckb', 'kcal over budget'), 'کالۆرییەکانی ئامانج تێپەڕاندووە', 'Sorani over-budget label is translated');
+assertEqual(translate('ar', 'kcal remaining'), 'سعرة متبقية', 'Arabic calorie remainder label is translated');
+assertEqual(translate('ckb', 'kcal remaining'), 'کالۆری ماوەتەوە', 'Sorani calorie remainder label is translated');
+assertEqual(translate('ar', 'kcal over budget'), 'سعرة فوق الميزانية', 'Arabic over-budget label is translated');
+assertEqual(translate('ckb', 'kcal over budget'), 'کالۆری زیاتر لە بودجە', 'Sorani over-budget label is translated');

@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
   Flame,
@@ -15,6 +16,8 @@ import {
 import { UserProfile, DailyLog } from '../types';
 import { loadLogsForDates } from '../storage/storage';
 import { getPastDates, parseLocalDateString, formatDisplayDate } from '../utils/dateUtils';
+import { useLanguage } from '../i18n/I18nContext';
+import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 
@@ -23,6 +26,11 @@ interface InsightsScreenProps {
 }
 
 export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
+  const language = useLanguage();
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(110, insets.bottom + 76);
+  const t = (key: string) => translate(language, key);
+
   const [daysLogs, setDaysLogs] = useState<{ date: string; log: DailyLog; dayLabel: string }[]>([]);
   const [selectedDayIdx, setSelectedDayIdx] = useState<number | null>(null);
 
@@ -30,9 +38,10 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
     async function loadPastWeek() {
       const dates = getPastDates(7);
       const logsMap = await loadLogsForDates(dates);
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const parsed = dates.map((d) => {
         const dateObj = parseLocalDateString(d);
-        const dayLabel = dateObj.toLocaleDateString(undefined, { weekday: 'short' });
+        const dayLabel = t(dayNames[dateObj.getDay()]);
         return {
           date: d,
           log: logsMap[d] || { date: d, meals: [], waterGlasses: 0, steps: 0 },
@@ -43,7 +52,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
       setSelectedDayIdx(parsed.length - 1);
     }
     loadPastWeek();
-  }, []);
+  }, [language]);
 
   const calorieTarget = profile?.targetCalories || 2000;
   const proteinTarget = profile?.targetProtein || 140;
@@ -79,16 +88,19 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}
+      contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+    >
       {/* Header */}
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.headerSubtitle}>Weekly Review</Text>
-          <Text style={styles.headerTitle}>Nutrition Insights</Text>
+          <Text style={styles.headerSubtitle}>{t('Weekly Review')}</Text>
+          <Text style={styles.headerTitle}>{t('Nutrition Insights')}</Text>
         </View>
         <View style={styles.rangeBadge}>
           <Calendar size={13} color={theme.colors.textMuted} />
-          <Text style={styles.rangeBadgeText}>Last 7 Days</Text>
+          <Text style={styles.rangeBadgeText}>{t('Last 7 Days')}</Text>
         </View>
       </View>
 
@@ -96,7 +108,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
           <View style={styles.statTop}>
-            <Text style={styles.statLabel}>Daily Average</Text>
+            <Text style={styles.statLabel}>{t('Daily Average')}</Text>
             <Flame size={15} color={theme.colors.accent} />
           </View>
           <View style={styles.statValueRow}>
@@ -104,28 +116,28 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
             <Text style={styles.statUnit}>kcal</Text>
           </View>
           <Text style={styles.statSub}>
-            {activeDays.length > 0 ? `${activeDays.length} of 7 days logged` : 'No data yet'}
+            {activeDays.length > 0 ? `${activeDays.length} ${t('of')} 7 ${t('days logged')}` : t('No data yet')}
           </Text>
         </View>
 
         <View style={styles.statCard}>
           <View style={styles.statTop}>
-            <Text style={styles.statLabel}>Avg Protein</Text>
+            <Text style={styles.statLabel}>{t('Avg Protein')}</Text>
             <Dumbbell size={15} color={theme.colors.primary} />
           </View>
           <View style={styles.statValueRow}>
             <Text style={styles.statValue}>{dailyAvgProtein}</Text>
             <Text style={styles.statUnit}>g</Text>
           </View>
-          <Text style={styles.statSub}>Target: {proteinTarget}g</Text>
+          <Text style={styles.statSub}>{t('Target')}: {proteinTarget}g</Text>
         </View>
       </View>
 
       {/* 7-Day Calorie Chart */}
       <View style={styles.chartCard}>
         <View style={styles.chartHeader}>
-          <Text style={styles.chartTitle}>7-Day Intake Trend</Text>
-          <Text style={styles.targetLabel}>{calorieTarget} kcal target</Text>
+          <Text style={styles.chartTitle}>{t('7-Day Intake Trend')}</Text>
+          <Text style={styles.targetLabel}>{calorieTarget} {t('kcal target')}</Text>
         </View>
 
         <View style={styles.barChartContainer}>
@@ -176,14 +188,14 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
         {selectedEntry && (
           <View style={styles.detailBanner}>
             <Text style={styles.detailDayText}>
-              {formatDisplayDate(selectedEntry.date)}: {selectedCalories} kcal
+              {formatDisplayDate(selectedEntry.date, language)}: {selectedCalories} kcal
             </Text>
             <Text style={styles.detailStatusText}>
               {selectedCalories === 0
-                ? 'No entries'
+                ? t('No entries')
                 : selectedCalories <= calorieTarget
-                ? `${calorieTarget - selectedCalories} kcal under budget`
-                : `${selectedCalories - calorieTarget} kcal over budget`}
+                ? `${calorieTarget - selectedCalories} ${t('kcal under budget')}`
+                : `${selectedCalories - calorieTarget} ${t('kcal over budget')}`}
             </Text>
           </View>
         )}
@@ -191,21 +203,21 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
 
       {/* Observations Section */}
       <View style={styles.insightsSection}>
-        <Text style={styles.sectionTitle}>Weekly Observations</Text>
+        <Text style={styles.sectionTitle}>{t('Weekly Observations')}</Text>
 
         {activeDays.length === 0 ? (
           <View style={styles.emptyCard}>
             <AlertCircle size={22} color={theme.colors.textMuted} />
-            <Text style={styles.emptyTitle}>Not enough logged days yet</Text>
+            <Text style={styles.emptyTitle}>{t('Not enough logged days yet')}</Text>
             <Text style={styles.emptyBody}>
-              Log meals over several days to unlock consistency and habit trends.
+              {t('Log meals over several days to unlock consistency and habit trends.')}
             </Text>
           </View>
         ) : (
           <View style={styles.observationCard}>
-            <Text style={styles.observationTitle}>Logging Consistency</Text>
+            <Text style={styles.observationTitle}>{t('Logging Consistency')}</Text>
             <Text style={styles.observationBody}>
-              You have tracked food on {activeDays.length} out of the last 7 days. Consistency helps establish a clear metabolic baseline.
+              {t('You have tracked food on')} {activeDays.length} {t('out of the last 7 days. Consistency helps establish a clear metabolic baseline.')}
             </Text>
           </View>
         )}
