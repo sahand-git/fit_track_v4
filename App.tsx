@@ -160,6 +160,12 @@ function FitTrackApp() {
     await saveSupplementRoutine(items);
   };
 
+  const handleUpdateSupplement = async (item: SupplementRoutineItem) => {
+    const updated = supplementRoutine.map((existing) => existing.id === item.id ? item : existing);
+    setSupplementRoutine(updated);
+    await saveSupplementRoutine(updated);
+  };
+
   const handleToggleSupplement = async (id: string, taken: boolean) => {
     if (selectedDate > getTodayDateString()) return;
     const updated = await setSupplementTaken(selectedDate, id, taken);
