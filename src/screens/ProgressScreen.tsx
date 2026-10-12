@@ -8,6 +8,7 @@ import {
   Modal,
   Alert
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
   TrendingDown,
@@ -24,6 +25,8 @@ import Svg, { Path, Circle, Line } from 'react-native-svg';
 import { UserProfile, WeightEntry } from '../types';
 import { loadWeightHistory, addWeightEntry, removeWeightEntry } from '../storage/storage';
 import { getTodayDateString, formatDisplayDate } from '../utils/dateUtils';
+import { useLanguage } from '../i18n/I18nContext';
+import { translate } from '../i18n/strings';
 import { InsightsScreen } from './InsightsScreen';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
@@ -34,6 +37,11 @@ interface ProgressScreenProps {
 }
 
 export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdateWeight }) => {
+  const language = useLanguage();
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(110, insets.bottom + 76);
+  const t = (key: string) => translate(language, key);
+
   const [subTab, setSubTab] = useState<'weight' | 'nutrition'>('weight');
   const [history, setHistory] = useState<WeightEntry[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -65,7 +73,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
   const handleSaveWeight = async () => {
     const num = parseFloat(inputWeight);
     if (isNaN(num) || num < 25 || num > 350) {
-      Alert.alert('Invalid Weight', 'Please enter a realistic weight between 25 and 350 kg.');
+      Alert.alert(t('Invalid Weight'), t('Please enter a realistic weight between 25 and 350 kg.'));
       return;
     }
 
@@ -99,9 +107,9 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
       return (
         <View style={styles.chartEmptyBox}>
           <Scale size={24} color={theme.colors.textMuted} />
-          <Text style={styles.chartEmptyTitle}>Need at least 2 entries for trend chart</Text>
+          <Text style={styles.chartEmptyTitle}>{t('Need at least 2 entries for trend chart')}</Text>
           <Text style={styles.chartEmptySubtitle}>
-            Log your weight across multiple days to view your true trajectory curve.
+            {t('Log your weight across multiple days to view your true trajectory curve.')}
           </Text>
         </View>
       );
@@ -144,8 +152,17 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
     );
   };
 
+  const bmiNum = parseFloat(bmi);
+  const bmiCategory = bmiNum < 18.5
+    ? t('Underweight')
+    : bmiNum < 25
+    ? t('Healthy Weight')
+    : bmiNum < 30
+    ? t('Overweight')
+    : t('Obese');
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
       {/* Top Ledger Segment Bar */}
       <View style={styles.segmentBar}>
         <TouchableOpacity
@@ -158,7 +175,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
         >
           <Scale size={14} color={subTab === 'weight' ? theme.colors.primary : theme.colors.textMuted} />
           <Text style={[styles.segmentText, subTab === 'weight' && styles.segmentTextActive]}>
-            Body Weight
+            {t('Body Weight')}
           </Text>
         </TouchableOpacity>
 
@@ -172,7 +189,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
         >
           <Flame size={14} color={subTab === 'nutrition' ? theme.colors.primary : theme.colors.textMuted} />
           <Text style={[styles.segmentText, subTab === 'nutrition' && styles.segmentTextActive]}>
-            Weekly Nutrition
+            {t('Weekly Nutrition')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -180,21 +197,21 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
       {subTab === 'nutrition' ? (
         <InsightsScreen profile={profile} />
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
           {/* Header */}
           <View style={styles.headerRow}>
             <View>
-              <Text style={styles.headerSubtitle}>Progress</Text>
-              <Text style={styles.headerTitle}>Body Weight</Text>
+              <Text style={styles.headerSubtitle}>{t('Progress')}</Text>
+              <Text style={styles.headerTitle}>{t('Body Weight')}</Text>
             </View>
             <TouchableOpacity
               style={styles.addBtn}
               onPress={() => setModalVisible(true)}
-              accessibilityLabel="Record weight"
+              accessibilityLabel={t('Log weight')}
               accessibilityRole="button"
             >
               <Plus size={15} color={theme.colors.textInverted} />
-              <Text style={styles.addBtnText}>Log weight</Text>
+              <Text style={styles.addBtnText}>{t('Log weight')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -202,7 +219,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
           <View style={styles.heroCard}>
             <View style={styles.heroTop}>
               <View>
-                <Text style={styles.heroLabel}>Current Weight</Text>
+                <Text style={styles.heroLabel}>{t('Current Weight')}</Text>
                 <View style={styles.heroValueRow}>
                   <Text style={styles.heroValue}>{currentWeight}</Text>
                   <Text style={styles.heroUnit}>kg</Text>
@@ -220,21 +237,14 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
                     {totalDelta > 0 ? `+${totalDelta}` : `${totalDelta}`} kg
                   </Text>
                 </View>
-                <Text style={styles.deltaSub}>Net change</Text>
+                <Text style={styles.deltaSub}>{t('Net change')}</Text>
               </View>
             </View>
 
             {/* BMI Meta */}
             <View style={styles.bmiStrip}>
               <Text style={styles.bmiText}>
-                BMI: <Text style={styles.boldText}>{bmi}</Text> •{' '}
-                {parseFloat(bmi) < 18.5
-                  ? 'Underweight'
-                  : parseFloat(bmi) < 25
-                  ? 'Healthy Weight'
-                  : parseFloat(bmi) < 30
-                  ? 'Overweight'
-                  : 'Obese'}
+                {t('BMI')}: <Text style={styles.boldText}>{bmi}</Text> • {bmiCategory}
               </Text>
             </View>
           </View>
@@ -242,9 +252,9 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
           {/* Trajectory Card */}
           <View style={styles.chartCard}>
             <View style={styles.chartTop}>
-              <Text style={styles.chartTitle}>Trajectory Curve</Text>
+              <Text style={styles.chartTitle}>{t('Trajectory Curve')}</Text>
               <Text style={styles.chartSubtitle}>
-                {history.length > 0 ? `${history.length} logged weigh-in${history.length > 1 ? 's' : ''}` : 'No history yet'}
+                {history.length > 0 ? `${history.length} ${t(history.length > 1 ? 'logged weigh-ins' : 'logged weigh-in')}` : t('No history yet')}
               </Text>
             </View>
 
@@ -253,14 +263,14 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
 
           {/* Real History List */}
           <View style={styles.historySection}>
-            <Text style={styles.sectionTitle}>Recorded Entries</Text>
+            <Text style={styles.sectionTitle}>{t('Recorded Entries')}</Text>
 
             {history.length === 0 ? (
               <View style={styles.emptyHistoryBox}>
                 <Scale size={28} color={theme.colors.textMuted} />
-                <Text style={styles.emptyHistoryTitle}>No weight entries logged yet</Text>
+                <Text style={styles.emptyHistoryTitle}>{t('No weight entries logged yet')}</Text>
                 <Text style={styles.emptyHistoryBody}>
-                  Tap "Log weight" above to track your weight across weeks.
+                  {t('Tap "Log weight" above to track your weight across weeks.')}
                 </Text>
               </View>
             ) : (
@@ -268,7 +278,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
                 <View key={entry.id} style={styles.historyRow}>
                   <View style={styles.historyDateBox}>
                     <Calendar size={14} color={theme.colors.textMuted} />
-                    <Text style={styles.historyDate}>{formatDisplayDate(entry.date)}</Text>
+                    <Text style={styles.historyDate}>{formatDisplayDate(entry.date, language)}</Text>
                   </View>
 
                   <View style={styles.historyRight}>
@@ -277,7 +287,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
                     <TouchableOpacity
                       style={styles.deleteBtn}
                       onPress={() => handleDeleteEntry(entry.id)}
-                      accessibilityLabel="Delete entry"
+                      accessibilityLabel={t('Delete entry')}
                     >
                       <Trash2 size={14} color={theme.colors.textMuted} />
                     </TouchableOpacity>
@@ -294,14 +304,14 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Record Weigh-in</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <Text style={styles.modalTitle}>{t('Record Weigh-in')}</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)} accessibilityLabel={t('Close')}>
                 <X size={20} color={theme.colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.modalInputGroup}>
-              <Text style={styles.modalLabel}>Weight (kg)</Text>
+              <Text style={styles.modalLabel}>{t('Weight (kg)')}</Text>
               <TextInput
                 style={styles.modalInput}
                 keyboardType="numeric"
@@ -312,10 +322,10 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
             </View>
 
             <View style={styles.modalInputGroup}>
-              <Text style={styles.modalLabel}>Note (optional)</Text>
+              <Text style={styles.modalLabel}>{t('Note (optional)')}</Text>
               <TextInput
                 style={styles.modalInput}
-                placeholder="e.g. Morning, post-workout"
+                placeholder={t('Note (optional)')}
                 placeholderTextColor={theme.colors.textMuted}
                 value={inputNote}
                 onChangeText={setInputNote}
@@ -324,7 +334,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
 
             <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveWeight}>
               <Check size={16} color={theme.colors.textInverted} />
-              <Text style={styles.modalSaveText}>Save Weigh-in</Text>
+              <Text style={styles.modalSaveText}>{t('Save Weigh-in')}</Text>
             </TouchableOpacity>
           </View>
         </View>

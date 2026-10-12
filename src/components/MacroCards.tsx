@@ -4,6 +4,8 @@ import {
   StyleSheet
 } from 'react-native';
 import { AppText as Text } from './AppText';
+import { useLanguage } from '../i18n/I18nContext';
+import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 
 interface MacroCardsProps {
@@ -25,6 +27,9 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
   fatTarget,
   fatConsumed,
 }) => {
+  const language = useLanguage();
+  const t = (key: string) => translate(language, key);
+
   const macros = [
     {
       name: 'Protein',
@@ -53,7 +58,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
         return (
           <View key={m.name} style={styles.macroCol}>
             <View style={styles.headerRow}>
-              <Text style={styles.macroName}>{m.name}</Text>
+              <Text style={styles.macroName}>{t(m.name)}</Text>
               <Text style={styles.macroNumbers}>
                 <Text style={styles.consumedText}>{m.consumed}</Text>
                 <Text style={styles.targetText}> / {m.target}g</Text>

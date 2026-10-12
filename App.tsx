@@ -3,9 +3,9 @@ import {
   StyleSheet,
   View,
   TouchableOpacity,
-  SafeAreaView,
   Platform,
 } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from './src/components/AppText';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -46,6 +46,15 @@ type Tab = 'today' | 'meals' | 'coach' | 'progress';
 type TemporaryScreen = 'none' | 'profile' | 'supplements';
 
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <FitTrackApp />
+    </SafeAreaProvider>
+  );
+}
+
+function FitTrackApp() {
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [tempScreen, setTempScreen] = useState<TemporaryScreen>('none');
 
@@ -194,7 +203,15 @@ export default function App() {
 
   return (
     <I18nProvider language={language}>
-      <SafeAreaView style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
+      <View
+        style={[
+          styles.container,
+          {
+            direction: language === 'en' ? 'ltr' : 'rtl',
+            paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0),
+          },
+        ]}
+      >
         <StatusBar style="dark" />
 
         {/* Main Screen Body */}
@@ -275,7 +292,14 @@ export default function App() {
         />
 
         {/* Bottom Navigation Dock: Exactly 4 Tabs */}
-        <View style={styles.dockContainer}>
+        <View
+          style={[
+            styles.dockContainer,
+            {
+              bottom: insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10),
+            },
+          ]}
+        >
           <View style={styles.bottomNav}>
             {/* 1. Today */}
             <TouchableOpacity
@@ -366,7 +390,7 @@ export default function App() {
             </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
+      </View>
     </I18nProvider>
   );
 }
@@ -375,14 +399,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    paddingTop: Platform.OS === 'android' ? 35 : 0,
   },
   main: {
     flex: 1,
   },
   dockContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 18 : 10,
     left: 14,
     right: 14,
   },

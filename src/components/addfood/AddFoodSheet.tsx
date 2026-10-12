@@ -11,6 +11,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../AppText';
 import {
   X,
@@ -71,6 +72,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   onAddMeal,
 }) => {
   const language = useLanguage();
+  const insets = useSafeAreaInsets();
   const t = (str: string) => translate(language, str);
 
   const [activeTab, setActiveTab] = useState<TabMode>('search');
@@ -303,7 +305,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-        <View style={styles.sheetContainer}>
+        <View style={[styles.sheetContainer, { paddingBottom: Math.max(theme.spacing.md, insets.bottom + 12) }]}>
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flex: 1 }}>

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
   Plus,
@@ -50,7 +51,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onOpenProfile,
 }) => {
   const language = useLanguage();
+  const insets = useSafeAreaInsets();
   const t = (str: string) => translate(language, str);
+
+  const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
+  const floatingBottom = dockBottom + 66;
 
   const consumedCalories = log.meals.reduce((sum, m) => sum + m.calories, 0);
   const consumedProtein = log.meals.reduce((sum, m) => sum + m.protein, 0);
@@ -83,7 +88,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: floatingBottom + 70 }]}>
         {/* Editorial Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
@@ -235,7 +240,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 style={[styles.mealRow, isLast && styles.mealRowLast]}
                 onPress={() => handleQuickAdd(m.key)}
                 activeOpacity={0.7}
-                accessibilityLabel={`Add to ${m.label}`}
+                accessibilityLabel={`${t('Add to')} ${m.label}`}
                 accessibilityRole="button"
               >
                 <View style={styles.mealLeft}>
@@ -246,7 +251,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     <Text style={styles.mealName}>{m.label}</Text>
                     <Text style={styles.mealSub}>
                       {mealsOfCategory.length > 0
-                        ? `${mealsOfCategory.length} ${t('item')}${mealsOfCategory.length > 1 ? 's' : ''}`
+                        ? `${mealsOfCategory.length} ${t(mealsOfCategory.length > 1 ? 'items' : 'item')}`
                         : t('Tap to log food')}
                     </Text>
                   </View>
@@ -267,7 +272,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       {/* Floating "+ Add food" Action Button */}
       {!isFuture && (
         <TouchableOpacity
-          style={styles.floatingAddBtn}
+          style={[
+            styles.floatingAddBtn,
+            {
+              bottom: floatingBottom,
+              ...(language === 'en' ? { right: 18 } : { left: 18 }),
+            },
+          ]}
           onPress={handleOpenFloatingAddFood}
           activeOpacity={0.88}
           accessibilityLabel={t('Add food')}
@@ -529,8 +540,6 @@ const styles = StyleSheet.create({
   },
   floatingAddBtn: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 86 : 76,
-    right: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bot, Send, Sparkles } from 'lucide-react-native';
 import { DailyLog, UserProfile } from '../types';
 import { AppText as Text } from '../components/AppText';
@@ -22,11 +23,14 @@ interface Message {
 
 export function CoachScreen({ profile, log }: CoachScreenProps) {
   const language = useLanguage();
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [hasKey, setHasKey] = useState<boolean | null>(null);
+
+  const bottomPadding = Math.max(100, insets.bottom + 76);
 
   const totals = useMemo(() => log.meals.reduce((acc, meal) => ({
     calories: acc.calories + meal.calories,
@@ -67,7 +71,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: bottomPadding, direction: language === 'en' ? 'ltr' : 'rtl' }]}>
       <View style={styles.header}>
         <View style={styles.icon}><Bot size={20} color={theme.colors.primary} /></View>
         <View style={styles.headerCopy}>
@@ -151,7 +155,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing.md, paddingBottom: 108 },
+  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing.md },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   icon: { width: 42, height: 42, borderRadius: 15, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   headerCopy: { flex: 1 },

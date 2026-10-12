@@ -5,12 +5,12 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  SafeAreaView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
 import { ArrowRight, Check } from 'lucide-react-native';
 import { Gender, ActivityLevel, FitnessGoal, UserProfile, AppLanguage } from '../types';
-import { languageNames } from '../i18n/strings';
+import { languageNames, translate } from '../i18n/strings';
 import { calculateTargets } from '../utils/calculator';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
@@ -24,7 +24,8 @@ interface OnboardingModalProps {
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, onLanguageChange }) => {
   const currentLanguage = useLanguage();
   const [step, setStep] = useState(1);
-  const [language, setLanguage] = useState<AppLanguage>('en');
+  const [language, setLanguage] = useState<AppLanguage>(currentLanguage || 'en');
+  const t = (str: string) => translate(language, str);
   const [name, setName] = useState('');
   const [gender, setGender] = useState<Gender>('male');
   const [age, setAge] = useState('26');
@@ -58,30 +59,30 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
   };
 
   const activityOptions: { key: ActivityLevel; label: string; desc: string }[] = [
-    { key: 'sedentary', label: 'Sedentary', desc: 'Desk job, little/no exercise' },
-    { key: 'light', label: 'Lightly Active', desc: 'Light workouts 1–3 days/wk' },
-    { key: 'moderate', label: 'Moderately Active', desc: 'Exercise 3–5 days/wk' },
-    { key: 'very_active', label: 'Very Active', desc: 'Hard training 6–7 days/wk' },
+    { key: 'sedentary', label: 'Sedentary', desc: 'Desk job, little to no exercise' },
+    { key: 'light', label: 'Lightly Active', desc: 'Light exercise 1–3 days a week' },
+    { key: 'moderate', label: 'Moderately Active', desc: 'Moderate training 3–5 days a week' },
+    { key: 'very_active', label: 'Very Active', desc: 'Intense training 6–7 days a week' },
   ];
 
   const goalOptions: { key: FitnessGoal; label: string; desc: string }[] = [
     { key: 'fat_loss_aggressive', label: 'Aggressive Fat Loss', desc: '−500 kcal daily deficit' },
     { key: 'fat_loss_moderate', label: 'Steady Fat Loss', desc: '−300 kcal sustainable deficit' },
-    { key: 'maintenance', label: 'Maintain Weight', desc: 'Healthy body recomposition' },
+    { key: 'maintenance', label: 'Maintain Weight', desc: 'Energy balance & recomposition' },
     { key: 'lean_bulk', label: 'Lean Bulk', desc: '+250 kcal controlled surplus' },
     { key: 'muscle_gain', label: 'Muscle Gain', desc: '+450 kcal muscle building' },
   ];
 
   return (
-    <SafeAreaView style={[styles.container, { direction: currentLanguage === 'en' ? 'ltr' : 'rtl' }]}>
+    <SafeAreaView style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Step Indicator */}
         <View style={styles.stepHeader}>
-          <Text style={styles.badgeText}>Welcome to FitTrack</Text>
-          <Text style={styles.stepCounter}>Step {step} of 3</Text>
+          <Text style={styles.badgeText}>{t('Welcome to FitTrack')}</Text>
+          <Text style={styles.stepCounter}>{t('Step')} {step} {t('of')} 3</Text>
         </View>
         <View style={styles.languageBlock}>
-          <Text style={styles.languageLabel}>Language</Text>
+          <Text style={styles.languageLabel}>{t('Language')}</Text>
           <View style={styles.languageRow}>
             {(['en', 'ar', 'ckb'] as AppLanguage[]).map(option => (
               <TouchableOpacity key={option} onPress={() => { setLanguage(option); onLanguageChange(option); }} style={[styles.languageChip, language === option && styles.languageChipActive]}>
@@ -94,16 +95,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
         {/* STEP 1: Body Measurements */}
         {step === 1 && (
           <View style={styles.stepContainer}>
-            <Text style={styles.title}>Let's set your baseline</Text>
+            <Text style={styles.title}>{t('Let’s set your baseline')}</Text>
             <Text style={styles.subtitle}>
-              We use the Mifflin-St Jeor equation to estimate your basal metabolic rate and daily calorie needs.
+              {t('We use the Mifflin-St Jeor equation to estimate your basal metabolic rate and daily calorie needs.')}
             </Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Your Name</Text>
+              <Text style={styles.label}>{t('Your Name')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="What should we call you?"
+                placeholder={t('What should we call you?')}
                 placeholderTextColor={theme.colors.textMuted}
                 value={name}
                 onChangeText={setName}
@@ -111,7 +112,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Biological Sex</Text>
+              <Text style={styles.label}>{t('Biological Sex')}</Text>
               <View style={styles.genderRow}>
                 {(['male', 'female'] as Gender[]).map((g) => (
                   <TouchableOpacity
@@ -120,7 +121,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                     onPress={() => setGender(g)}
                   >
                     <Text style={[styles.genderText, gender === g && styles.genderTextActive]}>
-                      {g.charAt(0).toUpperCase() + g.slice(1)}
+                      {g === 'male' ? t('Male') : t('Female')}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -129,7 +130,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
 
             <View style={styles.row}>
               <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Weight (kg)</Text>
+                <Text style={styles.label}>{t('Weight (kg)')}</Text>
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
@@ -140,7 +141,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                 />
               </View>
               <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Height (cm)</Text>
+                <Text style={styles.label}>{t('Height (cm)')}</Text>
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
@@ -151,7 +152,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                 />
               </View>
               <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Age</Text>
+                <Text style={styles.label}>{t('Age')}</Text>
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
@@ -164,7 +165,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
             </View>
 
             <TouchableOpacity style={styles.nextBtn} onPress={() => setStep(2)}>
-              <Text style={styles.nextBtnText}>Continue</Text>
+              <Text style={styles.nextBtnText}>{t('Continue')}</Text>
               <ArrowRight size={16} color={theme.colors.textInverted} />
             </TouchableOpacity>
           </View>
@@ -173,12 +174,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
         {/* STEP 2: Routine & Target */}
         {step === 2 && (
           <View style={styles.stepContainer}>
-            <Text style={styles.title}>Your Routine & Goal</Text>
+            <Text style={styles.title}>{t('Your Routine & Goal')}</Text>
             <Text style={styles.subtitle}>
-              Activity determines your total energy expenditure. Goals shape your caloric budget.
+              {t('Activity determines your total energy expenditure. Goals shape your caloric budget.')}
             </Text>
 
-            <Text style={styles.sectionHeader}>Activity Level</Text>
+            <Text style={styles.sectionHeader}>{t('Activity Level')}</Text>
             {activityOptions.map((act) => (
               <TouchableOpacity
                 key={act.key}
@@ -186,14 +187,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                 onPress={() => setActivityLevel(act.key)}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.optionTitle}>{act.label}</Text>
-                  <Text style={styles.optionDesc}>{act.desc}</Text>
+                  <Text style={styles.optionTitle}>{t(act.label)}</Text>
+                  <Text style={styles.optionDesc}>{t(act.desc)}</Text>
                 </View>
                 {activityLevel === act.key && <Check size={16} color={theme.colors.primary} />}
               </TouchableOpacity>
             ))}
 
-            <Text style={[styles.sectionHeader, { marginTop: 12 }]}>Fitness Goal</Text>
+            <Text style={[styles.sectionHeader, { marginTop: 12 }]}>{t('Fitness Goal')}</Text>
             {goalOptions.map((g) => (
               <TouchableOpacity
                 key={g.key}
@@ -201,8 +202,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                 onPress={() => setGoal(g.key)}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.optionTitle}>{g.label}</Text>
-                  <Text style={styles.optionDesc}>{g.desc}</Text>
+                  <Text style={styles.optionTitle}>{t(g.label)}</Text>
+                  <Text style={styles.optionDesc}>{t(g.desc)}</Text>
                 </View>
                 {goal === g.key && <Check size={16} color={theme.colors.primary} />}
               </TouchableOpacity>
@@ -210,10 +211,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
 
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.backBtn} onPress={() => setStep(1)}>
-                <Text style={styles.backBtnText}>Back</Text>
+                <Text style={styles.backBtnText}>{t('Back')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.nextBtn, { flex: 2 }]} onPress={() => setStep(3)}>
-                <Text style={styles.nextBtnText}>Review Plan</Text>
+                <Text style={styles.nextBtnText}>{t('Review Plan')}</Text>
                 <ArrowRight size={16} color={theme.colors.textInverted} />
               </TouchableOpacity>
             </View>
@@ -223,16 +224,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
         {/* STEP 3: Plan Review */}
         {step === 3 && (
           <View style={styles.stepContainer}>
-            <Text style={styles.title}>Your Daily Budget</Text>
+            <Text style={styles.title}>{t('Your Daily Budget')}</Text>
             <Text style={styles.subtitle}>
-              Here is your calculated nutrition estimate based on your measurements:
+              {t('Here is your calculated nutrition estimate based on your measurements:')}
             </Text>
 
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>Estimated Daily Target</Text>
+              <Text style={styles.summaryTitle}>{t('Estimated Daily Target')}</Text>
               <Text style={styles.summaryValue}>{targets.targetCalories} kcal</Text>
               <Text style={styles.summarySub}>
-                BMR: {targets.bmr} kcal • TDEE: {targets.tdee} kcal
+                {t('BMR')}: {targets.bmr} kcal • {t('TDEE')}: {targets.tdee} kcal
               </Text>
 
               <View style={styles.macroSplitRow}>
@@ -240,31 +241,31 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                   <Text style={[styles.macroSplitVal, { color: theme.colors.macroProtein }]}>
                     {targets.targetProtein}g
                   </Text>
-                  <Text style={styles.macroSplitLabel}>Protein</Text>
+                  <Text style={styles.macroSplitLabel}>{t('Protein')}</Text>
                 </View>
                 <View style={styles.macroDivider} />
                 <View style={styles.macroSplitItem}>
                   <Text style={[styles.macroSplitVal, { color: theme.colors.macroCarbs }]}>
                     {targets.targetCarbs}g
                   </Text>
-                  <Text style={styles.macroSplitLabel}>Carbs</Text>
+                  <Text style={styles.macroSplitLabel}>{t('Carbs')}</Text>
                 </View>
                 <View style={styles.macroDivider} />
                 <View style={styles.macroSplitItem}>
                   <Text style={[styles.macroSplitVal, { color: theme.colors.macroFat }]}>
                     {targets.targetFat}g
                   </Text>
-                  <Text style={styles.macroSplitLabel}>Fat</Text>
+                  <Text style={styles.macroSplitLabel}>{t('Fat')}</Text>
                 </View>
               </View>
             </View>
 
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.backBtn} onPress={() => setStep(2)}>
-                <Text style={styles.backBtnText}>Back</Text>
+                <Text style={styles.backBtnText}>{t('Back')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.nextBtn, { flex: 2 }]} onPress={handleFinish}>
-                <Text style={styles.nextBtnText}>Start Tracking</Text>
+                <Text style={styles.nextBtnText}>{t('Start Tracking')}</Text>
                 <Check size={16} color={theme.colors.textInverted} />
               </TouchableOpacity>
             </View>

@@ -15,6 +15,8 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { LoggedMeal, FoodItem } from '../types';
+import { useLanguage } from '../i18n/I18nContext';
+import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 
@@ -35,6 +37,8 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
   onSave,
   onDelete,
 }) => {
+  const language = useLanguage();
+  const t = (key: string) => translate(language, key);
   const [servings, setServings] = useState(1);
 
   useEffect(() => {
@@ -80,7 +84,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.backdrop}>
+      <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
         <View style={styles.sheet}>
           {/* Header */}
           <View style={styles.header}>
@@ -88,7 +92,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
               <Text style={styles.foodName}>{item.name}</Text>
               {item.brand && <Text style={styles.brand}>{item.brand}</Text>}
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityLabel={t('Close')}>
               <X size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -98,7 +102,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
             <View style={styles.energyCard}>
               <View>
                 <Text style={styles.kcalValue}>{currentKcal}</Text>
-                <Text style={styles.kcalLabel}>Total Calories (kcal)</Text>
+                <Text style={styles.kcalLabel}>{t('Total Calories (kcal)')}</Text>
               </View>
               <Text style={styles.portionLabel}>
                 {servings} × {item.servingSize} ({currentGrams}g)
@@ -108,19 +112,19 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
             {/* Macronutrients Row */}
             <View style={styles.macroRow}>
               <View style={styles.macroCard}>
-                <Text style={styles.macroTitle}>Protein</Text>
+                <Text style={styles.macroTitle}>{t('Protein')}</Text>
                 <Text style={[styles.macroValue, { color: theme.colors.macroProtein }]}>
                   {currentProtein}g
                 </Text>
               </View>
               <View style={styles.macroCard}>
-                <Text style={styles.macroTitle}>Carbs</Text>
+                <Text style={styles.macroTitle}>{t('Carbs')}</Text>
                 <Text style={[styles.macroValue, { color: theme.colors.macroCarbs }]}>
                   {currentCarbs}g
                 </Text>
               </View>
               <View style={styles.macroCard}>
-                <Text style={styles.macroTitle}>Fat</Text>
+                <Text style={styles.macroTitle}>{t('Fat')}</Text>
                 <Text style={[styles.macroValue, { color: theme.colors.macroFat }]}>
                   {currentFat}g
                 </Text>
@@ -129,12 +133,12 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
 
             {/* Servings Stepper */}
             <View style={styles.stepperContainer}>
-              <Text style={styles.stepperLabel}>Portion Multiplier</Text>
+              <Text style={styles.stepperLabel}>{t('Portion Multiplier')}</Text>
               <View style={styles.stepper}>
                 <TouchableOpacity style={styles.stepperBtn} onPress={handleMinus}>
                   <Minus size={16} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.servingsText}>{servings} servings</Text>
+                <Text style={styles.servingsText}>{servings} {t('servings')}</Text>
                 <TouchableOpacity style={styles.stepperBtn} onPress={handlePlus}>
                   <Plus size={16} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
@@ -145,7 +149,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
           {/* Actions Bottom Bar */}
           <View style={styles.footer}>
             {isLogged && onDelete && (
-              <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
+              <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} accessibilityLabel={t('Delete')}>
                 <Trash2 size={18} color={theme.colors.danger} />
               </TouchableOpacity>
             )}
@@ -159,7 +163,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
             >
               <Check size={16} color={theme.colors.textInverted} />
               <Text style={styles.saveBtnText}>
-                {isLogged ? 'Update Portion' : 'Confirm'}
+                {isLogged ? t('Update Portion') : t('Confirm')}
               </Text>
             </TouchableOpacity>
           </View>

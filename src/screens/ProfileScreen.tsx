@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import { Check, ArrowLeft, Globe2 } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage } from '../types';
@@ -32,6 +33,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onBack,
 }) => {
   const currentLanguage = useLanguage();
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(110, insets.bottom + 76);
   const t = (str: string) => translate(currentLanguage, str);
 
   const [name, setName] = useState(profile.name);
@@ -93,7 +96,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { direction: currentLanguage === 'en' ? 'ltr' : 'rtl' }]}
+      contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+    >
       {onBack && (
         <TouchableOpacity
           onPress={onBack}
@@ -153,7 +159,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <Text style={styles.previewTitle}>{t('Estimated Daily Target')}</Text>
         <Text style={styles.previewKcal}>{liveTargets.targetCalories} kcal</Text>
         <Text style={styles.previewMeta}>
-          BMR: {liveTargets.bmr} kcal • TDEE: {liveTargets.tdee} kcal
+          {t('BMR')}: {liveTargets.bmr} kcal • {t('TDEE')}: {liveTargets.tdee} kcal
         </Text>
 
         <View style={styles.macroStrip}>

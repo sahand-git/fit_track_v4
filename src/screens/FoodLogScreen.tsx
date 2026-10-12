@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
   ChevronLeft,
@@ -45,7 +46,11 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   initialMealType = 'breakfast',
 }) => {
   const language = useLanguage();
+  const insets = useSafeAreaInsets();
   const t = (value: string) => translate(language, value);
+
+  const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
+  const floatingBottom = dockBottom + 66;
 
   const [addSheetVisible, setAddSheetVisible] = useState(false);
   const [activeMealType, setActiveMealType] = useState<MealType>(initialMealType);
@@ -200,7 +205,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       </View>
 
       {/* Meal Groups Scroll List */}
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: floatingBottom + 70 }]}>
         {mealCategories.map((cat) => {
           const categoryMeals = log.meals.filter((m) => m.mealType === cat.key);
           const categoryKcal = categoryMeals.reduce((s, m) => s + m.calories, 0);
@@ -220,7 +225,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                   <TouchableOpacity
                     style={styles.addFoodBtn}
                     onPress={() => openAddSheet(cat.key)}
-                    accessibilityLabel={`Add food to ${cat.label}`}
+                    accessibilityLabel={`${t('Add food to')} ${cat.label}`}
                     accessibilityRole="button"
                   >
                     <Plus size={14} color={theme.colors.primary} />
@@ -292,7 +297,13 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       {/* Floating "+ Add food" Action Button */}
       {!isFuture && (
         <TouchableOpacity
-          style={styles.floatingAddBtn}
+          style={[
+            styles.floatingAddBtn,
+            {
+              bottom: floatingBottom,
+              ...(language === 'en' ? { right: 18 } : { left: 18 }),
+            },
+          ]}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
             openAddSheet('breakfast');
@@ -533,8 +544,6 @@ const styles = StyleSheet.create({
   },
   floatingAddBtn: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 86 : 76,
-    right: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,

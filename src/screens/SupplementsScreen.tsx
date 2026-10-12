@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CheckCircle2, Circle, Pill, Plus, Trash2, ArrowLeft } from 'lucide-react-native';
 import { SupplementCheck, SupplementRoutineItem, SupplementTime } from '../types';
 import { AppText as Text } from '../components/AppText';
@@ -23,12 +24,15 @@ const timeLabels: Record<SupplementTime, string> = { morning: 'Morning', afterno
 
 export function SupplementsScreen({ selectedDate, routine, checks, onAdd, onRemove, onToggle, onBack }: SupplementsScreenProps) {
   const language = useLanguage();
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState('');
   const [dose, setDose] = useState('');
   const [time, setTime] = useState<SupplementTime>('morning');
   const takenIds = useMemo(() => new Set(checks.filter(check => check.taken).map(check => check.itemId)), [checks]);
   const t = (value: string) => translate(language, value);
   const isFuture = selectedDate > getTodayDateString();
+
+  const bottomPadding = Math.max(112, insets.bottom + 76);
 
   const addItem = () => {
     const cleanName = name.trim();
@@ -39,7 +43,11 @@ export function SupplementsScreen({ selectedDate, routine, checks, onAdd, onRemo
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}
+      contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.header}>
         {onBack && (
           <TouchableOpacity onPress={onBack} style={{ padding: 6, marginRight: 6 }} accessibilityLabel={t('Back')}>
@@ -48,45 +56,45 @@ export function SupplementsScreen({ selectedDate, routine, checks, onAdd, onRemo
         )}
         <View style={styles.icon}><Pill size={19} color={theme.colors.primary} /></View>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>Vitamins & supplements</Text>
+          <Text style={styles.title}>{t('Vitamins & supplements')}</Text>
           <Text style={styles.subtitle}>{formatDisplayDate(selectedDate, language)}</Text>
         </View>
         <Text style={styles.count}>{takenIds.size}/{routine.length}</Text>
       </View>
 
       <View style={styles.notice}>
-        <Text style={styles.noticeText}>Tracking only — this app does not recommend supplements or doses.</Text>
+        <Text style={styles.noticeText}>{t('Tracking only — this app does not recommend supplements or doses.')}</Text>
       </View>
 
       <View style={styles.addCard}>
-        <Text style={styles.sectionTitle}>Add supplement</Text>
+        <Text style={styles.sectionTitle}>{t('Add supplement')}</Text>
         <TextInput value={name} onChangeText={setName} placeholder={t('Supplement name')} placeholderTextColor={theme.colors.textMuted} style={styles.input} returnKeyType="next" />
         <TextInput value={dose} onChangeText={setDose} placeholder={t('Dose / serving')} placeholderTextColor={theme.colors.textMuted} style={styles.input} returnKeyType="done" />
-        <Text style={styles.fieldLabel}>Time of day</Text>
+        <Text style={styles.fieldLabel}>{t('Time of day')}</Text>
         <View style={styles.timeRow}>
           {timeOptions.map(option => (
             <TouchableOpacity key={option} onPress={() => setTime(option)} style={[styles.timeChip, time === option && styles.timeChipActive]} accessibilityRole="button">
-              <Text style={[styles.timeText, time === option && styles.timeTextActive]}>{timeLabels[option]}</Text>
+              <Text style={[styles.timeText, time === option && styles.timeTextActive]}>{t(timeLabels[option])}</Text>
             </TouchableOpacity>
           ))}
         </View>
         <TouchableOpacity style={[styles.addButton, !name.trim() && styles.addButtonDisabled]} onPress={addItem} disabled={!name.trim()} accessibilityRole="button">
-          <Plus size={17} color={theme.colors.textInverted} /><Text style={styles.addButtonText}>Add</Text>
+          <Plus size={17} color={theme.colors.textInverted} /><Text style={styles.addButtonText}>{t('Add')}</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>My supplement routine</Text>
+      <Text style={styles.sectionTitle}>{t('My supplement routine')}</Text>
       {routine.length === 0 ? (
         <View style={styles.empty}>
           <Pill size={22} color={theme.colors.secondary} />
-          <Text style={styles.emptyText}>No supplements added yet. Add items you already take to build your checklist.</Text>
+          <Text style={styles.emptyText}>{t('No supplements added yet. Add items you already take to build your checklist.')}</Text>
         </View>
       ) : timeOptions.map(slot => {
         const items = routine.filter(item => item.time === slot);
         if (!items.length) return null;
         return (
           <View key={slot} style={styles.group}>
-            <Text style={styles.groupTitle}>{timeLabels[slot]}</Text>
+            <Text style={styles.groupTitle}>{t(timeLabels[slot])}</Text>
             {items.map(item => {
               const taken = takenIds.has(item.id);
               return (
