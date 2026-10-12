@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile, DailyLog, LoggedMeal, SupplementCheck, SupplementRoutineItem } from '../types';
+import { normalizeSupplementRoutine } from '../utils/supplementUtils';
 import { getDefaultProfile } from '../utils/calculator';
 
 const PROFILE_KEY = '@fittrack_profile';
@@ -97,7 +98,7 @@ export async function updateWater(dateStr: string, delta: number): Promise<Daily
 export async function loadSupplementRoutine(): Promise<SupplementRoutineItem[]> {
   try {
     const raw = await AsyncStorage.getItem(SUPPLEMENT_ROUTINE_KEY);
-    return raw ? JSON.parse(raw) as SupplementRoutineItem[] : [];
+    return raw ? normalizeSupplementRoutine(JSON.parse(raw)) : [];
   } catch (err) {
     console.error('Error loading supplement routine:', err);
     return [];

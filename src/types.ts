@@ -12,12 +12,14 @@ export type FitnessGoal =
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type AppLanguage = 'en' | 'ar' | 'ckb';
 export type SupplementTime = 'morning' | 'afternoon' | 'evening' | 'bedtime';
+export type SupplementCategory = 'vitamin' | 'mineral' | 'supplement' | 'other';
 
 export interface SupplementRoutineItem {
   id: string;
   name: string;
   dose: string;
   time: SupplementTime;
+  category?: SupplementCategory;
 }
 
 export interface SupplementCheck {
