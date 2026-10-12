@@ -107,7 +107,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing.md, paddingBottom: 108 },
+  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing.md, paddingBottom: 176 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   icon: { width: 42, height: 42, borderRadius: 15, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   headerCopy: { flex: 1 },

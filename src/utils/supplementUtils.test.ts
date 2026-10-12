@@ -1,4 +1,5 @@
 import { getSupplementProgress, normalizeSupplementRoutine } from './supplementUtils';
+import { translate } from '../i18n/strings';
 
 function assertEqual<T>(actual: T, expected: T, message: string): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
@@ -29,3 +30,8 @@ assertEqual(
   { scheduled: 0, completed: 0, pending: 0, percentage: 0 },
   'empty routine has zero progress',
 );
+
+assertEqual(translate('ar', 'kcal remaining'), 'السعرات المتبقية', 'Arabic calorie remainder label is translated');
+assertEqual(translate('ckb', 'kcal remaining'), 'کالۆری ماوە', 'Sorani calorie remainder label is translated');
+assertEqual(translate('ar', 'kcal over budget'), 'تجاوزت ميزانية السعرات', 'Arabic over-budget label is translated');
+assertEqual(translate('ckb', 'kcal over budget'), 'کالۆرییەکانی ئامانج تێپەڕاندووە', 'Sorani over-budget label is translated');

@@ -7,23 +7,29 @@ import {
   TextInput
 } from 'react-native';
 import { AppText as Text } from '../components/AppText';
-import { Check } from 'lucide-react-native';
-import { UserProfile, Gender, ActivityLevel, FitnessGoal } from '../types';
+import { ArrowLeft, Check, Globe2 } from 'lucide-react-native';
+import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage } from '../types';
 import { calculateTargets } from '../utils/calculator';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { clearGeminiApiKey, getStoredGeminiApiKey, setStoredGeminiApiKey } from '../services/plateAnalysisService';
 import { useLanguage } from '../i18n/I18nContext';
-import { translate } from '../i18n/strings';
+import { languageNames, translate } from '../i18n/strings';
 
 interface ProfileScreenProps {
   profile: UserProfile;
   onSaveProfile: (profile: UserProfile) => void;
+  language: AppLanguage;
+  onLanguageChange: (language: AppLanguage) => void;
+  onBack: () => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   profile,
   onSaveProfile,
+  language: selectedLanguage,
+  onLanguageChange,
+  onBack,
 }) => {
   const language = useLanguage();
   const [name, setName] = useState(profile.name);
@@ -102,10 +108,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.screenTitle}>Profile & Goals</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.screenTitle}>Profile & Goals</Text>
+        <TouchableOpacity onPress={onBack} style={styles.backButton} accessibilityRole="button" accessibilityLabel={translate(language, 'Back to Today')}>
+          <ArrowLeft size={20} color={theme.colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
       <Text style={styles.screenSubtitle}>
         Calibrated with the Mifflin-St Jeor metabolic formula.
       </Text>
+
+      <View style={styles.languageCard}>
+        <View style={styles.languageHeader}><Globe2 size={18} color={theme.colors.secondary} /><Text style={styles.languageTitle}>Language</Text></View>
+        <View style={styles.languageOptions}>
+          {(['en', 'ar', 'ckb'] as AppLanguage[]).map(option => (
+            <TouchableOpacity key={option} onPress={() => onLanguageChange(option)} style={[styles.languageOption, selectedLanguage === option && styles.languageOptionActive]} accessibilityRole="button" accessibilityState={{ selected: selectedLanguage === option }}>
+              <Text style={[styles.languageOptionText, selectedLanguage === option && styles.languageOptionTextActive]}>{languageNames[option]}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={styles.languageNote}>Language updates immediately. Arabic and Sorani use a right-to-left layout.</Text>
+      </View>
 
       <View style={styles.aiSettingsCard}>
         <Text style={styles.sectionHeader}>AI features</Text>
@@ -280,7 +303,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    paddingBottom: 110,
+    paddingBottom: 176,
     gap: 16,
   },
   screenTitle: {
@@ -290,6 +313,17 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     letterSpacing: -0.4,
   },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  backButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
+  languageCard: { padding: 14, gap: 12, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface },
+  languageHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  languageTitle: { color: theme.colors.textPrimary, fontFamily: theme.fonts.serif, fontSize: 17, fontWeight: '700' },
+  languageOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  languageOption: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: theme.radius.full, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.background },
+  languageOptionActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryLight },
+  languageOptionText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: '600' },
+  languageOptionTextActive: { color: theme.colors.primary },
+  languageNote: { color: theme.colors.textMuted, fontSize: 11, lineHeight: 16 },
   screenSubtitle: {
     fontFamily: theme.fonts.sans,
     fontSize: 13,

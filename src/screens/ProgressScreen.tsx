@@ -260,7 +260,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
                 <Scale size={28} color={theme.colors.textMuted} />
                 <Text style={styles.emptyHistoryTitle}>No weight entries logged yet</Text>
                 <Text style={styles.emptyHistoryBody}>
-                  Tap "Log weight" above to track your weight across weeks.
+                  Tap &quot;Log weight&quot; above to track your weight across weeks.
                 </Text>
               </View>
             ) : (
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    paddingBottom: 110,
+    paddingBottom: 176,
     gap: 16,
   },
   headerRow: {

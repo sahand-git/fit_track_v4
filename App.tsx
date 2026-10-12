@@ -1,20 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
   TouchableOpacity,
-  SafeAreaView,
-  Platform,
 } from 'react-native';
 import { AppText as Text } from './src/components/AppText';
 import { StatusBar } from 'expo-status-bar';
 import {
   LayoutDashboard,
-  BookOpen,
   Plus,
   TrendingUp,
-  Wrench,
+  UtensilsCrossed,
+  Bot,
 } from 'lucide-react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem } from './src/types';
 import {
   loadUserProfile,
@@ -36,16 +35,25 @@ import { FoodLogScreen } from './src/screens/FoodLogScreen';
 import { ScannerScreen } from './src/screens/ScannerScreen';
 import { ProgressScreen } from './src/screens/ProgressScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
-import { ToolsScreen } from './src/screens/ToolsScreen';
 import { SupplementsScreen } from './src/screens/SupplementsScreen';
 import { CoachScreen } from './src/screens/CoachScreen';
 import { I18nProvider } from './src/i18n/I18nContext';
 import { theme } from './src/theme';
 import * as Haptics from 'expo-haptics';
+import { translate } from './src/i18n/strings';
 
-type Tab = 'today' | 'diary' | 'scan' | 'progress' | 'tools' | 'profile' | 'supplements' | 'coach';
+type Tab = 'today' | 'diary' | 'scan' | 'progress' | 'profile' | 'supplements' | 'coach';
 
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
+  );
+}
+
+function AppContent() {
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [previousTab, setPreviousTab] = useState<Tab>('today');
 
@@ -59,8 +67,12 @@ export default function App() {
     steps: 0,
   });
   const [initialMealForAdd, setInitialMealForAdd] = useState<MealType>('breakfast');
+  const [openAddFoodOnNavigate, setOpenAddFoodOnNavigate] = useState(false);
+  const handleAutoOpenComplete = useCallback(() => setOpenAddFoodOnNavigate(false), []);
   const [supplementRoutine, setSupplementRoutine] = useState<SupplementRoutineItem[]>([]);
   const language = appLanguage;
+  const isTodaySelected = activeTab === 'today' || activeTab === 'supplements' || activeTab === 'profile' || (activeTab === 'scan' && previousTab === 'today');
+  const isMealsSelected = activeTab === 'diary' || (activeTab === 'scan' && previousTab === 'diary');
 
   // Load initial profile and daily log
   useEffect(() => {
@@ -134,12 +146,19 @@ export default function App() {
     await saveSupplementRoutine(updated);
   };
 
+  const handleUpdateSupplement = async (item: SupplementRoutineItem) => {
+    const updated = supplementRoutine.map(existing => existing.id === item.id ? item : existing);
+    setSupplementRoutine(updated);
+    await saveSupplementRoutine(updated);
+  };
+
   const handleToggleSupplement = async (id: string, taken: boolean) => {
     if (selectedDate > getTodayDateString()) return;
     setLog(await setSupplementTaken(selectedDate, id, taken));
   };
 
   const handleNavigateToMeals = (targetMeal?: MealType) => {
+    setOpenAddFoodOnNavigate(Boolean(targetMeal));
     if (targetMeal) setInitialMealForAdd(targetMeal);
     setActiveTab('diary');
   };
@@ -156,7 +175,7 @@ export default function App() {
 
   return (
     <I18nProvider language={language}>
-    <SafeAreaView style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
+    <View style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl', paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
       <StatusBar style="dark" />
 
       {/* Main Screen Body */}
@@ -168,10 +187,11 @@ export default function App() {
             log={log}
             onUpdateWater={handleUpdateWater}
             onNavigateToMeals={handleNavigateToMeals}
-            onOpenChooser={() => {
-              setPreviousTab('today');
-              setActiveTab('scan');
-            }}
+            supplementRoutine={supplementRoutine}
+            supplementChecks={log.supplements || []}
+            onToggleSupplement={handleToggleSupplement}
+            onOpenSupplements={() => setActiveTab('supplements')}
+            onOpenProfile={() => setActiveTab('profile')}
           />
         )}
 
@@ -185,6 +205,8 @@ export default function App() {
             onUpdateMeal={handleUpdateMeal}
             onRemoveMeal={handleRemoveMeal}
             initialMealType={initialMealForAdd}
+            openAddOnMount={openAddFoodOnNavigate}
+            onAutoOpenComplete={handleAutoOpenComplete}
           />
         )}
 
@@ -204,37 +226,33 @@ export default function App() {
 
         {/* Tab 5: PROFILE */}
         {activeTab === 'profile' && (
-          <ProfileScreen profile={profile} onSaveProfile={handleSaveProfile} />
-        )}
-        {activeTab === 'tools' && (
-          <ToolsScreen language={language} onLanguageChange={handleLanguageChange} onOpenVitamins={() => setActiveTab('supplements')} onOpenCoach={() => setActiveTab('coach')} onOpenProfile={() => setActiveTab('profile')} />
+          <ProfileScreen profile={profile} onSaveProfile={handleSaveProfile} language={language} onLanguageChange={handleLanguageChange} onBack={() => setActiveTab('today')} />
         )}
         {activeTab === 'supplements' && (
-          <SupplementsScreen selectedDate={selectedDate} routine={supplementRoutine} checks={log.supplements || []} onAdd={handleAddSupplement} onRemove={handleRemoveSupplement} onToggle={handleToggleSupplement} />
+          <SupplementsScreen selectedDate={selectedDate} routine={supplementRoutine} checks={log.supplements || []} onAdd={handleAddSupplement} onUpdate={handleUpdateSupplement} onRemove={handleRemoveSupplement} onToggle={handleToggleSupplement} onBack={() => setActiveTab('today')} />
         )}
         {activeTab === 'coach' && <CoachScreen profile={profile} log={log} />}
       </View>
 
       {/* Editorial Ledger Bottom Navigation Dock */}
-      {activeTab !== 'scan' && (
-        <View style={styles.dockContainer}>
+      <View style={[styles.dockContainer, { bottom: insets.bottom + 8, left: Math.max(insets.left, 14), right: Math.max(insets.right, 14) }]}>
           <View style={styles.bottomNav}>
             {/* 1. Today */}
             <TouchableOpacity
               style={styles.navBtn}
               onPress={() => switchTab('today')}
               activeOpacity={0.7}
-              accessibilityLabel="Today"
+              accessibilityLabel={translate(language, 'Today')}
               accessibilityRole="button"
             >
               <LayoutDashboard
                 size={20}
-                color={activeTab === 'today' ? theme.colors.primary : theme.colors.textMuted}
+                color={isTodaySelected ? theme.colors.primary : theme.colors.textMuted}
               />
               <Text
                 style={[
                   styles.navLabel,
-                  activeTab === 'today' && styles.navLabelActive,
+                  isTodaySelected && styles.navLabelActive,
                 ]}
               >
                 Today
@@ -246,35 +264,27 @@ export default function App() {
               style={styles.navBtn}
               onPress={() => switchTab('diary')}
               activeOpacity={0.7}
-              accessibilityLabel="Diary"
+              accessibilityLabel={translate(language, 'Meals')}
               accessibilityRole="button"
             >
-              <BookOpen
+              <UtensilsCrossed
                 size={20}
-                color={activeTab === 'diary' ? theme.colors.primary : theme.colors.textMuted}
+                color={isMealsSelected ? theme.colors.primary : theme.colors.textMuted}
               />
               <Text
                 style={[
                   styles.navLabel,
-                  activeTab === 'diary' && styles.navLabelActive,
+                  isMealsSelected && styles.navLabelActive,
                 ]}
               >
-                Diary
+                Meals
               </Text>
             </TouchableOpacity>
 
-            {/* 3. Log Food (Centered Action Button) */}
-            <TouchableOpacity
-              style={styles.logNavBtn}
-              onPress={() => switchTab('scan')}
-              activeOpacity={0.8}
-              accessibilityLabel="Log food"
-              accessibilityRole="button"
-            >
-              <View style={styles.logIconBox}>
-                <Plus size={20} color={theme.colors.textInverted} />
-              </View>
-              <Text style={styles.logNavLabel}>Log food</Text>
+            {/* 3. Coach */}
+            <TouchableOpacity style={styles.navBtn} onPress={() => switchTab('coach')} activeOpacity={0.7} accessibilityLabel={translate(language, 'Coach')} accessibilityRole="button">
+              <Bot size={20} color={activeTab === 'coach' ? theme.colors.primary : theme.colors.textMuted} />
+              <Text style={[styles.navLabel, activeTab === 'coach' && styles.navLabelActive]}>Coach</Text>
             </TouchableOpacity>
 
             {/* 4. Progress */}
@@ -299,31 +309,21 @@ export default function App() {
               </Text>
             </TouchableOpacity>
 
-            {/* 5. Tools, AI coach, and profile */}
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() => switchTab('tools')}
-              activeOpacity={0.7}
-              accessibilityLabel="Tools"
-              accessibilityRole="button"
-            >
-              <Wrench
-                size={20}
-                color={activeTab === 'tools' || activeTab === 'supplements' || activeTab === 'coach' || activeTab === 'profile' ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.navLabel,
-                  (activeTab === 'tools' || activeTab === 'supplements' || activeTab === 'coach' || activeTab === 'profile') && styles.navLabelActive,
-                ]}
-              >
-                Tools
-              </Text>
-            </TouchableOpacity>
           </View>
-        </View>
+      </View>
+      {(activeTab === 'today' || activeTab === 'diary') && selectedDate <= getTodayDateString() && (
+        <TouchableOpacity
+          style={[styles.addFoodFloating, { bottom: insets.bottom + 78 }, language === 'en' ? { right: Math.max(insets.right, 20) } : { left: Math.max(insets.left, 20) }]}
+          onPress={() => { setPreviousTab(activeTab); setActiveTab('scan'); }}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={translate(language, 'Add food')}
+        >
+          <Plus size={19} color={theme.colors.textInverted} />
+          <Text style={styles.addFoodFloatingText}>Add food</Text>
+        </TouchableOpacity>
       )}
-    </SafeAreaView>
+    </View>
     </I18nProvider>
   );
 }
@@ -332,14 +332,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    paddingTop: Platform.OS === 'android' ? 35 : 0,
   },
   main: {
     flex: 1,
   },
   dockContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 18 : 10,
+    bottom: 8,
     left: 14,
     right: 14,
   },
@@ -373,26 +372,6 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: '600',
   },
-  logNavBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 2,
-    minWidth: 54,
-  },
-  logIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...theme.shadow.subtle,
-  },
-  logNavLabel: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 11,
-    fontWeight: '600',
-    color: theme.colors.primary,
-    marginTop: 2,
-  },
+  addFoodFloating: { position: 'absolute', minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: theme.radius.full, paddingHorizontal: 18, backgroundColor: theme.colors.primary, ...theme.shadow.floating },
+  addFoodFloatingText: { color: theme.colors.textInverted, fontSize: 14, fontWeight: '700' },
 });

@@ -6,22 +6,27 @@ import {
   TouchableOpacity
 } from 'react-native';
 import { AppText as Text } from '../components/AppText';
-import { Plus, ChevronRight, Utensils } from 'lucide-react-native';
-import { UserProfile, DailyLog, MealType } from '../types';
+import { Plus, ChevronRight, Utensils, CheckCircle2, Circle, Pill, UserRound } from 'lucide-react-native';
+import { UserProfile, DailyLog, MealType, SupplementCheck, SupplementRoutineItem } from '../types';
 import { CalorieRing } from '../components/CalorieRing';
 import { MacroCards } from '../components/MacroCards';
 import { WaterTracker } from '../components/WaterTracker';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
-import { formatDisplayDate } from '../utils/dateUtils';
+import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
+import { translate } from '../i18n/strings';
 
 interface DashboardScreenProps {
   profile: UserProfile;
   log: DailyLog;
   onUpdateWater: (delta: number) => void;
   onNavigateToMeals: (targetMeal?: MealType) => void;
-  onOpenChooser?: () => void;
+  supplementRoutine: SupplementRoutineItem[];
+  supplementChecks: SupplementCheck[];
+  onToggleSupplement: (id: string, taken: boolean) => void;
+  onOpenSupplements: () => void;
+  onOpenProfile: () => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -29,7 +34,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   log,
   onUpdateWater,
   onNavigateToMeals,
-  onOpenChooser,
+  supplementRoutine,
+  supplementChecks,
+  onToggleSupplement,
+  onOpenSupplements,
+  onOpenProfile,
 }) => {
   const language = useLanguage();
   const consumedCalories = log.meals.reduce((sum, m) => sum + m.calories, 0);
@@ -45,19 +54,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   ];
 
   const todayLabel = formatDisplayDate(log.date, language);
+  const translateText = (value: string) => translate(language, value);
+  const takenIds = new Set(supplementChecks.filter(item => item.taken).map(item => item.itemId));
+  const isFuture = log.date > getTodayDateString();
 
   const handleQuickAdd = (meal: MealType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onNavigateToMeals(meal);
-  };
-
-  const handleOpenLog = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (onOpenChooser) {
-      onOpenChooser();
-    } else {
-      onNavigateToMeals('lunch');
-    }
   };
 
   return (
@@ -70,14 +73,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </View>
 
         <TouchableOpacity
-          style={styles.logCtaBtn}
-          onPress={handleOpenLog}
+          style={styles.profileButton}
+          onPress={onOpenProfile}
           activeOpacity={0.8}
-          accessibilityLabel="Log food"
+          accessibilityLabel={translateText('Profile')}
           accessibilityRole="button"
         >
-          <Plus size={16} color={theme.colors.textInverted} />
-          <Text style={styles.logCtaText}>Log food</Text>
+          <UserRound size={20} color={theme.colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -109,6 +111,41 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         target={profile.waterTargetGlasses}
         onUpdate={onUpdateWater}
       />
+
+      {supplementRoutine.length === 0 ? (
+        <TouchableOpacity style={styles.vitaminEmptyRow} onPress={onOpenSupplements} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel={translateText('Track vitamins & supplements')}>
+          <View style={styles.vitaminIcon}><Pill size={18} color={theme.colors.primary} /></View>
+          <Text style={styles.vitaminEmptyLabel}>Track vitamins & supplements</Text>
+          <ChevronRight size={17} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.vitaminCard}>
+          <View style={styles.vitaminHeader}>
+            <View style={styles.vitaminTitleGroup}>
+              <View style={styles.vitaminIcon}><Pill size={18} color={theme.colors.primary} /></View>
+              <View>
+                <Text style={styles.vitaminTitle}>Vitamins & supplements</Text>
+                <Text style={styles.vitaminCount}>{supplementRoutine.filter(item => takenIds.has(item.id)).length} {translateText('of')} {supplementRoutine.length} {translateText('taken today')}</Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={onOpenSupplements} accessibilityRole="button" accessibilityLabel={translateText('Manage vitamins')}>
+              <Text style={styles.manageLink}>Manage</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.vitaminList}>
+            {supplementRoutine.map(item => {
+              const taken = takenIds.has(item.id);
+              return (
+                <TouchableOpacity key={item.id} style={styles.vitaminRow} onPress={() => onToggleSupplement(item.id, !taken)} disabled={isFuture} activeOpacity={0.7} accessibilityRole="checkbox" accessibilityState={{ checked: taken, disabled: isFuture }} accessibilityLabel={`${translateText(taken ? 'Taken' : 'Mark as taken')}: ${item.name}`}>
+                  {taken ? <CheckCircle2 size={20} color={theme.colors.primary} /> : <Circle size={20} color={theme.colors.textMuted} />}
+                  <Text style={[styles.vitaminItemName, taken && styles.vitaminItemTaken]}>{item.name}</Text>
+                  {item.dose ? <Text style={styles.vitaminDose}>{item.dose}</Text> : null}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
 
       {/* Meals Ledger Header */}
       <View style={styles.mealsHeader}>
@@ -175,7 +212,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    paddingBottom: 110,
+    paddingBottom: 184,
   },
   header: {
     flexDirection: 'row',
@@ -200,22 +237,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     marginTop: 2,
   },
-  logCtaBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: theme.radius.full,
-    ...theme.shadow.subtle,
-  },
-  logCtaText: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.textInverted,
-  },
+  profileButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, ...theme.shadow.subtle },
   heroSection: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.xl,
@@ -226,6 +248,20 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     ...theme.shadow.subtle,
   },
+  vitaminEmptyRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg, paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1, borderColor: theme.colors.border, marginTop: 12, ...theme.shadow.subtle },
+  vitaminIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.primaryLight },
+  vitaminEmptyLabel: { flex: 1, color: theme.colors.textPrimary, fontWeight: '700', fontSize: 14 },
+  vitaminCard: { backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg, padding: 14, borderWidth: 1, borderColor: theme.colors.border, marginTop: 12, ...theme.shadow.subtle },
+  vitaminHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
+  vitaminTitleGroup: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  vitaminTitle: { color: theme.colors.textPrimary, fontWeight: '700', fontSize: 14 },
+  vitaminCount: { color: theme.colors.textMuted, fontSize: 11, marginTop: 2 },
+  manageLink: { color: theme.colors.primary, fontSize: 12, fontWeight: '700' },
+  vitaminList: { gap: 2 },
+  vitaminRow: { flexDirection: 'row', alignItems: 'center', gap: 9, minHeight: 42, paddingHorizontal: 2 },
+  vitaminItemName: { flex: 1, color: theme.colors.textPrimary, fontSize: 13, fontWeight: '600' },
+  vitaminItemTaken: { color: theme.colors.textMuted, textDecorationLine: 'line-through' },
+  vitaminDose: { color: theme.colors.textMuted, fontSize: 11 },
   mealsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

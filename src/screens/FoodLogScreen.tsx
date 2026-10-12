@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   View,
@@ -18,7 +18,6 @@ import {
   Search,
   X,
   Check,
-  Utensils,
   CalendarDays,
   Sparkles,
 } from 'lucide-react-native';
@@ -31,6 +30,7 @@ import { estimateMealFromText, PlateAnalysisResult } from '../services/plateAnal
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { createUniqueId } from '../utils/idUtils';
 import * as Haptics from 'expo-haptics';
 
 interface FoodLogScreenProps {
@@ -41,6 +41,8 @@ interface FoodLogScreenProps {
   onUpdateMeal?: (meal: LoggedMeal) => void;
   onRemoveMeal: (mealId: string) => void;
   initialMealType?: MealType;
+  openAddOnMount?: boolean;
+  onAutoOpenComplete?: () => void;
 }
 
 export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
@@ -51,8 +53,10 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   onUpdateMeal,
   onRemoveMeal,
   initialMealType = 'breakfast',
+  openAddOnMount = false,
+  onAutoOpenComplete,
 }) => {
-  const [modalVisible, setModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(openAddOnMount && selectedDate <= getTodayDateString());
   const [activeMealType, setActiveMealType] = useState<MealType>(initialMealType);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
@@ -69,6 +73,10 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   const language = useLanguage();
   const t = (value: string) => translate(language, value);
   const isFuture = selectedDate > getTodayDateString();
+
+  useEffect(() => {
+    if (openAddOnMount) onAutoOpenComplete?.();
+  }, [openAddOnMount, onAutoOpenComplete]);
 
   // Date navigation
   const handlePrevDay = () => {
@@ -153,7 +161,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     const grams = Math.max(1, aiGrams[index] || item.grams);
     const scale = grams / item.grams;
     const meal: LoggedMeal = {
-      id: `ai_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      id: createUniqueId('ai'),
       foodId: 'ai-estimate',
       name: item.name,
       mealType: aiMealType,
@@ -434,7 +442,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
               ListEmptyComponent={
                 <View style={styles.emptySearchBox}>
                   <Text style={styles.emptySearchTitle}>
-                    No foods found matching "{searchQuery}"
+                    No foods found matching &quot;{searchQuery}&quot;
                   </Text>
                   <Text style={styles.emptySearchSub}>
                     Try searching for common foods like chicken, eggs, rice, or oats.
@@ -615,7 +623,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    paddingBottom: 110,
+    paddingBottom: 178,
     gap: 16,
   },
   mealSection: {

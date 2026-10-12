@@ -6,6 +6,8 @@ import {
 import { AppText as Text } from './AppText';
 import Svg, { Circle } from 'react-native-svg';
 import { theme } from '../theme';
+import { useLanguage } from '../i18n/I18nContext';
+import { translate } from '../i18n/strings';
 
 interface CalorieRingProps {
   consumed: number;
@@ -20,6 +22,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = ({
   target,
   size = 200,
 }) => {
+  const language = useLanguage();
   const strokeWidth = 10;
   const radius = (size - strokeWidth * 2) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -65,12 +68,12 @@ export const CalorieRing: React.FC<CalorieRingProps> = ({
           {remaining.toLocaleString()}
         </Text>
         <Text style={styles.remainingLabel}>
-          {isOver ? 'kcal over budget' : 'kcal remaining'}
+          {translate(language, isOver ? 'kcal over budget' : 'kcal remaining')}
         </Text>
 
         <View style={styles.ratioPill}>
           <Text style={styles.ratioText}>
-            {consumed.toLocaleString()} of {target.toLocaleString()} kcal
+            {consumed.toLocaleString()} {translate(language, 'of')} {target.toLocaleString()} {translate(language, 'kcal')}
           </Text>
         </View>
       </View>

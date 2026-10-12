@@ -18,6 +18,8 @@
 - Future dates cannot be checked off or edited as if already taken.
 - New doses are user-entered; names/categories may be suggested, but no suggested dose is shown.
 - Translate every new visible and accessibility string into English, Arabic, and Sorani Kurdish.
+- The bottom navigation contains exactly Today, Meals, Coach, Progress; Profile and Supplements remain non-tab screens reachable from Today.
+- Preserve existing barcode/photo/manual food logging behind the Add food action; do not remove those capabilities.
 
 ## Review Focus
 
@@ -102,7 +104,29 @@ Expected: utility checks exit successfully and application typecheck reports no 
 
 ---
 
-### Task 4: Fix dock and floating action safe-area spacing
+### Task 4: Complete four-tab navigation, profile access, and language settings
+
+**Files:**
+- Modify: `App.tsx`
+- Modify: `src/screens/DashboardScreen.tsx`
+- Modify: `src/screens/ProfileScreen.tsx`
+- Modify: `src/i18n/strings.ts`
+- Delete: `src/screens/ToolsScreen.tsx` after no imports remain.
+
+**Interfaces:**
+- Bottom tabs are exactly `today`, `diary`, `coach`, `progress` (display labels Today, Meals, Coach, Progress); `profile`, `supplements`, and `scan` remain internal screen states.
+- `ProfileScreen` accepts `language: AppLanguage`, `onLanguageChange(language)`, and `onBack()`; language change saves immediately without requiring profile form submission.
+- `DashboardScreen` accepts `onOpenProfile()`; its header uses the profile button while food entry moves to the app-level floating action.
+
+- [ ] **Step 1: Replace the bottom dock controls with the four specified tabs**, use translated Meals/Coach labels and icons, and make Coach a direct tab.
+- [ ] **Step 2: Add Profile access to Today**, map the Today tab as active while Profile or Supplements is open, and make each screen return to Today.
+- [ ] **Step 3: Move the language selector into Profile**, persist the selected language through the existing handler, and remove ToolsScreen/imports.
+- [ ] **Step 4: Confirm existing camera/photo/barcode/manual food logging remains reachable from the Add food flow** and meal quick-add remembers its requested meal type.
+- [ ] **Step 5: Typecheck and manually inspect the four-tab/profile/language flow** in English, Arabic, and Sorani; commit as `feat: simplify navigation and profile access`.
+
+---
+
+### Task 5: Fix dock and floating action safe-area spacing
 
 **Files:**
 - Modify: `App.tsx`
@@ -114,19 +138,20 @@ Expected: utility checks exit successfully and application typecheck reports no 
 - Use `SafeAreaProvider` and `useSafeAreaInsets` from the installed `react-native-safe-area-context` package, following the Expo SDK 57 documentation.
 - Pass computed bottom spacing to screen content or keep it within the shared app shell; do not use fixed Android status/navigation-bar guesses.
 
-- [ ] **Step 1: Check the Expo SDK 57 safe-area guidance** before editing Expo/React Native behavior.
-- [ ] **Step 2: Add provider/inset-aware layout** so the app dock sits above Android system navigation and has sensible iOS/web behavior.
-- [ ] **Step 3: Add a floating “Add food” action to Today and Meals**, above the dock; hide it for future selected dates. Keep the scan/manual-add flow reachable and do not let the action cover the last scroll row.
-- [ ] **Step 4: Set scroll bottom padding** to clear the visible dock and floating action on Today and Meals.
-- [ ] **Step 5: Run typecheck and inspect the running app** against the supplied screenshot at mobile dimensions, including Arabic and Sorani. State clearly if physical Android verification requires the user’s device/emulator.
-- [ ] **Step 6: Commit** as `fix: keep app actions above system navigation`.
+- [x] **Step 1: Check the Expo SDK 57 safe-area guidance** before editing Expo/React Native behavior.
+- [x] **Step 2: Add provider/inset-aware layout** so the app dock sits above Android system navigation and has sensible iOS/web behavior.
+- [x] **Step 3: Add a floating “Add food” action to Today and Meals**, above the dock; hide it for future selected dates. Keep the scan/manual-add flow reachable and do not let the action cover the last scroll row.
+- [x] **Step 4: Set scroll bottom padding** to clear the visible dock and floating action on Today and Meals.
+- [x] **Step 5: Run typecheck and inspect the running app** against the supplied screenshot at mobile dimensions, including Arabic and Sorani. The TypeScript and web export checks passed; the preview browser could not reach the running app, so physical Android spacing remains unverified on-device.
+- [x] **Step 6: Commit** implementation as `8f4500a` (`feat: restore supplement tracking and simplify navigation`).
 
 ## Final Verification
 
-- Run the standalone supplement utility checks and `npx tsc --noEmit`.
-- Run the repository lint command from `AGENTS.md` (`npx expo lint`) and report its exact outcome; this repository has no lint script configured in `package.json`, so do not silently claim lint passed if Expo reports it unavailable.
-- Open/run the app preview and verify Today, Meals, supplement manager, empty/populated routine, future-date state, and English/Arabic/Sorani layouts.
-- Compare the Android screenshot geometry: system buttons below the app dock; final content scrolls above the dock; Today vitamin summary appears after Water.
+- [x] Run the standalone supplement and ID utility checks and `npx tsc --noEmit`.
+- [x] Run the repository lint command from `AGENTS.md` (`npx expo lint`) and report its exact outcome; 11 existing errors and 5 warnings remain in legacy components/screens/services. Changed feature files have 0 errors; App reports one missing dependency warning and Coach reports two duplicate-import warnings.
+- [x] Export the web bundle successfully.
+- [ ] Open/run the app preview and verify Today, Meals, supplement manager, empty/populated routine, future-date state, and English/Arabic/Sorani layouts. Browser preview was unreachable from this environment.
+- [ ] Compare the Android screenshot geometry on a device/emulator: system buttons below the app dock; final content scrolls above the dock; Today vitamin summary appears after Water.
 
 ## Plan Self-Review
 
