@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -72,8 +72,34 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const todayLabel = formatDisplayDate(log.date, language);
   const isFuture = log.date > getTodayDateString();
 
-  const takenSupplementIds = new Set(
-    (log.supplements || []).filter((c) => c.taken).map((c) => c.itemId)
+  const takenSupplementIds = useMemo(
+    () => new Set((log.supplements || []).filter((c) => c.taken).map((c) => c.itemId)),
+    [log.supplements]
+  );
+
+  const activeSupplements = useMemo(() => {
+    if (log.dailySupplements !== undefined) {
+      return log.dailySupplements.map((s) => ({
+        id: s.id,
+        name: s.name,
+        doseText: s.dose || (s.amount && s.unit ? `${s.amount} ${t(s.unit)}` : s.amount ? `${s.amount}` : ''),
+        isTaken: !!s.taken,
+      }));
+    }
+    if (supplementRoutine && supplementRoutine.length > 0) {
+      return supplementRoutine.map((r) => ({
+        id: r.id,
+        name: r.name,
+        doseText: r.dose || (r.amount && r.unit ? `${r.amount} ${t(r.unit)}` : r.amount ? `${r.amount}` : ''),
+        isTaken: takenSupplementIds.has(r.id),
+      }));
+    }
+    return [];
+  }, [log.dailySupplements, supplementRoutine, takenSupplementIds, language]);
+
+  const takenSupplementsCount = useMemo(
+    () => activeSupplements.filter((s) => s.isTaken).length,
+    [activeSupplements]
   );
 
   const handleQuickAdd = (meal: MealType) => {
@@ -138,8 +164,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
         {/* Vitamins & Supplements Section (Below Water Tracker) */}
         <View style={styles.supplementsContainer}>
-          {supplementRoutine.length === 0 ? (
-            /* Slim row if routine is empty */
+          {activeSupplements.length === 0 ? (
+            /* Slim row if routine/daily log is empty */
             <TouchableOpacity
               style={styles.slimRoutineRow}
               onPress={onOpenSupplements}
@@ -155,14 +181,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               <ChevronRight size={16} color={theme.colors.textMuted} />
             </TouchableOpacity>
           ) : (
-            /* Checklists with small Manage link if routine has items */
+            /* Checklists with small Manage link if items exist */
             <View style={styles.routineCard}>
               <View style={styles.routineHeader}>
                 <View style={styles.routineTitleRow}>
                   <Pill size={16} color={theme.colors.primary} />
                   <Text style={styles.routineTitle}>{t('Vitamins & supplements')}</Text>
                   <Text style={styles.routineCount}>
-                    {takenSupplementIds.size}/{supplementRoutine.length}
+                    {takenSupplementsCount}/{activeSupplements.length}
                   </Text>
                 </View>
 
@@ -176,34 +202,33 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               </View>
 
               <View style={styles.routineItemsList}>
-                {supplementRoutine.map((item) => {
-                  const isTaken = takenSupplementIds.has(item.id);
+                {activeSupplements.map((item) => {
                   return (
                     <TouchableOpacity
                       key={item.id}
                       style={styles.routineItemRow}
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                        onToggleSupplement(item.id, !isTaken);
+                        onToggleSupplement(item.id, !item.isTaken);
                       }}
                       disabled={isFuture}
                       activeOpacity={0.7}
                       accessibilityRole="checkbox"
-                      accessibilityState={{ checked: isTaken }}
+                      accessibilityState={{ checked: item.isTaken }}
                     >
                       <View style={styles.checkboxCircle}>
-                        {isTaken ? (
+                        {item.isTaken ? (
                           <CheckCircle2 size={19} color={theme.colors.primary} />
                         ) : (
                           <Circle size={19} color={theme.colors.textMuted} />
                         )}
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.routineItemName, isTaken && styles.routineItemNameTaken]}>
+                        <Text style={[styles.routineItemName, item.isTaken && styles.routineItemNameTaken]}>
                           {item.name}
                         </Text>
-                        {item.dose ? (
-                          <Text style={styles.routineItemDose}>{item.dose}</Text>
+                        {item.doseText ? (
+                          <Text style={styles.routineItemDose}>{item.doseText}</Text>
                         ) : null}
                       </View>
                     </TouchableOpacity>

@@ -11,17 +11,36 @@ export type FitnessGoal =
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type AppLanguage = 'en' | 'ar' | 'ckb';
+export type SupplementCategory = 'vitamin' | 'mineral' | 'supplement' | 'other';
 export type SupplementTime = 'morning' | 'afternoon' | 'evening' | 'bedtime';
 
 export interface SupplementRoutineItem {
   id: string;
   name: string;
-  dose: string;
+  category?: SupplementCategory;
+  amount?: number;
+  unit?: string;
+  dose?: string; // legacy or free-text dose
+  note?: string;
   time: SupplementTime;
 }
 
 export interface SupplementCheck {
   itemId: string;
+  taken: boolean;
+  takenAt?: string;
+}
+
+export interface LoggedDailySupplement {
+  id: string;
+  routineItemId?: string;
+  name: string;
+  category?: SupplementCategory;
+  amount?: number;
+  unit?: string;
+  dose?: string;
+  note?: string;
+  time: SupplementTime;
   taken: boolean;
   takenAt?: string;
 }
@@ -104,4 +123,5 @@ export interface DailyLog {
   waterGlasses: number;
   steps: number;
   supplements?: SupplementCheck[];
+  dailySupplements?: LoggedDailySupplement[];
 }

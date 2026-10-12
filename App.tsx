@@ -14,7 +14,7 @@ import {
   Bot,
   TrendingUp,
 } from 'lucide-react-native';
-import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem } from './src/types';
+import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem, LoggedDailySupplement } from './src/types';
 import {
   loadUserProfile,
   saveUserProfile,
@@ -25,6 +25,7 @@ import {
   updateWater,
   loadSupplementRoutine,
   saveSupplementRoutine,
+  saveDailySupplements,
   setSupplementTaken,
 } from './src/storage/storage';
 import { getDefaultProfile } from './src/utils/calculator';
@@ -149,16 +150,14 @@ function FitTrackApp() {
     setAppLanguage(nextLanguage);
   };
 
-  const handleAddSupplement = async (item: SupplementRoutineItem) => {
-    const updated = [...supplementRoutine, item];
-    setSupplementRoutine(updated);
-    await saveSupplementRoutine(updated);
+  const handleUpdateDailySupplements = async (items: LoggedDailySupplement[]) => {
+    const updated = await saveDailySupplements(selectedDate, items);
+    setLog(updated);
   };
 
-  const handleRemoveSupplement = async (id: string) => {
-    const updated = supplementRoutine.filter((item) => item.id !== id);
-    setSupplementRoutine(updated);
-    await saveSupplementRoutine(updated);
+  const handleUpdateRoutine = async (items: SupplementRoutineItem[]) => {
+    setSupplementRoutine(items);
+    await saveSupplementRoutine(items);
   };
 
   const handleToggleSupplement = async (id: string, taken: boolean) => {
@@ -232,10 +231,11 @@ function FitTrackApp() {
             <SupplementsScreen
               selectedDate={selectedDate}
               routine={supplementRoutine}
+              dailySupplements={log.dailySupplements || []}
               checks={log.supplements || []}
-              onAdd={handleAddSupplement}
-              onRemove={handleRemoveSupplement}
-              onToggle={handleToggleSupplement}
+              onUpdateDailySupplements={handleUpdateDailySupplements}
+              onUpdateRoutine={handleUpdateRoutine}
+              onToggleSupplement={handleToggleSupplement}
               onBack={() => setTempScreen('none')}
             />
           )}

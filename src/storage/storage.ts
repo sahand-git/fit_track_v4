@@ -41,7 +41,11 @@ export async function loadDailyLog(dateStr: string): Promise<DailyLog> {
       };
     }
     const parsed = JSON.parse(raw) as DailyLog;
-    return { ...parsed, supplements: parsed.supplements || [] };
+    return {
+      ...parsed,
+      supplements: parsed.supplements || [],
+      dailySupplements: parsed.dailySupplements,
+    };
   } catch (err) {
     console.error('Error loading daily log:', err);
     return {
@@ -49,6 +53,7 @@ export async function loadDailyLog(dateStr: string): Promise<DailyLog> {
       meals: [],
       waterGlasses: 0,
       steps: 0,
+      supplements: [],
     };
   }
 }
@@ -108,14 +113,82 @@ export async function saveSupplementRoutine(items: SupplementRoutineItem[]): Pro
   await AsyncStorage.setItem(SUPPLEMENT_ROUTINE_KEY, JSON.stringify(items));
 }
 
+export async function saveDailySupplements(
+  dateStr: string,
+  items: import('../types').LoggedDailySupplement[]
+): Promise<DailyLog> {
+  const current = await loadDailyLog(dateStr);
+  const updatedChecks: SupplementCheck[] = items.map((it) => ({
+    itemId: it.id,
+    taken: it.taken,
+    takenAt: it.takenAt,
+  }));
+  const updated: DailyLog = {
+    ...current,
+    dailySupplements: items,
+    supplements: updatedChecks,
+  };
+  await saveDailyLog(updated);
+  return updated;
+}
+
 export async function setSupplementTaken(dateStr: string, itemId: string, taken: boolean): Promise<DailyLog> {
   const current = await loadDailyLog(dateStr);
+  const takenAt = taken ? new Date().toISOString() : undefined;
+
+  let updatedDailySupplements: import('../types').LoggedDailySupplement[];
+
+  if (current.dailySupplements !== undefined) {
+    updatedDailySupplements = current.dailySupplements.map((s) => {
+      if (s.id === itemId || s.routineItemId === itemId) {
+        return {
+          ...s,
+          taken,
+          takenAt,
+        };
+      }
+      return s;
+    });
+  } else {
+    // Daily supplements not initialized yet, seed from routine
+    const routine = await loadSupplementRoutine();
+    const existingChecks = new Set((current.supplements || []).filter((c) => c.taken).map((c) => c.itemId));
+    if (routine && routine.length > 0) {
+      updatedDailySupplements = routine.map((r) => {
+        const isTarget = r.id === itemId;
+        const isTaken = isTarget ? taken : existingChecks.has(r.id);
+        return {
+          id: r.id,
+          routineItemId: r.id,
+          name: r.name,
+          category: r.category || 'supplement',
+          amount: r.amount,
+          unit: r.unit,
+          dose: r.dose,
+          note: r.note,
+          time: r.time,
+          taken: isTaken,
+          takenAt: isTaken ? (isTarget ? takenAt : new Date().toISOString()) : undefined,
+        };
+      });
+    } else {
+      updatedDailySupplements = [];
+    }
+  }
+
   const supplements = current.supplements || [];
-  const existing = supplements.find(item => item.itemId === itemId);
-  const next: SupplementCheck[] = existing
-    ? supplements.map(item => item.itemId === itemId ? { ...item, taken, takenAt: taken ? new Date().toISOString() : undefined } : item)
-    : [...supplements, { itemId, taken, ...(taken ? { takenAt: new Date().toISOString() } : {}) }];
-  const updated = { ...current, supplements: next };
+  const existing = supplements.find((item) => item.itemId === itemId);
+  const nextChecks: SupplementCheck[] = existing
+    ? supplements.map((item) =>
+        item.itemId === itemId ? { ...item, taken, takenAt } : item
+      )
+    : [...supplements, { itemId, taken, ...(takenAt ? { takenAt } : {}) }];
+
+  const updated: DailyLog = {
+    ...current,
+    supplements: nextChecks,
+    dailySupplements: updatedDailySupplements,
+  };
   await saveDailyLog(updated);
   return updated;
 }
