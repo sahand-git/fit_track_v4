@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
-  StyleSheet
+  StyleSheet,
+  Animated,
 } from 'react-native';
 import { AppText as Text } from './AppText';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { isReducedMotion } from '../utils/motion';
 
 interface MacroCardsProps {
   calorieTarget: number;
@@ -18,6 +20,38 @@ interface MacroCardsProps {
   fatTarget: number;
   fatConsumed: number;
 }
+
+const AnimatedProgressBar: React.FC<{ pct: number; color: string }> = ({ pct, color }) => {
+  const widthAnim = useRef(new Animated.Value(pct)).current;
+
+  useEffect(() => {
+    if (isReducedMotion()) {
+      widthAnim.setValue(pct);
+    } else {
+      Animated.timing(widthAnim, {
+        toValue: pct,
+        duration: 350,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [pct]);
+
+  const widthStyle = widthAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
+
+  return (
+    <View style={styles.track}>
+      <Animated.View
+        style={[
+          styles.bar,
+          { width: widthStyle, backgroundColor: color },
+        ]}
+      />
+    </View>
+  );
+};
 
 export const MacroCards: React.FC<MacroCardsProps> = ({
   proteinTarget,
@@ -65,14 +99,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
               </Text>
             </View>
 
-            <View style={styles.track}>
-              <View
-                style={[
-                  styles.bar,
-                  { width: `${pct}%`, backgroundColor: m.color },
-                ]}
-              />
-            </View>
+            <AnimatedProgressBar pct={pct} color={m.color} />
           </View>
         );
       })}

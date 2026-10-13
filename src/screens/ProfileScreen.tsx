@@ -13,6 +13,8 @@ import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, Supplemen
 import { calculateTargets } from '../utils/calculator';
 import { GeminiKeyManager } from '../components/GeminiKeyManager';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
+import { isNotificationSupported } from '../services/notificationService';
+import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useLanguage } from '../i18n/I18nContext';
 import { languageNames, translate } from '../i18n/strings';
 import { theme } from '../theme';
@@ -314,7 +316,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <View style={{ flex: 1 }}>
               <Text style={styles.optionLabel}>{t('Configure Reminders')}</Text>
               <Text style={styles.optionDesc}>
-                {t('Opt-in reminders for your habits and routines.')}
+                {isNotificationSupported()
+                  ? t('Opt-in reminders for your habits and routines.')
+                  : t('Available on mobile (Android & iOS)')}
               </Text>
             </View>
           </View>
@@ -322,9 +326,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       </View>
 
       {/* Save Button */}
-      <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
+      <AnimatedPressable style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
         <Text style={styles.saveBtnText}>{t('Save Targets')}</Text>
-      </TouchableOpacity>
+      </AnimatedPressable>
 
       <ReminderSettingsModal
         visible={remindersModalVisible}

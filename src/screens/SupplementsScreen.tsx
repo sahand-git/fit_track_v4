@@ -38,6 +38,7 @@ import {
   LoggedDailySupplement,
 } from '../types';
 import { AppText as Text } from '../components/AppText';
+import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
 import { translate } from '../i18n/strings';
 import { useLanguage } from '../i18n/I18nContext';
@@ -681,11 +682,7 @@ export function SupplementsScreen({
                         accessibilityRole="checkbox"
                         accessibilityState={{ checked: item.taken, disabled: isFuture }}
                       >
-                        {item.taken ? (
-                          <CheckCircle2 size={22} color={theme.colors.primary} />
-                        ) : (
-                          <Circle size={22} color={theme.colors.textMuted} />
-                        )}
+                        <AnimatedCheckbox checked={item.taken} size={22} />
                       </TouchableOpacity>
 
                       {/* Item Content */}

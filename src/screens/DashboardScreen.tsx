@@ -14,9 +14,8 @@ import {
   Utensils,
   User,
   Pill,
-  CheckCircle2,
-  Circle,
 } from 'lucide-react-native';
+import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { UserProfile, DailyLog, MealType, SupplementRoutineItem } from '../types';
 import { CalorieRing } from '../components/CalorieRing';
 import { MacroCards } from '../components/MacroCards';
@@ -217,11 +216,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       accessibilityState={{ checked: item.isTaken }}
                     >
                       <View style={styles.checkboxCircle}>
-                        {item.isTaken ? (
-                          <CheckCircle2 size={19} color={theme.colors.primary} />
-                        ) : (
-                          <Circle size={19} color={theme.colors.textMuted} />
-                        )}
+                        <AnimatedCheckbox checked={item.isTaken} size={19} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.routineItemName, item.isTaken && styles.routineItemNameTaken]}>

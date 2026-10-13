@@ -29,7 +29,14 @@ import {
   setSupplementTaken,
   loadReminderSettings,
 } from './src/storage/storage';
-import { initNotificationService, scheduleSupplementReminders } from './src/services/notificationService';
+import {
+  initNotificationService,
+  scheduleSupplementReminders,
+  reconcileNotificationLanguage,
+  checkNotificationPermissions,
+  syncAllReminders,
+  isNotificationSupported,
+} from './src/services/notificationService';
 import { getDefaultProfile } from './src/utils/calculator';
 import { OnboardingModal } from './src/components/OnboardingModal';
 import { getTodayDateString } from './src/utils/dateUtils';
@@ -92,10 +99,27 @@ function FitTrackApp() {
       await initNotificationService();
       const p = await loadUserProfile();
       setProfile(p);
-      setAppLanguage(p.language || 'en');
+      const appLang = p.language || 'en';
+      setAppLanguage(appLang);
       const l = await loadDailyLog(selectedDate);
       setLog(l);
-      setSupplementRoutine(await loadSupplementRoutine());
+      const initialRoutine = await loadSupplementRoutine();
+      setSupplementRoutine(initialRoutine);
+
+      // Reconcile reminders safely at startup WITHOUT requesting permission
+      if (isNotificationSupported()) {
+        const perm = await checkNotificationPermissions();
+        if (perm.granted) {
+          const reminderSettings = await loadReminderSettings();
+          const hasActive =
+            reminderSettings.supplementsEnabled ||
+            reminderSettings.water.enabled ||
+            Object.values(reminderSettings.meals).some((m) => m.enabled);
+          if (hasActive) {
+            await syncAllReminders(reminderSettings, initialRoutine, appLang);
+          }
+        }
+      }
     }
     init();
   }, []);
@@ -137,9 +161,14 @@ function FitTrackApp() {
   };
 
   const handleSaveProfile = async (newProfile: UserProfile) => {
+    const prevLanguage = language;
     await saveUserProfile(newProfile);
     setProfile(newProfile);
-    setAppLanguage(newProfile.language || 'en');
+    const nextLanguage = newProfile.language || 'en';
+    setAppLanguage(nextLanguage);
+    if (prevLanguage !== nextLanguage) {
+      await reconcileNotificationLanguage(nextLanguage, supplementRoutine);
+    }
     setTempScreen('none');
     setActiveTab('today');
     setSelectedDate(getTodayDateString());
@@ -151,6 +180,7 @@ function FitTrackApp() {
     await saveUserProfile(updated);
     setProfile(updated);
     setAppLanguage(nextLanguage);
+    await reconcileNotificationLanguage(nextLanguage, supplementRoutine);
   };
 
   const handleUpdateDailySupplements = async (items: LoggedDailySupplement[]) => {

@@ -20,6 +20,8 @@ import { DailyLog, LoggedMeal, MealType } from '../types';
 import { FoodDetailsModal } from '../components/FoodDetailsModal';
 import { CalendarPickerModal } from '../components/CalendarPickerModal';
 import { AddFoodSheet } from '../components/addfood/AddFoodSheet';
+import { AnimatedFoodRow } from '../components/AnimatedFoodRow';
+import { AnimatedPressable } from '../components/AnimatedPressable';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -249,43 +251,44 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
               ) : (
                 <View style={styles.foodListContainer}>
                   {categoryMeals.map((item, idx) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={[
-                        styles.foodRow,
-                        idx > 0 && styles.foodRowBorder,
-                      ]}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                        setInspectingMeal(item);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.foodInfo}>
-                        <Text style={styles.foodName}>{item.name}</Text>
-                        <Text style={styles.foodPortion}>
-                          {item.servings} × {item.servingSize}
-                        </Text>
-                        <Text style={styles.foodMacros}>
-                          P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g
-                        </Text>
-                      </View>
+                    <AnimatedFoodRow key={item.id} delay={idx * 30}>
+                      <TouchableOpacity
+                        style={[
+                          styles.foodRow,
+                          idx > 0 && styles.foodRowBorder,
+                        ]}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                          setInspectingMeal(item);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.foodInfo}>
+                          <Text style={styles.foodName}>{item.name}</Text>
+                          <Text style={styles.foodPortion}>
+                            {item.servings} × {item.servingSize}
+                          </Text>
+                          <Text style={styles.foodMacros}>
+                            P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g
+                          </Text>
+                        </View>
 
-                      <View style={styles.foodRight}>
-                        <Text style={styles.foodKcal}>{item.calories} kcal</Text>
-                        <TouchableOpacity
-                          style={styles.deleteBtn}
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            handleDelete(item.id);
-                          }}
-                          accessibilityLabel={`${t('Delete')} ${item.name}`}
-                          accessibilityRole="button"
-                        >
-                          <Trash2 size={15} color={theme.colors.danger} />
-                        </TouchableOpacity>
-                      </View>
-                    </TouchableOpacity>
+                        <View style={styles.foodRight}>
+                          <Text style={styles.foodKcal}>{item.calories} kcal</Text>
+                          <TouchableOpacity
+                            style={styles.deleteBtn}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleDelete(item.id);
+                            }}
+                            accessibilityLabel={`${t('Delete')} ${item.name}`}
+                            accessibilityRole="button"
+                          >
+                            <Trash2 size={15} color={theme.colors.danger} />
+                          </TouchableOpacity>
+                        </View>
+                      </TouchableOpacity>
+                    </AnimatedFoodRow>
                   ))}
                 </View>
               )}
@@ -296,7 +299,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
 
       {/* Floating "+ Add food" Action Button */}
       {!isFuture && (
-        <TouchableOpacity
+        <AnimatedPressable
           style={[
             styles.floatingAddBtn,
             {
@@ -314,7 +317,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
         >
           <Plus size={18} color={theme.colors.textInverted} strokeWidth={2.4} />
           <Text style={styles.floatingAddBtnText}>{t('Add food')}</Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       )}
 
       {/* Calendar Picker Modal */}

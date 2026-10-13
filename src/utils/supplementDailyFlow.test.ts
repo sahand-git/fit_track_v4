@@ -220,11 +220,47 @@ const activeSlots = (['morning', 'afternoon', 'evening', 'bedtime'] as const).fi
 assertEqual(activeSlots, ['morning'], 'Supplement reminders schedule ONLY morning slot since routine has no items in other slots');
 
 // --- TEST 8: Water reminder hour window calculation ---
-const waterSetting = { startHour: 8, endHour: 20, intervalHours: 2, enabled: true };
-const waterHours: number[] = [];
-for (let h = waterSetting.startHour; h < waterSetting.endHour; h += waterSetting.intervalHours) {
-  waterHours.push(h);
+function calculateWaterReminderHours(startHour: number, endHour: number, intervalHours: number): number[] {
+  const safeInterval = Math.max(1, Math.min(6, intervalHours || 2));
+  const safeStart = Math.max(0, Math.min(22, startHour));
+  const safeEnd = Math.max(safeStart + 1, Math.min(23, endHour));
+  const hours: number[] = [];
+  for (let hour = safeStart; hour < safeEnd; hour += safeInterval) {
+    hours.push(hour);
+  }
+  return hours;
 }
-assertEqual(waterHours, [8, 10, 12, 14, 16, 18], 'Water reminder generates predictable waking hours (8, 10, 12, 14, 16, 18) avoiding night hours');
 
-console.log('All supplementDailyFlow unit tests passed successfully!');
+const standardHours = calculateWaterReminderHours(8, 20, 2);
+assertEqual(standardHours, [8, 10, 12, 14, 16, 18], 'Standard waking hours (8 to 20, step 2) stops strictly before 20');
+assert(!standardHours.includes(20), 'Crucial: No water reminder scheduled at or after endHour (20)');
+
+// Test odd end hour
+const oddHours = calculateWaterReminderHours(8, 21, 2);
+assertEqual(oddHours, [8, 10, 12, 14, 16, 18, 20], 'Odd end hour (21) permits hour 20, but not 21');
+assert(!oddHours.includes(21), 'Crucial: Hour 21 is omitted when endHour is 21');
+
+// Test bounds clamping when endHour <= startHour
+const invertedHours = calculateWaterReminderHours(15, 10, 2);
+assertEqual(invertedHours, [15], 'Inverted start/end hour clamps safeEnd to safeStart + 1 (yields single start hour only)');
+
+// Test stepper adjustment logic from ReminderSettingsModal
+function adjustWaterStartHour(startHour: number, endHour: number, delta: number): number {
+  const next = startHour + delta;
+  return Math.max(0, Math.min(endHour - 1, next));
+}
+function adjustWaterEndHour(startHour: number, endHour: number, delta: number): number {
+  const next = endHour + delta;
+  return Math.max(startHour + 1, Math.min(23, next));
+}
+
+assert(adjustWaterStartHour(8, 20, -1) === 7, 'Start hour decrements correctly');
+assert(adjustWaterStartHour(0, 20, -1) === 0, 'Start hour does not go below 0');
+assert(adjustWaterStartHour(19, 20, 1) === 19, 'Start hour cannot reach or exceed endHour (clamped to endHour - 1)');
+
+assert(adjustWaterEndHour(8, 20, 1) === 21, 'End hour increments correctly');
+assert(adjustWaterEndHour(8, 23, 1) === 23, 'End hour does not exceed 23');
+assert(adjustWaterEndHour(8, 9, -1) === 9, 'End hour cannot reach or go below startHour (clamped to startHour + 1)');
+
+console.log('All supplementDailyFlow and reminder calculation unit tests passed successfully!');
+

@@ -20,6 +20,7 @@ import {
   Utensils,
   Pill,
   AlertCircle,
+  AlertTriangle,
   Plus,
   Minus,
   Check,
@@ -40,12 +41,14 @@ import {
   checkNotificationPermissions,
   requestNotificationPermissions,
   syncAllReminders,
+  isNotificationSupported,
 } from '../services/notificationService';
 import {
   loadReminderSettings,
   saveReminderSettings,
   DEFAULT_REMINDER_SETTINGS,
 } from '../storage/storage';
+import { AnimatedPressable } from './AnimatedPressable';
 
 interface ReminderSettingsModalProps {
   visible: boolean;
@@ -93,16 +96,23 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
     }
   }, [visible]);
 
+  const isSupported = isNotificationSupported();
+
   const loadInitialState = async () => {
     const loaded = await loadReminderSettings();
     setSettings(loaded);
+    if (!isSupported) {
+      setHasPermission(false);
+      setCanAskPermission(false);
+      return;
+    }
     const perm = await checkNotificationPermissions();
     setHasPermission(perm.granted);
     setCanAskPermission(perm.canAskAgain);
   };
 
   const verifyAndRequestPermission = async (): Promise<boolean> => {
-    if (Platform.OS === 'web') return true;
+    if (!isSupported) return false;
     const current = await checkNotificationPermissions();
     if (current.granted) {
       setHasPermission(true);
@@ -135,7 +145,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
 
   const handleToggleSupplementsMaster = async (val: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (val) {
+    if (val && isSupported) {
       const ok = await verifyAndRequestPermission();
       if (!ok) return;
     }
@@ -144,7 +154,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
 
   const handleToggleWaterMaster = async (val: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (val) {
+    if (val && isSupported) {
       const ok = await verifyAndRequestPermission();
       if (!ok) return;
     }
@@ -156,7 +166,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
 
   const handleToggleMeal = async (mealKey: MealType, val: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (val) {
+    if (val && isSupported) {
       const ok = await verifyAndRequestPermission();
       if (!ok) return;
     }
@@ -225,12 +235,48 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
     });
   };
 
+  const handleAdjustWaterStartHour = (delta: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setSettings((prev) => {
+      const currentStart = prev.water.startHour;
+      const currentEnd = prev.water.endHour;
+      let newStart = currentStart + delta;
+      if (newStart < 0) newStart = 0;
+      if (newStart >= currentEnd) {
+        newStart = Math.max(0, currentEnd - 1);
+      }
+      return {
+        ...prev,
+        water: { ...prev.water, startHour: newStart },
+      };
+    });
+  };
+
+  const handleAdjustWaterEndHour = (delta: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setSettings((prev) => {
+      const currentStart = prev.water.startHour;
+      const currentEnd = prev.water.endHour;
+      let newEnd = currentEnd + delta;
+      if (newEnd > 23) newEnd = 23;
+      if (newEnd <= currentStart) {
+        newEnd = Math.min(23, currentStart + 1);
+      }
+      return {
+        ...prev,
+        water: { ...prev.water, endHour: newEnd },
+      };
+    });
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     try {
       await saveReminderSettings(settings);
-      await syncAllReminders(settings, routine, language);
+      if (isSupported) {
+        await syncAllReminders(settings, routine, language);
+      }
       onClose();
     } catch (err) {
       console.warn('Error saving reminders:', err);
@@ -269,8 +315,20 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
             </Text>
           </View>
 
-          {/* Permission warning if disabled */}
-          {hasPermission === false && (
+          {/* Unsupported platform notice or permission warning */}
+          {!isSupported ? (
+            <View style={styles.unsupportedCard}>
+              <AlertTriangle size={16} color={theme.colors.accent} style={{ marginTop: 2 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.unsupportedTitle}>
+                  {t('Reminders are unavailable on web browsers')}
+                </Text>
+                <Text style={styles.unsupportedDesc}>
+                  {t('Local notifications are only supported on Android and iOS devices. You can configure your preferences here, and they will take effect when you use the mobile app.')}
+                </Text>
+              </View>
+            </View>
+          ) : hasPermission === false ? (
             <TouchableOpacity
               style={styles.permWarningCard}
               onPress={verifyAndRequestPermission}
@@ -282,7 +340,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                 <Text style={styles.permWarningAction}>{t('Enable in Settings')}</Text>
               </View>
             </TouchableOpacity>
-          )}
+          ) : null}
 
           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
             {/* 1. SUPPLEMENT REMINDERS */}
@@ -428,13 +486,91 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                     </View>
                   </View>
 
-                  {/* Window */}
-                  <View style={styles.settingItemRow}>
-                    <Text style={styles.settingItemLabel}>{t('Waking hours')}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.timeWindowText}>
-                        {formatTime(settings.water.startHour, 0)} - {formatTime(settings.water.endHour, 0)}
+                  {/* Start time */}
+                  <View style={styles.waterTimeRow}>
+                    <View style={styles.timeLabelWrap}>
+                      <Text style={styles.settingItemLabel}>{t('Start time')}</Text>
+                      <Text style={styles.settingItemSubLabel}>{t('First reminder of the day')}</Text>
+                    </View>
+                    <View style={styles.timeStepperWrap}>
+                      <TouchableOpacity
+                        style={[styles.stepperBtn, settings.water.startHour <= 0 && styles.stepperBtnDisabled]}
+                        onPress={() => handleAdjustWaterStartHour(-1)}
+                        disabled={settings.water.startHour <= 0}
+                        accessibilityLabel={t('Decrease start hour')}
+                        accessibilityRole="button"
+                      >
+                        <Minus
+                          size={13}
+                          color={settings.water.startHour <= 0 ? theme.colors.textMuted : theme.colors.textPrimary}
+                        />
+                      </TouchableOpacity>
+                      <Text style={styles.timeDisplay}>
+                        {formatTime(settings.water.startHour, 0)}
                       </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.stepperBtn,
+                          settings.water.startHour >= settings.water.endHour - 1 && styles.stepperBtnDisabled,
+                        ]}
+                        onPress={() => handleAdjustWaterStartHour(1)}
+                        disabled={settings.water.startHour >= settings.water.endHour - 1}
+                        accessibilityLabel={t('Increase start hour')}
+                        accessibilityRole="button"
+                      >
+                        <Plus
+                          size={13}
+                          color={
+                            settings.water.startHour >= settings.water.endHour - 1
+                              ? theme.colors.textMuted
+                              : theme.colors.textPrimary
+                          }
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* End time */}
+                  <View style={styles.waterTimeRow}>
+                    <View style={styles.timeLabelWrap}>
+                      <Text style={styles.settingItemLabel}>{t('End time')}</Text>
+                      <Text style={styles.settingItemSubLabel}>{t('No reminders at or after this hour')}</Text>
+                    </View>
+                    <View style={styles.timeStepperWrap}>
+                      <TouchableOpacity
+                        style={[
+                          styles.stepperBtn,
+                          settings.water.endHour <= settings.water.startHour + 1 && styles.stepperBtnDisabled,
+                        ]}
+                        onPress={() => handleAdjustWaterEndHour(-1)}
+                        disabled={settings.water.endHour <= settings.water.startHour + 1}
+                        accessibilityLabel={t('Decrease end hour')}
+                        accessibilityRole="button"
+                      >
+                        <Minus
+                          size={13}
+                          color={
+                            settings.water.endHour <= settings.water.startHour + 1
+                              ? theme.colors.textMuted
+                              : theme.colors.textPrimary
+                          }
+                        />
+                      </TouchableOpacity>
+                      <Text style={styles.timeDisplay}>
+                        {formatTime(settings.water.endHour, 0)}
+                      </Text>
+                      <TouchableOpacity
+                        style={[styles.stepperBtn, settings.water.endHour >= 23 && styles.stepperBtnDisabled]}
+                        onPress={() => handleAdjustWaterEndHour(1)}
+                        disabled={settings.water.endHour >= 23}
+                        accessibilityLabel={t('Increase end hour')}
+                        accessibilityRole="button"
+                      >
+                        <Plus
+                          size={13}
+                          color={settings.water.endHour >= 23 ? theme.colors.textMuted : theme.colors.textPrimary}
+                        />
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </View>
@@ -500,7 +636,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
           </ScrollView>
 
           {/* Save Button */}
-          <TouchableOpacity
+          <AnimatedPressable
             style={styles.saveBtn}
             onPress={handleSave}
             disabled={isSaving}
@@ -508,7 +644,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
           >
             <Check size={18} color={theme.colors.textInverted} />
             <Text style={styles.saveBtnText}>{t('Save')}</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         </View>
       </View>
     </Modal>
@@ -565,6 +701,29 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 11,
     color: theme.colors.textMuted,
+    lineHeight: 16,
+  },
+  unsupportedCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: 'rgba(193, 102, 76, 0.08)',
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(193, 102, 76, 0.3)',
+    padding: 12,
+  },
+  unsupportedTitle: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.accent,
+  },
+  unsupportedDesc: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
     lineHeight: 16,
   },
   permWarningCard: {
@@ -675,6 +834,9 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 4,
   },
+  stepperBtnDisabled: {
+    opacity: 0.35,
+  },
   timeDisplay: {
     fontSize: 13,
     fontWeight: '700',
@@ -687,6 +849,26 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     paddingTop: 10,
+  },
+  waterTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  timeLabelWrap: {
+    flex: 1,
+    minWidth: 140,
+  },
+  settingItemSubLabel: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginTop: 2,
   },
   settingItemRow: {
     flexDirection: 'row',

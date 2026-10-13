@@ -2,11 +2,16 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { ReminderSettings, SupplementRoutineItem, AppLanguage, SupplementTime, MealType } from '../types';
 import { translate } from '../i18n/strings';
+import { loadReminderSettings } from '../storage/storage';
 
 let isHandlerConfigured = false;
 
+export function isNotificationSupported(): boolean {
+  return Platform.OS === 'android' || Platform.OS === 'ios';
+}
+
 export async function initNotificationService(): Promise<void> {
-  if (Platform.OS === 'web') return;
+  if (!isNotificationSupported()) return;
 
   if (!isHandlerConfigured) {
     Notifications.setNotificationHandler({
@@ -46,32 +51,46 @@ export async function initNotificationService(): Promise<void> {
   }
 }
 
-export async function checkNotificationPermissions(): Promise<{ granted: boolean; canAskAgain: boolean }> {
-  if (Platform.OS === 'web') return { granted: false, canAskAgain: false };
+export async function checkNotificationPermissions(): Promise<{
+  granted: boolean;
+  canAskAgain: boolean;
+  isSupported: boolean;
+}> {
+  if (!isNotificationSupported()) {
+    return { granted: false, canAskAgain: false, isSupported: false };
+  }
   try {
     const { status, canAskAgain } = await Notifications.getPermissionsAsync();
     return {
       granted: status === 'granted',
       canAskAgain: canAskAgain ?? true,
+      isSupported: true,
     };
   } catch (err) {
     console.warn('Error checking notification permissions:', err);
-    return { granted: false, canAskAgain: false };
+    return { granted: false, canAskAgain: false, isSupported: true };
   }
 }
 
-export async function requestNotificationPermissions(): Promise<{ granted: boolean; canAskAgain: boolean }> {
-  if (Platform.OS === 'web') return { granted: false, canAskAgain: false };
+export async function requestNotificationPermissions(): Promise<{
+  granted: boolean;
+  canAskAgain: boolean;
+  isSupported: boolean;
+}> {
+  if (!isNotificationSupported()) {
+    return { granted: false, canAskAgain: false, isSupported: false };
+  }
   try {
     await initNotificationService();
     const { status, canAskAgain } = await Notifications.requestPermissionsAsync();
     return {
       granted: status === 'granted',
       canAskAgain: canAskAgain ?? true,
+      isSupported: true,
     };
   } catch (err) {
     console.warn('Error requesting notification permissions:', err);
-    return { granted: false, canAskAgain: false };
+    return { granted: false, canAskAgain: false, isSupported: true };
   }
 }
 
@@ -143,16 +162,18 @@ export async function scheduleWaterReminders(
   settings: ReminderSettings,
   language: AppLanguage
 ): Promise<void> {
-  if (Platform.OS === 'web') return;
+  if (!isNotificationSupported()) return;
   await cancelNotificationsByType('water');
 
   if (!settings.water.enabled) return;
 
   const { startHour, endHour, intervalHours } = settings.water;
   const safeInterval = Math.max(1, Math.min(6, intervalHours || 2));
-  const safeStart = Math.max(0, Math.min(23, startHour));
-  const safeEnd = Math.max(safeStart + 1, Math.min(24, endHour));
+  const safeStart = Math.max(0, Math.min(22, startHour));
+  const safeEnd = Math.max(safeStart + 1, Math.min(23, endHour));
 
+  // Reminders are scheduled strictly within [safeStart, safeEnd),
+  // ensuring no reminder is scheduled at or after safeEnd.
   for (let hour = safeStart; hour < safeEnd; hour += safeInterval) {
     try {
       await Notifications.scheduleNotificationAsync({
@@ -178,7 +199,7 @@ export async function scheduleMealReminders(
   settings: ReminderSettings,
   language: AppLanguage
 ): Promise<void> {
-  if (Platform.OS === 'web') return;
+  if (!isNotificationSupported()) return;
   await cancelNotificationsByType('meal');
 
   const mealLabels: Record<MealType, string> = {
@@ -224,4 +245,28 @@ export async function syncAllReminders(
   await scheduleSupplementReminders(settings, routine, language);
   await scheduleWaterReminders(settings, language);
   await scheduleMealReminders(settings, language);
+}
+
+/**
+ * Reconciles scheduled notification content after an app language change.
+ * Reuses existing category cancellation to prevent duplicates.
+ * Safe to call at startup or language selection — never requests permissions.
+ */
+export async function reconcileNotificationLanguage(
+  language: AppLanguage,
+  routine: SupplementRoutineItem[]
+): Promise<void> {
+  if (!isNotificationSupported()) return;
+  const perm = await checkNotificationPermissions();
+  if (!perm.granted) return; // Do not prompt for permissions during reconciliation
+
+  const settings = await loadReminderSettings();
+  const hasActive =
+    settings.supplementsEnabled ||
+    settings.water.enabled ||
+    Object.values(settings.meals).some((m) => m.enabled);
+
+  if (hasActive) {
+    await syncAllReminders(settings, routine, language);
+  }
 }

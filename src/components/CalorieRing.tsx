@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
-  StyleSheet
+  StyleSheet,
+  Animated,
 } from 'react-native';
 import { AppText as Text } from './AppText';
 import Svg, { Circle } from 'react-native-svg';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { isReducedMotion } from '../utils/motion';
 
 interface CalorieRingProps {
   consumed: number;
@@ -31,7 +33,29 @@ export const CalorieRing: React.FC<CalorieRingProps> = ({
 
   // Calorie percentage
   const calorieRatio = target > 0 ? Math.min(consumed / target, 1) : 0;
-  const calorieOffset = circumference - calorieRatio * circumference;
+  const [animatedRatio, setAnimatedRatio] = useState(calorieRatio);
+  const ratioAnim = useRef(new Animated.Value(calorieRatio)).current;
+
+  useEffect(() => {
+    if (isReducedMotion()) {
+      setAnimatedRatio(calorieRatio);
+      return;
+    }
+    const listenerId = ratioAnim.addListener(({ value }) => {
+      setAnimatedRatio(value);
+    });
+    Animated.timing(ratioAnim, {
+      toValue: calorieRatio,
+      duration: 350,
+      useNativeDriver: false,
+    }).start();
+
+    return () => {
+      ratioAnim.removeListener(listenerId);
+    };
+  }, [calorieRatio]);
+
+  const calorieOffset = circumference - animatedRatio * circumference;
 
   const remaining = Math.max(0, target - consumed);
   const isOver = consumed > target;
