@@ -63,6 +63,7 @@ export interface UserProfile {
   language?: AppLanguage;
   isOnboarded?: boolean;
   includeWorkoutsInCalorieBudget?: boolean; // off by default: workout burn is tracked without inflating food budget
+  stepGoal?: number;
 }
 
 export type ExerciseCategory = 'strength' | 'cardio' | 'hiit' | 'sports' | 'flexibility';

@@ -18,6 +18,7 @@ import {
   Flame,
   Dumbbell,
   Trash2,
+  Footprints,
 } from 'lucide-react-native';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { UserProfile, DailyLog, MealType, SupplementRoutineItem, WorkoutEntry } from '../types';
@@ -40,7 +41,9 @@ import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
+import { getScopedStorageKey } from '../storage/storage';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
+import { calculateActivityBudget } from '../utils/activityBudget';
 
 interface DashboardScreenProps {
   profile: UserProfile;
@@ -53,8 +56,11 @@ interface DashboardScreenProps {
   onOpenAddFood: (mealType?: MealType) => void;
   onOpenSupplements: () => void;
   onOpenProfile: () => void;
+  onOpenSteps: () => void;
+  onOpenWorkouts: () => void;
   onAddWorkout: (workout: WorkoutEntry, date: string) => void;
   onDeleteWorkout: (workoutId: string) => void;
+  onUpdateWorkout?: (workout: WorkoutEntry, date: string) => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -68,8 +74,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onOpenAddFood,
   onOpenSupplements,
   onOpenProfile,
+  onOpenSteps,
+  onOpenWorkouts,
   onAddWorkout,
   onDeleteWorkout,
+  onUpdateWorkout,
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
@@ -92,14 +101,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     );
   }, [log.meals]);
 
-  const burnedCalories = useMemo(
-    () => (log.workouts || []).reduce((sum, w) => sum + (w.caloriesBurned || 0), 0),
-    [log.workouts]
-  );
-
-  const effectiveCalorieTarget = profile.includeWorkoutsInCalorieBudget
-    ? profile.targetCalories + burnedCalories
-    : profile.targetCalories;
+  const activityBudget = useMemo(() => calculateActivityBudget({
+    profile,
+    workouts: log.workouts || [],
+    steps: log.steps || 0,
+  }), [profile, log.workouts, log.steps]);
+  const burnedCalories = activityBudget.grossWorkoutCalories;
+  const effectiveCalorieTarget = activityBudget.effectiveTarget;
 
   const mealTypes: { key: MealType; label: string }[] = useMemo(
     () => [
@@ -169,11 +177,12 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       celebratingDateRef.current = currentDate;
 
       try {
-        const lastCelebrated = await AsyncStorage.getItem('@fittrack_last_celebrated_goal_date');
+        const celebrationKey = getScopedStorageKey('@fittrack_last_celebrated_goal_date');
+        const lastCelebrated = await AsyncStorage.getItem(celebrationKey);
         if (lastCelebrated !== currentDate) {
           lastCelebratedDateRef.current = currentDate;
           setShowCelebration(true);
-          await AsyncStorage.setItem('@fittrack_last_celebrated_goal_date', currentDate);
+          await AsyncStorage.setItem(celebrationKey, currentDate);
         } else {
           lastCelebratedDateRef.current = currentDate;
         }
@@ -235,7 +244,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               <Text style={styles.burnBannerText}>
                 {burnedCalories} {t('kcal burned in active workouts')}
                 {profile.includeWorkoutsInCalorieBudget
-                  ? ` · ${t('added to food budget')}`
+                  ? ` · ${t('Net activity added')}: ${activityBudget.eligibleActivityCalories} ${t('kcal')}`
                   : ` · ${t('tracked as burn, not in food budget')}`}
               </Text>
             </View>
@@ -245,7 +254,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         {/* Nutrients Bar */}
         <Animated.View entering={getStaggeredCardEntry(1)}>
           <MacroCards
-            calorieTarget={profile.targetCalories}
+            calorieTarget={effectiveCalorieTarget}
             calorieConsumed={consumedCalories}
             proteinTarget={profile.targetProtein}
             proteinConsumed={consumedProtein}
@@ -265,8 +274,20 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           />
         </Animated.View>
 
+        <Animated.View entering={getStaggeredCardEntry(3)}>
+          <TouchableOpacity style={styles.stepsCard} onPress={onOpenSteps} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel={t('Steps')}>
+            <View style={styles.stepsIcon}><Footprints size={19} color={theme.colors.primary} /></View>
+            <View style={styles.stepsInfo}>
+              <View style={styles.stepsTitleRow}><Text style={styles.stepsTitle}>{t('Steps')}</Text><Text style={styles.stepsCount}>{(log.steps || 0).toLocaleString()} / {(profile.stepGoal || 8000).toLocaleString()}</Text></View>
+              <View style={styles.stepsTrack}><View style={[styles.stepsFill, { width: `${Math.min(100, ((log.steps || 0) / (profile.stepGoal || 8000)) * 100)}%` }]} /></View>
+              <Text style={styles.stepsHint}>{t('Tap to view activity details')}</Text>
+            </View>
+            <ChevronRight size={17} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        </Animated.View>
+
         {/* Vitamins & Supplements Section (Below Water Tracker) */}
-        <Animated.View entering={getStaggeredCardEntry(3)} style={styles.supplementsContainer}>
+        <Animated.View entering={getStaggeredCardEntry(4)} style={styles.supplementsContainer}>
           {activeSupplements.length === 0 ? (
             /* Slim row if routine/daily log is empty */
             <TouchableOpacity
@@ -339,7 +360,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </Animated.View>
 
         {/* Workouts Section */}
-        <Animated.View entering={getStaggeredCardEntry(4)} style={styles.workoutContainer}>
+        <Animated.View entering={getStaggeredCardEntry(5)} style={styles.workoutContainer}>
           <View style={styles.workoutCard}>
             <View style={styles.workoutHeader}>
               <View style={styles.workoutTitleRow}>
@@ -351,6 +372,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   </Text>
                 )}
               </View>
+              <TouchableOpacity onPress={onOpenWorkouts} style={styles.manageBtn} accessibilityRole="button"><Text style={styles.manageBtnText}>{t('History')}</Text></TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -429,7 +451,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </Animated.View>
 
         {/* Meals Ledger */}
-        <Animated.View entering={getStaggeredCardEntry(5)}>
+        <Animated.View entering={getStaggeredCardEntry(6)}>
           <View style={styles.mealsHeader}>
             <Text style={styles.sectionHeading}>{t('Today’s Meals')}</Text>
             <TouchableOpacity
@@ -511,6 +533,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         date={log.date}
         profile={profile}
         onSaveWorkout={onAddWorkout}
+        onUpdateWorkout={onUpdateWorkout}
       />
 
       <GoalCelebration
@@ -522,6 +545,19 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  stepsCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14,
+    marginTop: 12, backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg,
+    borderWidth: 1, borderColor: theme.colors.border, ...theme.shadow.subtle,
+  },
+  stepsIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.primaryLight },
+  stepsInfo: { flex: 1, gap: 6 },
+  stepsTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  stepsTitle: { color: theme.colors.textPrimary, fontWeight: '700', fontSize: 15 },
+  stepsCount: { color: theme.colors.textSecondary, fontSize: 13, fontWeight: '600' },
+  stepsTrack: { height: 6, overflow: 'hidden', borderRadius: 4, backgroundColor: theme.colors.surfaceSubtle },
+  stepsFill: { height: '100%', backgroundColor: theme.colors.secondary, borderRadius: 4 },
+  stepsHint: { color: theme.colors.textMuted, fontSize: 11 },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',

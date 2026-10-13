@@ -53,7 +53,15 @@
         }
       ],
       "expo-secure-store",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "@appeeky/expo-healthkit",
+        {
+          "healthSharePermission": "FitTrack reads your daily step totals to show activity progress.",
+          "healthUpdatePermission": "FitTrack does not write health data to Apple Health.",
+          "healthConnectPermissions": ["READ_STEPS"]
+        }
+      ]
     ]
   }
 }

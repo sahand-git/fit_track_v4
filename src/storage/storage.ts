@@ -11,6 +11,20 @@ const DAILY_LOG_PREFIX = '@fittrack_log_';
 const SUPPLEMENT_ROUTINE_KEY = '@fittrack_supplement_routine';
 const WEIGHT_HISTORY_KEY = '@fittrack_weight_history';
 const REMINDER_SETTINGS_KEY = '@fittrack_reminder_settings';
+let accountNamespace: string | null = null;
+
+/** Signed-in data is isolated; null preserves all existing v4 guest keys verbatim. */
+export function setAccountStorageNamespace(uid: string | null): void {
+  accountNamespace = uid ? uid.replace(/[^a-zA-Z0-9_-]/g, '_') : null;
+}
+
+export function getScopedStorageKey(key: string): string {
+  return accountNamespace ? `@fittrack_account_${accountNamespace}:${key}` : key;
+}
+
+function dailyLogPrefix(): string {
+  return getScopedStorageKey(DAILY_LOG_PREFIX);
+}
 
 // Per-key write queue to eliminate read-modify-write race conditions
 const keyQueues = new Map<string, Promise<unknown>>();
@@ -82,7 +96,7 @@ function safeParseArray<T>(raw: string | null): T[] {
 
 export async function loadUserProfile(): Promise<UserProfile> {
   try {
-    const raw = await AsyncStorage.getItem(PROFILE_KEY);
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(PROFILE_KEY));
     if (!raw) {
       return { ...getDefaultProfile(), isOnboarded: false };
     }
@@ -95,9 +109,9 @@ export async function loadUserProfile(): Promise<UserProfile> {
 }
 
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
-  return enqueueStorageOperation(PROFILE_KEY, async () => {
+  return enqueueStorageOperation(getScopedStorageKey(PROFILE_KEY), async () => {
     try {
-      await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+      await AsyncStorage.setItem(getScopedStorageKey(PROFILE_KEY), JSON.stringify(profile));
     } catch (err) {
       console.error('Error saving profile:', err);
       throw new Error('Failed to save user profile. Please check device storage.');
@@ -115,7 +129,7 @@ export async function loadDailyLog(dateStr: string): Promise<DailyLog> {
     workouts: [],
   };
   try {
-    const key = `${DAILY_LOG_PREFIX}${dateStr}`;
+    const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
     const raw = await AsyncStorage.getItem(key);
     if (!raw) return fallback;
     const parsed = safeParseObject<DailyLog>(raw, fallback);
@@ -136,7 +150,7 @@ export async function loadDailyLog(dateStr: string): Promise<DailyLog> {
 }
 
 export async function saveDailyLog(log: DailyLog): Promise<void> {
-  const key = `${DAILY_LOG_PREFIX}${log.date}`;
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${log.date}`);
   return enqueueStorageOperation(key, async () => {
     try {
       await AsyncStorage.setItem(key, JSON.stringify(log));
@@ -148,7 +162,7 @@ export async function saveDailyLog(log: DailyLog): Promise<void> {
 }
 
 export async function addMealToDay(dateStr: string, meal: LoggedMeal): Promise<DailyLog> {
-  const key = `${DAILY_LOG_PREFIX}${dateStr}`;
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
     const current = await loadDailyLog(dateStr);
     const updatedMeals = [...current.meals, meal];
@@ -159,7 +173,7 @@ export async function addMealToDay(dateStr: string, meal: LoggedMeal): Promise<D
 }
 
 export async function updateMealInDay(dateStr: string, updatedMeal: LoggedMeal): Promise<DailyLog> {
-  const key = `${DAILY_LOG_PREFIX}${dateStr}`;
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
     const current = await loadDailyLog(dateStr);
     const updatedMeals = current.meals.map(m => m.id === updatedMeal.id ? updatedMeal : m);
@@ -170,7 +184,7 @@ export async function updateMealInDay(dateStr: string, updatedMeal: LoggedMeal):
 }
 
 export async function removeMealFromDay(dateStr: string, mealId: string): Promise<DailyLog> {
-  const key = `${DAILY_LOG_PREFIX}${dateStr}`;
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
     const current = await loadDailyLog(dateStr);
     const updatedMeals = current.meals.filter(m => m.id !== mealId);
@@ -181,7 +195,7 @@ export async function removeMealFromDay(dateStr: string, mealId: string): Promis
 }
 
 export async function updateWater(dateStr: string, delta: number): Promise<DailyLog> {
-  const key = `${DAILY_LOG_PREFIX}${dateStr}`;
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
     const current = await loadDailyLog(dateStr);
     const updatedGlasses = Math.max(0, current.waterGlasses + delta);
@@ -191,9 +205,30 @@ export async function updateWater(dateStr: string, delta: number): Promise<Daily
   });
 }
 
+export async function setDailySteps(dateStr: string, steps: number): Promise<DailyLog> {
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadDailyLog(dateStr);
+    const updatedLog: DailyLog = { ...current, steps: Math.max(0, Math.round(Number.isFinite(steps) ? steps : 0)) };
+    await AsyncStorage.setItem(key, JSON.stringify(updatedLog));
+    return updatedLog;
+  });
+}
+
+export async function addDailySteps(dateStr: string, amount: number): Promise<DailyLog> {
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadDailyLog(dateStr);
+    const safeAmount = Math.max(0, Math.round(Number.isFinite(amount) ? amount : 0));
+    const updatedLog: DailyLog = { ...current, steps: current.steps + safeAmount };
+    await AsyncStorage.setItem(key, JSON.stringify(updatedLog));
+    return updatedLog;
+  });
+}
+
 export async function loadSupplementRoutine(): Promise<SupplementRoutineItem[]> {
   try {
-    const raw = await AsyncStorage.getItem(SUPPLEMENT_ROUTINE_KEY);
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(SUPPLEMENT_ROUTINE_KEY));
     if (!raw) return [];
     const parsed = safeParseArray<unknown>(raw);
     return normalizeSupplementRoutine(parsed);
@@ -204,9 +239,9 @@ export async function loadSupplementRoutine(): Promise<SupplementRoutineItem[]> 
 }
 
 export async function saveSupplementRoutine(items: SupplementRoutineItem[]): Promise<void> {
-  return enqueueStorageOperation(SUPPLEMENT_ROUTINE_KEY, async () => {
+  return enqueueStorageOperation(getScopedStorageKey(SUPPLEMENT_ROUTINE_KEY), async () => {
     try {
-      await AsyncStorage.setItem(SUPPLEMENT_ROUTINE_KEY, JSON.stringify(items));
+      await AsyncStorage.setItem(getScopedStorageKey(SUPPLEMENT_ROUTINE_KEY), JSON.stringify(items));
     } catch (err) {
       console.error('Error saving supplement routine:', err);
       throw new Error('Failed to save supplement routine.');
@@ -218,7 +253,7 @@ export async function saveDailySupplements(
   dateStr: string,
   items: import('../types').LoggedDailySupplement[]
 ): Promise<DailyLog> {
-  const key = `${DAILY_LOG_PREFIX}${dateStr}`;
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
     const current = await loadDailyLog(dateStr);
     const updatedChecks: SupplementCheck[] = items.map((it) => ({
@@ -237,7 +272,7 @@ export async function saveDailySupplements(
 }
 
 export async function setSupplementTaken(dateStr: string, itemId: string, taken: boolean): Promise<DailyLog> {
-  const key = `${DAILY_LOG_PREFIX}${dateStr}`;
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
     const current = await loadDailyLog(dateStr);
     const takenAt = taken ? new Date().toISOString() : undefined;
@@ -307,7 +342,7 @@ export async function setSupplementTaken(dateStr: string, itemId: string, taken:
 
 export async function loadWeightHistory(): Promise<import('../types').WeightEntry[]> {
   try {
-    const raw = await AsyncStorage.getItem(WEIGHT_HISTORY_KEY);
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(WEIGHT_HISTORY_KEY));
     if (!raw) return [];
     return safeParseArray<import('../types').WeightEntry>(raw);
   } catch (err) {
@@ -317,20 +352,20 @@ export async function loadWeightHistory(): Promise<import('../types').WeightEntr
 }
 
 export async function addWeightEntry(entry: import('../types').WeightEntry): Promise<import('../types').WeightEntry[]> {
-  return enqueueStorageOperation(WEIGHT_HISTORY_KEY, async () => {
+  return enqueueStorageOperation(getScopedStorageKey(WEIGHT_HISTORY_KEY), async () => {
     const history = await loadWeightHistory();
     const filtered = history.filter(h => h.date !== entry.date);
     const updated = [...filtered, entry].sort((a, b) => a.date.localeCompare(b.date));
-    await AsyncStorage.setItem(WEIGHT_HISTORY_KEY, JSON.stringify(updated));
+    await AsyncStorage.setItem(getScopedStorageKey(WEIGHT_HISTORY_KEY), JSON.stringify(updated));
     return updated;
   });
 }
 
 export async function removeWeightEntry(id: string): Promise<import('../types').WeightEntry[]> {
-  return enqueueStorageOperation(WEIGHT_HISTORY_KEY, async () => {
+  return enqueueStorageOperation(getScopedStorageKey(WEIGHT_HISTORY_KEY), async () => {
     const history = await loadWeightHistory();
     const updated = history.filter(h => h.id !== id);
-    await AsyncStorage.setItem(WEIGHT_HISTORY_KEY, JSON.stringify(updated));
+    await AsyncStorage.setItem(getScopedStorageKey(WEIGHT_HISTORY_KEY), JSON.stringify(updated));
     return updated;
   });
 }
@@ -369,7 +404,7 @@ export const DEFAULT_REMINDER_SETTINGS: import('../types').ReminderSettings = {
 
 export async function loadReminderSettings(): Promise<import('../types').ReminderSettings> {
   try {
-    const raw = await AsyncStorage.getItem(REMINDER_SETTINGS_KEY);
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(REMINDER_SETTINGS_KEY));
     if (!raw) return DEFAULT_REMINDER_SETTINGS;
     const parsed = safeParseObject<Partial<import('../types').ReminderSettings>>(raw, {});
     return {
@@ -395,9 +430,9 @@ export async function loadReminderSettings(): Promise<import('../types').Reminde
 }
 
 export async function saveReminderSettings(settings: import('../types').ReminderSettings): Promise<void> {
-  return enqueueStorageOperation(REMINDER_SETTINGS_KEY, async () => {
+  return enqueueStorageOperation(getScopedStorageKey(REMINDER_SETTINGS_KEY), async () => {
     try {
-      await AsyncStorage.setItem(REMINDER_SETTINGS_KEY, JSON.stringify(settings));
+      await AsyncStorage.setItem(getScopedStorageKey(REMINDER_SETTINGS_KEY), JSON.stringify(settings));
     } catch (err) {
       console.error('Error saving reminder settings:', err);
       throw new Error('Failed to save reminder settings.');
@@ -407,7 +442,7 @@ export async function saveReminderSettings(settings: import('../types').Reminder
 
 // Workout mutations
 export async function addWorkoutToDay(dateStr: string, workout: WorkoutEntry): Promise<DailyLog> {
-  const key = `${DAILY_LOG_PREFIX}${dateStr}`;
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
     const current = await loadDailyLog(dateStr);
     const existingWorkouts = current.workouts || [];
@@ -419,7 +454,7 @@ export async function addWorkoutToDay(dateStr: string, workout: WorkoutEntry): P
 }
 
 export async function updateWorkoutInDay(dateStr: string, updatedWorkout: WorkoutEntry): Promise<DailyLog> {
-  const key = `${DAILY_LOG_PREFIX}${dateStr}`;
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
     const current = await loadDailyLog(dateStr);
     const existingWorkouts = current.workouts || [];
@@ -431,7 +466,7 @@ export async function updateWorkoutInDay(dateStr: string, updatedWorkout: Workou
 }
 
 export async function removeWorkoutFromDay(dateStr: string, workoutId: string): Promise<DailyLog> {
-  const key = `${DAILY_LOG_PREFIX}${dateStr}`;
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
     const current = await loadDailyLog(dateStr);
     const existingWorkouts = current.workouts || [];
@@ -446,7 +481,8 @@ export async function removeWorkoutFromDay(dateStr: string, workoutId: string): 
 export async function getAllDailyLogs(): Promise<Record<string, DailyLog>> {
   try {
     const allKeys = await AsyncStorage.getAllKeys();
-    const logKeys = allKeys.filter((k) => k.startsWith(DAILY_LOG_PREFIX));
+    const prefix = dailyLogPrefix();
+    const logKeys = allKeys.filter((k) => k.startsWith(prefix));
     if (logKeys.length === 0) return {};
 
     const pairs = await AsyncStorage.multiGet(logKeys);
@@ -454,7 +490,7 @@ export async function getAllDailyLogs(): Promise<Record<string, DailyLog>> {
 
     for (const [key, raw] of pairs) {
       if (!raw) continue;
-      const dateStr = key.replace(DAILY_LOG_PREFIX, '');
+      const dateStr = key.slice(prefix.length);
       const parsed = safeParseObject<DailyLog>(raw, { date: dateStr, meals: [], waterGlasses: 0, steps: 0 });
       result[dateStr] = {
         ...parsed,
@@ -486,13 +522,14 @@ export async function getDailyLogsRange(endDate: string, days: number = 90): Pro
       dates.push(cur);
       cur = addDaysToDateString(cur, -1);
     }
-    const keys = dates.map((d) => `${DAILY_LOG_PREFIX}${d}`);
+    const prefix = dailyLogPrefix();
+    const keys = dates.map((d) => getScopedStorageKey(`${DAILY_LOG_PREFIX}${d}`));
     const pairs = await AsyncStorage.multiGet(keys);
     const result: Record<string, DailyLog> = {};
 
     for (const [key, raw] of pairs) {
       if (!raw) continue;
-      const dateStr = key.replace(DAILY_LOG_PREFIX, '');
+      const dateStr = key.slice(prefix.length);
       const parsed = safeParseObject<DailyLog>(raw, { date: dateStr, meals: [], waterGlasses: 0, steps: 0 });
       result[dateStr] = {
         ...parsed,
@@ -557,14 +594,15 @@ export async function restoreAllData(
     try {
       // 2. Snapshot every key that restore may change, including whether it was absent before
       const allKeys = await AsyncStorage.getAllKeys();
-      const existingLogKeys = allKeys.filter((k) => k.startsWith(DAILY_LOG_PREFIX));
-      const incomingLogKeys = Object.keys(staged.dailyLogs || {}).map((d) => `${DAILY_LOG_PREFIX}${d}`);
+      const prefix = dailyLogPrefix();
+      const existingLogKeys = allKeys.filter((k) => k.startsWith(prefix));
+      const incomingLogKeys = Object.keys(staged.dailyLogs || {}).map((d) => getScopedStorageKey(`${DAILY_LOG_PREFIX}${d}`));
 
       const targetKeysSet = new Set<string>([
-        PROFILE_KEY,
-        SUPPLEMENT_ROUTINE_KEY,
-        WEIGHT_HISTORY_KEY,
-        REMINDER_SETTINGS_KEY,
+        getScopedStorageKey(PROFILE_KEY),
+        getScopedStorageKey(SUPPLEMENT_ROUTINE_KEY),
+        getScopedStorageKey(WEIGHT_HISTORY_KEY),
+        getScopedStorageKey(REMINDER_SETTINGS_KEY),
         ...existingLogKeys,
         ...incomingLogKeys,
       ]);
@@ -579,28 +617,28 @@ export async function restoreAllData(
         }
 
         // 2. Write profile
-        await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(staged.profile));
+        await AsyncStorage.setItem(getScopedStorageKey(PROFILE_KEY), JSON.stringify(staged.profile));
 
         // 3. Write each daily log
         const newLogPairs: [string, string][] = [];
         for (const [dateStr, dayLog] of Object.entries(staged.dailyLogs || {})) {
-          newLogPairs.push([`${DAILY_LOG_PREFIX}${dateStr}`, JSON.stringify({ ...dayLog, date: dateStr })]);
+          newLogPairs.push([getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`), JSON.stringify({ ...dayLog, date: dateStr })]);
         }
         if (newLogPairs.length > 0) {
           await AsyncStorage.multiSet(newLogPairs);
         }
 
         // 4. Write supplement routine
-        await AsyncStorage.setItem(SUPPLEMENT_ROUTINE_KEY, JSON.stringify(staged.supplementRoutine || []));
+        await AsyncStorage.setItem(getScopedStorageKey(SUPPLEMENT_ROUTINE_KEY), JSON.stringify(staged.supplementRoutine || []));
 
         // 5. Write weight history
-        await AsyncStorage.setItem(WEIGHT_HISTORY_KEY, JSON.stringify(staged.weightHistory || []));
+        await AsyncStorage.setItem(getScopedStorageKey(WEIGHT_HISTORY_KEY), JSON.stringify(staged.weightHistory || []));
 
         // 6. Write reminder settings if present, or remove if absent in incoming backup
         if (staged.reminderSettings) {
-          await AsyncStorage.setItem(REMINDER_SETTINGS_KEY, JSON.stringify(staged.reminderSettings));
+          await AsyncStorage.setItem(getScopedStorageKey(REMINDER_SETTINGS_KEY), JSON.stringify(staged.reminderSettings));
         } else {
-          await AsyncStorage.removeItem(REMINDER_SETTINGS_KEY);
+          await AsyncStorage.removeItem(getScopedStorageKey(REMINDER_SETTINGS_KEY));
         }
       } catch (restoreErr) {
         console.error('Restore failed midway, attempting rollback:', restoreErr);
@@ -704,7 +742,7 @@ export async function restoreAllData(
       ...currentWeights,
       ...(staged.weightHistory || []).filter((w) => !weightDates.has(w.date)),
     ].sort((a, b) => a.date.localeCompare(b.date));
-    await AsyncStorage.setItem(WEIGHT_HISTORY_KEY, JSON.stringify(mergedWeights));
+    await AsyncStorage.setItem(getScopedStorageKey(WEIGHT_HISTORY_KEY), JSON.stringify(mergedWeights));
 
     // 5. Reminders
     if (staged.reminderSettings) {

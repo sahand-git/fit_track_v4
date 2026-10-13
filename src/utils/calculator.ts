@@ -104,6 +104,7 @@ export function getDefaultProfile(): UserProfile {
     ...defaults,
     ...targets,
     includeWorkoutsInCalorieBudget: false,
+    stepGoal: 8000,
   };
 }
 

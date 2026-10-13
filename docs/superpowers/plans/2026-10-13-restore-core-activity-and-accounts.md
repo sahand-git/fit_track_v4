@@ -4,7 +4,7 @@
 
 **Goal:** Restore useful step tracking, a dedicated workout history, Firebase accounts, and per-user cloud backup in FitTrack v4 without breaking offline use or existing local data.
 
-**Architecture:** Keep the existing four-tab state navigation and AsyncStorage-first model. Add testable activity calculations and date-scoped storage operations, a step tracker and workout history reachable from existing screens, and an auth/backup service boundary that keeps guest records separate from authenticated account records. Use Firebase Authentication and Firestore only after the current Expo SDK 57 documentation and package compatibility are verified. Keep explicit backup/restore user-initiated.
+**Architecture:** Keep the existing four-tab state navigation and AsyncStorage-first model. Extend the existing workout types, workout CRUD, `AddWorkoutSheet`, and activity helpers rather than duplicating them. Add a tested expenditure-budget function, date-scoped step operations and provider adapter, a dedicated workout history, and an auth/backup service boundary that keeps guest records separate from authenticated account records. Use Firebase Authentication and Firestore only after the current Expo SDK 57 documentation and package compatibility are verified. Keep explicit backup/restore user-initiated.
 
 **Tech Stack:** Expo SDK 57, React Native 0.86, TypeScript, AsyncStorage, existing i18n/theme/components, Expo-compatible health APIs, Firebase JS SDK or another documented Expo-compatible Firebase path, and existing lightweight test conventions.
 
@@ -37,7 +37,7 @@
 
 **Files:**
 - Read: `package.json`, `app.json`, `AGENTS.md`, `src/types.ts`, `src/storage/storage.ts`
-- Modify: `package.json` to add local `tsx` test execution and later verified SDK-compatible libraries
+- Modify: `package.json` only for verified SDK-compatible libraries; `tsx` and a test script already exist on current `main`
 - Modify: `app.json` only for documented permission/config-plugin requirements
 - Create: `docs/native-health-setup.md`
 - Test: dependency compatibility via Expo Doctor
@@ -49,7 +49,7 @@
 
 - [ ] **Step 1: Read official docs before selecting packages.** Check `https://docs.expo.dev/versions/v57.0.0/`, `https://docs.expo.dev/llms.txt`, Expo Pedometer, Firebase, and Google-auth guides. Confirm what works in Expo Go versus a development build.
 - [ ] **Step 2: Record chosen libraries, versions, config changes, limitations, and required device build in `docs/native-health-setup.md`.** Do not install an unverified health package.
-- [ ] **Step 3: Add the local test runner** with `npm install --save-dev tsx`; add an `npm test` script that runs the existing self-executing utility tests through the local dependency. Append each new test file to this script in its owning task so no test uses a network-downloaded runner.
+- [ ] **Step 3: Restore dependencies from the committed lockfile** with `npm ci`; change the existing test script from `npx tsx` to the locally declared `tsx` executable so it never downloads a missing runner.
 - [ ] **Step 4: Install only selected Expo/native dependencies** using `npx expo install` where supported. Keep Firebase and auth choices compatible with the documented Expo Go/dev-build constraints.
 - [ ] **Step 5: Run the baseline suite, Expo Doctor, and TypeScript before feature work.**
 
@@ -63,17 +63,17 @@ Expected: no new dependency/config errors; record any pre-existing findings verb
 ### Task 2: Add activity calculations and backward-compatible workout storage
 
 **Files:**
-- Modify: `src/types.ts`
+- Modify: `src/types.ts` only for new step-source or expenditure-profile fields; `WorkoutEntry` already exists
 - Modify: `src/utils/calculator.ts`
-- Create: `src/utils/activity.ts`
-- Create: `src/utils/activity.test.ts`
-- Modify: `src/storage/storage.ts`
-- Test: `src/storage/storage.test.ts` using the repository's established mock/assertion pattern
+- Create: `src/utils/activityBudget.ts`
+- Create: `src/utils/activityBudget.test.ts`
+- Modify: `src/storage/storage.ts` only for date-scoped step changes and any validated compatibility defaults; workout CRUD already exists
+- Modify: `src/storage/storage.test.ts` using the repository's established mock/assertion pattern
 
 **Interfaces:**
-- `WorkoutEntry` contains stable ID, name, category, duration, calorie value and source, optional note, and optional strength sets.
+- Reuse existing `WorkoutEntry`, `addWorkoutToDay`, `updateWorkoutInDay`, `removeWorkoutFromDay`, `estimateWorkoutSteps`, and `deduplicateWorkoutSteps` APIs.
 - `calculateActivityBudget(profile, workouts, steps)` returns a typed breakdown with base target, gross/net workout estimates, gross/net step estimates, steps attributed to workouts, eligible active calories, effective target, and selected model.
-- `addWorkoutToDay(date, entry)`, `updateWorkoutInDay(date, entry)`, and `removeWorkoutFromDay(date, id)` return the updated `DailyLog` and preserve all unrelated date fields.
+- Date-scoped step storage returns an updated `DailyLog` while preserving all unrelated date fields.
 - Optional new profile settings default to the current safe v4 behavior when absent.
 
 - [ ] **Step 1: Add failing pure-function tests** for zero/negative input clamping, step estimates, non-ambulatory workout exclusion, workout step deduplication, fixed versus adaptive budgets, and activity multiplier no-double-counting.
@@ -125,7 +125,7 @@ Expected: all activity assertions pass and the app typechecks.
 
 **Files:**
 - Create: `src/screens/WorkoutsScreen.tsx`
-- Create: `src/components/WorkoutEditorSheet.tsx` (or adapt existing `AddWorkoutSheet` after inspection)
+- Modify: `src/components/AddWorkoutSheet.tsx` only for edit mode if required; it already supports logging category presets and strength sets
 - Modify: `App.tsx`
 - Modify: `src/screens/DashboardScreen.tsx`
 - Modify: `src/i18n/strings.ts`
@@ -136,7 +136,7 @@ Expected: all activity assertions pass and the app typechecks.
 - `WorkoutsScreen` receives selected date, workout entries, profile, and add/update/remove/date-navigation callbacks.
 - Workout CRUD uses Task 2 storage functions and the selected date.
 
-- [ ] **Step 1: Inspect the current `AddWorkoutSheet` and write failing screen-data tests** for presets, custom names, strength sets, estimate source, edit identity, deletion, and future date lock.
+- [ ] **Step 1: Inspect the current `AddWorkoutSheet` and write failing screen-data tests** for edit identity, deletion, selected date, and future date lock. Preserve its existing preset, custom name, strength-set, and estimate flows.
 - [ ] **Step 2: Build searchable category/preset selection** for strength, cardio, HIIT, sports, and flexibility, plus custom title and duration.
 - [ ] **Step 3: Add strength set rows** with weight, reps, completion state, add/remove controls, and validated numeric input.
 - [ ] **Step 4: Add dedicated date history** with summaries and edit/delete paths; destructive delete requires confirmation or undo. Preserve current Today quick-log access.

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, ArrowLeft, Globe2, Bell, Database, Flame } from 'lucide-react-native';
+import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
 import { GeminiKeyManager } from '../components/GeminiKeyManager';
@@ -32,6 +32,7 @@ interface ProfileScreenProps {
   onSaveProfile: (profile: UserProfile) => void;
   onRestoreComplete?: () => void;
   onBack?: () => void;
+  onOpenAccount?: () => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
@@ -42,6 +43,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onSaveProfile,
   onRestoreComplete,
   onBack,
+  onOpenAccount,
 }) => {
   const currentLanguage = useLanguage();
   const insets = useSafeAreaInsets();
@@ -354,7 +356,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       {/* Workout Calorie Budget Setting */}
       <View style={styles.section}>
-        <Text style={styles.sectionHeader}>{t('Workout Calorie Budget')}</Text>
+        <Text style={styles.sectionHeader}>{t('Activity calorie budget')}</Text>
         <TouchableOpacity
           style={[styles.optionRow, includeWorkouts && styles.optionRowActive]}
           onPress={() => {
@@ -368,9 +370,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
             <Flame size={20} color={theme.colors.warning} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.optionLabel}>{t('Add workout calories to food budget')}</Text>
+              <Text style={styles.optionLabel}>{t('Use adaptive activity budget')}</Text>
               <Text style={styles.optionDesc}>
-                {t('Off by default. When off, workout calories show as extra burn without increasing the amount of food you can eat today.')}
+                {t('Off keeps your current target. When on, FitTrack uses a sedentary baseline plus net logged workouts and steps above a daily baseline, without double-counting workout steps.')}
               </Text>
             </View>
           </View>
@@ -381,6 +383,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* Data & Backup Section */}
       <View style={styles.section}>
         <Text style={styles.sectionHeader}>{t('Data & Storage')}</Text>
+        {onOpenAccount && (
+          <TouchableOpacity style={styles.optionRow} onPress={onOpenAccount} activeOpacity={0.7} accessibilityRole="button">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+              <UserRound size={20} color={theme.colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.optionLabel}>{t('Account & cloud backup')}</Text>
+                <Text style={styles.optionDesc}>{t('Sign in, verify your account, and back up to your own cloud space.')}</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.optionRow}
           onPress={() => {
