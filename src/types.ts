@@ -62,6 +62,28 @@ export interface UserProfile {
   waterTargetGlasses: number;
   language?: AppLanguage;
   isOnboarded?: boolean;
+  includeWorkoutsInCalorieBudget?: boolean; // off by default: workout burn is tracked without inflating food budget
+}
+
+export type ExerciseCategory = 'strength' | 'cardio' | 'hiit' | 'sports' | 'flexibility';
+
+export interface ExerciseSet {
+  setNum: number;
+  weightKg?: number;
+  reps?: number;
+  completed?: boolean;
+}
+
+export interface WorkoutEntry {
+  id: string;
+  name: string;
+  category: ExerciseCategory;
+  durationMinutes: number;
+  caloriesBurned: number;
+  sets?: ExerciseSet[];
+  loggedAt: string;
+  calorieSource?: 'user_entered' | 'met_estimate';
+  note?: string;
 }
 
 export interface FoodItem {
@@ -76,8 +98,11 @@ export interface FoodItem {
   fat: number;
   category?: string;
   barcode?: string;
+  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated';
   fiber?: number;
   sugar?: number;
+  sugars?: number;
+  nutriScore?: string;
   sodium?: number; // mg
   potassium?: number; // mg
   calcium?: number; // mg
@@ -124,6 +149,7 @@ export interface DailyLog {
   steps: number;
   supplements?: SupplementCheck[];
   dailySupplements?: LoggedDailySupplement[];
+  workouts?: WorkoutEntry[];
 }
 
 export interface TimeSetting {
@@ -144,4 +170,24 @@ export interface ReminderSettings {
   supplementTimes: Record<SupplementTime, TimeSetting>;
   water: WaterReminderSetting;
   meals: Record<MealType, TimeSetting>;
+}
+
+export interface FitTrackBackup {
+  version: '4.0';
+  exportedAt: string;
+  profile: UserProfile;
+  dailyLogs: Record<string, DailyLog>;
+  supplementRoutine: SupplementRoutineItem[];
+  weightHistory: WeightEntry[];
+  reminderSettings?: ReminderSettings;
+}
+
+export interface BackupSummary {
+  daysCount: number;
+  mealsCount: number;
+  workoutsCount: number;
+  weightsCount: number;
+  routineItemsCount: number;
+  hasProfile: boolean;
+  hasReminders: boolean;
 }

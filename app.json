@@ -5,8 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#090D16",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FAF7F2",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.fittrack.expo"
@@ -14,11 +14,14 @@
     "android": {
       "package": "com.fittrack.expo",
       "adaptiveIcon": {
-        "backgroundColor": "#090D16",
+        "backgroundColor": "#FAF7F2",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["RECEIVE_BOOT_COMPLETED", "SCHEDULE_EXACT_ALARM"]
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,9 +43,11 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#10B981"
+          "color": "#1E3A2F"
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-sharing"
     ]
   }
 }

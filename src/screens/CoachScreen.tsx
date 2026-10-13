@@ -1,5 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bot, Send, Sparkles } from 'lucide-react-native';
 import { DailyLog, UserProfile } from '../types';
@@ -9,6 +18,7 @@ import { useLanguage } from '../i18n/I18nContext';
 import { askNutritionCoach } from '../services/plateAnalysisService';
 import { getStoredGeminiApiKey } from '../services/plateAnalysisService';
 import { formatDisplayDate } from '../utils/dateUtils';
+import { SkeletonCoachBubble } from '../components/SkeletonLoader';
 import { theme } from '../theme';
 
 interface CoachScreenProps {
@@ -71,7 +81,12 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
   };
 
   return (
-    <View style={[styles.container, { paddingBottom: bottomPadding, direction: language === 'en' ? 'ltr' : 'rtl' }]}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      style={{ flex: 1 }}
+    >
+      <View style={[styles.container, { paddingBottom: bottomPadding, direction: language === 'en' ? 'ltr' : 'rtl' }]}>
       <View style={styles.header}>
         <View style={styles.icon}><Bot size={20} color={theme.colors.primary} /></View>
         <View style={styles.headerCopy}>
@@ -115,12 +130,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
             </View>
           ))
         )}
-        {busy && (
-          <View style={[styles.bubble, styles.coachBubble, styles.loadingBubble]}>
-            <ActivityIndicator size="small" color={theme.colors.primary} />
-            <Text style={styles.coachText}>{t('Thinking…')}</Text>
-          </View>
-        )}
+        {busy && <SkeletonCoachBubble />}
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </ScrollView>
 
@@ -151,7 +161,8 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
         </TouchableOpacity>
       </View>
     </View>
-  );
+  </KeyboardAvoidingView>
+);
 }
 
 const styles = StyleSheet.create({

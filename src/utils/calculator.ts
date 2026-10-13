@@ -98,5 +98,76 @@ export function getDefaultProfile(): UserProfile {
   return {
     ...defaults,
     ...targets,
+    includeWorkoutsInCalorieBudget: false,
+  };
+}
+
+/**
+ * Calculates net workout calorie burn above resting metabolic rate.
+ * Subtracts the resting calories that would have been burned during the workout duration.
+ */
+export function calculateNetWorkoutBurn(grossBurn: number, durationMinutes: number, bmr: number): number {
+  if (grossBurn <= 0) return 0;
+  if (durationMinutes <= 0) return grossBurn;
+  const safeBmr = bmr > 0 ? bmr : 1700;
+  const restingBurn = Math.round((durationMinutes / 1440) * safeBmr);
+  return Math.max(0, grossBurn - restingBurn);
+}
+
+/**
+ * Estimates steps taken during a workout to prevent double-counting when step tracking is also active.
+ * Only step-based ambulatory activities (running, walking, aerobics) accumulate steps.
+ */
+export function estimateWorkoutSteps(workout: { category?: string; durationMinutes?: number; name?: string }): number {
+  const duration = Math.max(0, workout.durationMinutes || 0);
+  if (duration === 0) return 0;
+  const name = (workout.name || '').toLowerCase();
+  const category = (workout.category || '').toLowerCase();
+
+  const nonStepKeywords = [
+    'cycl', 'bike', 'spin',
+    'swim',
+    'row',
+    'elliptical',
+    'strength', 'weight', 'lifting', 'bench', 'squat', 'deadlift',
+    'yoga', 'pilates', 'stretch', 'flexib', 'mobility'
+  ];
+  if (
+    category === 'strength' ||
+    category === 'flexibility' ||
+    nonStepKeywords.some(k => name.includes(k) || category.includes(k))
+  ) {
+    return 0;
+  }
+
+  if (name.includes('run') || name.includes('jog') || name.includes('sprint')) {
+    return Math.round(duration * 150); // ~150 steps/min running cadence
+  }
+  if (name.includes('walk') || name.includes('hike') || name.includes('treadmill')) {
+    return Math.round(duration * 110); // ~110 steps/min walking cadence
+  }
+  if (name.includes('jump rope') || name.includes('skipping') || name.includes('step aerob') || name.includes('aerobic')) {
+    return Math.round(duration * 120);
+  }
+  if (name.includes('soccer') || name.includes('basketball') || name.includes('tennis')) {
+    return Math.round(duration * 100);
+  }
+
+  return 0;
+}
+
+/**
+ * Deduplicates workout steps from total pedometer steps to prevent counting exercise twice.
+ */
+export function deduplicateWorkoutSteps(
+  totalSteps: number,
+  workouts: Array<{ category?: string; durationMinutes?: number; name?: string }>
+): { workoutSteps: number; nonWorkoutSteps: number } {
+  const safeTotal = Math.max(0, totalSteps);
+  const workoutSteps = workouts.reduce((sum, w) => sum + estimateWorkoutSteps(w), 0);
+  const nonWorkoutSteps = Math.max(0, safeTotal - workoutSteps);
+  return {
+    workoutSteps: Math.min(safeTotal, workoutSteps),
+    nonWorkoutSteps
   };
 }

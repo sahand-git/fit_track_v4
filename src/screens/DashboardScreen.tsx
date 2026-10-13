@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -14,12 +14,26 @@ import {
   Utensils,
   User,
   Pill,
+  Flame,
+  Dumbbell,
+  Trash2,
 } from 'lucide-react-native';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
-import { UserProfile, DailyLog, MealType, SupplementRoutineItem } from '../types';
+import { UserProfile, DailyLog, MealType, SupplementRoutineItem, WorkoutEntry } from '../types';
 import { CalorieRing } from '../components/CalorieRing';
 import { MacroCards } from '../components/MacroCards';
 import { WaterTracker } from '../components/WaterTracker';
+import { AddWorkoutSheet } from '../components/AddWorkoutSheet';
+import { StreakBadge } from '../components/StreakBadge';
+import { GoalCelebration } from '../components/GoalCelebration';
+import Animated from 'react-native-reanimated';
+import {
+  getStaggeredCardEntry,
+  getListLayoutTransition,
+  getItemEnterAnimation,
+  getItemExitAnimation,
+} from '../utils/reanimatedMotion';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
@@ -30,28 +44,36 @@ interface DashboardScreenProps {
   profile: UserProfile;
   log: DailyLog;
   supplementRoutine: SupplementRoutineItem[];
+  streak?: number;
   onToggleSupplement: (id: string, taken: boolean) => void;
   onUpdateWater: (delta: number) => void;
   onNavigateToMeals: (targetMeal?: MealType) => void;
   onOpenAddFood: (mealType?: MealType) => void;
   onOpenSupplements: () => void;
   onOpenProfile: () => void;
+  onAddWorkout: (workout: WorkoutEntry, date: string) => void;
+  onDeleteWorkout: (workoutId: string) => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   profile,
   log,
   supplementRoutine,
+  streak = 0,
   onToggleSupplement,
   onUpdateWater,
   onNavigateToMeals,
   onOpenAddFood,
   onOpenSupplements,
   onOpenProfile,
+  onAddWorkout,
+  onDeleteWorkout,
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const t = (str: string) => translate(language, str);
+
+  const [workoutSheetVisible, setWorkoutSheetVisible] = useState(false);
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const floatingBottom = dockBottom + 66;
@@ -60,6 +82,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const consumedProtein = log.meals.reduce((sum, m) => sum + m.protein, 0);
   const consumedCarbs = log.meals.reduce((sum, m) => sum + m.carbs, 0);
   const consumedFat = log.meals.reduce((sum, m) => sum + m.fat, 0);
+
+  const burnedCalories = (log.workouts || []).reduce((sum, w) => sum + (w.caloriesBurned || 0), 0);
+  const effectiveCalorieTarget = profile.includeWorkoutsInCalorieBudget
+    ? profile.targetCalories + burnedCalories
+    : profile.targetCalories;
 
   const mealTypes: { key: MealType; label: string }[] = [
     { key: 'breakfast', label: t('Breakfast') },
@@ -101,6 +128,26 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     [activeSupplements]
   );
 
+  const [showCelebration, setShowCelebration] = useState(false);
+
+  // Trigger celebration once per day when target is reached
+  useEffect(() => {
+    async function checkGoalCelebration() {
+      if (effectiveCalorieTarget > 0 && consumedCalories >= effectiveCalorieTarget) {
+        try {
+          const lastCelebrated = await AsyncStorage.getItem('@fittrack_last_celebrated_goal_date');
+          if (lastCelebrated !== log.date) {
+            setShowCelebration(true);
+            await AsyncStorage.setItem('@fittrack_last_celebrated_goal_date', log.date);
+          }
+        } catch {
+          // Graceful fallback
+        }
+      }
+    }
+    checkGoalCelebration();
+  }, [consumedCalories, effectiveCalorieTarget, log.date]);
+
   const handleQuickAdd = (meal: MealType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onOpenAddFood(meal);
@@ -118,7 +165,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.dateLabel}>{todayLabel}</Text>
-            <Text style={styles.screenTitle}>{t('Today')}</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.screenTitle}>{t('Today')}</Text>
+              <StreakBadge streak={streak} />
+            </View>
           </View>
 
           <TouchableOpacity
@@ -133,36 +183,52 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </View>
 
         {/* Hero Calorie Budget Focus */}
-        <View style={styles.heroSection}>
+        <Animated.View entering={getStaggeredCardEntry(0)} style={styles.heroSection}>
           <CalorieRing
             consumed={consumedCalories}
-            target={profile.targetCalories}
+            target={effectiveCalorieTarget}
             proteinConsumed={consumedProtein}
             proteinTarget={profile.targetProtein}
           />
-        </View>
+
+          {burnedCalories > 0 && (
+            <View style={styles.burnBanner}>
+              <Flame size={14} color={theme.colors.warning} />
+              <Text style={styles.burnBannerText}>
+                {burnedCalories} {t('kcal burned in active workouts')}
+                {profile.includeWorkoutsInCalorieBudget
+                  ? ` · ${t('added to food budget')}`
+                  : ` · ${t('tracked as burn, not in food budget')}`}
+              </Text>
+            </View>
+          )}
+        </Animated.View>
 
         {/* Nutrients Bar */}
-        <MacroCards
-          calorieTarget={profile.targetCalories}
-          calorieConsumed={consumedCalories}
-          proteinTarget={profile.targetProtein}
-          proteinConsumed={consumedProtein}
-          carbsTarget={profile.targetCarbs}
-          carbsConsumed={consumedCarbs}
-          fatTarget={profile.targetFat}
-          fatConsumed={consumedFat}
-        />
+        <Animated.View entering={getStaggeredCardEntry(1)}>
+          <MacroCards
+            calorieTarget={profile.targetCalories}
+            calorieConsumed={consumedCalories}
+            proteinTarget={profile.targetProtein}
+            proteinConsumed={consumedProtein}
+            carbsTarget={profile.targetCarbs}
+            carbsConsumed={consumedCarbs}
+            fatTarget={profile.targetFat}
+            fatConsumed={consumedFat}
+          />
+        </Animated.View>
 
         {/* Hydration Row */}
-        <WaterTracker
-          glasses={log.waterGlasses}
-          target={profile.waterTargetGlasses}
-          onUpdate={onUpdateWater}
-        />
+        <Animated.View entering={getStaggeredCardEntry(2)}>
+          <WaterTracker
+            glasses={log.waterGlasses}
+            target={profile.waterTargetGlasses}
+            onUpdate={onUpdateWater}
+          />
+        </Animated.View>
 
         {/* Vitamins & Supplements Section (Below Water Tracker) */}
-        <View style={styles.supplementsContainer}>
+        <Animated.View entering={getStaggeredCardEntry(3)} style={styles.supplementsContainer}>
           {activeSupplements.length === 0 ? (
             /* Slim row if routine/daily log is empty */
             <TouchableOpacity
@@ -232,61 +298,142 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               </View>
             </View>
           )}
-        </View>
+        </Animated.View>
 
-        {/* Meals Ledger Header */}
-        <View style={styles.mealsHeader}>
-          <Text style={styles.sectionHeading}>{t('Today’s Meals')}</Text>
-          <TouchableOpacity
-            onPress={() => onNavigateToMeals()}
-            style={styles.seeAllBtn}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.seeAllText}>{t('View diary')}</Text>
-            <ChevronRight size={14} color={theme.colors.primary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Meals Ledger List */}
-        <View style={styles.mealsList}>
-          {mealTypes.map((m, index) => {
-            const mealsOfCategory = log.meals.filter((item) => item.mealType === m.key);
-            const cals = mealsOfCategory.reduce((sum, item) => sum + item.calories, 0);
-            const isLast = index === mealTypes.length - 1;
-
-            return (
+        {/* Workouts Section */}
+        <Animated.View entering={getStaggeredCardEntry(4)} style={styles.workoutContainer}>
+          <View style={styles.workoutCard}>
+            <View style={styles.workoutHeader}>
+              <View style={styles.workoutTitleRow}>
+                <Dumbbell size={16} color={theme.colors.primary} />
+                <Text style={styles.workoutTitle}>{t('Workouts')}</Text>
+                {burnedCalories > 0 && (
+                  <Text style={styles.workoutBurnBadge}>
+                    {burnedCalories} {t('kcal')}
+                  </Text>
+                )}
+              </View>
               <TouchableOpacity
-                key={m.key}
-                style={[styles.mealRow, isLast && styles.mealRowLast]}
-                onPress={() => handleQuickAdd(m.key)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setWorkoutSheetVisible(true);
+                }}
+                style={styles.addWorkoutBtn}
+                disabled={isFuture}
                 activeOpacity={0.7}
-                accessibilityLabel={`${t('Add to')} ${m.label}`}
                 accessibilityRole="button"
+                accessibilityLabel={t('Add workout')}
               >
-                <View style={styles.mealLeft}>
-                  <View style={styles.mealIconBox}>
-                    <Utensils size={14} color={theme.colors.secondary} />
-                  </View>
-                  <View>
-                    <Text style={styles.mealName}>{m.label}</Text>
-                    <Text style={styles.mealSub}>
-                      {mealsOfCategory.length > 0
-                        ? `${mealsOfCategory.length} ${t(mealsOfCategory.length > 1 ? 'items' : 'item')}`
-                        : t('Tap to log food')}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.mealRight}>
-                  {cals > 0 && <Text style={styles.mealCals}>{cals} kcal</Text>}
-                  <View style={styles.plusIconCircle}>
-                    <Plus size={14} color={theme.colors.primary} />
-                  </View>
-                </View>
+                <Plus size={14} color={theme.colors.primary} />
+                <Text style={styles.addWorkoutBtnText}>{t('Add workout')}</Text>
               </TouchableOpacity>
-            );
-          })}
-        </View>
+            </View>
+
+            {(!log.workouts || log.workouts.length === 0) ? (
+              <TouchableOpacity
+                style={styles.emptyWorkoutRow}
+                onPress={() => {
+                  if (!isFuture) setWorkoutSheetVisible(true);
+                }}
+                disabled={isFuture}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.emptyWorkoutText}>
+                  {isFuture
+                    ? t('Workouts cannot be logged for future dates.')
+                    : t('No workouts logged yet. Tap to log exercise.')}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.workoutItemsList}>
+                {log.workouts.map((w) => (
+                  <Animated.View
+                    key={w.id}
+                    entering={getItemEnterAnimation()}
+                    exiting={getItemExitAnimation()}
+                    layout={getListLayoutTransition()}
+                    style={styles.workoutItemRow}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.workoutItemName}>{t(w.name)}</Text>
+                      <Text style={styles.workoutItemMeta}>
+                        {w.durationMinutes} {t('min')} · {w.caloriesBurned} {t('kcal')}
+                        {w.sets && w.sets.length > 0 ? ` · ${w.sets.length} ${t('sets')}` : ''}
+                        {w.calorieSource === 'met_estimate' ? ` (${t('Estimate')})` : ''}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        onDeleteWorkout(w.id);
+                      }}
+                      style={styles.deleteWorkoutBtn}
+                      accessibilityLabel={t('Delete workout')}
+                    >
+                      <Trash2 size={16} color={theme.colors.textMuted} />
+                    </TouchableOpacity>
+                  </Animated.View>
+                ))}
+              </View>
+            )}
+          </View>
+        </Animated.View>
+
+        {/* Meals Ledger */}
+        <Animated.View entering={getStaggeredCardEntry(5)}>
+          <View style={styles.mealsHeader}>
+            <Text style={styles.sectionHeading}>{t('Today’s Meals')}</Text>
+            <TouchableOpacity
+              onPress={() => onNavigateToMeals()}
+              style={styles.seeAllBtn}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.seeAllText}>{t('View diary')}</Text>
+              <ChevronRight size={14} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Meals Ledger List */}
+          <View style={styles.mealsList}>
+            {mealTypes.map((m, index) => {
+              const mealsOfCategory = log.meals.filter((item) => item.mealType === m.key);
+              const cals = mealsOfCategory.reduce((sum, item) => sum + item.calories, 0);
+              const isLast = index === mealTypes.length - 1;
+
+              return (
+                <TouchableOpacity
+                  key={m.key}
+                  style={[styles.mealRow, isLast && styles.mealRowLast]}
+                  onPress={() => handleQuickAdd(m.key)}
+                  activeOpacity={0.7}
+                  accessibilityLabel={`${t('Add to')} ${m.label}`}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.mealLeft}>
+                    <View style={styles.mealIconBox}>
+                      <Utensils size={14} color={theme.colors.secondary} />
+                    </View>
+                    <View>
+                      <Text style={styles.mealName}>{m.label}</Text>
+                      <Text style={styles.mealSub}>
+                        {mealsOfCategory.length > 0
+                          ? `${mealsOfCategory.length} ${t(mealsOfCategory.length > 1 ? 'items' : 'item')}`
+                          : t('Tap to log food')}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.mealRight}>
+                    {cals > 0 && <Text style={styles.mealCals}>{cals} kcal</Text>}
+                    <View style={styles.plusIconCircle}>
+                      <Plus size={14} color={theme.colors.primary} />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Animated.View>
       </ScrollView>
 
       {/* Floating "+ Add food" Action Button */}
@@ -308,11 +455,145 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           <Text style={styles.floatingAddBtnText}>{t('Add food')}</Text>
         </TouchableOpacity>
       )}
+
+      <AddWorkoutSheet
+        visible={workoutSheetVisible}
+        onClose={() => setWorkoutSheetVisible(false)}
+        date={log.date}
+        profile={profile}
+        onSaveWorkout={onAddWorkout}
+      />
+
+      <GoalCelebration
+        visible={showCelebration}
+        onDismiss={() => setShowCelebration(false)}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 2,
+  },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FDF2EE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: '#F5C6B9',
+  },
+  streakText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#D95338',
+  },
+  burnBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.colors.warningLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: theme.radius.full,
+    marginTop: 12,
+  },
+  burnBannerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.warning,
+  },
+  workoutContainer: {
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  workoutCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+    ...theme.shadow.subtle,
+  },
+  workoutHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  workoutTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  workoutTitle: {
+    fontFamily: theme.fonts.serif,
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  workoutBurnBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.warning,
+    backgroundColor: theme.colors.warningLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: theme.radius.sm,
+  },
+  addWorkoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.primaryLight,
+  },
+  addWorkoutBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
+  emptyWorkoutRow: {
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  emptyWorkoutText: {
+    fontSize: 13,
+    color: theme.colors.textMuted,
+  },
+  workoutItemsList: {
+    gap: 8,
+  },
+  workoutItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  workoutItemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  workoutItemMeta: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
+  deleteWorkoutBtn: {
+    padding: 6,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

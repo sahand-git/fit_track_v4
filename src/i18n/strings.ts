@@ -378,6 +378,11 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Remaining': 'المتبقي',
     'Common & Frequent Foods': 'الأطعمة الشائعة والمتكررة',
     'Day-to-day weight fluctuations naturally reflect hydration, sodium, and digestion rather than immediate changes in fat or muscle mass. Track multi-week trends for meaningful insight.': 'تعكس تقلبات الوزن اليومية بشكل طبيعي تغيرات السوائل والصوديوم والهضم، وليس تغيراً فورياً في دهون أو عضلات الجسم. تابع الاتجاه على مدى عدة أسابيع للحصول على نتائج دقيقة.',
+    'Daily Goal Reached!': 'تم تحقيق الهدف اليومي!',
+    'You hit your calorie target for today.': 'لقد حققت هدف السعرات الحرارية لهذا اليوم.',
+    'Workout Logged': 'تم تسجيل التمرين',
+    'Food Logged': 'تم تسجيل الطعام',
+    'Backup Exported': 'تم تصدير النسخة الاحتياطية',
   },
   ckb: {
     'Today': 'ئەمڕۆ',
@@ -746,6 +751,11 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Remaining': 'ماوە',
     'Common & Frequent Foods': 'خۆراکە باوەکان و دووبارەکان',
     'Day-to-day weight fluctuations naturally reflect hydration, sodium, and digestion rather than immediate changes in fat or muscle mass. Track multi-week trends for meaningful insight.': 'گۆڕانکاری ڕۆژانەی کێش بە شێوەیەکی سروشتی پەیوەستە بە شلەمەنی، سۆدیۆم و هەرسکردن، نەک گۆڕانی دەستبەجێ لە چەوری یان ماسوولکە. بۆ ئەنجامی ورد، چاودێری ڕەوتی چەند هەفتەیی بکە.',
+    'Daily Goal Reached!': 'ئامانجی ڕۆژانە بەدەستهات!',
+    'You hit your calorie target for today.': 'ئەمڕۆ گەیشتیتە ئامانجی کالۆرییەکانت.',
+    'Workout Logged': 'ڕاهێنان تۆمارکرا',
+    'Food Logged': 'خواردن تۆمارکرا',
+    'Backup Exported': 'پاشەکەوت هەناردەکرا',
   },
 };
 

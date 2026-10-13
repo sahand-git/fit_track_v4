@@ -1,18 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  Platform,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, ArrowLeft, Globe2, Bell } from 'lucide-react-native';
+import { Check, ArrowLeft, Globe2, Bell, Database, Flame } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
 import { GeminiKeyManager } from '../components/GeminiKeyManager';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
+import { BackupModal } from '../components/BackupModal';
+import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { isNotificationSupported } from '../services/notificationService';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useLanguage } from '../i18n/I18nContext';
@@ -26,6 +30,7 @@ interface ProfileScreenProps {
   supplementRoutine?: SupplementRoutineItem[];
   onLanguageChange: (language: AppLanguage) => void;
   onSaveProfile: (profile: UserProfile) => void;
+  onRestoreComplete?: () => void;
   onBack?: () => void;
 }
 
@@ -35,6 +40,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   supplementRoutine = [],
   onLanguageChange,
   onSaveProfile,
+  onRestoreComplete,
   onBack,
 }) => {
   const currentLanguage = useLanguage();
@@ -43,6 +49,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const t = (str: string) => translate(currentLanguage, str);
 
   const [remindersModalVisible, setRemindersModalVisible] = useState(false);
+  const [backupModalVisible, setBackupModalVisible] = useState(false);
+  const [includeWorkouts, setIncludeWorkouts] = useState(!!profile.includeWorkoutsInCalorieBudget);
+
+  // Handle Android back button when sub-modals are open
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const onBackPress = () => {
+      if (remindersModalVisible) {
+        setRemindersModalVisible(false);
+        return true;
+      }
+      if (backupModalVisible) {
+        setBackupModalVisible(false);
+        return true;
+      }
+      return false; // let App.tsx return from tempScreen
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [remindersModalVisible, backupModalVisible]);
   const [name, setName] = useState(profile.name);
   const [age, setAge] = useState(profile.age.toString());
   const [gender, setGender] = useState<Gender>(profile.gender);
@@ -81,6 +107,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       goal,
       language,
       isOnboarded: true,
+      includeWorkoutsInCalorieBudget: includeWorkouts,
       ...liveTargets,
     };
     onSaveProfile(updated);
@@ -325,6 +352,56 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </TouchableOpacity>
       </View>
 
+      {/* Workout Calorie Budget Setting */}
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>{t('Workout Calorie Budget')}</Text>
+        <TouchableOpacity
+          style={[styles.optionRow, includeWorkouts && styles.optionRowActive]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setIncludeWorkouts(!includeWorkouts);
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: includeWorkouts }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <Flame size={20} color={theme.colors.warning} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Add workout calories to food budget')}</Text>
+              <Text style={styles.optionDesc}>
+                {t('Off by default. When off, workout calories show as extra burn without increasing the amount of food you can eat today.')}
+              </Text>
+            </View>
+          </View>
+          <AnimatedCheckbox checked={includeWorkouts} size={20} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Data & Backup Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>{t('Data & Storage')}</Text>
+        <TouchableOpacity
+          style={styles.optionRow}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setBackupModalVisible(true);
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <Database size={20} color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Backup & Restore')}</Text>
+              <Text style={styles.optionDesc}>
+                {t('Export or import complete local fitness records JSON.')}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+
       {/* Save Button */}
       <AnimatedPressable style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
         <Text style={styles.saveBtnText}>{t('Save Targets')}</Text>
@@ -334,6 +411,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         visible={remindersModalVisible}
         onClose={() => setRemindersModalVisible(false)}
         routine={supplementRoutine}
+      />
+
+      <BackupModal
+        visible={backupModalVisible}
+        onClose={() => setBackupModalVisible(false)}
+        onRestoreComplete={onRestoreComplete || (() => {})}
       />
     </ScrollView>
   );

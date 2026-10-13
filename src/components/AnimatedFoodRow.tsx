@@ -1,49 +1,46 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, ViewProps } from 'react-native';
+import React from 'react';
+import { ViewProps } from 'react-native';
+import Animated, { FadeInDown, FadeOutRight, LinearTransition } from 'react-native-reanimated';
 import { isReducedMotion } from '../utils/motion';
+import { MOTION } from '../utils/reanimatedMotion';
 
 interface AnimatedFoodRowProps extends ViewProps {
   children: React.ReactNode;
   delay?: number;
 }
 
+/**
+ * Editorial Ledger Animated Food Row
+ * Smooth Reanimated layout transitions for adding and deleting meal items.
+ */
 export const AnimatedFoodRow: React.FC<AnimatedFoodRowProps> = ({
   children,
   style,
   delay = 0,
   ...rest
 }) => {
-  const animatedOpacity = useRef(new Animated.Value(isReducedMotion() ? 1 : 0)).current;
-  const animatedTranslateY = useRef(new Animated.Value(isReducedMotion() ? 0 : 6)).current;
+  const enterAnim = isReducedMotion()
+    ? undefined
+    : FadeInDown.duration(MOTION.duration.base)
+        .delay(delay)
+        .easing(MOTION.easing.outCubic);
 
-  useEffect(() => {
-    if (isReducedMotion()) return;
+  const exitAnim = isReducedMotion()
+    ? undefined
+    : FadeOutRight.duration(MOTION.duration.quick)
+        .easing(MOTION.easing.outCubic);
 
-    Animated.parallel([
-      Animated.timing(animatedOpacity, {
-        toValue: 1,
-        duration: 220,
-        delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(animatedTranslateY, {
-        toValue: 0,
-        duration: 220,
-        delay,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [delay]);
+  const layoutAnim = isReducedMotion()
+    ? undefined
+    : LinearTransition.duration(MOTION.duration.base)
+        .easing(MOTION.easing.outCubic);
 
   return (
     <Animated.View
-      style={[
-        style,
-        {
-          opacity: animatedOpacity,
-          transform: [{ translateY: animatedTranslateY }],
-        },
-      ]}
+      entering={enterAnim}
+      exiting={exitAnim}
+      layout={layoutAnim}
+      style={style}
       {...rest}
     >
       {children}

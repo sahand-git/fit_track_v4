@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   TextInput,
   ScrollView,
+  Platform,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
@@ -24,6 +26,21 @@ interface OnboardingModalProps {
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, onLanguageChange }) => {
   const currentLanguage = useLanguage();
   const [step, setStep] = useState(1);
+
+  // Handle Android hardware back press during onboarding steps
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const onBackPress = () => {
+      if (step > 1) {
+        setStep((s) => s - 1);
+        return true;
+      }
+      return false;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [step]);
+
   const [language, setLanguage] = useState<AppLanguage>(currentLanguage || 'en');
   const t = (str: string) => translate(language, str);
   const [name, setName] = useState('');

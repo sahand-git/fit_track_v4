@@ -4,6 +4,8 @@ import {
   View,
   TouchableOpacity,
   Platform,
+  Alert,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from './src/components/AppText';
@@ -14,7 +16,7 @@ import {
   Bot,
   TrendingUp,
 } from 'lucide-react-native';
-import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem, LoggedDailySupplement } from './src/types';
+import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem, LoggedDailySupplement, WorkoutEntry } from './src/types';
 import {
   loadUserProfile,
   saveUserProfile,
@@ -28,6 +30,10 @@ import {
   saveDailySupplements,
   setSupplementTaken,
   loadReminderSettings,
+  addWorkoutToDay,
+  removeWorkoutFromDay,
+  loadWeightHistory,
+  getAllDailyLogs,
 } from './src/storage/storage';
 import {
   initNotificationService,
@@ -40,6 +46,7 @@ import {
 import { getDefaultProfile } from './src/utils/calculator';
 import { OnboardingModal } from './src/components/OnboardingModal';
 import { getTodayDateString } from './src/utils/dateUtils';
+import { calculateLoggingStreak } from './src/utils/streak';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { FoodLogScreen } from './src/screens/FoodLogScreen';
 import { ProgressScreen } from './src/screens/ProgressScreen';
@@ -47,6 +54,8 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { SupplementsScreen } from './src/screens/SupplementsScreen';
 import { CoachScreen } from './src/screens/CoachScreen';
 import { AddFoodSheet } from './src/components/addfood/AddFoodSheet';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { ScreenTransitionView } from './src/components/ScreenTransitionView';
 import { I18nProvider } from './src/i18n/I18nContext';
 import { translate } from './src/i18n/strings';
 import { theme } from './src/theme';
@@ -57,9 +66,11 @@ type TemporaryScreen = 'none' | 'profile' | 'supplements';
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <FitTrackApp />
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <FitTrackApp />
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 
@@ -76,7 +87,9 @@ function FitTrackApp() {
     meals: [],
     waterGlasses: 0,
     steps: 0,
+    workouts: [],
   });
+  const [streak, setStreak] = useState<number>(0);
   const [initialMealForAdd, setInitialMealForAdd] = useState<MealType>('breakfast');
   const [supplementRoutine, setSupplementRoutine] = useState<SupplementRoutineItem[]>([]);
 
@@ -93,6 +106,19 @@ function FitTrackApp() {
   const language = appLanguage;
   const t = (str: string) => translate(language, str);
 
+  const refreshStreak = async () => {
+    try {
+      const [allLogs, weights] = await Promise.all([
+        getAllDailyLogs(),
+        loadWeightHistory(),
+      ]);
+      const res = calculateLoggingStreak(allLogs, weights);
+      setStreak(res.currentStreak);
+    } catch (e) {
+      console.warn('Error calculating streak:', e);
+    }
+  };
+
   // Load initial profile and daily log
   useEffect(() => {
     async function init() {
@@ -105,6 +131,7 @@ function FitTrackApp() {
       setLog(l);
       const initialRoutine = await loadSupplementRoutine();
       setSupplementRoutine(initialRoutine);
+      await refreshStreak();
 
       // Reconcile reminders safely at startup WITHOUT requesting permission
       if (isNotificationSupported()) {
@@ -124,14 +151,43 @@ function FitTrackApp() {
     init();
   }, []);
 
-  // Reload log whenever date changes
+  // Reload log whenever date changes with cancellation to prevent race conditions
   useEffect(() => {
+    let isCancelled = false;
     async function fetchDateLog() {
       const l = await loadDailyLog(selectedDate);
-      setLog(l);
+      if (!isCancelled) {
+        setLog(l);
+        await refreshStreak();
+      }
     }
     fetchDateLog();
+    return () => {
+      isCancelled = true;
+    };
   }, [selectedDate]);
+
+  // Handle Android hardware back button
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const onHardwareBack = () => {
+      if (addSheetConfig.visible) {
+        setAddSheetConfig((prev) => ({ ...prev, visible: false }));
+        return true;
+      }
+      if (tempScreen !== 'none') {
+        setTempScreen('none');
+        return true;
+      }
+      if (activeTab !== 'today') {
+        setActiveTab('today');
+        return true;
+      }
+      return false;
+    };
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
+    return () => subscription.remove();
+  }, [addSheetConfig.visible, tempScreen, activeTab]);
 
   // Handlers
   const handleUpdateWater = async (delta: number) => {
@@ -148,6 +204,7 @@ function FitTrackApp() {
     if (selectedDate === targetDate) {
       setLog(updated);
     }
+    await refreshStreak();
   };
 
   const handleUpdateMeal = async (meal: LoggedMeal) => {
@@ -158,29 +215,40 @@ function FitTrackApp() {
   const handleRemoveMeal = async (mealId: string) => {
     const updated = await removeMealFromDay(selectedDate, mealId);
     setLog(updated);
+    await refreshStreak();
   };
 
   const handleSaveProfile = async (newProfile: UserProfile) => {
-    const prevLanguage = language;
-    await saveUserProfile(newProfile);
-    setProfile(newProfile);
-    const nextLanguage = newProfile.language || 'en';
-    setAppLanguage(nextLanguage);
-    if (prevLanguage !== nextLanguage) {
-      await reconcileNotificationLanguage(nextLanguage, supplementRoutine);
+    try {
+      const prevLanguage = language;
+      await saveUserProfile(newProfile);
+      setProfile(newProfile);
+      const nextLanguage = newProfile.language || 'en';
+      setAppLanguage(nextLanguage);
+      if (prevLanguage !== nextLanguage) {
+        await reconcileNotificationLanguage(nextLanguage, supplementRoutine);
+      }
+      setTempScreen('none');
+      setActiveTab('today');
+      setSelectedDate(getTodayDateString());
+    } catch (err) {
+      console.error('Error saving user profile:', err);
+      Alert.alert(t('Save Error'), t('Could not save your profile changes. Please try again.'));
     }
-    setTempScreen('none');
-    setActiveTab('today');
-    setSelectedDate(getTodayDateString());
   };
 
   const handleLanguageChange = async (nextLanguage: AppLanguage) => {
     if (language === nextLanguage) return;
-    const updated = { ...profile, language: nextLanguage };
-    await saveUserProfile(updated);
-    setProfile(updated);
-    setAppLanguage(nextLanguage);
-    await reconcileNotificationLanguage(nextLanguage, supplementRoutine);
+    try {
+      const updated = { ...profile, language: nextLanguage };
+      await saveUserProfile(updated);
+      setProfile(updated);
+      setAppLanguage(nextLanguage);
+      await reconcileNotificationLanguage(nextLanguage, supplementRoutine);
+    } catch (err) {
+      console.error('Error changing language:', err);
+      Alert.alert(t('Save Error'), t('Could not save language preference. Please try again.'));
+    }
   };
 
   const handleUpdateDailySupplements = async (items: LoggedDailySupplement[]) => {
@@ -216,6 +284,37 @@ function FitTrackApp() {
     if (selectedDate > getTodayDateString()) return;
     const updated = await setSupplementTaken(selectedDate, id, taken);
     setLog(updated);
+  };
+
+  const handleAddWorkout = async (workout: WorkoutEntry, targetDate: string) => {
+    if (targetDate > getTodayDateString()) return;
+    const updated = await addWorkoutToDay(targetDate, workout);
+    if (selectedDate === targetDate) {
+      setLog(updated);
+    }
+    await refreshStreak();
+  };
+
+  const handleDeleteWorkout = async (workoutId: string) => {
+    const updated = await removeWorkoutFromDay(selectedDate, workoutId);
+    setLog(updated);
+    await refreshStreak();
+  };
+
+  const handleRestoreComplete = async () => {
+    const p = await loadUserProfile();
+    setProfile(p);
+    const nextLang = p.language || 'en';
+    setAppLanguage(nextLang);
+    const routine = await loadSupplementRoutine();
+    setSupplementRoutine(routine);
+    const l = await loadDailyLog(selectedDate);
+    setLog(l);
+    await refreshStreak();
+    if (isNotificationSupported()) {
+      const remSettings = await loadReminderSettings();
+      await syncAllReminders(remSettings, routine, nextLang);
+    }
   };
 
   const handleNavigateToMeals = (targetMeal?: MealType) => {
@@ -266,7 +365,10 @@ function FitTrackApp() {
         <StatusBar style="dark" />
 
         {/* Main Screen Body */}
-        <View style={styles.main}>
+        <ScreenTransitionView
+          transitionKey={tempScreen !== 'none' ? tempScreen : activeTab}
+          style={styles.main}
+        >
           {/* Temporary Screen: Profile */}
           {tempScreen === 'profile' && (
             <ProfileScreen
@@ -275,6 +377,7 @@ function FitTrackApp() {
               supplementRoutine={supplementRoutine}
               onLanguageChange={handleLanguageChange}
               onSaveProfile={handleSaveProfile}
+              onRestoreComplete={handleRestoreComplete}
               onBack={() => setTempScreen('none')}
             />
           )}
@@ -299,12 +402,15 @@ function FitTrackApp() {
               profile={profile}
               log={log}
               supplementRoutine={supplementRoutine}
+              streak={streak}
               onToggleSupplement={handleToggleSupplement}
               onUpdateWater={handleUpdateWater}
               onNavigateToMeals={handleNavigateToMeals}
               onOpenAddFood={handleOpenAddFoodToday}
               onOpenSupplements={() => setTempScreen('supplements')}
               onOpenProfile={() => setTempScreen('profile')}
+              onAddWorkout={handleAddWorkout}
+              onDeleteWorkout={handleDeleteWorkout}
             />
           )}
 
@@ -333,7 +439,7 @@ function FitTrackApp() {
           {tempScreen === 'none' && activeTab === 'progress' && (
             <ProgressScreen profile={profile} />
           )}
-        </View>
+        </ScreenTransitionView>
 
         {/* Global AddFoodSheet for Today and quick actions */}
         <AddFoodSheet

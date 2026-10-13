@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   Platform,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
@@ -58,6 +59,28 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   const [activeMealType, setActiveMealType] = useState<MealType>(initialMealType);
   const [inspectingMeal, setInspectingMeal] = useState<LoggedMeal | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
+
+  // Handle Android hardware back press for dialogs
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const onBackPress = () => {
+      if (addSheetVisible) {
+        setAddSheetVisible(false);
+        return true;
+      }
+      if (calendarVisible) {
+        setCalendarVisible(false);
+        return true;
+      }
+      if (inspectingMeal) {
+        setInspectingMeal(null);
+        return true;
+      }
+      return false;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [addSheetVisible, calendarVisible, inspectingMeal]);
 
   const isToday = selectedDate === getTodayDateString();
   const isPast = selectedDate < getTodayDateString();

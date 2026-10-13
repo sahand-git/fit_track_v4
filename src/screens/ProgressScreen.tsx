@@ -6,7 +6,9 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
-  Alert
+  Alert,
+  Platform,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
@@ -50,12 +52,32 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
   const [inputNote, setInputNote] = useState('');
 
   useEffect(() => {
+    let isMounted = true;
     async function load() {
       const data = await loadWeightHistory();
-      setHistory(data);
+      if (isMounted) {
+        setHistory(data);
+      }
     }
     load();
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  // Handle Android back button when modal is open
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const onBackPress = () => {
+      if (modalVisible) {
+        setModalVisible(false);
+        return true;
+      }
+      return false;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [modalVisible]);
 
   const currentWeight = history.length > 0 
     ? history[history.length - 1].weightKg 

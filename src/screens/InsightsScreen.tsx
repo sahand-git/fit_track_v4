@@ -35,9 +35,11 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
   const [selectedDayIdx, setSelectedDayIdx] = useState<number | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadPastWeek() {
       const dates = getPastDates(7);
       const logsMap = await loadLogsForDates(dates);
+      if (!isMounted) return;
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const parsed = dates.map((d) => {
         const dateObj = parseLocalDateString(d);
@@ -48,10 +50,15 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
           dayLabel,
         };
       });
-      setDaysLogs(parsed);
-      setSelectedDayIdx(parsed.length - 1);
+      if (isMounted) {
+        setDaysLogs(parsed);
+        setSelectedDayIdx(parsed.length - 1);
+      }
     }
     loadPastWeek();
+    return () => {
+      isMounted = false;
+    };
   }, [language]);
 
   const calorieTarget = profile?.targetCalories || 2000;

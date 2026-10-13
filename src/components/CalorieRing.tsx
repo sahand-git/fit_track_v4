@@ -1,15 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Animated,
-} from 'react-native';
-import { AppText as Text } from './AppText';
+import React, { useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
+import { AppText as Text } from './AppText';
+import { AnimatedCount } from './AnimatedCount';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import { isReducedMotion } from '../utils/motion';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface CalorieRingProps {
   consumed: number;
@@ -33,29 +38,25 @@ export const CalorieRing: React.FC<CalorieRingProps> = ({
 
   // Calorie percentage
   const calorieRatio = target > 0 ? Math.min(consumed / target, 1) : 0;
-  const [animatedRatio, setAnimatedRatio] = useState(calorieRatio);
-  const ratioAnim = useRef(new Animated.Value(calorieRatio)).current;
+  const progress = useSharedValue(calorieRatio);
 
   useEffect(() => {
     if (isReducedMotion()) {
-      setAnimatedRatio(calorieRatio);
-      return;
+      progress.value = calorieRatio;
+    } else {
+      progress.value = withTiming(calorieRatio, {
+        duration: 350,
+        easing: Easing.out(Easing.cubic),
+      });
     }
-    const listenerId = ratioAnim.addListener(({ value }) => {
-      setAnimatedRatio(value);
-    });
-    Animated.timing(ratioAnim, {
-      toValue: calorieRatio,
-      duration: 350,
-      useNativeDriver: false,
-    }).start();
-
-    return () => {
-      ratioAnim.removeListener(listenerId);
-    };
   }, [calorieRatio]);
 
-  const calorieOffset = circumference - animatedRatio * circumference;
+  const animatedCircleProps = useAnimatedProps(() => {
+    'worklet';
+    return {
+      strokeDashoffset: circumference - progress.value * circumference,
+    };
+  });
 
   const remaining = Math.max(0, target - consumed);
   const isOver = consumed > target;
@@ -74,8 +75,8 @@ export const CalorieRing: React.FC<CalorieRingProps> = ({
             fill="none"
           />
 
-          {/* Botanical Green Progress Arc */}
-          <Circle
+          {/* Botanical Green Progress Arc (Driven natively via Reanimated) */}
+          <AnimatedCircle
             cx={size / 2}
             cy={size / 2}
             r={radius}
@@ -83,17 +84,18 @@ export const CalorieRing: React.FC<CalorieRingProps> = ({
             strokeWidth={strokeWidth}
             fill="none"
             strokeDasharray={`${circumference}`}
-            strokeDashoffset={calorieOffset}
+            animatedProps={animatedCircleProps}
             strokeLinecap="round"
             transform={`rotate(-90 ${size / 2} ${size / 2})`}
           />
         </Svg>
 
-        {/* Center Metrics: Natural, calm typography */}
+        {/* Center Metrics: Natural, calm typography with count-up */}
         <View style={styles.centerContent}>
-          <Text style={[styles.remainingValue, isOver && { color: theme.colors.accent }]}>
-            {remaining.toLocaleString()}
-          </Text>
+          <AnimatedCount
+            value={remaining}
+            style={[styles.remainingValue, isOver && { color: theme.colors.accent }]}
+          />
           <Text style={styles.remainingLabel}>
             {isOver ? t('kcal over budget') : t('kcal remaining')}
           </Text>
@@ -103,16 +105,17 @@ export const CalorieRing: React.FC<CalorieRingProps> = ({
       {/* 3-Point Calorie Ledger: Consumed | Remaining | Daily Target */}
       <View style={styles.ledgerRow}>
         <View style={styles.ledgerCol}>
-          <Text style={styles.ledgerVal}>{consumed.toLocaleString()}</Text>
+          <AnimatedCount value={consumed} style={styles.ledgerVal} />
           <Text style={styles.ledgerLbl}>{t('Consumed')}</Text>
         </View>
 
         <View style={styles.ledgerDivider} />
 
         <View style={styles.ledgerCol}>
-          <Text style={[styles.ledgerVal, isOver && { color: theme.colors.accent }]}>
-            {remaining.toLocaleString()}
-          </Text>
+          <AnimatedCount
+            value={remaining}
+            style={[styles.ledgerVal, isOver && { color: theme.colors.accent }]}
+          />
           <Text style={styles.ledgerLbl}>
             {isOver ? t('Over') : t('Remaining')}
           </Text>

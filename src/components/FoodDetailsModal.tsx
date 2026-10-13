@@ -83,7 +83,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
         <View style={styles.sheet}>
           {/* Header */}

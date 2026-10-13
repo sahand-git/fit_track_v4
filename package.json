@@ -6,14 +6,19 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.27",
     "expo-camera": "~57.0.6",
+    "expo-document-picker": "~57.0.3",
+    "expo-file-system": "~57.0.7",
     "expo-haptics": "~57.0.3",
     "expo-image-picker": "~57.0.20",
     "expo-notifications": "~57.0.22",
+    "expo-secure-store": "~57.0.4",
+    "expo-sharing": "~57.0.23",
     "expo-status-bar": "~57.0.1",
     "lucide-react-native": "^1.52.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4",
     "react-native-web": "^0.21.2"
@@ -26,7 +31,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "npx tsx src/utils/idUtils.test.ts && npx tsx src/utils/supplementUtils.test.ts && npx tsx src/utils/supplementDailyFlow.test.ts && npx tsx src/utils/backup.test.ts && npx tsx src/utils/workout.test.ts && npx tsx src/utils/streak.test.ts && npx tsx src/utils/geminiRetry.test.ts && npx tsx src/utils/searchNormalize.test.ts"
   },
   "private": true
 }

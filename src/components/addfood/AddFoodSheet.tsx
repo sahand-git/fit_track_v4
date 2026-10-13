@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   Image,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../AppText';
@@ -40,8 +41,10 @@ import {
 } from '../../services/plateAnalysisService';
 import { GeminiKeyManager } from '../GeminiKeyManager';
 import { AiReview } from './AiReview';
+import { SaveSuccessOverlay } from '../SaveSuccessOverlay';
 import { useLanguage } from '../../i18n/I18nContext';
 import { translate } from '../../i18n/strings';
+import { normalizeSearch } from '../../utils/localeUtils';
 import { formatDisplayDate, getTodayDateString } from '../../utils/dateUtils';
 import { theme } from '../../theme';
 import * as Haptics from 'expo-haptics';
@@ -102,6 +105,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [describeLoading, setDescribeLoading] = useState(false);
   const [describeError, setDescribeError] = useState<string | null>(null);
   const [describeResult, setDescribeResult] = useState<PlateAnalysisResult | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const isToday = date === getTodayDateString();
   const isFuture = date > getTodayDateString();
@@ -195,7 +199,11 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     };
 
     onAddMeal(meal, date);
-    handleClose();
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+      handleClose();
+    }, 450);
   };
 
   // --- AI PHOTO HANDLERS ---
@@ -279,17 +287,28 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
   const handleLogAllAiItems = (meals: LoggedMeal[]) => {
     meals.forEach((m) => onAddMeal(m, date));
+    setShowSuccess(true);
     setTimeout(() => {
+      setShowSuccess(false);
       handleClose();
-    }, 400);
+    }, 450);
   };
 
-  // Filtered Food Search
-  const filteredFoods = VERIFIED_FOOD_DATABASE.filter(
-    (f) =>
-      f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (f.category && f.category.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Filtered Food Search with Arabic/Sorani variant normalization
+  const normalizedQuery = normalizeSearch(searchQuery);
+  const filteredFoods = VERIFIED_FOOD_DATABASE.filter((f) => {
+    if (!normalizedQuery) return true;
+    const normName = normalizeSearch(f.name);
+    const normCategory = f.category ? normalizeSearch(f.category) : '';
+    const normBrand = f.brand ? normalizeSearch(f.brand) : '';
+    const localizedName = normalizeSearch(t(f.name));
+    return (
+      normName.includes(normalizedQuery) ||
+      normCategory.includes(normalizedQuery) ||
+      normBrand.includes(normalizedQuery) ||
+      localizedName.includes(normalizedQuery)
+    );
+  });
 
   const mealCategories: { key: MealType; label: string }[] = [
     { key: 'breakfast', label: t('Breakfast') },
@@ -305,7 +324,12 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-        <View style={[styles.sheetContainer, { paddingBottom: Math.max(theme.spacing.md, insets.bottom + 12) }]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ width: '100%', height: '92%', justifyContent: 'flex-end' }}
+        >
+          <View style={[styles.sheetContainer, { height: '100%', paddingBottom: Math.max(theme.spacing.md, insets.bottom + 12) }]}>
+          <SaveSuccessOverlay visible={showSuccess} message={t('Food Logged')} />
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
@@ -761,8 +785,9 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
             </ScrollView>
           )}
         </View>
-      </View>
-    </Modal>
+      </KeyboardAvoidingView>
+    </View>
+  </Modal>
   );
 };
 

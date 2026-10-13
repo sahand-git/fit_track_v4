@@ -7,6 +7,9 @@ import {
   View,
   Modal,
   Alert,
+  Platform,
+  BackHandler,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -49,6 +52,12 @@ import {
   CatalogSupplementItem,
 } from '../data/supplementCatalog';
 import { theme } from '../theme';
+import Animated from 'react-native-reanimated';
+import {
+  getListLayoutTransition,
+  getItemEnterAnimation,
+  getItemExitAnimation,
+} from '../utils/reanimatedMotion';
 import * as Haptics from 'expo-haptics';
 
 interface SupplementsScreenProps {
@@ -141,6 +150,28 @@ export function SupplementsScreen({
 
   // Reminders Modal state
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
+
+  // Handle Android hardware back press for sub-modals
+  React.useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const onBackPress = () => {
+      if (itemToDelete) {
+        setItemToDelete(null);
+        return true;
+      }
+      if (modalVisible) {
+        setModalVisible(false);
+        return true;
+      }
+      if (reminderModalVisible) {
+        setReminderModalVisible(false);
+        return true;
+      }
+      return false;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [itemToDelete, modalVisible, reminderModalVisible]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -462,8 +493,13 @@ export function SupplementsScreen({
       }
     }
 
-    await onUpdateRoutine(newRoutine);
-    showToast(t('Current day saved as repeating routine.'));
+    try {
+      await onUpdateRoutine(newRoutine);
+      showToast(t('Current day saved as repeating routine.'));
+    } catch (err) {
+      console.error('Error saving routine:', err);
+      showToast(t('Failed to save routine. Please try again.'));
+    }
   };
 
   const bottomPadding = Math.max(112, insets.bottom + 76);
@@ -669,8 +705,11 @@ export function SupplementsScreen({
                   const isLast = idx === slotItems.length - 1;
 
                   return (
-                    <View
+                    <Animated.View
                       key={item.id}
+                      entering={getItemEnterAnimation()}
+                      exiting={getItemExitAnimation()}
+                      layout={getListLayoutTransition()}
                       style={[styles.itemRow, !isLast && styles.itemRowBorder]}
                     >
                       {/* Checkbox */}
@@ -766,7 +805,7 @@ export function SupplementsScreen({
                           </TouchableOpacity>
                         </View>
                       )}
-                    </View>
+                    </Animated.View>
                   );
                 })
               )}
@@ -792,7 +831,11 @@ export function SupplementsScreen({
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={[styles.modalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-          <View style={[styles.modalCard, { paddingBottom: Math.max(theme.spacing.lg, insets.bottom + 12) }]}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ width: '100%', justifyContent: 'flex-end' }}
+          >
+            <View style={[styles.modalCard, { paddingBottom: Math.max(theme.spacing.lg, insets.bottom + 12) }]}>
             {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
@@ -1096,8 +1139,9 @@ export function SupplementsScreen({
               </View>
             </ScrollView>
           </View>
-        </View>
-      </Modal>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
 
       {/* Floating in-app Toast Notification */}
       {toastMessage && (
