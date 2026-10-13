@@ -93,7 +93,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
     }
   };
 
-  const handleApplyRestore = async (mode: 'merge' | 'replace') => {
+  const executeRestore = async (mode: 'merge' | 'replace') => {
     if (!pendingBackup) return;
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -112,6 +112,26 @@ export const BackupModal: React.FC<BackupModalProps> = ({
         err?.message || t('Could not restore backup safely. Existing data was left untouched.')
       );
     }
+  };
+
+  const handleApplyRestore = async (mode: 'merge' | 'replace') => {
+    if (!pendingBackup) return;
+    if (mode === 'replace') {
+      Alert.alert(
+        t('Replace All Data?'),
+        t('This will replace your current fitness history with this backup file. Are you sure you want to proceed?'),
+        [
+          { text: t('Cancel'), style: 'cancel' },
+          {
+            text: t('Replace'),
+            style: 'destructive',
+            onPress: () => executeRestore(mode),
+          },
+        ]
+      );
+      return;
+    }
+    await executeRestore(mode);
   };
 
   return (

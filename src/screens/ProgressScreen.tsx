@@ -121,8 +121,21 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
 
   const handleDeleteEntry = async (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    const updated = await removeWeightEntry(id);
-    setHistory(updated);
+    Alert.alert(
+      t('Delete weight entry'),
+      t('Are you sure you want to delete this weight record?'),
+      [
+        { text: t('Cancel'), style: 'cancel' },
+        {
+          text: t('Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            const updated = await removeWeightEntry(id);
+            setHistory(updated);
+          },
+        },
+      ]
+    );
   };
 
   const renderChart = () => {

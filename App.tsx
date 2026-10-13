@@ -34,6 +34,7 @@ import {
   removeWorkoutFromDay,
   loadWeightHistory,
   getAllDailyLogs,
+  getRecentDailyLogs,
 } from './src/storage/storage';
 import {
   initNotificationService,
@@ -108,11 +109,11 @@ function FitTrackApp() {
 
   const refreshStreak = async () => {
     try {
-      const [allLogs, weights] = await Promise.all([
-        getAllDailyLogs(),
+      const [recentLogs, weights] = await Promise.all([
+        getRecentDailyLogs(90),
         loadWeightHistory(),
       ]);
-      const res = calculateLoggingStreak(allLogs, weights);
+      const res = calculateLoggingStreak(recentLogs, weights);
       setStreak(res.currentStreak);
     } catch (e) {
       console.warn('Error calculating streak:', e);
@@ -191,31 +192,49 @@ function FitTrackApp() {
 
   // Handlers
   const handleUpdateWater = async (delta: number) => {
-    const today = getTodayDateString();
-    const updated = await updateWater(today, delta);
-    if (selectedDate === today) {
+    if (selectedDate > getTodayDateString()) return;
+    try {
+      const updated = await updateWater(selectedDate, delta);
       setLog(updated);
+    } catch (err) {
+      console.error('Failed to update water:', err);
+      Alert.alert(t('Error'), t('Could not update water intake.'));
     }
   };
 
   const handleAddMeal = async (meal: LoggedMeal, targetDate: string) => {
     if (targetDate > getTodayDateString()) return;
-    const updated = await addMealToDay(targetDate, meal);
-    if (selectedDate === targetDate) {
-      setLog(updated);
+    try {
+      const updated = await addMealToDay(targetDate, meal);
+      if (selectedDate === targetDate) {
+        setLog(updated);
+      }
+      await refreshStreak();
+    } catch (err) {
+      console.error('Failed to add meal:', err);
+      Alert.alert(t('Error'), t('Failed to save meal.'));
     }
-    await refreshStreak();
   };
 
   const handleUpdateMeal = async (meal: LoggedMeal) => {
-    const updated = await updateMealInDay(selectedDate, meal);
-    setLog(updated);
+    try {
+      const updated = await updateMealInDay(selectedDate, meal);
+      setLog(updated);
+    } catch (err) {
+      console.error('Failed to update meal:', err);
+      Alert.alert(t('Error'), t('Failed to update meal.'));
+    }
   };
 
   const handleRemoveMeal = async (mealId: string) => {
-    const updated = await removeMealFromDay(selectedDate, mealId);
-    setLog(updated);
-    await refreshStreak();
+    try {
+      const updated = await removeMealFromDay(selectedDate, mealId);
+      setLog(updated);
+      await refreshStreak();
+    } catch (err) {
+      console.error('Failed to remove meal:', err);
+      Alert.alert(t('Error'), t('Failed to remove meal.'));
+    }
   };
 
   const handleSaveProfile = async (newProfile: UserProfile) => {
@@ -288,17 +307,27 @@ function FitTrackApp() {
 
   const handleAddWorkout = async (workout: WorkoutEntry, targetDate: string) => {
     if (targetDate > getTodayDateString()) return;
-    const updated = await addWorkoutToDay(targetDate, workout);
-    if (selectedDate === targetDate) {
-      setLog(updated);
+    try {
+      const updated = await addWorkoutToDay(targetDate, workout);
+      if (selectedDate === targetDate) {
+        setLog(updated);
+      }
+      await refreshStreak();
+    } catch (err) {
+      console.error('Failed to add workout:', err);
+      Alert.alert(t('Error'), t('Failed to save workout.'));
     }
-    await refreshStreak();
   };
 
   const handleDeleteWorkout = async (workoutId: string) => {
-    const updated = await removeWorkoutFromDay(selectedDate, workoutId);
-    setLog(updated);
-    await refreshStreak();
+    try {
+      const updated = await removeWorkoutFromDay(selectedDate, workoutId);
+      setLog(updated);
+      await refreshStreak();
+    } catch (err) {
+      console.error('Failed to delete workout:', err);
+      Alert.alert(t('Error'), t('Failed to delete workout.'));
+    }
   };
 
   const handleRestoreComplete = async () => {

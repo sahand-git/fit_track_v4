@@ -19,12 +19,12 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 interface CalorieRingProps {
   consumed: number;
   target: number;
-  proteinConsumed: number;
-  proteinTarget: number;
+  proteinConsumed?: number;
+  proteinTarget?: number;
   size?: number;
 }
 
-export const CalorieRing: React.FC<CalorieRingProps> = ({
+export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
   consumed,
   target,
   size = 200,
@@ -130,7 +130,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = ({
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   wrapper: {

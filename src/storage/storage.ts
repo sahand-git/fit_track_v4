@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile, DailyLog, LoggedMeal, SupplementCheck, SupplementRoutineItem, WorkoutEntry, FitTrackBackup, WeightEntry, ReminderSettings } from '../types';
 import { normalizeSupplementRoutine } from '../utils/supplementUtils';
 import { getDefaultProfile } from '../utils/calculator';
+import { getTodayDateString, addDaysToDateString } from '../utils/dateUtils';
 
 const PROFILE_KEY = '@fittrack_profile';
 const DAILY_LOG_PREFIX = '@fittrack_log_';
@@ -230,11 +231,12 @@ export async function setSupplementTaken(dateStr: string, itemId: string, taken:
     } else {
       // Daily supplements not initialized yet, seed from routine
       const routine = await loadSupplementRoutine();
-      const existingChecks = new Set((current.supplements || []).filter((c) => c.taken).map((c) => c.itemId));
+      const existingChecksMap = new Map((current.supplements || []).map((c) => [c.itemId, c]));
       if (routine && routine.length > 0) {
         updatedDailySupplements = routine.map((r) => {
           const isTarget = r.id === itemId;
-          const isTaken = isTarget ? taken : existingChecks.has(r.id);
+          const existingCheck = existingChecksMap.get(r.id);
+          const isTaken = isTarget ? taken : !!existingCheck?.taken;
           return {
             id: r.id,
             routineItemId: r.id,
@@ -246,7 +248,11 @@ export async function setSupplementTaken(dateStr: string, itemId: string, taken:
             note: r.note,
             time: r.time,
             taken: isTaken,
-            takenAt: isTaken ? (isTarget ? takenAt : new Date().toISOString()) : undefined,
+            takenAt: isTaken
+              ? isTarget
+                ? takenAt
+                : existingCheck?.takenAt || new Date().toISOString()
+              : undefined,
           };
         });
       } else {
@@ -414,18 +420,68 @@ export async function getAllDailyLogs(): Promise<Record<string, DailyLog>> {
   try {
     const allKeys = await AsyncStorage.getAllKeys();
     const logKeys = allKeys.filter((k) => k.startsWith(DAILY_LOG_PREFIX));
+    if (logKeys.length === 0) return {};
+
+    const pairs = await AsyncStorage.multiGet(logKeys);
     const result: Record<string, DailyLog> = {};
 
-    await Promise.all(
-      logKeys.map(async (key) => {
-        const dateStr = key.replace(DAILY_LOG_PREFIX, '');
-        const log = await loadDailyLog(dateStr);
-        result[dateStr] = log;
-      })
-    );
+    for (const [key, raw] of pairs) {
+      if (!raw) continue;
+      const dateStr = key.replace(DAILY_LOG_PREFIX, '');
+      const parsed = safeParseObject<DailyLog>(raw, { date: dateStr, meals: [], waterGlasses: 0, steps: 0 });
+      result[dateStr] = {
+        ...parsed,
+        date: dateStr,
+        meals: Array.isArray(parsed.meals) ? parsed.meals : [],
+        waterGlasses: typeof parsed.waterGlasses === 'number' && !isNaN(parsed.waterGlasses) ? Math.max(0, parsed.waterGlasses) : 0,
+        steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, parsed.steps) : 0,
+        supplements: Array.isArray(parsed.supplements) ? parsed.supplements : [],
+        dailySupplements: Array.isArray(parsed.dailySupplements) ? parsed.dailySupplements : undefined,
+        workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
+      };
+    }
     return result;
   } catch (err) {
     console.error('Error fetching all daily logs:', err);
+    return {};
+  }
+}
+
+/**
+ * Loads recent daily logs up to `days` back from today using a single batch query.
+ * Prevents loading years of historical data into memory during streak calculations.
+ */
+export async function getRecentDailyLogs(days: number = 90): Promise<Record<string, DailyLog>> {
+  try {
+    const today = getTodayDateString();
+    const dates: string[] = [];
+    let cur = today;
+    for (let i = 0; i < days; i++) {
+      dates.push(cur);
+      cur = addDaysToDateString(cur, -1);
+    }
+    const keys = dates.map((d) => `${DAILY_LOG_PREFIX}${d}`);
+    const pairs = await AsyncStorage.multiGet(keys);
+    const result: Record<string, DailyLog> = {};
+
+    for (const [key, raw] of pairs) {
+      if (!raw) continue;
+      const dateStr = key.replace(DAILY_LOG_PREFIX, '');
+      const parsed = safeParseObject<DailyLog>(raw, { date: dateStr, meals: [], waterGlasses: 0, steps: 0 });
+      result[dateStr] = {
+        ...parsed,
+        date: dateStr,
+        meals: Array.isArray(parsed.meals) ? parsed.meals : [],
+        waterGlasses: typeof parsed.waterGlasses === 'number' && !isNaN(parsed.waterGlasses) ? Math.max(0, parsed.waterGlasses) : 0,
+        steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, parsed.steps) : 0,
+        supplements: Array.isArray(parsed.supplements) ? parsed.supplements : [],
+        dailySupplements: Array.isArray(parsed.dailySupplements) ? parsed.dailySupplements : undefined,
+        workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
+      };
+    }
+    return result;
+  } catch (err) {
+    console.error('Error fetching recent daily logs:', err);
     return {};
   }
 }
@@ -435,30 +491,50 @@ export async function restoreAllData(
   mode: 'replace' | 'merge'
 ): Promise<void> {
   if (mode === 'replace') {
-    // 1. Clear all existing log keys
+    // Stash snapshot in memory before performing destructive operations
     const allKeys = await AsyncStorage.getAllKeys();
     const existingLogKeys = allKeys.filter((k) => k.startsWith(DAILY_LOG_PREFIX));
-    if (existingLogKeys.length > 0) {
-      await AsyncStorage.multiRemove(existingLogKeys);
-    }
+    const previousSnapshotPairs = existingLogKeys.length > 0 ? await AsyncStorage.multiGet(existingLogKeys) : [];
+    const previousProfile = await AsyncStorage.getItem(PROFILE_KEY);
+    const previousRoutine = await AsyncStorage.getItem(SUPPLEMENT_ROUTINE_KEY);
+    const previousWeight = await AsyncStorage.getItem(WEIGHT_HISTORY_KEY);
+    const previousReminders = await AsyncStorage.getItem(REMINDER_SETTINGS_KEY);
 
-    // 2. Write profile
-    await saveUserProfile(backup.profile);
+    try {
+      // 1. Clear all existing log keys
+      if (existingLogKeys.length > 0) {
+        await AsyncStorage.multiRemove(existingLogKeys);
+      }
 
-    // 3. Write each daily log
-    for (const [dateStr, dayLog] of Object.entries(backup.dailyLogs || {})) {
-      await saveDailyLog({ ...dayLog, date: dateStr });
-    }
+      // 2. Write profile
+      await saveUserProfile(backup.profile);
 
-    // 4. Write supplement routine
-    await saveSupplementRoutine(backup.supplementRoutine || []);
+      // 3. Write each daily log
+      for (const [dateStr, dayLog] of Object.entries(backup.dailyLogs || {})) {
+        await saveDailyLog({ ...dayLog, date: dateStr });
+      }
 
-    // 5. Write weight history
-    await AsyncStorage.setItem(WEIGHT_HISTORY_KEY, JSON.stringify(backup.weightHistory || []));
+      // 4. Write supplement routine
+      await saveSupplementRoutine(backup.supplementRoutine || []);
 
-    // 6. Write reminder settings if present
-    if (backup.reminderSettings) {
-      await saveReminderSettings(backup.reminderSettings);
+      // 5. Write weight history
+      await AsyncStorage.setItem(WEIGHT_HISTORY_KEY, JSON.stringify(backup.weightHistory || []));
+
+      // 6. Write reminder settings if present
+      if (backup.reminderSettings) {
+        await saveReminderSettings(backup.reminderSettings);
+      }
+    } catch (restoreErr) {
+      console.error('Restore failed midway, attempting rollback:', restoreErr);
+      // Rollback to prior snapshot
+      if (previousSnapshotPairs.length > 0) {
+        await AsyncStorage.multiSet(previousSnapshotPairs as [string, string][]);
+      }
+      if (previousProfile) await AsyncStorage.setItem(PROFILE_KEY, previousProfile);
+      if (previousRoutine) await AsyncStorage.setItem(SUPPLEMENT_ROUTINE_KEY, previousRoutine);
+      if (previousWeight) await AsyncStorage.setItem(WEIGHT_HISTORY_KEY, previousWeight);
+      if (previousReminders) await AsyncStorage.setItem(REMINDER_SETTINGS_KEY, previousReminders);
+      throw new Error('Failed to restore backup data. Previous data has been preserved.');
     }
   } else {
     // MERGE mode

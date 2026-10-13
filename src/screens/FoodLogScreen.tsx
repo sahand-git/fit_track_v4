@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Platform,
   BackHandler,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
@@ -118,7 +119,18 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
 
   const handleDelete = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    onRemoveMeal(id);
+    Alert.alert(
+      t('Delete food item'),
+      t('Are you sure you want to delete this item?'),
+      [
+        { text: t('Cancel'), style: 'cancel' },
+        {
+          text: t('Delete'),
+          style: 'destructive',
+          onPress: () => onRemoveMeal(id),
+        },
+      ]
+    );
   };
 
   const handleUpdateInspectingServings = (newServings: number) => {
@@ -332,7 +344,10 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
           ]}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-            openAddSheet('breakfast');
+            const currentHour = new Date().getHours();
+            const defaultMeal: MealType =
+              currentHour < 11 ? 'breakfast' : currentHour < 16 ? 'lunch' : currentHour < 21 ? 'dinner' : 'snack';
+            openAddSheet(defaultMeal);
           }}
           activeOpacity={0.88}
           accessibilityLabel={t('Add food')}

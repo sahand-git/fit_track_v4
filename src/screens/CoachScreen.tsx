@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bot, Send, Sparkles } from 'lucide-react-native';
 import { DailyLog, UserProfile } from '../types';
@@ -32,6 +33,8 @@ interface Message {
   text: string;
 }
 
+const COACH_HISTORY_KEY = '@fittrack_coach_history';
+
 export function CoachScreen({ profile, log }: CoachScreenProps) {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
@@ -40,6 +43,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const bottomPadding = Math.max(100, insets.bottom + 76);
 
@@ -50,30 +54,66 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
     fat: acc.fat + meal.fat,
   }), { calories: 0, protein: 0, carbs: 0, fat: 0 }), [log.meals]);
 
+  const burnedCalories = useMemo(
+    () => (log.workouts || []).reduce((sum, w) => sum + (w.caloriesBurned || 0), 0),
+    [log.workouts]
+  );
+
   const t = (value: string) => translate(language, value);
 
-  React.useEffect(() => {
-    getStoredGeminiApiKey().then(key => setHasKey(Boolean(key)));
+  // Restore persisted chat history on mount
+  useEffect(() => {
+    getStoredGeminiApiKey().then((key) => setHasKey(Boolean(key)));
+    AsyncStorage.getItem(COACH_HISTORY_KEY).then((raw) => {
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMessages(parsed);
+          }
+        } catch {
+          // Graceful fallback
+        }
+      }
+    });
   }, []);
+
+  // Persist messages whenever chat changes
+  useEffect(() => {
+    if (messages.length > 0) {
+      AsyncStorage.setItem(COACH_HISTORY_KEY, JSON.stringify(messages.slice(-20))).catch(() => {});
+    }
+  }, [messages]);
+
+  // Auto-scroll to bottom on new messages or loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [messages, busy]);
 
   const send = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
     setInput('');
     setError('');
-    setMessages(current => [...current, { role: 'user', text: trimmed }]);
+    setMessages((current) => [...current, { role: 'user', text: trimmed }]);
     setBusy(true);
     try {
       const languageName = language === 'ar' ? 'Arabic' : language === 'ckb' ? 'Sorani Kurdish' : 'English';
       const transcript = [...messages, { role: 'user' as const, text: trimmed }].slice(-8).map(item => `${item.role === 'user' ? 'User' : 'Coach'}: ${item.text}`).join('\n');
+      const workoutSummary = (log.workouts || []).map((w) => `${w.name} (${w.durationMinutes}min, ${w.caloriesBurned}kcal)`).join(', ');
       const reply = await askNutritionCoach(transcript, {
         name: profile.name,
         goal: profile.goal,
         targetCalories: profile.targetCalories,
         ...totals,
         waterGlasses: log.waterGlasses,
-      }, languageName);
-      setMessages(current => [...current, { role: 'coach', text: reply }]);
+        burnedCalories,
+        ...(workoutSummary ? { workouts: workoutSummary } : {}),
+      } as any, languageName);
+      setMessages((current) => [...current, { role: 'coach', text: reply }]);
     } catch (err: any) {
       if (err instanceof GeminiError) {
         setError(t(getDefaultMessageForKind(err.kind)));
@@ -110,7 +150,11 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
         </View>
       )}
 
-      <ScrollView style={styles.messages} contentContainerStyle={styles.messagesContent}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.messages}
+        contentContainerStyle={styles.messagesContent}
+      >
         {messages.length === 0 ? (
           <View style={styles.welcomeCard}>
             <Sparkles size={22} color={theme.colors.secondary} />

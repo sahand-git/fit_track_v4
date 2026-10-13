@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
@@ -78,22 +79,36 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const floatingBottom = dockBottom + 66;
 
-  const consumedCalories = log.meals.reduce((sum, m) => sum + m.calories, 0);
-  const consumedProtein = log.meals.reduce((sum, m) => sum + m.protein, 0);
-  const consumedCarbs = log.meals.reduce((sum, m) => sum + m.carbs, 0);
-  const consumedFat = log.meals.reduce((sum, m) => sum + m.fat, 0);
+  const { consumedCalories, consumedProtein, consumedCarbs, consumedFat } = useMemo(() => {
+    return log.meals.reduce(
+      (acc, m) => ({
+        consumedCalories: acc.consumedCalories + m.calories,
+        consumedProtein: acc.consumedProtein + m.protein,
+        consumedCarbs: acc.consumedCarbs + m.carbs,
+        consumedFat: acc.consumedFat + m.fat,
+      }),
+      { consumedCalories: 0, consumedProtein: 0, consumedCarbs: 0, consumedFat: 0 }
+    );
+  }, [log.meals]);
 
-  const burnedCalories = (log.workouts || []).reduce((sum, w) => sum + (w.caloriesBurned || 0), 0);
+  const burnedCalories = useMemo(
+    () => (log.workouts || []).reduce((sum, w) => sum + (w.caloriesBurned || 0), 0),
+    [log.workouts]
+  );
+
   const effectiveCalorieTarget = profile.includeWorkoutsInCalorieBudget
     ? profile.targetCalories + burnedCalories
     : profile.targetCalories;
 
-  const mealTypes: { key: MealType; label: string }[] = [
-    { key: 'breakfast', label: t('Breakfast') },
-    { key: 'lunch', label: t('Lunch') },
-    { key: 'dinner', label: t('Dinner') },
-    { key: 'snack', label: t('Snacks') },
-  ];
+  const mealTypes: { key: MealType; label: string }[] = useMemo(
+    () => [
+      { key: 'breakfast', label: t('Breakfast') },
+      { key: 'lunch', label: t('Lunch') },
+      { key: 'dinner', label: t('Dinner') },
+      { key: 'snack', label: t('Snacks') },
+    ],
+    [language]
+  );
 
   const todayLabel = formatDisplayDate(log.date, language);
   const isFuture = log.date > getTodayDateString();
@@ -130,10 +145,18 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   const [showCelebration, setShowCelebration] = useState(false);
 
-  // Trigger celebration once per day when target is reached
+  // Trigger celebration once per day when target is reached appropriately
   useEffect(() => {
     async function checkGoalCelebration() {
-      if (effectiveCalorieTarget > 0 && consumedCalories >= effectiveCalorieTarget) {
+      if (effectiveCalorieTarget <= 0 || consumedCalories <= 0) return;
+
+      const isSurplusGoal = profile.goal === 'muscle_gain' || profile.goal === 'lean_bulk';
+      const isGoalMet = isSurplusGoal
+        ? consumedCalories >= effectiveCalorieTarget
+        : (consumedCalories >= effectiveCalorieTarget * 0.9 && consumedCalories <= effectiveCalorieTarget) ||
+          (consumedProtein >= profile.targetProtein && consumedCalories <= effectiveCalorieTarget);
+
+      if (isGoalMet) {
         try {
           const lastCelebrated = await AsyncStorage.getItem('@fittrack_last_celebrated_goal_date');
           if (lastCelebrated !== log.date) {
@@ -146,7 +169,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       }
     }
     checkGoalCelebration();
-  }, [consumedCalories, effectiveCalorieTarget, log.date]);
+  }, [consumedCalories, consumedProtein, effectiveCalorieTarget, profile.goal, profile.targetProtein, log.date]);
 
   const handleQuickAdd = (meal: MealType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -365,7 +388,18 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                        onDeleteWorkout(w.id);
+                        Alert.alert(
+                          t('Delete workout'),
+                          t('Are you sure you want to delete this workout?'),
+                          [
+                            { text: t('Cancel'), style: 'cancel' },
+                            {
+                              text: t('Delete'),
+                              style: 'destructive',
+                              onPress: () => onDeleteWorkout(w.id),
+                            },
+                          ]
+                        );
                       }}
                       style={styles.deleteWorkoutBtn}
                       accessibilityLabel={t('Delete workout')}

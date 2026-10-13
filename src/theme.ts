@@ -48,7 +48,7 @@ export const theme = {
     // Typography — Charcoal & Muted Sage
     textPrimary: '#1F2421',      // Charcoal text
     textSecondary: '#555F58',    // Muted charcoal / slate
-    textMuted: '#7E8A82',        // Muted sage grey
+    textMuted: '#54635B',        // Muted sage grey (passes WCAG AA 4.5:1 against warm ivory)
     textInverted: '#FFFFFF',     // Contrast white
     
     // Primary Brand — Deep Forest Green

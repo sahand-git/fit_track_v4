@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -46,6 +46,7 @@ import { useLanguage } from '../../i18n/I18nContext';
 import { translate } from '../../i18n/strings';
 import { normalizeSearch } from '../../utils/localeUtils';
 import { formatDisplayDate, getTodayDateString } from '../../utils/dateUtils';
+import { createUniqueId } from '../../utils/idUtils';
 import { theme } from '../../theme';
 import * as Haptics from 'expo-haptics';
 
@@ -182,7 +183,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
     const meal: LoggedMeal = {
-      id: `meal_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: createUniqueId('meal'),
       foodId: selectedFood.id,
       name: selectedFood.name,
       brand: selectedFood.brand,
@@ -294,28 +295,33 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     }, 450);
   };
 
-  // Filtered Food Search with Arabic/Sorani variant normalization
-  const normalizedQuery = normalizeSearch(searchQuery);
-  const filteredFoods = VERIFIED_FOOD_DATABASE.filter((f) => {
-    if (!normalizedQuery) return true;
-    const normName = normalizeSearch(f.name);
-    const normCategory = f.category ? normalizeSearch(f.category) : '';
-    const normBrand = f.brand ? normalizeSearch(f.brand) : '';
-    const localizedName = normalizeSearch(t(f.name));
-    return (
-      normName.includes(normalizedQuery) ||
-      normCategory.includes(normalizedQuery) ||
-      normBrand.includes(normalizedQuery) ||
-      localizedName.includes(normalizedQuery)
-    );
-  });
+  // Filtered Food Search with Arabic/Sorani variant normalization (memoized)
+  const filteredFoods = useMemo(() => {
+    const normalizedQuery = normalizeSearch(searchQuery);
+    if (!normalizedQuery) return VERIFIED_FOOD_DATABASE;
+    return VERIFIED_FOOD_DATABASE.filter((f) => {
+      const normName = normalizeSearch(f.name);
+      const normCategory = f.category ? normalizeSearch(f.category) : '';
+      const normBrand = f.brand ? normalizeSearch(f.brand) : '';
+      const localizedName = normalizeSearch(t(f.name));
+      return (
+        normName.includes(normalizedQuery) ||
+        normCategory.includes(normalizedQuery) ||
+        normBrand.includes(normalizedQuery) ||
+        localizedName.includes(normalizedQuery)
+      );
+    });
+  }, [searchQuery, language]);
 
-  const mealCategories: { key: MealType; label: string }[] = [
-    { key: 'breakfast', label: t('Breakfast') },
-    { key: 'lunch', label: t('Lunch') },
-    { key: 'dinner', label: t('Dinner') },
-    { key: 'snack', label: t('Snacks') },
-  ];
+  const mealCategories: { key: MealType; label: string }[] = useMemo(
+    () => [
+      { key: 'breakfast', label: t('Breakfast') },
+      { key: 'lunch', label: t('Lunch') },
+      { key: 'dinner', label: t('Dinner') },
+      { key: 'snack', label: t('Snacks') },
+    ],
+    [language]
+  );
 
   const headerTitle = isToday
     ? `${t('Add food')} · ${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))}`

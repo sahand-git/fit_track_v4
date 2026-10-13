@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { AppText as Text } from '../AppText';
 import { Sparkles, Plus, Check, Minus } from 'lucide-react-native';
@@ -33,13 +33,23 @@ export const AiReview: React.FC<AiReviewProps> = ({
   const language = useLanguage();
   const t = (str: string) => translate(language, str);
 
-  const [items, setItems] = useState<EditableItemState[]>(
+  const [items, setItems] = useState<EditableItemState[]>(() =>
     result.items.map((it) => ({
       item: it,
       currentGrams: it.grams || 100,
       isLogged: false,
     }))
   );
+
+  useEffect(() => {
+    setItems(
+      result.items.map((it) => ({
+        item: it,
+        currentGrams: it.grams || 100,
+        isLogged: false,
+      }))
+    );
+  }, [result]);
 
   const handleUpdateGrams = (index: number, newGrams: number) => {
     const val = Math.max(5, Math.min(2000, newGrams));

@@ -100,8 +100,8 @@ export interface FoodItem {
   barcode?: string;
   source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated';
   fiber?: number;
-  sugar?: number;
-  sugars?: number;
+  sugar?: number; // Canonical sugar content in grams
+  sugars?: number; // Maintained for database schema compatibility
   nutriScore?: string;
   sodium?: number; // mg
   potassium?: number; // mg

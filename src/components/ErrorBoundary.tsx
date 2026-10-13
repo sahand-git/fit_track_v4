@@ -103,9 +103,11 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.state.showDetails && (
               <View style={styles.detailsBox}>
                 <Text style={styles.errorText}>
-                  {this.state.error?.toString() || 'Unknown error'}
+                  {__DEV__
+                    ? (this.state.error?.toString() || 'Unknown error')
+                    : 'An unexpected application error occurred. Details have been logged securely.'}
                 </Text>
-                {this.state.errorInfo?.componentStack && (
+                {__DEV__ && this.state.errorInfo?.componentStack && (
                   <Text style={styles.stackText}>
                     {this.state.errorInfo.componentStack.slice(0, 1000)}
                   </Text>
