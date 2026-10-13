@@ -36,6 +36,8 @@ export function normalizeOpenFoodFactsProduct(barcode: string, product: Record<s
 
   const scale = (val: number | undefined) => val !== undefined ? roundVal((val * servingGrams) / 100) : 0;
 
+  const effectiveKcal100g = calories100g ?? (protein100g * 4 + carbs100g * 4 + fat100g * 9);
+
   return {
     id: `barcode_${barcode}`,
     name: productName,
@@ -43,7 +45,7 @@ export function normalizeOpenFoodFactsProduct(barcode: string, product: Record<s
     barcode,
     servingSize,
     servingGrams: Math.round(servingGrams),
-    calories: Math.round(scale(calories100g) || (protein100g * 4 + carbs100g * 4 + fat100g * 9)),
+    calories: Math.round(scale(effectiveKcal100g)),
     protein: scale(protein100g),
     carbs: scale(carbs100g),
     fat: scale(fat100g),

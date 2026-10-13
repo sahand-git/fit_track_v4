@@ -183,19 +183,11 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setSettings((prev) => {
       const current = prev.supplementTimes[slot];
-      let newH = current.hour + deltaHour;
-      let newM = current.minute + deltaMinute;
-
-      if (newM >= 60) {
-        newM = 0;
-        newH += 1;
-      } else if (newM < 0) {
-        newM = 45;
-        newH -= 1;
-      }
-
-      if (newH >= 24) newH = 0;
-      if (newH < 0) newH = 23;
+      let totalMinutes = (current.hour + deltaHour) * 60 + (current.minute + deltaMinute);
+      if (totalMinutes < 0) totalMinutes += 24 * 60;
+      totalMinutes = totalMinutes % (24 * 60);
+      const newH = Math.floor(totalMinutes / 60);
+      const newM = totalMinutes % 60;
 
       return {
         ...prev,
@@ -211,19 +203,11 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setSettings((prev) => {
       const current = prev.meals[mealKey];
-      let newH = current.hour + deltaHour;
-      let newM = current.minute + deltaMinute;
-
-      if (newM >= 60) {
-        newM = 0;
-        newH += 1;
-      } else if (newM < 0) {
-        newM = 45;
-        newH -= 1;
-      }
-
-      if (newH >= 24) newH = 0;
-      if (newH < 0) newH = 23;
+      let totalMinutes = (current.hour + deltaHour) * 60 + (current.minute + deltaMinute);
+      if (totalMinutes < 0) totalMinutes += 24 * 60;
+      totalMinutes = totalMinutes % (24 * 60);
+      const newH = Math.floor(totalMinutes / 60);
+      const newM = totalMinutes % 60;
 
       return {
         ...prev,

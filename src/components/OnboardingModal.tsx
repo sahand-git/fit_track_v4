@@ -67,7 +67,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
       heightCm: numHeight,
       activityLevel,
       goal,
-      waterTargetGlasses: 8,
+      waterTargetGlasses: Math.max(6, Math.min(16, Math.round((numWeight * 35) / 250))),
       isOnboarded: true,
       language,
       ...targets,

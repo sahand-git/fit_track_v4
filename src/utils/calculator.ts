@@ -53,13 +53,18 @@ export function calculateTargets(
   const goalConfig = GOAL_ADJUSTMENTS[goal] || GOAL_ADJUSTMENTS.maintenance;
 
   const minSafe = gender === 'female' ? 1200 : 1500;
-  const targetCalories = Math.max(minSafe, tdee + goalConfig.calorieDelta);
+  let targetCalories = Math.max(minSafe, tdee + goalConfig.calorieDelta);
 
   const targetProtein = Math.round(weightKg * goalConfig.proteinMultiplier);
   const proteinCalories = targetProtein * 4;
 
-  const fatCalories = targetCalories * 0.28;
+  // Essential dietary fat: at least 0.6g/kg or 28% of target calories
+  const minEssentialFat = Math.round(Math.max(30, weightKg * 0.6));
+  const fatCalories = Math.max(minEssentialFat * 9, targetCalories * 0.28);
   const targetFat = Math.round(fatCalories / 9);
+
+  // Ensure targetCalories accommodates protein + fat + minimal carbs
+  targetCalories = Math.max(targetCalories, proteinCalories + targetFat * 9 + 40);
 
   const remainingCalories = Math.max(0, targetCalories - proteinCalories - targetFat * 9);
   const targetCarbs = Math.round(remainingCalories / 4);

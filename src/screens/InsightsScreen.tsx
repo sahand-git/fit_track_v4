@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -64,35 +64,47 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
   const calorieTarget = profile?.targetCalories || 2000;
   const proteinTarget = profile?.targetProtein || 140;
 
-  const activeDays = daysLogs.filter((d) => d.log.meals.length > 0);
-  const totalCaloriesLogged = daysLogs.reduce((sum, d) => {
-    return sum + d.log.meals.reduce((mSum, m) => mSum + m.calories, 0);
-  }, 0);
+  const {
+    activeDays,
+    totalCaloriesLogged,
+    totalProteinLogged,
+    dailyAvgCalories,
+    dailyAvgProtein,
+    maxWeeklyCalories,
+  } = useMemo(() => {
+    const active = daysLogs.filter((d) => d.log.meals.length > 0);
+    const totalCal = daysLogs.reduce((sum, d) => {
+      return sum + d.log.meals.reduce((mSum, m) => mSum + m.calories, 0);
+    }, 0);
+    const totalProt = daysLogs.reduce((sum, d) => {
+      return sum + d.log.meals.reduce((mSum, m) => mSum + m.protein, 0);
+    }, 0);
+    const avgCal = active.length > 0 ? Math.round(totalCal / active.length) : 0;
+    const avgProt = active.length > 0 ? Math.round((totalProt / active.length) * 10) / 10 : 0;
+    const maxCal = Math.max(
+      calorieTarget * 1.2,
+      ...daysLogs.map((d) => d.log.meals.reduce((s, m) => s + m.calories, 0))
+    );
 
-  const totalProteinLogged = daysLogs.reduce((sum, d) => {
-    return sum + d.log.meals.reduce((mSum, m) => mSum + m.protein, 0);
-  }, 0);
-
-  const dailyAvgCalories = activeDays.length > 0
-    ? Math.round(totalCaloriesLogged / activeDays.length)
-    : 0;
-
-  const dailyAvgProtein = activeDays.length > 0
-    ? Math.round((totalProteinLogged / activeDays.length) * 10) / 10
-    : 0;
+    return {
+      activeDays: active,
+      totalCaloriesLogged: totalCal,
+      totalProteinLogged: totalProt,
+      dailyAvgCalories: avgCal,
+      dailyAvgProtein: avgProt,
+      maxWeeklyCalories: maxCal,
+    };
+  }, [daysLogs, calorieTarget]);
 
   const selectedEntry = selectedDayIdx !== null && daysLogs[selectedDayIdx]
     ? daysLogs[selectedDayIdx]
     : null;
 
-  const selectedCalories = selectedEntry
-    ? selectedEntry.log.meals.reduce((sum, m) => sum + m.calories, 0)
-    : 0;
-
-  const maxWeeklyCalories = Math.max(
-    calorieTarget * 1.2,
-    ...daysLogs.map((d) => d.log.meals.reduce((s, m) => s + m.calories, 0))
-  );
+  const selectedCalories = useMemo(() => {
+    return selectedEntry
+      ? selectedEntry.log.meals.reduce((sum, m) => sum + m.calories, 0)
+      : 0;
+  }, [selectedEntry]);
 
   return (
     <ScrollView
@@ -166,6 +178,9 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                     setSelectedDayIdx(idx);
                   }}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.dayLabel}: ${dayKcal} kcal`}
+                  accessibilityState={{ selected: isSelected }}
                 >
                   <View style={styles.barTrack}>
                     <View

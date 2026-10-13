@@ -35,6 +35,7 @@ import {
   estimateWorkoutCalories,
 } from '../data/exerciseDatabase';
 import { getTodayDateString, formatDisplayDate } from '../utils/dateUtils';
+import { createUniqueId } from '../utils/idUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
@@ -149,7 +150,7 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     const newWorkout: WorkoutEntry = {
-      id: `workout_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: createUniqueId('workout'),
       name: selectedPreset.name,
       category: selectedPreset.category,
       durationMinutes,

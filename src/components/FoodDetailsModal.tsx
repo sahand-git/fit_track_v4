@@ -64,11 +64,15 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
     ? Math.round((item.fat / item.servings) * 10) / 10
     : item.fat;
 
+  const baseGrams = 'servings' in item && item.servings > 0
+    ? item.servingGrams / item.servings
+    : (item.servingGrams || 100);
+
   const currentKcal = Math.round(baseKcal * servings);
   const currentProtein = Math.round(baseProtein * servings * 10) / 10;
   const currentCarbs = Math.round(baseCarbs * servings * 10) / 10;
   const currentFat = Math.round(baseFat * servings * 10) / 10;
-  const currentGrams = Math.round((item.servingGrams || 100) * servings);
+  const currentGrams = Math.round(baseGrams * servings);
 
   const handleMinus = () => {
     if (servings > 0.5) {

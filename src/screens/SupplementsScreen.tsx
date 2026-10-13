@@ -353,8 +353,15 @@ export function SupplementsScreen({
     if (isFuture) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
-    const currentAmt = item.amount ?? 1;
-    const nextAmt = Math.max(1, currentAmt + delta);
+    const unitLower = (item.unit || 'tablet').toLowerCase();
+    let step = 1;
+    if (unitLower === 'mg') step = 50;
+    else if (unitLower === 'iu') step = 500;
+    else if (unitLower === 'mcg') step = 25;
+    else if (unitLower === 'ml') step = 5;
+
+    const currentAmt = item.amount ?? step;
+    const nextAmt = Math.max(step, currentAmt + delta * step);
     const unit = item.unit || 'tablet';
 
     const updated = activeItems.map((it) => {

@@ -7,6 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "backgroundColor": "#FAF7F2",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FAF7F2"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.fittrack.expo"
@@ -15,7 +20,8 @@
       "package": "com.fittrack.expo",
       "adaptiveIcon": {
         "backgroundColor": "#FAF7F2",
-        "foregroundImage": "./assets/android-icon-foreground.png"
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
