@@ -6,8 +6,8 @@ import { FoodItem } from '../types';
 const SECURE_GEMINI_API_KEY = 'fittrack_gemini_api_key';
 const LEGACY_GEMINI_API_KEY_STORAGE = '@fittrack_gemini_api_key';
 
-// gemini-2.5-flash is actively served through the Google Gemini API.
-const GEMINI_MODEL = 'gemini-2.5-flash';
+import { clearActiveModelCache } from '../utils/geminiModels';
+
 const REQUEST_TIMEOUT_MS = 25000;
 
 async function canUseSecureStore(): Promise<boolean> {
@@ -53,6 +53,7 @@ export async function getStoredGeminiApiKey(): Promise<string | null> {
 
 export async function setStoredGeminiApiKey(key: string): Promise<void> {
   const clean = key.trim();
+  await clearActiveModelCache();
   const isSecureAvailable = await canUseSecureStore();
   if (isSecureAvailable) {
     await SecureStore.setItemAsync(SECURE_GEMINI_API_KEY, clean);
@@ -65,6 +66,7 @@ export async function setStoredGeminiApiKey(key: string): Promise<void> {
 }
 
 export async function clearGeminiApiKey(): Promise<void> {
+  await clearActiveModelCache();
   const isSecureAvailable = await canUseSecureStore();
   if (isSecureAvailable) {
     try {
@@ -80,9 +82,16 @@ export {
   sanitizeGeminiError,
   FetchFunction,
   WaitFunction,
-  GEMINI_MODEL,
   REQUEST_TIMEOUT_MS,
 } from '../utils/geminiCore';
+
+export {
+  GeminiError,
+  GeminiErrorKind,
+  getActiveModel,
+  clearActiveModelCache,
+  testGeminiConnection,
+} from '../utils/geminiModels';
 
 import {
   executeGeminiRequest as coreExecuteGeminiRequest,

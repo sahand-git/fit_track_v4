@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -32,7 +33,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "npx tsx src/utils/idUtils.test.ts && npx tsx src/utils/supplementUtils.test.ts && npx tsx src/utils/supplementDailyFlow.test.ts && npx tsx src/utils/backup.test.ts && npx tsx src/utils/workout.test.ts && npx tsx src/utils/streak.test.ts && npx tsx src/utils/geminiRetry.test.ts && npx tsx src/utils/searchNormalize.test.ts"
+    "test": "npx tsx src/utils/idUtils.test.ts && npx tsx src/utils/supplementUtils.test.ts && npx tsx src/utils/supplementDailyFlow.test.ts && npx tsx src/utils/backup.test.ts && npx tsx src/utils/workout.test.ts && npx tsx src/utils/streak.test.ts && npx tsx src/utils/geminiRetry.test.ts && npx tsx src/utils/geminiModels.test.ts && npx tsx src/utils/searchNormalize.test.ts"
   },
   "private": true
 }

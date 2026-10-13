@@ -4,6 +4,12 @@ import {
   FetchFunction,
   WaitFunction,
 } from './geminiCore';
+import {
+  GeminiError,
+  ACTIVE_MODEL_STORAGE_KEY,
+  ACTIVE_MODEL_TIMESTAMP_KEY,
+  inMemoryStorage,
+} from './geminiModels';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
@@ -22,6 +28,10 @@ const longError = 'x'.repeat(600);
 assert(sanitizeGeminiError(longError).length <= 450, 'Truncates to max 450 characters');
 
 async function runAsyncTests() {
+  // Pre-seed active model in cache so retry tests isolate generateContent behaviour
+  await inMemoryStorage.setItem(ACTIVE_MODEL_STORAGE_KEY, 'gemini-2.5-flash');
+  await inMemoryStorage.setItem(ACTIVE_MODEL_TIMESTAMP_KEY, String(Date.now()));
+
   // 2. 429 Quota exhausted -> NO retry
   let fetchCount429 = 0;
   const mockFetch429: FetchFunction = async () => {
@@ -38,7 +48,9 @@ async function runAsyncTests() {
     await executeGeminiRequest([{ text: 'hi' }], false, 'AIzaMockKey', mockFetch429, mockWait);
   } catch (e: any) {
     threw429 = true;
-    assert(e.message.includes('quota or rate limit reached'), 'Clear quota limit message');
+    assert(e instanceof GeminiError, 'Throws typed GeminiError on 429');
+    assert(e.kind === 'quota' || e.kind === 'rate_limit', 'Classified as quota or rate_limit');
+    assert(e.message.includes('quota') || e.message.includes('rate limit'), 'Clear quota or rate limit message');
   }
   assert(threw429, 'Throws error on 429');
   assert(fetchCount429 === 1, `429 must NOT be retried (fetch count = 1, got ${fetchCount429})`);
@@ -55,6 +67,8 @@ async function runAsyncTests() {
     await executeGeminiRequest([{ text: 'hi' }], false, 'AIzaMockKey', mockFetch401, mockWait);
   } catch (e: any) {
     threw401 = true;
+    assert(e instanceof GeminiError, 'Throws typed GeminiError on 401');
+    assert(e.kind === 'invalid_key', 'Classified as invalid_key');
     assert(e.message.includes('rejected this API key'), 'Clear key rejected message');
   }
   assert(threw401, 'Throws error on 401');
@@ -96,8 +110,10 @@ async function runAsyncTests() {
   let threwExhaust = false;
   try {
     await executeGeminiRequest([{ text: 'hi' }], false, 'AIzaMockKey', mockFetchExhaust, mockWait);
-  } catch (e) {
+  } catch (e: any) {
     threwExhaust = true;
+    assert(e instanceof GeminiError, 'Throws typed GeminiError on 500');
+    assert(e.kind === 'server', 'Classified as server error');
   }
   assert(threwExhaust, 'Throws error after max attempts exhausted');
   assert(fetchCountExhaust === 3, `Attempted exactly 3 times (1 initial + 2 retries), got ${fetchCountExhaust}`);

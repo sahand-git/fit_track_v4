@@ -17,6 +17,7 @@ import { translate } from '../i18n/strings';
 import { useLanguage } from '../i18n/I18nContext';
 import { askNutritionCoach } from '../services/plateAnalysisService';
 import { getStoredGeminiApiKey } from '../services/plateAnalysisService';
+import { GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
 import { formatDisplayDate } from '../utils/dateUtils';
 import { SkeletonCoachBubble } from '../components/SkeletonLoader';
 import { theme } from '../theme';
@@ -73,8 +74,12 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
         waterGlasses: log.waterGlasses,
       }, languageName);
       setMessages(current => [...current, { role: 'coach', text: reply }]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('Could not reach the AI coach. Try again.'));
+    } catch (err: any) {
+      if (err instanceof GeminiError) {
+        setError(t(getDefaultMessageForKind(err.kind)));
+      } else {
+        setError(err instanceof Error ? err.message : t('Could not reach the AI coach. Try again.'));
+      }
     } finally {
       setBusy(false);
     }

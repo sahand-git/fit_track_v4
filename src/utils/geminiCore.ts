@@ -1,5 +1,23 @@
-export const GEMINI_MODEL = 'gemini-2.5-flash';
-export const REQUEST_TIMEOUT_MS = 25000;
+import {
+  getActiveModel,
+  clearActiveModelCache,
+  parseGoogleErrorBody,
+  sanitizeGeminiString,
+  GeminiError,
+  GeminiErrorKind,
+  FetchFunction,
+  WaitFunction,
+  defaultWait,
+  REQUEST_TIMEOUT_MS,
+} from './geminiModels';
+
+export {
+  GeminiError,
+  GeminiErrorKind,
+  FetchFunction,
+  WaitFunction,
+  REQUEST_TIMEOUT_MS,
+};
 
 /**
  * Sanitizes Gemini error messages to prevent exposing API keys or query params
@@ -7,21 +25,8 @@ export const REQUEST_TIMEOUT_MS = 25000;
  */
 export function sanitizeGeminiError(message: string, apiKey?: string): string {
   if (!message) return 'An error occurred while communicating with Gemini.';
-  let cleaned = message;
-  if (apiKey) {
-    cleaned = cleaned.split(apiKey).join('[redacted]');
-  }
-  cleaned = cleaned
-    .replace(/AIza[A-Za-z0-9_-]+/g, '[redacted]')
-    .replace(/https?:\/\/\S+/g, '[link omitted]')
-    .slice(0, 450);
-  return cleaned;
+  return sanitizeGeminiString(message, apiKey);
 }
-
-export type FetchFunction = (url: string, init?: RequestInit) => Promise<Response>;
-export type WaitFunction = (ms: number) => Promise<void>;
-
-const defaultWait: WaitFunction = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function executeGeminiRequest(
   parts: Array<Record<string, unknown>>,
@@ -29,24 +34,36 @@ export async function executeGeminiRequest(
   apiKeyOverride?: string,
   customFetch: FetchFunction = fetch,
   customWait: WaitFunction = defaultWait,
-  apiKeyGetter?: () => Promise<string | null>
+  apiKeyGetter?: () => Promise<string | null>,
+  modelOverride?: string
 ): Promise<string> {
   const apiKey = apiKeyOverride ?? (apiKeyGetter ? await apiKeyGetter() : null);
-  if (!apiKey) throw new Error('Add a Gemini API key in Profile to use AI features.');
+  if (!apiKey || !apiKey.trim()) {
+    throw new GeminiError('invalid_key', {
+      message: 'Add a Gemini API key in Profile to use AI features.',
+    });
+  }
 
-  let lastError: Error | null = null;
-  const maxAttempts = 3; // Initial + up to 2 retries
+  const cleanKey = apiKey.trim();
+  let model = modelOverride || (await getActiveModel(cleanKey, false, customFetch));
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  let hasRetried404 = false;
+  let lastError: GeminiError | Error | null = null;
+  const maxTransientAttempts = 3;
+
+  for (let attempt = 0; attempt < maxTransientAttempts; attempt++) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
       const response = await customFetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': cleanKey,
+          },
           body: JSON.stringify({
             contents: [{ parts }],
             generationConfig: {
@@ -58,37 +75,27 @@ export async function executeGeminiRequest(
         }
       );
 
-      // Quota limit (429) -> NEVER RETRY
-      if (response.status === 429) {
-        throw new Error('Gemini API quota or rate limit reached. Check usage before retrying.');
-      }
-
-      // Invalid key or forbidden (400, 401, 403) -> NEVER RETRY
-      if (response.status === 400 || response.status === 401 || response.status === 403) {
-        const rawBody = await response.text().catch(() => '');
-        throw new Error(
-          sanitizeGeminiError(
-            `Gemini rejected this API key (HTTP ${response.status}). Check it in Profile.${rawBody ? ` Details: ${rawBody}` : ''}`,
-            apiKey
-          )
-        );
-      }
-
-      // Model unavailable (404) -> NEVER RETRY
+      // Handle 404 Model Unavailable with single rediscovery retry
       if (response.status === 404) {
-        throw new Error(`The model (${GEMINI_MODEL}) is unavailable for this key. Verify key permissions in Google AI Studio.`);
+        const rawBody = await response.text().catch(() => '');
+        if (!hasRetried404) {
+          hasRetried404 = true;
+          // Invalidate cache and rediscover
+          await clearActiveModelCache();
+          model = await getActiveModel(cleanKey, true, customFetch);
+          // Retry immediately with the newly selected model
+          attempt--;
+          continue;
+        }
+        // If already retried 404 once, stop and show the error
+        throw parseGoogleErrorBody(404, rawBody, cleanKey);
       }
 
-      // Temporary server errors (500, 502, 503, 504) -> RETRY with backoff
+      // Handle transient server errors (500, 502, 503, 504)
       if (response.status >= 500 && response.status <= 504) {
         const rawBody = await response.text().catch(() => '');
-        const serverError = new Error(
-          sanitizeGeminiError(
-            `Gemini service error (${response.status}).${rawBody ? ` Details: ${rawBody}` : ''}`,
-            apiKey
-          )
-        );
-        if (attempt < maxAttempts - 1) {
+        const serverError = parseGoogleErrorBody(response.status, rawBody, cleanKey);
+        if (attempt < maxTransientAttempts - 1) {
           lastError = serverError;
           await customWait(750 * Math.pow(2, attempt));
           continue;
@@ -96,41 +103,78 @@ export async function executeGeminiRequest(
         throw serverError;
       }
 
+      // All other non-OK errors: parse and throw immediately (NEVER RETRY)
       if (!response.ok) {
-        throw new Error(`AI service returned code ${response.status}. Please try again.`);
+        const rawBody = await response.text().catch(() => '');
+        throw parseGoogleErrorBody(response.status, rawBody, cleanKey);
       }
 
-      const json = await response.json();
-      const text = json?.candidates?.[0]?.content?.parts
+      // Parse JSON response
+      let json: any;
+      try {
+        json = await response.json();
+      } catch {
+        throw new GeminiError('server', {
+          message: 'Invalid response from Gemini service.',
+          status: response.status,
+        });
+      }
+
+      // Check safety blocking
+      const candidate = json?.candidates?.[0];
+      if (candidate?.finishReason === 'SAFETY' || json?.promptFeedback?.blockReason) {
+        throw new GeminiError('blocked', {
+          message: 'The response was blocked by Gemini safety filters.',
+        });
+      }
+
+      const text = candidate?.content?.parts
         ?.map((part: { text?: string }) => part.text || '')
         .join('')
         .trim();
 
-      if (!text) throw new Error('The AI did not return a result. Please try again.');
+      if (!text) {
+        throw new GeminiError('empty', {
+          message: 'The AI did not return a result. Please try again.',
+        });
+      }
+
       return text;
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        throw new Error('Gemini request timed out. Please check your internet connection and try again.');
+        throw new GeminiError('timeout', {
+          message: 'Gemini request timed out. Please check your connection and try again.',
+          cause: err,
+        });
       }
-      if (
-        err.message?.includes('quota or rate limit reached') ||
-        err.message?.includes('rejected this API key') ||
-        err.message?.includes('is unavailable for this key')
-      ) {
+
+      // If it's already a GeminiError
+      if (err instanceof GeminiError) {
+        // Only transient server errors reach here if attempts remain
+        if (err.kind === 'server' && attempt < maxTransientAttempts - 1) {
+          lastError = err;
+          await customWait(750 * Math.pow(2, attempt));
+          continue;
+        }
         throw err;
       }
 
-      // Network disconnect / unexpected error -> retry if attempts remain
-      if (attempt < maxAttempts - 1) {
-        lastError = err;
+      // Network error during fetch (e.g., connection lost)
+      const netError = new GeminiError('network', {
+        message: sanitizeGeminiString(err?.message || 'Network error connecting to Gemini.', cleanKey),
+        cause: err,
+      });
+
+      if (attempt < maxTransientAttempts - 1) {
+        lastError = netError;
         await customWait(750 * Math.pow(2, attempt));
         continue;
       }
-      throw err;
+      throw netError;
     } finally {
       clearTimeout(timeoutId);
     }
   }
 
-  throw lastError || new Error('Gemini request failed after retries.');
+  throw lastError || new GeminiError('server', { message: 'Gemini request failed after retries.' });
 }
