@@ -8,10 +8,11 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bot, Send, Sparkles } from 'lucide-react-native';
+import { Bot, Send, Sparkles, Trash2 } from 'lucide-react-native';
 import { DailyLog, UserProfile } from '../types';
 import { AppText as Text } from '../components/AppText';
 import { translate } from '../i18n/strings';
@@ -61,22 +62,53 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
 
   const t = (value: string) => translate(language, value);
 
-  // Restore persisted chat history on mount
+  // Restore persisted chat history on mount safely without overwriting concurrent user messages
   useEffect(() => {
-    getStoredGeminiApiKey().then((key) => setHasKey(Boolean(key)));
-    AsyncStorage.getItem(COACH_HISTORY_KEY).then((raw) => {
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setMessages(parsed);
+    getStoredGeminiApiKey()
+      .then((key) => setHasKey(Boolean(key)))
+      .catch(() => setHasKey(false));
+
+    AsyncStorage.getItem(COACH_HISTORY_KEY)
+      .then((raw) => {
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              // Prepend loaded history before any user message sent while loading was in-flight
+              setMessages((current) => (current.length > 0 ? [...parsed, ...current] : parsed));
+            }
+          } catch {
+            // Graceful fallback
           }
-        } catch {
-          // Graceful fallback
         }
-      }
-    });
+      })
+      .catch((err) => {
+        console.warn('Error reading coach history:', err);
+      });
   }, []);
+
+  const confirmClearConversation = () => {
+    Alert.alert(
+      t('Clear conversation'),
+      t('Are you sure you want to clear your chat history?'),
+      [
+        { text: t('Cancel'), style: 'cancel' },
+        {
+          text: t('Clear'),
+          style: 'destructive',
+          onPress: async () => {
+            setMessages([]);
+            setError('');
+            try {
+              await AsyncStorage.removeItem(COACH_HISTORY_KEY);
+            } catch (err) {
+              console.warn('Failed to clear coach history:', err);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // Persist messages whenever chat changes
   useEffect(() => {
@@ -138,6 +170,16 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
           <Text style={styles.title}>{t('AI Coach')}</Text>
           <Text style={styles.subtitle}>{formatDisplayDate(log.date, language)} · {totals.calories} kcal</Text>
         </View>
+        {messages.length > 0 && (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={confirmClearConversation}
+            accessibilityLabel={t('Clear conversation')}
+            accessibilityRole="button"
+          >
+            <Trash2 size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.disclaimer}>
@@ -221,6 +263,7 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1 },
   title: { fontFamily: theme.fonts.serif, fontSize: 24, fontWeight: '700', color: theme.colors.textPrimary },
   subtitle: { color: theme.colors.textMuted, fontSize: 12, marginTop: 3 },
+  clearButton: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
   disclaimer: { borderWidth: 1, borderColor: theme.colors.primaryBorder, backgroundColor: theme.colors.primaryLight, borderRadius: theme.radius.md, padding: 10, marginBottom: 8 },
   disclaimerText: { color: theme.colors.textSecondary, fontSize: 12, textAlign: 'center' },
   keyNotice: { borderColor: theme.colors.warning, borderWidth: 1, borderRadius: theme.radius.md, padding: 10, marginBottom: 8 },

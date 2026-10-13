@@ -237,6 +237,14 @@ const backupShape = shape<FitTrackBackup>({
 });
 
 /**
+ * Validates an in-memory backup object against the schema.
+ * Throws an error if the format is invalid or corrupted.
+ */
+export function validateBackup(value: unknown): FitTrackBackup {
+  return backupShape(value);
+}
+
+/**
  * Validates and parses raw backup JSON text.
  * Throws an error if the format is invalid or corrupted.
  */

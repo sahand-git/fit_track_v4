@@ -3,6 +3,8 @@ import { UserProfile, DailyLog, LoggedMeal, SupplementCheck, SupplementRoutineIt
 import { normalizeSupplementRoutine } from '../utils/supplementUtils';
 import { getDefaultProfile } from '../utils/calculator';
 import { getTodayDateString, addDaysToDateString } from '../utils/dateUtils';
+import { validateBackup } from '../utils/backupCore';
+import { calculateStreakWithChunking } from '../utils/streak';
 
 const PROFILE_KEY = '@fittrack_profile';
 const DAILY_LOG_PREFIX = '@fittrack_log_';
@@ -12,18 +14,43 @@ const REMINDER_SETTINGS_KEY = '@fittrack_reminder_settings';
 
 // Per-key write queue to eliminate read-modify-write race conditions
 const keyQueues = new Map<string, Promise<unknown>>();
+let activeRestorePromise: Promise<void> | null = null;
+
+export function setRestoreLock(promise: Promise<void> | null): void {
+  activeRestorePromise = promise;
+}
+
+export function getActiveRestoreLock(): Promise<void> | null {
+  return activeRestorePromise;
+}
+
+export async function waitForPendingStorageOperations(): Promise<void> {
+  const pending = Array.from(keyQueues.values());
+  if (pending.length > 0) {
+    await Promise.allSettled(pending);
+  }
+}
 
 export function enqueueStorageOperation<T>(key: string, task: () => Promise<T>): Promise<T> {
   const previous = keyQueues.get(key) || Promise.resolve();
-  const next = previous
-    .catch(() => {})
-    .then(task);
+  const restoreWait = activeRestorePromise ? activeRestorePromise.catch(() => {}) : Promise.resolve();
+
+  const next = Promise.all([previous.catch(() => {}), restoreWait])
+    .then(() => task());
+
   keyQueues.set(key, next);
-  next.finally(() => {
-    if (keyQueues.get(key) === next) {
-      keyQueues.delete(key);
-    }
-  });
+
+  next
+    .finally(() => {
+      if (keyQueues.get(key) === next) {
+        keyQueues.delete(key);
+      }
+    })
+    .catch(() => {
+      // Suppress unhandled rejection on the cleanup promise branch.
+      // The caller awaiting `next` will still receive the original rejection.
+    });
+
   return next;
 }
 
@@ -448,14 +475,13 @@ export async function getAllDailyLogs(): Promise<Record<string, DailyLog>> {
 }
 
 /**
- * Loads recent daily logs up to `days` back from today using a single batch query.
- * Prevents loading years of historical data into memory during streak calculations.
+ * Loads daily logs for a specific range of calendar days ending on `endDate` going backward.
+ * Uses a single batch query (AsyncStorage.multiGet) for efficiency.
  */
-export async function getRecentDailyLogs(days: number = 90): Promise<Record<string, DailyLog>> {
+export async function getDailyLogsRange(endDate: string, days: number = 90): Promise<Record<string, DailyLog>> {
   try {
-    const today = getTodayDateString();
     const dates: string[] = [];
-    let cur = today;
+    let cur = endDate;
     for (let i = 0; i < days; i++) {
       dates.push(cur);
       cur = addDaysToDateString(cur, -1);
@@ -481,60 +507,135 @@ export async function getRecentDailyLogs(days: number = 90): Promise<Record<stri
     }
     return result;
   } catch (err) {
-    console.error('Error fetching recent daily logs:', err);
+    console.error('Error fetching daily logs range:', err);
     return {};
   }
+}
+
+/**
+ * Loads recent daily logs up to `days` back from today using a single batch query.
+ * Prevents loading years of historical data into memory during streak calculations.
+ */
+export async function getRecentDailyLogs(days: number = 90): Promise<Record<string, DailyLog>> {
+  return getDailyLogsRange(getTodayDateString(), days);
+}
+
+/**
+ * Calculates current consecutive active logging streak with on-demand chunked reads.
+ * Only loads older chunks if the active streak reaches the boundary of the loaded chunk.
+ */
+export async function loadAccurateStreak(
+  referenceDate: string = getTodayDateString(),
+  chunkSize: number = 90
+): Promise<{ currentStreak: number; loggedToday: boolean }> {
+  const weights = await loadWeightHistory();
+  return calculateStreakWithChunking(
+    (endDate, days) => getDailyLogsRange(endDate, days),
+    weights,
+    referenceDate,
+    chunkSize
+  );
 }
 
 export async function restoreAllData(
   backup: FitTrackBackup,
   mode: 'replace' | 'merge'
 ): Promise<void> {
+  // Validate and stage incoming backup before performing destructive operations
+  const staged = validateBackup(backup);
+
   if (mode === 'replace') {
-    // Stash snapshot in memory before performing destructive operations
-    const allKeys = await AsyncStorage.getAllKeys();
-    const existingLogKeys = allKeys.filter((k) => k.startsWith(DAILY_LOG_PREFIX));
-    const previousSnapshotPairs = existingLogKeys.length > 0 ? await AsyncStorage.multiGet(existingLogKeys) : [];
-    const previousProfile = await AsyncStorage.getItem(PROFILE_KEY);
-    const previousRoutine = await AsyncStorage.getItem(SUPPLEMENT_ROUTINE_KEY);
-    const previousWeight = await AsyncStorage.getItem(WEIGHT_HISTORY_KEY);
-    const previousReminders = await AsyncStorage.getItem(REMINDER_SETTINGS_KEY);
+    // 1. Wait for any in-flight queued operations and acquire restore lock
+    await waitForPendingStorageOperations();
+
+    let releaseLock!: () => void;
+    const lockPromise = new Promise<void>((resolve) => {
+      releaseLock = resolve;
+    });
+    setRestoreLock(lockPromise);
 
     try {
-      // 1. Clear all existing log keys
-      if (existingLogKeys.length > 0) {
-        await AsyncStorage.multiRemove(existingLogKeys);
+      // 2. Snapshot every key that restore may change, including whether it was absent before
+      const allKeys = await AsyncStorage.getAllKeys();
+      const existingLogKeys = allKeys.filter((k) => k.startsWith(DAILY_LOG_PREFIX));
+      const incomingLogKeys = Object.keys(staged.dailyLogs || {}).map((d) => `${DAILY_LOG_PREFIX}${d}`);
+
+      const targetKeysSet = new Set<string>([
+        PROFILE_KEY,
+        SUPPLEMENT_ROUTINE_KEY,
+        WEIGHT_HISTORY_KEY,
+        REMINDER_SETTINGS_KEY,
+        ...existingLogKeys,
+        ...incomingLogKeys,
+      ]);
+      const targetKeys = Array.from(targetKeysSet);
+      const snapshotPairs = targetKeys.length > 0 ? await AsyncStorage.multiGet(targetKeys) : [];
+      const priorStateMap = new Map<string, string | null>(snapshotPairs);
+
+      try {
+        // 1. Clear existing log keys
+        if (existingLogKeys.length > 0) {
+          await AsyncStorage.multiRemove(existingLogKeys);
+        }
+
+        // 2. Write profile
+        await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(staged.profile));
+
+        // 3. Write each daily log
+        const newLogPairs: [string, string][] = [];
+        for (const [dateStr, dayLog] of Object.entries(staged.dailyLogs || {})) {
+          newLogPairs.push([`${DAILY_LOG_PREFIX}${dateStr}`, JSON.stringify({ ...dayLog, date: dateStr })]);
+        }
+        if (newLogPairs.length > 0) {
+          await AsyncStorage.multiSet(newLogPairs);
+        }
+
+        // 4. Write supplement routine
+        await AsyncStorage.setItem(SUPPLEMENT_ROUTINE_KEY, JSON.stringify(staged.supplementRoutine || []));
+
+        // 5. Write weight history
+        await AsyncStorage.setItem(WEIGHT_HISTORY_KEY, JSON.stringify(staged.weightHistory || []));
+
+        // 6. Write reminder settings if present, or remove if absent in incoming backup
+        if (staged.reminderSettings) {
+          await AsyncStorage.setItem(REMINDER_SETTINGS_KEY, JSON.stringify(staged.reminderSettings));
+        } else {
+          await AsyncStorage.removeItem(REMINDER_SETTINGS_KEY);
+        }
+      } catch (restoreErr) {
+        console.error('Restore failed midway, attempting rollback:', restoreErr);
+        try {
+          const toRestorePairs: [string, string][] = [];
+          const toRemoveKeys: string[] = [];
+
+          for (const [key, priorVal] of priorStateMap.entries()) {
+            if (priorVal === null) {
+              toRemoveKeys.push(key);
+            } else {
+              toRestorePairs.push([key, priorVal]);
+            }
+          }
+
+          if (toRemoveKeys.length > 0) {
+            await AsyncStorage.multiRemove(toRemoveKeys);
+          }
+          if (toRestorePairs.length > 0) {
+            await AsyncStorage.multiSet(toRestorePairs);
+          }
+        } catch (rollbackErr) {
+          console.error('Rollback failed after restore failure:', rollbackErr);
+          throw new Error(
+            `Failed to restore backup data and rollback failed: ${
+              rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr)
+            }. Storage may be in an inconsistent state.`
+          );
+        }
+
+        throw new Error('Failed to restore backup data. Previous data has been preserved.');
       }
-
-      // 2. Write profile
-      await saveUserProfile(backup.profile);
-
-      // 3. Write each daily log
-      for (const [dateStr, dayLog] of Object.entries(backup.dailyLogs || {})) {
-        await saveDailyLog({ ...dayLog, date: dateStr });
-      }
-
-      // 4. Write supplement routine
-      await saveSupplementRoutine(backup.supplementRoutine || []);
-
-      // 5. Write weight history
-      await AsyncStorage.setItem(WEIGHT_HISTORY_KEY, JSON.stringify(backup.weightHistory || []));
-
-      // 6. Write reminder settings if present
-      if (backup.reminderSettings) {
-        await saveReminderSettings(backup.reminderSettings);
-      }
-    } catch (restoreErr) {
-      console.error('Restore failed midway, attempting rollback:', restoreErr);
-      // Rollback to prior snapshot
-      if (previousSnapshotPairs.length > 0) {
-        await AsyncStorage.multiSet(previousSnapshotPairs as [string, string][]);
-      }
-      if (previousProfile) await AsyncStorage.setItem(PROFILE_KEY, previousProfile);
-      if (previousRoutine) await AsyncStorage.setItem(SUPPLEMENT_ROUTINE_KEY, previousRoutine);
-      if (previousWeight) await AsyncStorage.setItem(WEIGHT_HISTORY_KEY, previousWeight);
-      if (previousReminders) await AsyncStorage.setItem(REMINDER_SETTINGS_KEY, previousReminders);
-      throw new Error('Failed to restore backup data. Previous data has been preserved.');
+    } finally {
+      releaseLock();
+      setRestoreLock(null);
     }
   } else {
     // MERGE mode
@@ -542,11 +643,11 @@ export async function restoreAllData(
     const currentProfile = await loadUserProfile();
     await saveUserProfile({
       ...currentProfile,
-      ...backup.profile,
+      ...staged.profile,
     });
 
     // 2. Daily logs: merge per date
-    for (const [dateStr, incomingLog] of Object.entries(backup.dailyLogs || {})) {
+    for (const [dateStr, incomingLog] of Object.entries(staged.dailyLogs || {})) {
       const currentLog = await loadDailyLog(dateStr);
 
       // Merge meals: avoid duplicate IDs
@@ -592,7 +693,7 @@ export async function restoreAllData(
     const routineNames = new Set(currentRoutine.map((r) => r.name.toLowerCase()));
     const mergedRoutine = [
       ...currentRoutine,
-      ...(backup.supplementRoutine || []).filter((r) => !routineNames.has(r.name.toLowerCase())),
+      ...(staged.supplementRoutine || []).filter((r) => !routineNames.has(r.name.toLowerCase())),
     ];
     await saveSupplementRoutine(mergedRoutine);
 
@@ -601,13 +702,13 @@ export async function restoreAllData(
     const weightDates = new Set(currentWeights.map((w) => w.date));
     const mergedWeights = [
       ...currentWeights,
-      ...(backup.weightHistory || []).filter((w) => !weightDates.has(w.date)),
+      ...(staged.weightHistory || []).filter((w) => !weightDates.has(w.date)),
     ].sort((a, b) => a.date.localeCompare(b.date));
     await AsyncStorage.setItem(WEIGHT_HISTORY_KEY, JSON.stringify(mergedWeights));
 
     // 5. Reminders
-    if (backup.reminderSettings) {
-      await saveReminderSettings(backup.reminderSettings);
+    if (staged.reminderSettings) {
+      await saveReminderSettings(staged.reminderSettings);
     }
   }
 }

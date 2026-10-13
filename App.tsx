@@ -35,6 +35,7 @@ import {
   loadWeightHistory,
   getAllDailyLogs,
   getRecentDailyLogs,
+  loadAccurateStreak,
 } from './src/storage/storage';
 import {
   initNotificationService,
@@ -62,6 +63,8 @@ import { translate } from './src/i18n/strings';
 import { theme } from './src/theme';
 import * as Haptics from 'expo-haptics';
 
+import { shouldUpdateVisibleDate } from './src/utils/dateSync';
+
 type Tab = 'today' | 'meals' | 'coach' | 'progress';
 type TemporaryScreen = 'none' | 'profile' | 'supplements';
 
@@ -83,6 +86,11 @@ function FitTrackApp() {
   const [profile, setProfile] = useState<UserProfile>(getDefaultProfile());
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en');
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
+  const selectedDateRef = React.useRef(selectedDate);
+  useEffect(() => {
+    selectedDateRef.current = selectedDate;
+  }, [selectedDate]);
+
   const [log, setLog] = useState<DailyLog>({
     date: getTodayDateString(),
     meals: [],
@@ -109,11 +117,7 @@ function FitTrackApp() {
 
   const refreshStreak = async () => {
     try {
-      const [recentLogs, weights] = await Promise.all([
-        getRecentDailyLogs(90),
-        loadWeightHistory(),
-      ]);
-      const res = calculateLoggingStreak(recentLogs, weights);
+      const res = await loadAccurateStreak();
       setStreak(res.currentStreak);
     } catch (e) {
       console.warn('Error calculating streak:', e);
@@ -192,10 +196,13 @@ function FitTrackApp() {
 
   // Handlers
   const handleUpdateWater = async (delta: number) => {
-    if (selectedDate > getTodayDateString()) return;
+    const targetDate = selectedDate;
+    if (targetDate > getTodayDateString()) return;
     try {
-      const updated = await updateWater(selectedDate, delta);
-      setLog(updated);
+      const updated = await updateWater(targetDate, delta);
+      if (selectedDateRef.current === targetDate) {
+        setLog(updated);
+      }
     } catch (err) {
       console.error('Failed to update water:', err);
       Alert.alert(t('Error'), t('Could not update water intake.'));
@@ -206,7 +213,7 @@ function FitTrackApp() {
     if (targetDate > getTodayDateString()) return;
     try {
       const updated = await addMealToDay(targetDate, meal);
-      if (selectedDate === targetDate) {
+      if (selectedDateRef.current === targetDate) {
         setLog(updated);
       }
       await refreshStreak();
@@ -217,9 +224,12 @@ function FitTrackApp() {
   };
 
   const handleUpdateMeal = async (meal: LoggedMeal) => {
+    const targetDate = selectedDate;
     try {
-      const updated = await updateMealInDay(selectedDate, meal);
-      setLog(updated);
+      const updated = await updateMealInDay(targetDate, meal);
+      if (selectedDateRef.current === targetDate) {
+        setLog(updated);
+      }
     } catch (err) {
       console.error('Failed to update meal:', err);
       Alert.alert(t('Error'), t('Failed to update meal.'));
@@ -227,9 +237,12 @@ function FitTrackApp() {
   };
 
   const handleRemoveMeal = async (mealId: string) => {
+    const targetDate = selectedDate;
     try {
-      const updated = await removeMealFromDay(selectedDate, mealId);
-      setLog(updated);
+      const updated = await removeMealFromDay(targetDate, mealId);
+      if (selectedDateRef.current === targetDate) {
+        setLog(updated);
+      }
       await refreshStreak();
     } catch (err) {
       console.error('Failed to remove meal:', err);
@@ -271,9 +284,12 @@ function FitTrackApp() {
   };
 
   const handleUpdateDailySupplements = async (items: LoggedDailySupplement[]) => {
-    if (selectedDate > getTodayDateString()) return;
-    const updated = await saveDailySupplements(selectedDate, items);
-    setLog(updated);
+    const targetDate = selectedDate;
+    if (targetDate > getTodayDateString()) return;
+    const updated = await saveDailySupplements(targetDate, items);
+    if (selectedDateRef.current === targetDate) {
+      setLog(updated);
+    }
   };
 
   const handleUpdateRoutine = async (items: SupplementRoutineItem[]) => {
@@ -300,16 +316,19 @@ function FitTrackApp() {
   };
 
   const handleToggleSupplement = async (id: string, taken: boolean) => {
-    if (selectedDate > getTodayDateString()) return;
-    const updated = await setSupplementTaken(selectedDate, id, taken);
-    setLog(updated);
+    const targetDate = selectedDate;
+    if (targetDate > getTodayDateString()) return;
+    const updated = await setSupplementTaken(targetDate, id, taken);
+    if (selectedDateRef.current === targetDate) {
+      setLog(updated);
+    }
   };
 
   const handleAddWorkout = async (workout: WorkoutEntry, targetDate: string) => {
     if (targetDate > getTodayDateString()) return;
     try {
       const updated = await addWorkoutToDay(targetDate, workout);
-      if (selectedDate === targetDate) {
+      if (selectedDateRef.current === targetDate) {
         setLog(updated);
       }
       await refreshStreak();
@@ -320,9 +339,12 @@ function FitTrackApp() {
   };
 
   const handleDeleteWorkout = async (workoutId: string) => {
+    const targetDate = selectedDate;
     try {
-      const updated = await removeWorkoutFromDay(selectedDate, workoutId);
-      setLog(updated);
+      const updated = await removeWorkoutFromDay(targetDate, workoutId);
+      if (selectedDateRef.current === targetDate) {
+        setLog(updated);
+      }
       await refreshStreak();
     } catch (err) {
       console.error('Failed to delete workout:', err);

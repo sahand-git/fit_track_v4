@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -27,6 +27,7 @@ import { WaterTracker } from '../components/WaterTracker';
 import { AddWorkoutSheet } from '../components/AddWorkoutSheet';
 import { StreakBadge } from '../components/StreakBadge';
 import { GoalCelebration } from '../components/GoalCelebration';
+import { evaluateGoalAchievement } from '../utils/goalCelebration';
 import Animated from 'react-native-reanimated';
 import {
   getStaggeredCardEntry,
@@ -144,28 +145,42 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   );
 
   const [showCelebration, setShowCelebration] = useState(false);
+  const celebratingDateRef = useRef<string | null>(null);
+  const lastCelebratedDateRef = useRef<string | null>(null);
 
   // Trigger celebration once per day when target is reached appropriately
   useEffect(() => {
     async function checkGoalCelebration() {
-      if (effectiveCalorieTarget <= 0 || consumedCalories <= 0) return;
+      const isGoalMet = evaluateGoalAchievement({
+        goal: profile.goal,
+        consumedCalories,
+        consumedProtein,
+        effectiveCalorieTarget,
+        targetProtein: profile.targetProtein,
+      });
 
-      const isSurplusGoal = profile.goal === 'muscle_gain' || profile.goal === 'lean_bulk';
-      const isGoalMet = isSurplusGoal
-        ? consumedCalories >= effectiveCalorieTarget
-        : (consumedCalories >= effectiveCalorieTarget * 0.9 && consumedCalories <= effectiveCalorieTarget) ||
-          (consumedProtein >= profile.targetProtein && consumedCalories <= effectiveCalorieTarget);
+      if (!isGoalMet) return;
 
-      if (isGoalMet) {
-        try {
-          const lastCelebrated = await AsyncStorage.getItem('@fittrack_last_celebrated_goal_date');
-          if (lastCelebrated !== log.date) {
-            setShowCelebration(true);
-            await AsyncStorage.setItem('@fittrack_last_celebrated_goal_date', log.date);
-          }
-        } catch {
-          // Graceful fallback
+      const currentDate = log.date;
+      // In-memory synchronization lock prevents overlapping/duplicate runs for the same date
+      if (lastCelebratedDateRef.current === currentDate || celebratingDateRef.current === currentDate) {
+        return;
+      }
+      celebratingDateRef.current = currentDate;
+
+      try {
+        const lastCelebrated = await AsyncStorage.getItem('@fittrack_last_celebrated_goal_date');
+        if (lastCelebrated !== currentDate) {
+          lastCelebratedDateRef.current = currentDate;
+          setShowCelebration(true);
+          await AsyncStorage.setItem('@fittrack_last_celebrated_goal_date', currentDate);
+        } else {
+          lastCelebratedDateRef.current = currentDate;
         }
+      } catch {
+        // Graceful fallback
+      } finally {
+        celebratingDateRef.current = null;
       }
     }
     checkGoalCelebration();

@@ -61,3 +61,56 @@ export function calculateLoggingStreak(
     loggedToday,
   };
 }
+
+/**
+ * Calculates current consecutive active logging streak with on-demand chunked loading.
+ * Fetches batches of logs going backward only when the streak reaches the oldest loaded date.
+ * Does not load the user's entire multi-year history into memory at once.
+ */
+export async function calculateStreakWithChunking(
+  fetchLogsChunk: (endDate: string, days: number) => Promise<Record<string, DailyLog>>,
+  weightHistory: WeightEntry[],
+  referenceDate: string = getTodayDateString(),
+  chunkSize: number = 90
+): Promise<{ currentStreak: number; loggedToday: boolean }> {
+  let loadedLogs: Record<string, DailyLog> = {};
+  let oldestLoadedDate = referenceDate;
+
+  // Load initial chunk ending at referenceDate
+  const initialChunk = await fetchLogsChunk(referenceDate, chunkSize);
+  loadedLogs = { ...initialChunk };
+
+  let cur = referenceDate;
+  for (let i = 0; i < chunkSize - 1; i++) {
+    cur = getPreviousDayString(cur);
+  }
+  oldestLoadedDate = cur;
+
+  const loggedToday = hasActivityOnDate(referenceDate, loadedLogs, weightHistory);
+  let streak = 0;
+  let checkDate = loggedToday ? referenceDate : getPreviousDayString(referenceDate);
+
+  while (true) {
+    if (checkDate < oldestLoadedDate) {
+      const nextChunk = await fetchLogsChunk(checkDate, chunkSize);
+      Object.assign(loadedLogs, nextChunk);
+      let chunkEnd = checkDate;
+      for (let i = 0; i < chunkSize - 1; i++) {
+        chunkEnd = getPreviousDayString(chunkEnd);
+      }
+      oldestLoadedDate = chunkEnd;
+    }
+
+    if (hasActivityOnDate(checkDate, loadedLogs, weightHistory)) {
+      streak++;
+      checkDate = getPreviousDayString(checkDate);
+    } else {
+      break;
+    }
+  }
+
+  return {
+    currentStreak: streak,
+    loggedToday,
+  };
+}
