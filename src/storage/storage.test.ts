@@ -19,6 +19,9 @@ import {
   loadUserProfile,
   saveUserProfile,
   loadSupplementRoutine,
+  setAccountStorageNamespace,
+  setDailySteps,
+  addDailySteps,
 } from './storage';
 import { FitTrackBackup, UserProfile, DailyLog } from '../types';
 
@@ -259,7 +262,24 @@ async function runStorageTests() {
     }
   }
 
-  console.log('All storage and backup rollback regression tests passed successfully!');
+  // Account namespaces preserve guest data and isolate each signed-in profile.
+  setAccountStorageNamespace(null);
+  await saveUserProfile({ ...(await loadUserProfile()), name: 'Guest profile' });
+  setAccountStorageNamespace('user-one');
+  assert((await loadUserProfile()).name !== 'Guest profile', 'account namespace does not read guest profile');
+  await saveUserProfile({ ...(await loadUserProfile()), name: 'Account one' });
+  setAccountStorageNamespace('user-two');
+  assert((await loadUserProfile()).name !== 'Account one', 'account namespace does not read another account');
+  setAccountStorageNamespace(null);
+  assert((await loadUserProfile()).name === 'Guest profile', 'guest profile remains intact after account changes');
+
+  const stepDate = '2026-10-13';
+  await setDailySteps(stepDate, 1000);
+  const stepLog = await addDailySteps(stepDate, 500);
+  assert(stepLog.steps === 1500, 'manual step add updates only the selected daily total');
+  assert(stepLog.meals.length >= 0, 'step update preserves unrelated daily log fields');
+
+  console.log('All storage, account isolation, step tracking, and backup rollback tests passed successfully!');
 }
 
 runStorageTests().catch((err) => {

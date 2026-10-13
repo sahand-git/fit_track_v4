@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getScopedStorageKey } from '../storage/storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bot, Send, Sparkles, Trash2 } from 'lucide-react-native';
 import { DailyLog, UserProfile } from '../types';
@@ -68,7 +69,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
       .then((key) => setHasKey(Boolean(key)))
       .catch(() => setHasKey(false));
 
-    AsyncStorage.getItem(COACH_HISTORY_KEY)
+    AsyncStorage.getItem(getScopedStorageKey(COACH_HISTORY_KEY))
       .then((raw) => {
         if (raw) {
           try {
@@ -100,7 +101,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
             setMessages([]);
             setError('');
             try {
-              await AsyncStorage.removeItem(COACH_HISTORY_KEY);
+              await AsyncStorage.removeItem(getScopedStorageKey(COACH_HISTORY_KEY));
             } catch (err) {
               console.warn('Failed to clear coach history:', err);
             }
@@ -113,7 +114,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
   // Persist messages whenever chat changes
   useEffect(() => {
     if (messages.length > 0) {
-      AsyncStorage.setItem(COACH_HISTORY_KEY, JSON.stringify(messages.slice(-20))).catch(() => {});
+      AsyncStorage.setItem(getScopedStorageKey(COACH_HISTORY_KEY), JSON.stringify(messages.slice(-20))).catch(() => {});
     }
   }, [messages]);
 

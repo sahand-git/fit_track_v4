@@ -19,7 +19,6 @@ import {
   Flame,
   Plus,
   Trash2,
-  Calendar,
   AlertCircle,
   Check,
 } from 'lucide-react-native';
@@ -48,6 +47,8 @@ export interface AddWorkoutSheetProps {
   date: string;
   profile: UserProfile;
   onSaveWorkout: (workout: WorkoutEntry, targetDate: string) => void;
+  editingWorkout?: WorkoutEntry | null;
+  onUpdateWorkout?: (workout: WorkoutEntry, targetDate: string) => void;
 }
 
 export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
@@ -56,23 +57,28 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
   date,
   profile,
   onSaveWorkout,
+  editingWorkout = null,
+  onUpdateWorkout,
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const t = (str: string) => translate(language, str);
 
-  const isToday = date === getTodayDateString();
   const isFuture = date > getTodayDateString();
 
-  const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory | 'all'>('all');
-  const [selectedPreset, setSelectedPreset] = useState<ExercisePreset>(EXERCISE_DATABASE[0]);
-  const [durationMinutes, setDurationMinutes] = useState<number>(EXERCISE_DATABASE[0].defaultMinutes);
-  const [customCalories, setCustomCalories] = useState<string>('');
-  const [isCustomCalorieMode, setIsCustomCalorieMode] = useState<boolean>(false);
-  const [sets, setSets] = useState<ExerciseSet[]>([
+  const editingPreset = editingWorkout
+    ? EXERCISE_DATABASE.find((item) => item.name === editingWorkout.name && item.category === editingWorkout.category)
+    : undefined;
+  const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory | 'all'>(editingWorkout?.category ?? 'all');
+  const [selectedPreset, setSelectedPreset] = useState<ExercisePreset>(editingPreset ?? EXERCISE_DATABASE[0]);
+  const [durationMinutes, setDurationMinutes] = useState<number>(editingWorkout?.durationMinutes ?? EXERCISE_DATABASE[0].defaultMinutes);
+  const [customCalories, setCustomCalories] = useState<string>(editingWorkout ? String(editingWorkout.caloriesBurned) : '');
+  const [isCustomCalorieMode, setIsCustomCalorieMode] = useState<boolean>(editingWorkout?.calorieSource === 'user_entered');
+  const [sets, setSets] = useState<ExerciseSet[]>(editingWorkout?.sets?.length ? editingWorkout.sets : [
     { setNum: 1, weightKg: 20, reps: 10, completed: true },
   ]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [customName, setCustomName] = useState(editingPreset ? '' : (editingWorkout?.name ?? ''));
 
   // Handle hardware back button on Android
   useEffect(() => {
@@ -150,17 +156,18 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     const newWorkout: WorkoutEntry = {
-      id: createUniqueId('workout'),
-      name: selectedPreset.name,
+      id: editingWorkout?.id || createUniqueId('workout'),
+      name: customName.trim() || selectedPreset.name,
       category: selectedPreset.category,
       durationMinutes,
       caloriesBurned: effectiveCalories,
-      loggedAt: timeStr,
+      loggedAt: editingWorkout?.loggedAt || timeStr,
       calorieSource: isCustomCalorieMode ? 'user_entered' : 'met_estimate',
       sets: selectedPreset.category === 'strength' && sets.length > 0 ? sets : undefined,
     };
 
-    onSaveWorkout(newWorkout, date);
+    if (editingWorkout && onUpdateWorkout) onUpdateWorkout(newWorkout, date);
+    else onSaveWorkout(newWorkout, date);
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);
@@ -200,7 +207,7 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.title}>{t('Log Workout')}</Text>
+              <Text style={styles.title}>{t(editingWorkout ? 'Edit workout' : 'Log Workout')}</Text>
               <Text style={styles.subtitle}>
                 {formatDisplayDate(date, language)}
               </Text>
@@ -292,6 +299,18 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
                 );
               })}
             </View>
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{t('Custom workout name (optional)')}</Text>
+            </View>
+            <TextInput
+              value={customName}
+              onChangeText={setCustomName}
+              placeholder={t('Use preset name or enter your own')}
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.customNameInput}
+              accessibilityLabel={t('Custom workout name (optional)')}
+            />
 
             {/* Duration & Calorie Calculation */}
             <View style={styles.statsCard}>
@@ -424,7 +443,7 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
               disabled={isFuture || durationMinutes <= 0}
               activeOpacity={0.8}
             >
-              <Text style={styles.saveBtnText}>{t('Save Workout')}</Text>
+              <Text style={styles.saveBtnText}>{t(editingWorkout ? 'Update workout' : 'Save Workout')}</Text>
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -572,6 +591,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
+  },
+  customNameInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
   },
   checkIcon: {
     width: 24,

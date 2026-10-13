@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@appeeky/expo-healthkit": "^0.4.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.27",
     "expo-camera": "~57.0.6",
@@ -14,14 +15,18 @@
     "expo-secure-store": "~57.0.4",
     "expo-sharing": "~57.0.23",
     "expo-status-bar": "~57.0.1",
+    "firebase": "^13.0.0",
     "lucide-react-native": "^1.52.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-nitro-google-signin": "^2.3.0",
+    "react-native-nitro-modules": "^0.37.1",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4",
-    "react-native-web": "^0.21.2"
+    "react-native-web": "^0.21.2",
+    "react-native-worklets": "^0.10.1"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -34,7 +39,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "npx tsx src/utils/idUtils.test.ts && npx tsx src/utils/supplementUtils.test.ts && npx tsx src/utils/supplementDailyFlow.test.ts && npx tsx src/utils/backup.test.ts && npx tsx src/utils/workout.test.ts && npx tsx src/utils/streak.test.ts && npx tsx src/utils/geminiRetry.test.ts && npx tsx src/utils/geminiModels.test.ts && npx tsx src/utils/searchNormalize.test.ts && npx tsx src/storage/storage.test.ts && npx tsx src/utils/waterUpdate.test.ts && npx tsx src/utils/goalCelebration.test.ts"
+    "test": "tsx src/utils/idUtils.test.ts && tsx src/utils/supplementUtils.test.ts && tsx src/utils/supplementDailyFlow.test.ts && tsx src/utils/backup.test.ts && tsx src/utils/workout.test.ts && tsx src/utils/activityBudget.test.ts && tsx src/services/stepTrackingCore.test.ts && tsx src/i18n/activityAccountsLocalization.test.ts && tsx src/utils/streak.test.ts && tsx src/utils/geminiRetry.test.ts && tsx src/utils/geminiModels.test.ts && tsx src/utils/searchNormalize.test.ts && tsx src/storage/storage.test.ts && tsx src/utils/waterUpdate.test.ts && tsx src/utils/goalCelebration.test.ts"
   },
   "private": true
 }

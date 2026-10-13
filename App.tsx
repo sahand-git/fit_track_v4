@@ -32,10 +32,13 @@ import {
   loadReminderSettings,
   addWorkoutToDay,
   removeWorkoutFromDay,
+  updateWorkoutInDay,
   loadWeightHistory,
   getAllDailyLogs,
   getRecentDailyLogs,
   loadAccurateStreak,
+  setDailySteps,
+  addDailySteps,
 } from './src/storage/storage';
 import {
   initNotificationService,
@@ -64,9 +67,14 @@ import { theme } from './src/theme';
 import * as Haptics from 'expo-haptics';
 
 import { shouldUpdateVisibleDate } from './src/utils/dateSync';
+import { StepsScreen } from './src/screens/StepsScreen';
+import { WorkoutsScreen } from './src/screens/WorkoutsScreen';
+import { AccountScreen } from './src/screens/AccountScreen';
+import { AuthIdentity, watchAuthState } from './src/services/authService';
+import { setAccountStorageNamespace } from './src/storage/storage';
 
 type Tab = 'today' | 'meals' | 'coach' | 'progress';
-type TemporaryScreen = 'none' | 'profile' | 'supplements';
+type TemporaryScreen = 'none' | 'profile' | 'supplements' | 'steps' | 'workouts' | 'account';
 
 export default function App() {
   return (
@@ -82,6 +90,8 @@ function FitTrackApp() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [tempScreen, setTempScreen] = useState<TemporaryScreen>('none');
+  const [authUser, setAuthUser] = useState<AuthIdentity | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile>(getDefaultProfile());
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en');
@@ -124,17 +134,28 @@ function FitTrackApp() {
     }
   };
 
-  // Load initial profile and daily log
+  useEffect(() => watchAuthState((user) => {
+    setAccountStorageNamespace(user?.uid || null);
+    setAuthUser(user);
+    setAuthReady(true);
+  }), []);
+
+  // Load the active namespace only after Firebase restores the session.
   useEffect(() => {
+    if (!authReady) return;
+    let isCancelled = false;
     async function init() {
       await initNotificationService();
       const p = await loadUserProfile();
+      if (isCancelled) return;
       setProfile(p);
       const appLang = p.language || 'en';
       setAppLanguage(appLang);
       const l = await loadDailyLog(selectedDate);
+      if (isCancelled) return;
       setLog(l);
       const initialRoutine = await loadSupplementRoutine();
+      if (isCancelled) return;
       setSupplementRoutine(initialRoutine);
       await refreshStreak();
 
@@ -154,10 +175,12 @@ function FitTrackApp() {
       }
     }
     init();
-  }, []);
+    return () => { isCancelled = true; };
+  }, [authReady, authUser?.uid]);
 
   // Reload log whenever date changes with cancellation to prevent race conditions
   useEffect(() => {
+    if (!authReady) return;
     let isCancelled = false;
     async function fetchDateLog() {
       const l = await loadDailyLog(selectedDate);
@@ -170,7 +193,7 @@ function FitTrackApp() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedDate]);
+  }, [selectedDate, authReady, authUser?.uid]);
 
   // Handle Android hardware back button
   useEffect(() => {
@@ -352,6 +375,32 @@ function FitTrackApp() {
     }
   };
 
+  const handleUpdateWorkout = async (workout: WorkoutEntry, targetDate: string) => {
+    if (targetDate > getTodayDateString()) return;
+    const updated = await updateWorkoutInDay(targetDate, workout);
+    if (selectedDateRef.current === targetDate) setLog(updated);
+  };
+
+  const handleSaveSteps = async (total: number) => {
+    const targetDate = selectedDateRef.current;
+    if (targetDate > getTodayDateString()) return;
+    const updated = await setDailySteps(targetDate, total);
+    if (selectedDateRef.current === targetDate) setLog(updated);
+  };
+
+  const handleAddSteps = async (amount: number) => {
+    const targetDate = selectedDateRef.current;
+    if (targetDate > getTodayDateString()) return;
+    const updated = await addDailySteps(targetDate, amount);
+    if (selectedDateRef.current === targetDate) setLog(updated);
+  };
+
+  const handleSaveStepGoal = async (stepGoal: number) => {
+    const updated = { ...profile, stepGoal };
+    await saveUserProfile(updated);
+    setProfile(updated);
+  };
+
   const handleRestoreComplete = async () => {
     const p = await loadUserProfile();
     setProfile(p);
@@ -429,6 +478,7 @@ function FitTrackApp() {
               onLanguageChange={handleLanguageChange}
               onSaveProfile={handleSaveProfile}
               onRestoreComplete={handleRestoreComplete}
+              onOpenAccount={() => setTempScreen('account')}
               onBack={() => setTempScreen('none')}
             />
           )}
@@ -447,6 +497,41 @@ function FitTrackApp() {
             />
           )}
 
+          {tempScreen === 'steps' && (
+            <StepsScreen
+              date={selectedDate}
+              steps={log.steps || 0}
+              goal={profile.stepGoal || 8000}
+              weightKg={profile.weightKg}
+              heightCm={profile.heightCm}
+              onSetSteps={handleSaveSteps}
+              onAddSteps={handleAddSteps}
+              onSetGoal={handleSaveStepGoal}
+              onBack={() => setTempScreen('none')}
+            />
+          )}
+
+          {tempScreen === 'workouts' && (
+            <WorkoutsScreen
+              date={selectedDate}
+              workouts={log.workouts || []}
+              profile={profile}
+              onSelectDate={setSelectedDate}
+              onAddWorkout={handleAddWorkout}
+              onUpdateWorkout={handleUpdateWorkout}
+              onDeleteWorkout={handleDeleteWorkout}
+              onBack={() => setTempScreen('none')}
+            />
+          )}
+
+          {tempScreen === 'account' && (
+            <AccountScreen
+              user={authUser}
+              onBack={() => setTempScreen('profile')}
+              onRestoreComplete={handleRestoreComplete}
+            />
+          )}
+
           {/* Tab 1: Today */}
           {tempScreen === 'none' && activeTab === 'today' && (
             <DashboardScreen
@@ -460,8 +545,11 @@ function FitTrackApp() {
               onOpenAddFood={handleOpenAddFoodToday}
               onOpenSupplements={() => setTempScreen('supplements')}
               onOpenProfile={() => setTempScreen('profile')}
+              onOpenSteps={() => setTempScreen('steps')}
+              onOpenWorkouts={() => setTempScreen('workouts')}
               onAddWorkout={handleAddWorkout}
               onDeleteWorkout={handleDeleteWorkout}
+              onUpdateWorkout={handleUpdateWorkout}
             />
           )}
 
