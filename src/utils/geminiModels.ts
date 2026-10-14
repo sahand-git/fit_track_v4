@@ -313,7 +313,7 @@ export async function fetchAvailableModels(
     }
     if (pageToken) seenPageTokens.add(pageToken);
 
-    const response = await fetchWithTimeout(customFetch, url.toString(), {
+    const { response, bodyText } = await fetchWithTimeout(customFetch, url.toString(), {
         method: 'GET',
         headers: {
           'x-goog-api-key': cleanKey,
@@ -322,13 +322,12 @@ export async function fetchAvailableModels(
     pagesFetched++;
 
     if (!response.ok) {
-      const rawBody = await response.text().catch(() => '');
-      throw parseGoogleErrorBody(response.status, rawBody, cleanKey);
+      throw parseGoogleErrorBody(response.status, bodyText, cleanKey);
     }
 
     let json: any;
     try {
-      json = await response.json();
+      json = JSON.parse(bodyText);
     } catch {
       throw new GeminiError('server', { message: 'Invalid response from Gemini model discovery.' });
     }
@@ -359,15 +358,14 @@ export async function verifyCandidate(
   const cleanKey = apiKey.trim();
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
   const post = async (parts: Array<Record<string, unknown>>): Promise<'ok' | 'incompatible'> => {
-    const response = await fetchWithTimeout(customFetch, endpoint, {
+    const { response, bodyText } = await fetchWithTimeout(customFetch, endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey },
       body: JSON.stringify({ contents: [{ parts }], generationConfig: { maxOutputTokens: 5 } }),
     }, cleanKey, timeoutMs);
 
     if (!response.ok) {
-      const rawBody = await response.text().catch(() => '');
-      const error = parseGoogleErrorBody(response.status, rawBody, cleanKey);
+      const error = parseGoogleErrorBody(response.status, bodyText, cleanKey);
       if (response.status === 404) return 'incompatible';
       if (response.status === 400 && /model|modality|image|vision|multimodal|unsupported|not supported/i.test(error.providerMessage || '')) {
         return 'incompatible';
@@ -376,7 +374,7 @@ export async function verifyCandidate(
     }
 
     let json: any;
-    try { json = await response.json(); }
+    try { json = JSON.parse(bodyText); }
     catch (cause) { throw new GeminiError('server', { status: response.status, message: 'Invalid response from Gemini probe.', cause }); }
     if (!json?.candidates?.length) throw new GeminiError('empty', { status: response.status });
     return 'ok';
@@ -427,7 +425,7 @@ async function fetchWithTimeout(
   init: RequestInit,
   apiKey: string,
   timeoutMs: number
-): Promise<Response> {
+): Promise<{ response: Response; bodyText: string }> {
   const controller = new AbortController();
   const timeout = Math.max(1, timeoutMs);
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -439,7 +437,10 @@ async function fetchWithTimeout(
   });
   try {
     return await Promise.race([
-      customFetch(url, { ...init, signal: controller.signal }).catch((cause) => {
+      customFetch(url, { ...init, signal: controller.signal }).then(async (response) => ({
+        response,
+        bodyText: await response.text(),
+      })).catch((cause) => {
         if (controller.signal.aborted) throw new GeminiError('timeout', { cause });
         throw new GeminiError('network', {
           message: sanitizeGeminiString((cause as any)?.message || getDefaultMessageForKind('network'), apiKey),

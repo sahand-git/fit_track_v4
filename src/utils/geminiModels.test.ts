@@ -132,6 +132,15 @@ async function runAllTests() {
     assert(caught instanceof GeminiError && caught.kind === 'timeout', 'Hung discovery fetch throws timeout');
     assert(REQUEST_TIMEOUT_MS > 0, 'Production timeout is configured');
 
+    const hangingBodyFetch: FetchFunction = async () => {
+      const response = new Response('{}', { status: 200 });
+      response.text = () => new Promise<string>(() => {});
+      return response;
+    };
+    let bodyTimeout: any;
+    try { await fetchAvailableModels('test-key', hangingBodyFetch, 5); } catch (error) { bodyTimeout = error; }
+    assert(bodyTimeout instanceof GeminiError && bodyTimeout.kind === 'timeout', 'Hung discovery body parsing throws timeout');
+
     const probeFetch: FetchFunction = async (url) => {
       if (url.includes('/models?')) return new Response(JSON.stringify({ models: [
         { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
