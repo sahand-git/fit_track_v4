@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { ReminderSettings, SupplementRoutineItem, AppLanguage, SupplementTime, MealType } from '../types';
 import { translate } from '../i18n/strings';
 import { loadReminderSettings } from '../storage/storage';
+import { getEnabledSupplementReminderSlots } from '../utils/supplementRoutine';
 
 let isHandlerConfigured = false;
 
@@ -125,14 +126,10 @@ export async function scheduleSupplementReminders(
     bedtime: 'Bedtime',
   };
 
-  const slots: SupplementTime[] = ['morning', 'afternoon', 'evening', 'bedtime'];
+  const slots = getEnabledSupplementReminderSlots(settings, routine);
   for (const slot of slots) {
     const slotSetting = settings.supplementTimes[slot];
-    if (!slotSetting || !slotSetting.enabled) continue;
-
-    // Schedule ONLY if routine contains items for this time slot
     const slotItems = routine.filter((r) => r.time === slot);
-    if (slotItems.length === 0) continue;
 
     const itemNames = slotItems.map((s) => s.name).join(', ');
     const title = `${translate(language, 'Vitamins & Supplements')} · ${translate(language, slotLabels[slot])}`;

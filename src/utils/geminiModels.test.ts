@@ -15,9 +15,38 @@ import {
   ACTIVE_MODEL_TIMESTAMP_KEY,
   FetchFunction,
   WaitFunction,
+  REQUEST_TIMEOUT_MS,
+  MAX_MODEL_DISCOVERY_PAGES,
+  TINY_16X16_WHITE_PNG_BASE64,
+  testGeminiConnection,
 } from './geminiModels';
 import { executeGeminiRequest, sanitizeGeminiError } from './geminiCore';
 import { translate } from '../i18n/strings';
+
+declare const require: (moduleName: string) => { inflateSync: (data: Uint8Array) => Uint8Array };
+const { inflateSync } = require('node:zlib');
+
+function decodeBase64(value: string): Uint8Array {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const bytes: number[] = [];
+  let buffer = 0;
+  let bitCount = 0;
+  for (const char of value.replace(/=+$/, '')) {
+    const digit = alphabet.indexOf(char);
+    if (digit < 0) throw new Error('Invalid base64 fixture');
+    buffer = (buffer << 6) | digit;
+    bitCount += 6;
+    if (bitCount >= 8) {
+      bitCount -= 8;
+      bytes.push((buffer >> bitCount) & 0xff);
+    }
+  }
+  return Uint8Array.from(bytes);
+}
+
+function readUInt32BE(bytes: Uint8Array, offset: number): number {
+  return (((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0);
+}
 
 function assert(condition: boolean, message: string): void {
   if (!condition) {
@@ -36,6 +65,134 @@ function createMockStorage(): StorageInterface {
 
 async function runAllTests() {
   console.log('Starting Gemini Model Discovery, Ranking & Error Engine Tests...');
+
+  // The image probe fixture must remain a valid, decodable PNG.
+  {
+    const png = decodeBase64(TINY_16X16_WHITE_PNG_BASE64);
+    assert(Array.from(png.subarray(0, 8)).join(',') === '137,80,78,71,13,10,26,10', 'PNG signature is valid');
+    const chunks: Array<{ type: string; data: Uint8Array }> = [];
+    let offset = 8;
+    while (offset < png.length) {
+      assert(offset + 12 <= png.length, 'Chunk header and CRC are complete');
+      const length = readUInt32BE(png, offset);
+      const type = String.fromCharCode(...png.subarray(offset + 4, offset + 8));
+      const end = offset + 12 + length;
+      assert(end <= png.length, `${type} chunk is complete`);
+      const data = png.subarray(offset + 8, offset + 8 + length);
+      let crc = 0xffffffff;
+      for (const byte of png.subarray(offset + 4, offset + 8 + length)) {
+        crc ^= byte;
+        for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+      }
+      assert(((crc ^ 0xffffffff) >>> 0) === readUInt32BE(png, offset + 8 + length), `${type} CRC is valid`);
+      chunks.push({ type, data });
+      offset = end;
+      if (type === 'IEND') break;
+    }
+    assert(offset === png.length, 'PNG ends after IEND');
+    assert(chunks.map((chunk) => chunk.type).join(',') === 'IHDR,IDAT,IEND', 'PNG chunk order is valid');
+    assert(readUInt32BE(chunks[0].data, 0) === 16 && readUInt32BE(chunks[0].data, 4) === 16, 'Fixture is 16x16');
+    assert(inflateSync(chunks[1].data).length > 0, 'IDAT image payload decompresses');
+  }
+
+  {
+    const ranked = rankCandidates([
+      'gemma-3-4b-it', 'aqa', 'learnlm-2.0', 'other-2.0-flash',
+      'gemini-computer-use-preview', 'gemini-deep-research-preview', 'gemini-3-exp-1206',
+      'gemini-2.5-flash',
+    ]);
+    assert(ranked.length === 1 && ranked[0] === 'gemini-2.5-flash', 'Only eligible Gemini models are ranked');
+  }
+
+  for (const [status, expectedKind] of [[429, 'quota'], [503, 'server']] as const) {
+    const storage = createMockStorage();
+    let probeCalls = 0;
+    const mockFetch: FetchFunction = async (url) => {
+      if (url.includes('/models?')) return new Response(JSON.stringify({ models: [
+        { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+        { name: 'models/gemini-2.0-flash', supportedGenerationMethods: ['generateContent'] },
+      ] }), { status: 200 });
+      probeCalls++;
+      if (probeCalls === 1) return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }), { status: 200 });
+      return new Response(JSON.stringify({ error: { code: status, message: status === 429 ? 'Quota exceeded' : 'Service unavailable', status: status === 429 ? 'RESOURCE_EXHAUSTED' : 'UNAVAILABLE' } }), { status });
+    };
+    let caught: any;
+    try { await testGeminiConnection('test-key', mockFetch, storage); } catch (error) { caught = error; }
+    assert(caught instanceof GeminiError && caught.kind === expectedKind, `${status} probe throws ${expectedKind}`);
+    assert(probeCalls === 2, `${status} image probe failure does not fall through to another candidate`);
+    assert(await storage.getItem(ACTIVE_MODEL_STORAGE_KEY) === null, `${status} does not cache a model`);
+    assert(await storage.getItem(ACTIVE_MODEL_TIMESTAMP_KEY) === null, `${status} does not cache a timestamp`);
+  }
+
+  {
+    let caught: any;
+    try {
+      await fetchAvailableModels('test-key', (() => new Promise<Response>(() => {})) as FetchFunction, 5);
+    } catch (error) { caught = error; }
+    assert(caught instanceof GeminiError && caught.kind === 'timeout', 'Hung discovery fetch throws timeout');
+    assert(REQUEST_TIMEOUT_MS > 0, 'Production timeout is configured');
+
+    const hangingBodyFetch: FetchFunction = async () => {
+      const response = new Response('{}', { status: 200 });
+      response.text = () => new Promise<string>(() => {});
+      return response;
+    };
+    let bodyTimeout: any;
+    try { await fetchAvailableModels('test-key', hangingBodyFetch, 5); } catch (error) { bodyTimeout = error; }
+    assert(bodyTimeout instanceof GeminiError && bodyTimeout.kind === 'timeout', 'Hung discovery body parsing throws timeout');
+
+    const probeFetch: FetchFunction = async (url) => {
+      if (url.includes('/models?')) return new Response(JSON.stringify({ models: [
+        { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+      ] }), { status: 200 });
+      return new Promise<Response>(() => {});
+    };
+    let probeTimeout: any;
+    try { await discoverAndVerifyModel('test-key', probeFetch, 5); } catch (error) { probeTimeout = error; }
+    assert(probeTimeout instanceof GeminiError && probeTimeout.kind === 'timeout', 'Hung model probe throws timeout');
+
+    const imageProbeFetch: FetchFunction = async (url) => {
+      if (url.includes('/models?')) return new Response(JSON.stringify({ models: [
+        { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+      ] }), { status: 200 });
+      if (++imageProbeCalls === 1) return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }), { status: 200 });
+      return new Promise<Response>(() => {});
+    };
+    let imageProbeCalls = 0;
+    let imageProbeTimeout: any;
+    try { await discoverAndVerifyModel('test-key', imageProbeFetch, 5); } catch (error) { imageProbeTimeout = error; }
+    assert(imageProbeTimeout instanceof GeminiError && imageProbeTimeout.kind === 'timeout', 'Hung image probe throws timeout');
+  }
+
+  {
+    let pageCalls = 0;
+    const infinitePages: FetchFunction = async () => {
+      pageCalls++;
+      return new Response(JSON.stringify({ models: [], nextPageToken: `page-${pageCalls + 1}` }), { status: 200 });
+    };
+    let pageLimitError: any;
+    try { await fetchAvailableModels('test-key', infinitePages, 5000); } catch (error) { pageLimitError = error; }
+    assert(pageLimitError instanceof GeminiError && pageLimitError.kind === 'server', 'Unique endless page tokens stop at a safety limit');
+    assert(pageCalls === MAX_MODEL_DISCOVERY_PAGES, `Discovery page limit is enforced (${pageCalls})`);
+  }
+
+  // Gemini 3 uses default temperature and low thinking for responsive in-app chat.
+  {
+    const inspectRequest = async (model: string) => {
+      let requestBody: any;
+      const mockFetch: FetchFunction = async (_url, init) => {
+        requestBody = JSON.parse(String(init?.body || '{}'));
+        return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }), { status: 200 });
+      };
+      await executeGeminiRequest([{ text: 'hello' }], false, 'test-key', mockFetch, undefined, undefined, model);
+      return requestBody.generationConfig;
+    };
+    const gemini3Config = await inspectRequest('gemini-3.8-flash');
+    assert(!('temperature' in gemini3Config), 'Gemini 3 request does not override temperature');
+    assert(gemini3Config.thinkingConfig?.thinkingLevel === 'LOW', 'Gemini 3 request uses low thinking');
+    const previousConfig = await inspectRequest('gemini-2.5-flash');
+    assert(!('thinkingConfig' in previousConfig), 'Older model does not receive Gemini 3 thinking config');
+  }
 
   // =========================================================================
   // SCENARIO 1: Pagination handles multiple pages with nextPageToken
@@ -203,6 +360,10 @@ async function runAllTests() {
       candidateProbeCalls.push(url);
       const body = JSON.parse(String(init?.body || '{}'));
       const isImageProbe = Boolean(body?.contents?.[0]?.parts?.[1]?.inlineData);
+      if (isImageProbe) {
+        assert(body.contents[0].parts[1].inlineData.mimeType === 'image/png', 'Image probe declares image/png');
+        assert(body.contents[0].parts[1].inlineData.data === TINY_16X16_WHITE_PNG_BASE64, 'Image probe sends the validated PNG fixture');
+      }
 
       // Candidate 1 (gemini-3.0-flash): Text succeeds, but image probe fails!
       if (url.includes('gemini-3.0-flash')) {

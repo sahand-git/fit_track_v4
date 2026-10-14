@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -26,6 +26,7 @@ import { CalorieRing } from '../components/CalorieRing';
 import { MacroCards } from '../components/MacroCards';
 import { WaterTracker } from '../components/WaterTracker';
 import { AddWorkoutSheet } from '../components/AddWorkoutSheet';
+import { AnimatedPressable } from '../components/AnimatedPressable';
 import { StreakBadge } from '../components/StreakBadge';
 import { GoalCelebration } from '../components/GoalCelebration';
 import { evaluateGoalAchievement } from '../utils/goalCelebration';
@@ -43,7 +44,9 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { getScopedStorageKey } from '../storage/storage';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
+import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
 import { calculateActivityBudget } from '../utils/activityBudget';
+import { getCalorieRingSize } from '../utils/dashboardLayout';
 
 interface DashboardScreenProps {
   profile: UserProfile;
@@ -82,12 +85,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
-  const t = (str: string) => translate(language, str);
+  const t = useCallback((str: string) => translate(language, str), [language]);
 
   const [workoutSheetVisible, setWorkoutSheetVisible] = useState(false);
+  const [heroWidth, setHeroWidth] = useState(0);
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
-  const floatingBottom = dockBottom + 66;
+  const dockClearance = dockBottom + 72;
 
   const { consumedCalories, consumedProtein, consumedCarbs, consumedFat } = useMemo(() => {
     return log.meals.reduce(
@@ -116,7 +120,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       { key: 'dinner', label: t('Dinner') },
       { key: 'snack', label: t('Snacks') },
     ],
-    [language]
+    [t]
   );
 
   const todayLabel = formatDisplayDate(log.date, language);
@@ -145,7 +149,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       }));
     }
     return [];
-  }, [log.dailySupplements, supplementRoutine, takenSupplementIds, language]);
+  }, [log.dailySupplements, supplementRoutine, takenSupplementIds, t]);
 
   const takenSupplementsCount = useMemo(
     () => activeSupplements.filter((s) => s.isTaken).length,
@@ -207,7 +211,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: floatingBottom + 70 }]}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {/* Editorial Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
@@ -230,12 +234,17 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </View>
 
         {/* Hero Calorie Budget Focus */}
-        <Animated.View entering={getStaggeredCardEntry(0)} style={styles.heroSection}>
+        <Animated.View
+          entering={getStaggeredCardEntry(0)}
+          onLayout={(event) => setHeroWidth(event.nativeEvent.layout.width)}
+          style={styles.heroSection}
+        >
           <CalorieRing
             consumed={consumedCalories}
             target={effectiveCalorieTarget}
             proteinConsumed={consumedProtein}
             proteinTarget={profile.targetProtein}
+            size={getCalorieRingSize(heroWidth)}
           />
 
           {burnedCalories > 0 && (
@@ -363,30 +372,33 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <Animated.View entering={getStaggeredCardEntry(5)} style={styles.workoutContainer}>
           <View style={styles.workoutCard}>
             <View style={styles.workoutHeader}>
-              <View style={styles.workoutTitleRow}>
-                <Dumbbell size={16} color={theme.colors.primary} />
-                <Text style={styles.workoutTitle}>{t('Workouts')}</Text>
-                {burnedCalories > 0 && (
-                  <Text style={styles.workoutBurnBadge}>
-                    {burnedCalories} {t('kcal')}
-                  </Text>
-                )}
+              <View style={styles.workoutHeaderTop}>
+                <View style={styles.workoutTitleRow}>
+                  <Dumbbell size={17} color={theme.colors.primary} />
+                  <Text style={styles.workoutTitle}>{t('Workouts')}</Text>
+                </View>
+                <AnimatedPressable onPress={onOpenWorkouts} style={styles.manageBtn} accessibilityRole="button">
+                  <Text style={styles.manageBtnText}>{t('History')}</Text>
+                </AnimatedPressable>
               </View>
-              <TouchableOpacity onPress={onOpenWorkouts} style={styles.manageBtn} accessibilityRole="button"><Text style={styles.manageBtnText}>{t('History')}</Text></TouchableOpacity>
-              <TouchableOpacity
+              {burnedCalories > 0 && (
+                <Text style={styles.workoutBurnBadge}>
+                  {burnedCalories} {t('kcal')}
+                </Text>
+              )}
+              <AnimatedPressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   setWorkoutSheetVisible(true);
                 }}
                 style={styles.addWorkoutBtn}
                 disabled={isFuture}
-                activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={t('Add workout')}
               >
                 <Plus size={14} color={theme.colors.primary} />
                 <Text style={styles.addWorkoutBtnText}>{t('Add workout')}</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
 
             {(!log.workouts || log.workouts.length === 0) ? (
@@ -414,13 +426,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     layout={getListLayoutTransition()}
                     style={styles.workoutItemRow}
                   >
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.workoutItemName}>{t(w.name)}</Text>
-                      <Text style={styles.workoutItemMeta}>
-                        {w.durationMinutes} {t('min')} · {w.caloriesBurned} {t('kcal')}
-                        {w.sets && w.sets.length > 0 ? ` · ${w.sets.length} ${t('sets')}` : ''}
-                        {w.calorieSource === 'met_estimate' ? ` (${t('Estimate')})` : ''}
-                      </Text>
+                    <View style={styles.workoutItemInfo}>
+                      <Text style={styles.workoutItemName} numberOfLines={2}>{t(w.name)}</Text>
+                      <View style={styles.workoutItemMetaList}>
+                        {Object.values(getWorkoutDisplayMeta(w, t)).map((label, index) => (
+                          <Text key={`${w.id}_meta_${index}`} style={styles.workoutItemMeta}>{label}</Text>
+                        ))}
+                      </View>
                     </View>
                     <TouchableOpacity
                       onPress={() => {
@@ -507,24 +519,20 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </Animated.View>
       </ScrollView>
 
-      {/* Floating "+ Add food" Action Button */}
+      {/* Reserved action area keeps Add Food clear of the dashboard cards. */}
       {!isFuture && (
-        <TouchableOpacity
-          style={[
-            styles.floatingAddBtn,
-            {
-              bottom: floatingBottom,
-              ...(language === 'en' ? { right: 18 } : { left: 18 }),
-            },
-          ]}
-          onPress={handleOpenFloatingAddFood}
-          activeOpacity={0.88}
-          accessibilityLabel={t('Add food')}
-          accessibilityRole="button"
-        >
-          <Plus size={18} color={theme.colors.textInverted} strokeWidth={2.4} />
-          <Text style={styles.floatingAddBtnText}>{t('Add food')}</Text>
-        </TouchableOpacity>
+        <View style={[styles.addFoodFooter, { paddingBottom: dockClearance, alignItems: language === 'en' ? 'flex-end' : 'flex-start' }]}>
+          <TouchableOpacity
+            style={styles.floatingAddBtn}
+            onPress={handleOpenFloatingAddFood}
+            activeOpacity={0.88}
+            accessibilityLabel={t('Add food')}
+            accessibilityRole="button"
+          >
+            <Plus size={18} color={theme.colors.textInverted} strokeWidth={2.4} />
+            <Text style={styles.floatingAddBtnText}>{t('Add food')}</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       <AddWorkoutSheet
@@ -545,6 +553,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  scroll: {
+    flex: 1,
+  },
   stepsCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14,
     marginTop: 12, backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg,
@@ -608,15 +619,21 @@ const styles = StyleSheet.create({
     ...theme.shadow.subtle,
   },
   workoutHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    gap: 8,
     marginBottom: 10,
+  },
+  workoutHeaderTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   workoutTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
+    minWidth: 0,
   },
   workoutTitle: {
     fontFamily: theme.fonts.serif,
@@ -629,17 +646,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.warning,
     backgroundColor: theme.colors.warningLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: theme.radius.sm,
+    overflow: 'hidden',
   },
   addWorkoutBtn: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: theme.radius.sm,
+    gap: 7,
+    minHeight: 42,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.radius.md,
     backgroundColor: theme.colors.primaryLight,
   },
   addWorkoutBtnText: {
@@ -660,7 +681,7 @@ const styles = StyleSheet.create({
   },
   workoutItemRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderTopWidth: 1,
@@ -670,14 +691,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: theme.colors.textPrimary,
+    lineHeight: 20,
   },
   workoutItemMeta: {
     fontSize: 12,
     color: theme.colors.textMuted,
-    marginTop: 2,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    overflow: 'hidden',
+  },
+  workoutItemInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  workoutItemMetaList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
   },
   deleteWorkoutBtn: {
-    padding: 6,
+    minWidth: 40,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
   },
   container: {
     flex: 1,
@@ -686,7 +726,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    paddingBottom: 160,
+    paddingBottom: theme.spacing.md,
   },
   header: {
     flexDirection: 'row',
@@ -925,7 +965,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   floatingAddBtn: {
-    position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -934,8 +973,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: theme.radius.full,
     ...theme.shadow.floating,
-    zIndex: 10,
-    elevation: 6,
+  },
+  addFoodFooter: {
+    paddingHorizontal: 18,
+    paddingTop: 8,
+    backgroundColor: theme.colors.background,
   },
   floatingAddBtnText: {
     fontFamily: theme.fonts.sans,

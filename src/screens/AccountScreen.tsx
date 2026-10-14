@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { ArrowLeft, Cloud, LogIn, LogOut, Mail, ShieldCheck, Trash2 } from 'lucide-react-native';
+import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ArrowLeft, Cloud, ExternalLink, LogIn, LogOut, Mail, ShieldCheck, Trash2 } from 'lucide-react-native';
 import { AppText as Text } from '../components/AppText';
+import { AnimatedPressable } from '../components/AnimatedPressable';
 import { AuthIdentity, getAuthErrorMessage, loginWithEmail, loginWithGoogle, logout, refreshVerificationStatus, registerWithEmail, requestPasswordReset, resendVerification } from '../services/authService';
 import { createCloudBackup, deleteAccountAndBackup, restoreCloudBackup } from '../services/cloudBackupService';
 import { firebaseConfigured } from '../services/firebaseApp';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Props { user: AuthIdentity | null; onBack: () => void; onRestoreComplete: () => void; }
 
 export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete }) => {
   const language = useLanguage();
+  const insets = useSafeAreaInsets();
   const t = (value: string) => translate(language, value);
   const [mode, setMode] = useState<'login' | 'create'>('login');
   const [email, setEmail] = useState(user?.email || '');
@@ -34,6 +37,13 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
 
   const signIn = () => perform(async () => { if (mode === 'create') await registerWithEmail(email, password); else await loginWithEmail(email, password); }, mode === 'create' ? 'Account created. Check your email to verify it.' : 'Signed in successfully.');
   const googleSignIn = () => perform(async () => { await loginWithGoogle(); }, 'Signed in successfully.');
+  const openSetupGuide = async () => {
+    try {
+      await Linking.openURL('https://github.com/sahand-git/fit_track_v4/blob/main/docs/firebase-setup.md');
+    } catch {
+      setError(t('Could not open Firebase setup guide.'));
+    }
+  };
 
   const cloudBackup = () => perform(async () => {
     if (!user) throw new Error(t('Sign in to use cloud backup.'));
@@ -58,6 +68,11 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
   };
 
   return (
+    <KeyboardAvoidingView
+      style={styles.keyboardAvoidingView}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+    >
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.back} accessibilityLabel={t('Back')} accessibilityRole="button"><ArrowLeft size={19} color={theme.colors.textPrimary} /></TouchableOpacity>
@@ -65,13 +80,19 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
         <ShieldCheck size={24} color={theme.colors.primary} />
       </View>
 
-      {!firebaseConfigured ? (
+      {!firebaseConfigured && (
         <View style={styles.notice}>
           <Cloud size={22} color={theme.colors.secondary} />
           <Text style={styles.noticeTitle}>{t('Account services need setup')}</Text>
           <Text style={styles.body}>{t('Firebase is not configured yet. Guest mode and local data continue to work. Add your Firebase app values and publish the Firestore rules using docs/firebase-setup.md.')}</Text>
+          <AnimatedPressable style={styles.outlineBtn} onPress={openSetupGuide} accessibilityRole="link" accessibilityLabel={t('Open Firebase setup guide')}>
+            <ExternalLink size={16} color={theme.colors.primary} />
+            <Text style={styles.outlineText}>{t('Open Firebase setup guide')}</Text>
+          </AnimatedPressable>
         </View>
-      ) : user ? (
+      )}
+
+      {user ? (
         <>
           <View style={styles.notice}>
             <View style={styles.emailIcon}><Mail size={18} color={theme.colors.primary} /></View>
@@ -103,14 +124,15 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t(mode === 'create' ? 'Create your account' : 'Welcome back')}</Text>
           <Text style={styles.body}>{t('You can keep using FitTrack as a guest. An account is only needed for cross-device cloud backup.')}</Text>
+          {!firebaseConfigured && <Text style={styles.small}>{t('Connect Firebase before using sign in or account creation.')}</Text>}
           <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder={t('Email')} placeholderTextColor={theme.colors.textMuted} style={styles.input} accessibilityLabel={t('Email')} />
           <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder={t('Password')} placeholderTextColor={theme.colors.textMuted} style={styles.input} accessibilityLabel={t('Password')} />
-          <TouchableOpacity disabled={busy || !email.trim() || password.length < 6} style={[styles.primaryBtn, (busy || !email.trim() || password.length < 6) && styles.disabled]} onPress={signIn} accessibilityRole="button"><LogIn size={17} color={theme.colors.textInverted} /><Text style={styles.primaryText}>{t(mode === 'create' ? 'Create account' : 'Sign in')}</Text></TouchableOpacity>
+          <AnimatedPressable disabled={busy || !firebaseConfigured || !email.trim() || password.length < 6} style={[styles.primaryBtn, (busy || !firebaseConfigured || !email.trim() || password.length < 6) && styles.disabled]} onPress={signIn} accessibilityRole="button"><LogIn size={17} color={theme.colors.textInverted} /><Text style={styles.primaryText}>{t(mode === 'create' ? 'Create account' : 'Sign in')}</Text></AnimatedPressable>
           <TouchableOpacity onPress={() => setMode(mode === 'create' ? 'login' : 'create')} style={styles.switchMode}><Text style={styles.outlineText}>{t(mode === 'create' ? 'Already have an account? Sign in' : 'New to FitTrack? Create an account')}</Text></TouchableOpacity>
-          {mode === 'login' && <TouchableOpacity onPress={() => perform(async () => { await requestPasswordReset(email); }, 'Password reset email sent.')} style={styles.switchMode}><Text style={styles.outlineText}>{t('Forgot password?')}</Text></TouchableOpacity>}
+          {mode === 'login' && <TouchableOpacity disabled={!firebaseConfigured || busy} onPress={() => perform(async () => { await requestPasswordReset(email); }, 'Password reset email sent.')} style={styles.switchMode}><Text style={styles.outlineText}>{t('Forgot password?')}</Text></TouchableOpacity>}
           <View style={styles.separator}><View style={styles.rule} /><Text style={styles.muted}>{t('or')}</Text><View style={styles.rule} /></View>
           {Platform.OS !== 'web' && <>
-            <TouchableOpacity disabled={busy} style={[styles.outlineBtn, styles.googleBtn, busy && styles.disabled]} onPress={googleSignIn}><Text style={styles.outlineText}>{t('Continue with Google')}</Text></TouchableOpacity>
+            <TouchableOpacity disabled={busy || !firebaseConfigured} style={[styles.outlineBtn, styles.googleBtn, (busy || !firebaseConfigured) && styles.disabled]} onPress={googleSignIn}><Text style={styles.outlineText}>{t('Continue with Google')}</Text></TouchableOpacity>
             <Text style={styles.small}>{t('Google sign-in needs a configured mobile development build. It uses your Google identity only, not Gmail or Gemini.')}</Text>
           </>}
         </View>
@@ -119,10 +141,12 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
       {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
       {busy && <Text style={styles.muted}>{t('Please wait…')}</Text>}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: { flex: 1 },
   container: { flex: 1, backgroundColor: theme.colors.background }, content: { padding: 18, paddingBottom: 145, gap: 14 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 }, back: { padding: 10, borderRadius: 24, backgroundColor: theme.colors.surface }, eyebrow: { fontSize: 11, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 1 }, title: { fontFamily: theme.fonts.serif, fontSize: 27, color: theme.colors.textPrimary },
   card: { padding: 18, gap: 12, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 18 }, notice: { alignItems: 'center', padding: 22, gap: 10, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 18 }, emailIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' }, noticeTitle: { textAlign: 'center', fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontWeight: '700', fontSize: 19 }, cardTitle: { fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontWeight: '700', fontSize: 20 }, body: { color: theme.colors.textSecondary, fontSize: 13, lineHeight: 19 }, small: { color: theme.colors.textMuted, fontSize: 11, lineHeight: 16, textAlign: 'center' }, muted: { color: theme.colors.textMuted, fontSize: 13, textAlign: 'center' },

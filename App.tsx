@@ -61,6 +61,7 @@ import { CoachScreen } from './src/screens/CoachScreen';
 import { AddFoodSheet } from './src/components/addfood/AddFoodSheet';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { ScreenTransitionView } from './src/components/ScreenTransitionView';
+import { persistRoutineThenCommit } from './src/utils/supplementRoutine';
 import { I18nProvider } from './src/i18n/I18nContext';
 import { translate } from './src/i18n/strings';
 import { theme } from './src/theme';
@@ -316,8 +317,7 @@ function FitTrackApp() {
   };
 
   const handleUpdateRoutine = async (items: SupplementRoutineItem[]) => {
-    setSupplementRoutine(items);
-    await saveSupplementRoutine(items);
+    await persistRoutineThenCommit(items, saveSupplementRoutine, setSupplementRoutine);
     try {
       const remSettings = await loadReminderSettings();
       await scheduleSupplementReminders(remSettings, items, language);
@@ -328,8 +328,7 @@ function FitTrackApp() {
 
   const handleUpdateSupplement = async (item: SupplementRoutineItem) => {
     const updated = supplementRoutine.map((existing) => existing.id === item.id ? item : existing);
-    setSupplementRoutine(updated);
-    await saveSupplementRoutine(updated);
+    await persistRoutineThenCommit(updated, saveSupplementRoutine, setSupplementRoutine);
     try {
       const remSettings = await loadReminderSettings();
       await scheduleSupplementReminders(remSettings, updated, language);

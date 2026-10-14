@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,7 +15,6 @@ import { AppText as Text } from './AppText';
 import {
   X,
   Bell,
-  Clock,
   Droplet,
   Utensils,
   Pill,
@@ -31,7 +30,6 @@ import {
   SupplementRoutineItem,
   SupplementTime,
   MealType,
-  TimeSetting,
 } from '../types';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -87,29 +85,28 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
 
   const [settings, setSettings] = useState<ReminderSettings>(DEFAULT_REMINDER_SETTINGS);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [canAskPermission, setCanAskPermission] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (visible) {
-      loadInitialState();
-    }
-  }, [visible]);
 
   const isSupported = isNotificationSupported();
 
-  const loadInitialState = async () => {
+  const loadInitialState = useCallback(async () => {
     const loaded = await loadReminderSettings();
     setSettings(loaded);
     if (!isSupported) {
       setHasPermission(false);
-      setCanAskPermission(false);
       return;
     }
     const perm = await checkNotificationPermissions();
     setHasPermission(perm.granted);
-    setCanAskPermission(perm.canAskAgain);
-  };
+  }, [isSupported]);
+
+  useEffect(() => {
+    if (visible) {
+      // This fetch synchronizes modal state with persisted settings when the modal opens.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void loadInitialState();
+    }
+  }, [visible, loadInitialState]);
 
   const verifyAndRequestPermission = async (): Promise<boolean> => {
     if (!isSupported) return false;
@@ -139,7 +136,6 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
 
     const requested = await requestNotificationPermissions();
     setHasPermission(requested.granted);
-    setCanAskPermission(requested.canAskAgain);
     return requested.granted;
   };
 
@@ -254,16 +250,18 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
     setIsSaving(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     try {
       await saveReminderSettings(settings);
       if (isSupported) {
         await syncAllReminders(settings, routine, language);
       }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       onClose();
     } catch (err) {
       console.warn('Error saving reminders:', err);
+      Alert.alert(t('Save Error'), t('Could not save reminder settings. Please try again.'));
     } finally {
       setIsSaving(false);
     }

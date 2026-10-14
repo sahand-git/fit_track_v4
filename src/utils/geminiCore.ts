@@ -67,7 +67,8 @@ export async function executeGeminiRequest(
           body: JSON.stringify({
             contents: [{ parts }],
             generationConfig: {
-              temperature: 0.2,
+              // Gemini 3 recommends the default temperature (1.0); do not override it.
+              ...(isGemini3Model(model) ? { thinkingConfig: { thinkingLevel: 'LOW' } } : {}),
               ...(jsonResponse ? { responseMimeType: 'application/json' } : {}),
             },
           }),
@@ -177,4 +178,8 @@ export async function executeGeminiRequest(
   }
 
   throw lastError || new GeminiError('server', { message: 'Gemini request failed after retries.' });
+}
+
+function isGemini3Model(modelName: string): boolean {
+  return /^gemini-3(?:\.|-)/i.test(modelName);
 }
