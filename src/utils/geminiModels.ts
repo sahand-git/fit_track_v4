@@ -23,11 +23,9 @@ export type WaitFunction = (ms: number) => Promise<void>;
 
 export const defaultWait: WaitFunction = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * 1x1 white JPEG base64 payload used to verify multimodal image capability.
- */
-export const TINY_1X1_JPEG_BASE64 =
-  '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=';
+/** Valid 16x16 white PNG used to verify multimodal image capability. */
+export const TINY_16X16_WHITE_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGP8//8/AymAiSTVoxpGNQwpDQBVbQMdPVIhQwAAAABJRU5ErkJggg==';
 
 export type GeminiErrorKind =
   | 'invalid_key'
@@ -219,8 +217,12 @@ export function rankCandidates(modelNames: string[]): string[] {
     .map((m) => m.replace(/^models\//, ''))
     .filter((name) => {
       const lower = name.toLowerCase();
-      // Exclude special-purpose media/robotics/embedding models
-      return !EXCLUDED_KEYWORDS.some((kw) => lower.includes(kw));
+      // Only Gemini model IDs are eligible; explicitly reject tool/research/experimental families.
+      return lower.startsWith('gemini-') &&
+        !EXCLUDED_KEYWORDS.some((kw) => lower.includes(kw)) &&
+        !/(^|[-_])computer[-_]?use($|[-_])/.test(lower) &&
+        !/(^|[-_])deep[-_]?research($|[-_])/.test(lower) &&
+        !/(^|[-_])exp(?:[-_]|$)/.test(lower);
     });
 
   interface RankedItem {
@@ -278,7 +280,8 @@ export function rankCandidates(modelNames: string[]): string[] {
  */
 export async function fetchAvailableModels(
   apiKey: string,
-  customFetch: FetchFunction = fetch
+  customFetch: FetchFunction = fetch,
+  timeoutMs = REQUEST_TIMEOUT_MS
 ): Promise<string[]> {
   const cleanKey = apiKey.trim();
   if (!cleanKey) {
@@ -287,6 +290,7 @@ export async function fetchAvailableModels(
 
   const modelNames: string[] = [];
   let pageToken: string | undefined = undefined;
+  const seenPageTokens = new Set<string>();
 
   do {
     const url = new URL('https://generativelanguage.googleapis.com/v1beta/models');
@@ -295,20 +299,17 @@ export async function fetchAvailableModels(
       url.searchParams.set('pageToken', pageToken);
     }
 
-    let response: Response;
-    try {
-      response = await customFetch(url.toString(), {
+    if (pageToken && seenPageTokens.has(pageToken)) {
+      throw new GeminiError('server', { message: 'Gemini model discovery returned a repeated page token.' });
+    }
+    if (pageToken) seenPageTokens.add(pageToken);
+
+    const response = await fetchWithTimeout(customFetch, url.toString(), {
         method: 'GET',
         headers: {
           'x-goog-api-key': cleanKey,
         },
-      });
-    } catch (err) {
-      throw new GeminiError('network', {
-        message: 'Network error connecting to Gemini. Check your internet connection.',
-        cause: err,
-      });
-    }
+      }, cleanKey, timeoutMs);
 
     if (!response.ok) {
       const rawBody = await response.text().catch(() => '');
@@ -342,71 +343,41 @@ export async function fetchAvailableModels(
 export async function verifyCandidate(
   modelName: string,
   apiKey: string,
-  customFetch: FetchFunction = fetch
-): Promise<boolean> {
+  customFetch: FetchFunction = fetch,
+  timeoutMs = REQUEST_TIMEOUT_MS
+): Promise<'ok' | 'incompatible'> {
   const cleanKey = apiKey.trim();
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+  const post = async (parts: Array<Record<string, unknown>>): Promise<'ok' | 'incompatible'> => {
+    const response = await fetchWithTimeout(customFetch, endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey },
+      body: JSON.stringify({ contents: [{ parts }], generationConfig: { maxOutputTokens: 5 } }),
+    }, cleanKey, timeoutMs);
 
-  // Probe 1: Text probe
-  try {
-    const textRes = await customFetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': cleanKey,
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: 'ping' }] }],
-          generationConfig: { maxOutputTokens: 5 },
-        }),
+    if (!response.ok) {
+      const rawBody = await response.text().catch(() => '');
+      const error = parseGoogleErrorBody(response.status, rawBody, cleanKey);
+      if (response.status === 404) return 'incompatible';
+      if (response.status === 400 && /model|modality|image|vision|multimodal|unsupported|not supported/i.test(error.providerMessage || '')) {
+        return 'incompatible';
       }
-    );
+      throw error;
+    }
 
-    if (!textRes.ok) return false;
-    const textJson = await textRes.json().catch(() => null);
-    if (!textJson?.candidates?.length) return false;
-  } catch {
-    return false;
-  }
+    let json: any;
+    try { json = await response.json(); }
+    catch (cause) { throw new GeminiError('server', { status: response.status, message: 'Invalid response from Gemini probe.', cause }); }
+    if (!json?.candidates?.length) throw new GeminiError('empty', { status: response.status });
+    return 'ok';
+  };
 
-  // Probe 2: 1x1 Image probe
-  try {
-    const imgRes = await customFetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': cleanKey,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: 'test' },
-                {
-                  inlineData: {
-                    mimeType: 'image/jpeg',
-                    data: TINY_1X1_JPEG_BASE64,
-                  },
-                },
-              ],
-            },
-          ],
-          generationConfig: { maxOutputTokens: 5 },
-        }),
-      }
-    );
-
-    if (!imgRes.ok) return false;
-    const imgJson = await imgRes.json().catch(() => null);
-    if (!imgJson?.candidates?.length) return false;
-  } catch {
-    return false;
-  }
-
-  return true;
+  const textResult = await post([{ text: 'ping' }]);
+  if (textResult === 'incompatible') return textResult;
+  return post([
+    { text: 'Describe this image in one word.' },
+    { inlineData: { mimeType: 'image/png', data: TINY_16X16_WHITE_PNG_BASE64 } },
+  ]);
 }
 
 /**
@@ -415,9 +386,10 @@ export async function verifyCandidate(
  */
 export async function discoverAndVerifyModel(
   apiKey: string,
-  customFetch: FetchFunction = fetch
+  customFetch: FetchFunction = fetch,
+  timeoutMs = REQUEST_TIMEOUT_MS
 ): Promise<string> {
-  const models = await fetchAvailableModels(apiKey, customFetch);
+  const models = await fetchAvailableModels(apiKey, customFetch, timeoutMs);
   const ranked = rankCandidates(models);
 
   if (!ranked.length) {
@@ -428,8 +400,8 @@ export async function discoverAndVerifyModel(
 
   const topCandidates = ranked.slice(0, 3);
   for (const candidate of topCandidates) {
-    const ok = await verifyCandidate(candidate, apiKey, customFetch);
-    if (ok) {
+    const result = await verifyCandidate(candidate, apiKey, customFetch, timeoutMs);
+    if (result === 'ok') {
       return candidate;
     }
   }
@@ -437,6 +409,38 @@ export async function discoverAndVerifyModel(
   throw new GeminiError('no_compatible_model', {
     message: 'None of the candidate Gemini models passed text and multimodal verification.',
   });
+}
+
+async function fetchWithTimeout(
+  customFetch: FetchFunction,
+  url: string,
+  init: RequestInit,
+  apiKey: string,
+  timeoutMs: number
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = Math.max(1, timeoutMs);
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timer = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+      reject(new GeminiError('timeout', { message: 'Gemini request timed out. Please check your connection and try again.' }));
+    }, timeout);
+  });
+  try {
+    return await Promise.race([
+      customFetch(url, { ...init, signal: controller.signal }).catch((cause) => {
+        if (controller.signal.aborted) throw new GeminiError('timeout', { cause });
+        throw new GeminiError('network', {
+          message: sanitizeGeminiString((cause as any)?.message || getDefaultMessageForKind('network'), apiKey),
+          cause,
+        });
+      }),
+      timer,
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 // In-memory fallback if AsyncStorage is unavailable or throws (e.g. Node environments without window)
