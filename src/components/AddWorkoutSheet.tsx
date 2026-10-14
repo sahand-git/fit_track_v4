@@ -556,10 +556,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: theme.colors.textPrimary,
+    flexShrink: 1,
   },
   presetList: {
     gap: 8,
-    maxHeight: 180,
   },
   presetItem: {
     flexDirection: 'row',
@@ -577,12 +577,14 @@ const styles = StyleSheet.create({
   },
   presetInfo: {
     flex: 1,
+    minWidth: 0,
     marginRight: 8,
   },
   presetName: {
     fontSize: 14,
     fontWeight: '600',
     color: theme.colors.textPrimary,
+    flexShrink: 1,
   },
   presetNameActive: {
     color: theme.colors.primary,
@@ -591,6 +593,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
+    flexShrink: 1,
   },
   customNameInput: {
     borderWidth: 1,
@@ -620,10 +623,14 @@ const styles = StyleSheet.create({
   },
   statRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
   },
   statLabelRow: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -701,10 +708,14 @@ const styles = StyleSheet.create({
   },
   sectionHeaderRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
   sectionHeaderLeft: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -781,3 +792,4 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverted,
   },
 });
+

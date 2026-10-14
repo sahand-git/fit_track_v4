@@ -46,6 +46,7 @@ import { getScopedStorageKey } from '../storage/storage';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
 import { calculateActivityBudget } from '../utils/activityBudget';
+import { getCalorieRingSize } from '../utils/dashboardLayout';
 
 interface DashboardScreenProps {
   profile: UserProfile;
@@ -87,9 +88,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const t = useCallback((str: string) => translate(language, str), [language]);
 
   const [workoutSheetVisible, setWorkoutSheetVisible] = useState(false);
+  const [heroWidth, setHeroWidth] = useState(0);
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
-  const floatingBottom = dockBottom + 66;
+  const dockClearance = dockBottom + 72;
 
   const { consumedCalories, consumedProtein, consumedCarbs, consumedFat } = useMemo(() => {
     return log.meals.reduce(
@@ -209,7 +211,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: floatingBottom + 70 }]}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {/* Editorial Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
@@ -232,12 +234,17 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </View>
 
         {/* Hero Calorie Budget Focus */}
-        <Animated.View entering={getStaggeredCardEntry(0)} style={styles.heroSection}>
+        <Animated.View
+          entering={getStaggeredCardEntry(0)}
+          onLayout={(event) => setHeroWidth(event.nativeEvent.layout.width)}
+          style={styles.heroSection}
+        >
           <CalorieRing
             consumed={consumedCalories}
             target={effectiveCalorieTarget}
             proteinConsumed={consumedProtein}
             proteinTarget={profile.targetProtein}
+            size={getCalorieRingSize(heroWidth)}
           />
 
           {burnedCalories > 0 && (
@@ -512,24 +519,20 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </Animated.View>
       </ScrollView>
 
-      {/* Floating "+ Add food" Action Button */}
+      {/* Reserved action area keeps Add Food clear of the dashboard cards. */}
       {!isFuture && (
-        <TouchableOpacity
-          style={[
-            styles.floatingAddBtn,
-            {
-              bottom: floatingBottom,
-              ...(language === 'en' ? { right: 18 } : { left: 18 }),
-            },
-          ]}
-          onPress={handleOpenFloatingAddFood}
-          activeOpacity={0.88}
-          accessibilityLabel={t('Add food')}
-          accessibilityRole="button"
-        >
-          <Plus size={18} color={theme.colors.textInverted} strokeWidth={2.4} />
-          <Text style={styles.floatingAddBtnText}>{t('Add food')}</Text>
-        </TouchableOpacity>
+        <View style={[styles.addFoodFooter, { paddingBottom: dockClearance, alignItems: language === 'en' ? 'flex-end' : 'flex-start' }]}>
+          <TouchableOpacity
+            style={styles.floatingAddBtn}
+            onPress={handleOpenFloatingAddFood}
+            activeOpacity={0.88}
+            accessibilityLabel={t('Add food')}
+            accessibilityRole="button"
+          >
+            <Plus size={18} color={theme.colors.textInverted} strokeWidth={2.4} />
+            <Text style={styles.floatingAddBtnText}>{t('Add food')}</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       <AddWorkoutSheet
@@ -550,6 +553,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  scroll: {
+    flex: 1,
+  },
   stepsCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14,
     marginTop: 12, backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg,
@@ -720,7 +726,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    paddingBottom: 160,
+    paddingBottom: theme.spacing.md,
   },
   header: {
     flexDirection: 'row',
@@ -959,7 +965,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   floatingAddBtn: {
-    position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -968,8 +973,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: theme.radius.full,
     ...theme.shadow.floating,
-    zIndex: 10,
-    elevation: 6,
+  },
+  addFoodFooter: {
+    paddingHorizontal: 18,
+    paddingTop: 8,
+    backgroundColor: theme.colors.background,
   },
   floatingAddBtnText: {
     fontFamily: theme.fonts.sans,

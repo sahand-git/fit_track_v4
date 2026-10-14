@@ -14,7 +14,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CheckCircle2,
-  Circle,
   Pill,
   Plus,
   Minus,
@@ -52,6 +51,7 @@ import {
   CatalogSupplementItem,
 } from '../data/supplementCatalog';
 import { theme } from '../theme';
+import { buildRoutineFromDay, mergeRoutineIntoDay } from '../utils/supplementRoutine';
 import Animated from 'react-native-reanimated';
 import {
   getListLayoutTransition,
@@ -103,7 +103,6 @@ export function SupplementsScreen({
   const t = (value: string) => translate(language, value);
 
   const isFuture = selectedDate > getTodayDateString();
-  const isToday = selectedDate === getTodayDateString();
 
   // Resolved list of items for the selected day:
   // If the day already has specific daily items, use them.
@@ -140,6 +139,7 @@ export function SupplementsScreen({
 
   // Add / Edit Modal state
   const [modalVisible, setModalVisible] = useState(false);
+  const [isSavingSupplement, setIsSavingSupplement] = useState(false);
   const [editingItem, setEditingItem] = useState<LoggedDailySupplement | null>(null);
 
   // Delete Confirmation Modal state
@@ -248,9 +248,8 @@ export function SupplementsScreen({
 
   const handleSaveModal = async () => {
     const cleanName = formName.trim();
-    if (!cleanName) return;
-
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    if (!cleanName || isSavingSupplement) return;
+    setIsSavingSupplement(true);
 
     const numAmount = parseFloat(formAmount);
     const validAmount = !isNaN(numAmount) && numAmount > 0 ? numAmount : undefined;
@@ -259,6 +258,7 @@ export function SupplementsScreen({
     const computedDose =
       validAmount !== undefined ? `${validAmount} ${cleanUnit}` : undefined;
 
+    try {
     if (editingItem) {
       // Editing existing item
       const updatedDailyList = activeItems.map((item) => {
@@ -316,11 +316,6 @@ export function SupplementsScreen({
         taken: false,
       };
 
-      if (formSaveTarget === 'day' || formSaveTarget === 'both') {
-        const nextDaily = [...activeItems, newDailyItem];
-        await onUpdateDailySupplements(nextDaily);
-      }
-
       if (formSaveTarget === 'routine' || formSaveTarget === 'both') {
         const newRoutineItem: SupplementRoutineItem = {
           id: newId,
@@ -338,15 +333,24 @@ export function SupplementsScreen({
         if (!exists) {
           await onUpdateRoutine([...routine, newRoutineItem]);
         }
-        // If saved to routine only, also append to current day's active list so user sees it right away
-        if (formSaveTarget === 'routine') {
-          const nextDaily = [...activeItems, newDailyItem];
-          await onUpdateDailySupplements(nextDaily);
-        }
       }
+
+      // Persist the routine first for combined saves. If writing the daily list then fails,
+      // retrying will detect the existing routine item and won't create a duplicate.
+      const existsInDay = activeItems.some(
+        (item) => item.name.trim().toLowerCase() === cleanName.toLowerCase() && item.time === formTime
+      );
+      if (!existsInDay) await onUpdateDailySupplements([...activeItems, newDailyItem]);
     }
 
     setModalVisible(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    } catch (err) {
+      console.error('Failed to save supplement:', err);
+      Alert.alert(t('Save Error'), t('Could not save supplement. Please try again.'));
+    } finally {
+      setIsSavingSupplement(false);
+    }
   };
 
   const handleAdjustQuantity = async (item: LoggedDailySupplement, delta: number) => {
@@ -432,45 +436,33 @@ export function SupplementsScreen({
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 
-    // Prevent duplicates by name and time-slot
-    const existingKeys = new Set(
-      activeItems.map((i) => `${i.name.trim().toLowerCase()}_${i.time}`)
+    const updated = mergeRoutineIntoDay(activeItems, routine, (item) =>
+      `supp_${Date.now()}_${item.id}_${Math.random().toString(36).slice(2, 7)}`
     );
 
-    const newToAdd: LoggedDailySupplement[] = [];
-    routine.forEach((r) => {
-      const key = `${r.name.trim().toLowerCase()}_${r.time}`;
-      if (!existingKeys.has(key)) {
-        newToAdd.push({
-          id: `supp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          routineItemId: r.id,
-          name: r.name,
-          category: r.category || 'supplement',
-          amount: r.amount,
-          unit: r.unit,
-          dose: r.dose,
-          note: r.note,
-          time: r.time,
-          taken: false,
-        });
-        existingKeys.add(key);
-      }
-    });
-
-    if (newToAdd.length === 0) {
+    if (updated.length === activeItems.length) {
       // If dailySupplements was not yet saved explicitly, save activeItems now
       if (dailySupplements === undefined && activeItems.length > 0) {
-        await onUpdateDailySupplements(activeItems);
-        showToast(t('Routine loaded into today.'));
+        try {
+          await onUpdateDailySupplements(activeItems);
+          showToast(t('Routine loaded into today.'));
+        } catch (err) {
+          console.error('Failed to load supplement routine:', err);
+          showToast(t('Could not update supplements. Please try again.'));
+        }
       } else {
         showToast(t('All routine items are already present.'));
       }
       return;
     }
 
-    const updated = [...activeItems, ...newToAdd];
-    await onUpdateDailySupplements(updated);
-    showToast(t('Routine loaded into today.'));
+    try {
+      await onUpdateDailySupplements(updated);
+      showToast(t('Routine loaded into today.'));
+    } catch (err) {
+      console.error('Failed to load supplement routine:', err);
+      showToast(t('Could not update supplements. Please try again.'));
+    }
   };
 
   const handleSaveDayAsRoutine = async () => {
@@ -481,24 +473,7 @@ export function SupplementsScreen({
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 
-    const seen = new Set<string>();
-    const newRoutine: SupplementRoutineItem[] = [];
-    for (const i of activeItems) {
-      const key = `${i.name.trim().toLowerCase()}_${i.time}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        newRoutine.push({
-          id: i.routineItemId || i.id,
-          name: i.name,
-          category: i.category || 'supplement',
-          amount: i.amount,
-          unit: i.unit,
-          dose: i.dose,
-          note: i.note,
-          time: i.time,
-        });
-      }
-    }
+    const newRoutine = buildRoutineFromDay(activeItems);
 
     try {
       await onUpdateRoutine(newRoutine);
@@ -1133,10 +1108,10 @@ export function SupplementsScreen({
                 <TouchableOpacity
                   style={[
                     styles.modalSaveBtn,
-                    !formName.trim() && styles.modalSaveBtnDisabled,
+                    (!formName.trim() || isSavingSupplement) && styles.modalSaveBtnDisabled,
                   ]}
                   onPress={handleSaveModal}
-                  disabled={!formName.trim()}
+                  disabled={!formName.trim() || isSavingSupplement}
                   accessibilityRole="button"
                 >
                   <Text style={styles.modalSaveBtnText}>
