@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -18,12 +19,13 @@ import { DailyLog, UserProfile } from '../types';
 import { AppText as Text } from '../components/AppText';
 import { translate } from '../i18n/strings';
 import { useLanguage } from '../i18n/I18nContext';
-import { askNutritionCoach } from '../services/plateAnalysisService';
-import { getStoredGeminiApiKey } from '../services/plateAnalysisService';
+import { askNutritionCoach, getStoredGeminiApiKey } from '../services/plateAnalysisService';
 import { GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
 import { formatDisplayDate } from '../utils/dateUtils';
 import { SkeletonCoachBubble } from '../components/SkeletonLoader';
 import { theme } from '../theme';
+import { isReducedMotion } from '../utils/motion';
+import { AnimatedPressable } from '../components/AnimatedPressable';
 
 interface CoachScreenProps {
   profile: UserProfile;
@@ -121,10 +123,26 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
   // Auto-scroll to bottom on new messages or loading state
   useEffect(() => {
     const timer = setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
+      scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
     }, 100);
     return () => clearTimeout(timer);
   }, [messages, busy]);
+
+  // When the keyboard reduces the available height, keep the newest message and
+  // the reply composer in view instead of leaving the conversation at its old offset.
+  useEffect(() => {
+    let scrollTimer: ReturnType<typeof setTimeout> | undefined;
+    const subscription = Keyboard.addListener('keyboardDidShow', () => {
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
+      }, 120);
+    });
+    return () => {
+      subscription.remove();
+      if (scrollTimer) clearTimeout(scrollTimer);
+    };
+  }, []);
 
   const send = async (text: string) => {
     const trimmed = text.trim();
@@ -161,7 +179,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       style={{ flex: 1 }}
     >
       <View style={[styles.container, { paddingBottom: bottomPadding, direction: language === 'en' ? 'ltr' : 'rtl' }]}>
@@ -197,6 +215,8 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
         ref={scrollViewRef}
         style={styles.messages}
         contentContainerStyle={styles.messagesContent}
+        keyboardShouldPersistTaps="handled"
+        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() })}
       >
         {messages.length === 0 ? (
           <View style={styles.welcomeCard}>
@@ -238,7 +258,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
           returnKeyType="send"
           onSubmitEditing={() => send(input)}
         />
-        <TouchableOpacity
+        <AnimatedPressable
           style={[styles.sendButton, (!input.trim() || busy) && styles.sendDisabled]}
           onPress={() => send(input)}
           disabled={!input.trim() || busy}
@@ -250,7 +270,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
           ) : (
             <Send size={17} color={theme.colors.textInverted} />
           )}
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
     </View>
   </KeyboardAvoidingView>
@@ -284,7 +304,7 @@ const styles = StyleSheet.create({
   loadingBubble: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   error: { color: theme.colors.danger, fontSize: 12, paddingHorizontal: 4 },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, borderColor: theme.colors.border, borderWidth: 1, backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg, padding: 7, marginTop: 8 },
-  input: { flex: 1, maxHeight: 100, paddingHorizontal: 9, paddingVertical: 8, fontSize: 14, color: theme.colors.textPrimary },
+  input: { flex: 1, maxHeight: 100, minHeight: 40, paddingHorizontal: 9, paddingVertical: 8, fontSize: 14, color: theme.colors.textPrimary, textAlignVertical: 'top' },
   sendButton: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.primary },
   sendDisabled: { opacity: 0.5 },
 });

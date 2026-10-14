@@ -152,6 +152,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         {t('Calibrated with the Mifflin-St Jeor metabolic formula.')}
       </Text>
 
+      {onOpenAccount && (
+        <AnimatedPressable
+          style={[styles.optionRow, styles.accountShortcut]}
+          onPress={onOpenAccount}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel={t('Account & cloud backup')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <View style={styles.accountShortcutIcon}>
+              <UserRound size={20} color={theme.colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Account & cloud backup')}</Text>
+              <Text style={styles.optionDesc}>{t('Sign in, verify your account, and back up to your own cloud space.')}</Text>
+            </View>
+          </View>
+        </AnimatedPressable>
+      )}
+
       {/* Language Selector */}
       <View style={styles.languageCard}>
         <View style={styles.languageHeader}>
@@ -383,17 +403,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* Data & Backup Section */}
       <View style={styles.section}>
         <Text style={styles.sectionHeader}>{t('Data & Storage')}</Text>
-        {onOpenAccount && (
-          <TouchableOpacity style={styles.optionRow} onPress={onOpenAccount} activeOpacity={0.7} accessibilityRole="button">
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-              <UserRound size={20} color={theme.colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.optionLabel}>{t('Account & cloud backup')}</Text>
-                <Text style={styles.optionDesc}>{t('Sign in, verify your account, and back up to your own cloud space.')}</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        )}
         <TouchableOpacity
           style={styles.optionRow}
           onPress={() => {
@@ -645,6 +654,19 @@ const styles = StyleSheet.create({
   optionRowActive: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primaryLight,
+  },
+  accountShortcut: {
+    borderColor: theme.colors.primaryBorder,
+    backgroundColor: theme.colors.primaryLight,
+    paddingVertical: 14,
+  },
+  accountShortcutIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   optionLabel: {
     fontSize: 14,

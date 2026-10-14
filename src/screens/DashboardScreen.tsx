@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -26,6 +26,7 @@ import { CalorieRing } from '../components/CalorieRing';
 import { MacroCards } from '../components/MacroCards';
 import { WaterTracker } from '../components/WaterTracker';
 import { AddWorkoutSheet } from '../components/AddWorkoutSheet';
+import { AnimatedPressable } from '../components/AnimatedPressable';
 import { StreakBadge } from '../components/StreakBadge';
 import { GoalCelebration } from '../components/GoalCelebration';
 import { evaluateGoalAchievement } from '../utils/goalCelebration';
@@ -43,6 +44,7 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { getScopedStorageKey } from '../storage/storage';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
+import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
 import { calculateActivityBudget } from '../utils/activityBudget';
 
 interface DashboardScreenProps {
@@ -82,7 +84,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
-  const t = (str: string) => translate(language, str);
+  const t = useCallback((str: string) => translate(language, str), [language]);
 
   const [workoutSheetVisible, setWorkoutSheetVisible] = useState(false);
 
@@ -116,7 +118,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       { key: 'dinner', label: t('Dinner') },
       { key: 'snack', label: t('Snacks') },
     ],
-    [language]
+    [t]
   );
 
   const todayLabel = formatDisplayDate(log.date, language);
@@ -145,7 +147,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       }));
     }
     return [];
-  }, [log.dailySupplements, supplementRoutine, takenSupplementIds, language]);
+  }, [log.dailySupplements, supplementRoutine, takenSupplementIds, t]);
 
   const takenSupplementsCount = useMemo(
     () => activeSupplements.filter((s) => s.isTaken).length,
@@ -363,30 +365,33 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <Animated.View entering={getStaggeredCardEntry(5)} style={styles.workoutContainer}>
           <View style={styles.workoutCard}>
             <View style={styles.workoutHeader}>
-              <View style={styles.workoutTitleRow}>
-                <Dumbbell size={16} color={theme.colors.primary} />
-                <Text style={styles.workoutTitle}>{t('Workouts')}</Text>
-                {burnedCalories > 0 && (
-                  <Text style={styles.workoutBurnBadge}>
-                    {burnedCalories} {t('kcal')}
-                  </Text>
-                )}
+              <View style={styles.workoutHeaderTop}>
+                <View style={styles.workoutTitleRow}>
+                  <Dumbbell size={17} color={theme.colors.primary} />
+                  <Text style={styles.workoutTitle}>{t('Workouts')}</Text>
+                </View>
+                <AnimatedPressable onPress={onOpenWorkouts} style={styles.manageBtn} accessibilityRole="button">
+                  <Text style={styles.manageBtnText}>{t('History')}</Text>
+                </AnimatedPressable>
               </View>
-              <TouchableOpacity onPress={onOpenWorkouts} style={styles.manageBtn} accessibilityRole="button"><Text style={styles.manageBtnText}>{t('History')}</Text></TouchableOpacity>
-              <TouchableOpacity
+              {burnedCalories > 0 && (
+                <Text style={styles.workoutBurnBadge}>
+                  {burnedCalories} {t('kcal')}
+                </Text>
+              )}
+              <AnimatedPressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   setWorkoutSheetVisible(true);
                 }}
                 style={styles.addWorkoutBtn}
                 disabled={isFuture}
-                activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={t('Add workout')}
               >
                 <Plus size={14} color={theme.colors.primary} />
                 <Text style={styles.addWorkoutBtnText}>{t('Add workout')}</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
 
             {(!log.workouts || log.workouts.length === 0) ? (
@@ -414,13 +419,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     layout={getListLayoutTransition()}
                     style={styles.workoutItemRow}
                   >
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.workoutItemName}>{t(w.name)}</Text>
-                      <Text style={styles.workoutItemMeta}>
-                        {w.durationMinutes} {t('min')} · {w.caloriesBurned} {t('kcal')}
-                        {w.sets && w.sets.length > 0 ? ` · ${w.sets.length} ${t('sets')}` : ''}
-                        {w.calorieSource === 'met_estimate' ? ` (${t('Estimate')})` : ''}
-                      </Text>
+                    <View style={styles.workoutItemInfo}>
+                      <Text style={styles.workoutItemName} numberOfLines={2}>{t(w.name)}</Text>
+                      <View style={styles.workoutItemMetaList}>
+                        {Object.values(getWorkoutDisplayMeta(w, t)).map((label, index) => (
+                          <Text key={`${w.id}_meta_${index}`} style={styles.workoutItemMeta}>{label}</Text>
+                        ))}
+                      </View>
                     </View>
                     <TouchableOpacity
                       onPress={() => {
@@ -608,15 +613,21 @@ const styles = StyleSheet.create({
     ...theme.shadow.subtle,
   },
   workoutHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    gap: 8,
     marginBottom: 10,
+  },
+  workoutHeaderTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   workoutTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
+    minWidth: 0,
   },
   workoutTitle: {
     fontFamily: theme.fonts.serif,
@@ -629,17 +640,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.warning,
     backgroundColor: theme.colors.warningLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: theme.radius.sm,
+    overflow: 'hidden',
   },
   addWorkoutBtn: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: theme.radius.sm,
+    gap: 7,
+    minHeight: 42,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.radius.md,
     backgroundColor: theme.colors.primaryLight,
   },
   addWorkoutBtnText: {
@@ -660,7 +675,7 @@ const styles = StyleSheet.create({
   },
   workoutItemRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderTopWidth: 1,
@@ -670,14 +685,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: theme.colors.textPrimary,
+    lineHeight: 20,
   },
   workoutItemMeta: {
     fontSize: 12,
     color: theme.colors.textMuted,
-    marginTop: 2,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    overflow: 'hidden',
+  },
+  workoutItemInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  workoutItemMetaList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
   },
   deleteWorkoutBtn: {
-    padding: 6,
+    minWidth: 40,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
   },
   container: {
     flex: 1,
