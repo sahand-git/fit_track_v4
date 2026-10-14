@@ -16,6 +16,7 @@ import {
   FetchFunction,
   WaitFunction,
   REQUEST_TIMEOUT_MS,
+  MAX_MODEL_DISCOVERY_PAGES,
   TINY_16X16_WHITE_PNG_BASE64,
   testGeminiConnection,
 } from './geminiModels';
@@ -152,6 +153,18 @@ async function runAllTests() {
     let imageProbeTimeout: any;
     try { await discoverAndVerifyModel('test-key', imageProbeFetch, 5); } catch (error) { imageProbeTimeout = error; }
     assert(imageProbeTimeout instanceof GeminiError && imageProbeTimeout.kind === 'timeout', 'Hung image probe throws timeout');
+  }
+
+  {
+    let pageCalls = 0;
+    const infinitePages: FetchFunction = async () => {
+      pageCalls++;
+      return new Response(JSON.stringify({ models: [], nextPageToken: `page-${pageCalls + 1}` }), { status: 200 });
+    };
+    let pageLimitError: any;
+    try { await fetchAvailableModels('test-key', infinitePages, 5000); } catch (error) { pageLimitError = error; }
+    assert(pageLimitError instanceof GeminiError && pageLimitError.kind === 'server', 'Unique endless page tokens stop at a safety limit');
+    assert(pageCalls === MAX_MODEL_DISCOVERY_PAGES, `Discovery page limit is enforced (${pageCalls})`);
   }
 
   // Gemini 3 uses default temperature and low thinking for responsive in-app chat.

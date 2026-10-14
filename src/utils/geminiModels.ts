@@ -16,6 +16,7 @@ export const ACTIVE_MODEL_STORAGE_KEY = '@fittrack_gemini_active_model';
 export const ACTIVE_MODEL_TIMESTAMP_KEY = '@fittrack_gemini_active_model_time';
 export const MODEL_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // ~24 hours
 export const MAX_PAGE_SIZE = 1000; // Gemini API max pageSize per official docs
+export const MAX_MODEL_DISCOVERY_PAGES = 100;
 export const REQUEST_TIMEOUT_MS = 25000;
 
 export type FetchFunction = (url: string, init?: RequestInit) => Promise<Response>;
@@ -291,8 +292,16 @@ export async function fetchAvailableModels(
   const modelNames: string[] = [];
   let pageToken: string | undefined = undefined;
   const seenPageTokens = new Set<string>();
+  const discoveryDeadline = Date.now() + Math.max(1, timeoutMs);
+  let pagesFetched = 0;
 
   do {
+    if (Date.now() >= discoveryDeadline) {
+      throw new GeminiError('timeout', { message: 'Gemini model discovery timed out. Please try again.' });
+    }
+    if (pagesFetched >= MAX_MODEL_DISCOVERY_PAGES) {
+      throw new GeminiError('server', { message: 'Gemini model discovery exceeded the safe page limit.' });
+    }
     const url = new URL('https://generativelanguage.googleapis.com/v1beta/models');
     url.searchParams.set('pageSize', String(MAX_PAGE_SIZE));
     if (pageToken) {
@@ -309,7 +318,8 @@ export async function fetchAvailableModels(
         headers: {
           'x-goog-api-key': cleanKey,
         },
-      }, cleanKey, timeoutMs);
+      }, cleanKey, discoveryDeadline - Date.now());
+    pagesFetched++;
 
     if (!response.ok) {
       const rawBody = await response.text().catch(() => '');
