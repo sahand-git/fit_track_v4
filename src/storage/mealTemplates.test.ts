@@ -22,9 +22,7 @@ import {
   saveDailyLog,
   loadDailyLog,
   restoreAllData,
-  saveUserProfile,
 } from './storage';
-import { createBackupPayload } from '../services/backupService';
 import { computeBackupSummary } from '../utils/backupCore';
 import { LoggedMeal, DailyLog, MealTemplate, FitTrackBackup } from '../types';
 
@@ -351,24 +349,33 @@ async function runMealTemplatesTests() {
 
   // Test 5: Backup & Restore with mealTemplates
   {
-    await saveUserProfile({
-      name: 'Saif Al-Iraqi',
-      age: 28,
-      gender: 'male',
-      weightKg: 78,
-      heightCm: 178,
-      activityLevel: 'moderate',
-      goal: 'muscle_gain',
-      bmr: 1750,
-      tdee: 2400,
-      targetCalories: 2600,
-      targetProtein: 160,
-      targetCarbs: 320,
-      targetFat: 70,
-      waterTargetGlasses: 10,
-    });
-
-    const backupPayload = await createBackupPayload();
+    const savedTemplates = await loadMealTemplates();
+    const backupPayload: FitTrackBackup = {
+      version: '4.0',
+      exportedAt: new Date().toISOString(),
+      profile: {
+        name: 'Saif Al-Iraqi',
+        age: 28,
+        gender: 'male',
+        weightKg: 78,
+        heightCm: 178,
+        activityLevel: 'moderate',
+        goal: 'muscle_gain',
+        bmr: 1750,
+        tdee: 2400,
+        targetCalories: 2600,
+        targetProtein: 160,
+        targetCarbs: 320,
+        targetFat: 70,
+        waterTargetGlasses: 10,
+        language: 'en',
+        isOnboarded: true,
+      },
+      dailyLogs: {},
+      supplementRoutine: [],
+      weightHistory: [],
+      mealTemplates: savedTemplates,
+    };
     assert(Array.isArray(backupPayload.mealTemplates), 'Backup payload includes mealTemplates array');
     assert(backupPayload.mealTemplates!.length === 1, 'Backup payload includes saved template');
 

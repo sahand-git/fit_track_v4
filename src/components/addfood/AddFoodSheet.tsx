@@ -27,11 +27,15 @@ import {
   Image as ImageIcon,
   Star,
   Copy,
+  Utensils,
+  Trash2,
+  Bookmark,
+  Info,
 } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { LoggedMeal, MealType, FoodItem } from '../../types';
-import { VERIFIED_FOOD_DATABASE } from '../../data/foodDatabase';
+import { LoggedMeal, MealType, FoodItem, MealTemplate } from '../../types';
+import { VERIFIED_FOOD_DATABASE, REGIONAL_FOODS } from '../../data/foodDatabase';
 import { lookupBarcodeWithFallbacks } from '../../services/barcodeService';
 import {
   analyzeMealImage,
@@ -57,7 +61,13 @@ import {
   addCustomFood,
   loadBarcodeCache,
   copyYesterdayMeals,
+  copyYesterdayMealType,
   loadDailyLog,
+  loadFrequentFoods,
+  loadMealTemplates,
+  saveMealTemplate,
+  deleteMealTemplate,
+  createTemplateFromMeals,
 } from '../../storage/storage';
 import { getFoodSourceLabel } from '../../utils/foodSource';
 import { createUniqueId } from '../../utils/idUtils';
@@ -97,7 +107,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
-  const t = (str: string) => translate(language, str);
+  const t = useCallback((str: string) => translate(language, str), [language]);
 
   const [activeTab, setActiveTab] = useState<TabMode>('search');
   const [selectedMeal, setSelectedMeal] = useState<MealType>(mealType || getDefaultMealType());
@@ -108,13 +118,22 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [servingsCount, setServingsCount] = useState(1);
 
   // Filter & Collections state
-  type FoodFilter = 'all' | 'recent' | 'favorites' | 'custom' | 'scanned';
+  type FoodFilter = 'all' | 'recent' | 'frequent' | 'favorites' | 'templates' | 'regional' | 'custom' | 'scanned';
   const [foodFilter, setFoodFilter] = useState<FoodFilter>('all');
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
+  const [frequentFoods, setFrequentFoods] = useState<FoodItem[]>([]);
+  const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
+  const [currentDayMeals, setCurrentDayMeals] = useState<LoggedMeal[]>([]);
   const [favoriteFoods, setFavoriteFoods] = useState<FoodItem[]>([]);
   const [customFoods, setCustomFoods] = useState<FoodItem[]>([]);
   const [barcodeCache, setBarcodeCache] = useState<FoodItem[]>([]);
+
+  // Modals state
   const [customModalVisible, setCustomModalVisible] = useState(false);
+  const [templateModalVisible, setTemplateModalVisible] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const [templateSaving, setTemplateSaving] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customServing, setCustomServing] = useState('');
   const [customCalories, setCustomCalories] = useState('');
@@ -123,6 +142,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [customFat, setCustomFat] = useState('');
   const [customError, setCustomError] = useState<string | null>(null);
   const [copyLoading, setCopyLoading] = useState(false);
+  const [copyMealTypeLoading, setCopyMealTypeLoading] = useState(false);
 
   // Barcode state
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -171,19 +191,27 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       loadFavoriteFoods(),
       loadCustomFoods(),
       loadBarcodeCache(),
-    ]).then(([recent, favs, custom, cachedBarcodes]) => {
+      loadFrequentFoods(),
+      loadMealTemplates(),
+      loadDailyLog(date),
+    ]).then(([recent, favs, custom, cachedBarcodes, frequent, templates, daily]) => {
       if (!isMounted) return;
       setRecentFoods(recent);
       setFavoriteFoods(favs);
       setCustomFoods(custom);
       setBarcodeCache(cachedBarcodes);
+      setFrequentFoods(frequent);
+      setMealTemplates(templates);
+      if (daily?.meals) {
+        setCurrentDayMeals(daily.meals);
+      }
     }).catch((err) => {
       console.error('Error loading collections:', err);
     });
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [date]);
 
   const checkApiKey = useCallback(() => {
     let isMounted = true;
@@ -218,7 +246,9 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     setPhotoError(null);
     setDescribeError(null);
     setCustomModalVisible(false);
+    setTemplateModalVisible(false);
     setCustomError(null);
+    setTemplateError(null);
     onClose();
   };
 
@@ -265,6 +295,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     if (!selectedFood || isFuture) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
+    const effectiveGramsPerUnit = selectedFood.gramsPerUnit ?? selectedFood.servingGrams;
+    const totalGrams = Math.round(effectiveGramsPerUnit * servingsCount);
+    const scaleRatio = totalGrams / (selectedFood.servingGrams > 0 ? selectedFood.servingGrams : 100);
+
     const meal: LoggedMeal = {
       id: createUniqueId('meal'),
       foodId: selectedFood.id,
@@ -274,16 +308,19 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       mealType: selectedMeal,
       servings: servingsCount,
       servingSize: selectedFood.servingSize,
-      servingGrams: Math.round(selectedFood.servingGrams * servingsCount),
-      calories: Math.round(selectedFood.calories * servingsCount),
-      protein: Math.round(selectedFood.protein * servingsCount * 10) / 10,
-      carbs: Math.round(selectedFood.carbs * servingsCount * 10) / 10,
-      fat: Math.round(selectedFood.fat * servingsCount * 10) / 10,
-      fiber: selectedFood.fiber !== undefined ? Math.round(selectedFood.fiber * servingsCount * 10) / 10 : undefined,
-      sugar: selectedFood.sugar !== undefined ? Math.round(selectedFood.sugar * servingsCount * 10) / 10 : undefined,
-      sodium: selectedFood.sodium !== undefined ? Math.round(selectedFood.sodium * servingsCount) : undefined,
+      servingGrams: totalGrams,
+      calories: Math.round(selectedFood.calories * scaleRatio),
+      protein: Math.round(selectedFood.protein * scaleRatio * 10) / 10,
+      carbs: Math.round(selectedFood.carbs * scaleRatio * 10) / 10,
+      fat: Math.round(selectedFood.fat * scaleRatio * 10) / 10,
+      fiber: selectedFood.fiber !== undefined ? Math.round(selectedFood.fiber * scaleRatio * 10) / 10 : undefined,
+      sugar: selectedFood.sugar !== undefined ? Math.round(selectedFood.sugar * scaleRatio * 10) / 10 : undefined,
+      sodium: selectedFood.sodium !== undefined ? Math.round(selectedFood.sodium * scaleRatio) : undefined,
       barcode: selectedFood.barcode,
       source: selectedFood.source ?? (selectedFood.barcode ? 'open_food_facts' : undefined),
+      isEstimate: selectedFood.isEstimate,
+      portionUnit: selectedFood.portionUnit,
+      gramsPerUnit: selectedFood.gramsPerUnit,
       timestamp: new Date().toISOString(),
     };
 
@@ -350,7 +387,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       setCustomFat('');
       setCustomError(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    } catch (err) {
+    } catch {
       setCustomError(t('Failed to save meal.'));
     }
   };
@@ -380,6 +417,117 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       Alert.alert(t('Error'), t('Failed to save meal.'));
     } finally {
       setCopyLoading(false);
+    }
+  };
+
+  const handleCopyYesterdayMealType = async () => {
+    if (isFuture || copyMealTypeLoading) return;
+    setCopyMealTypeLoading(true);
+    try {
+      const yesterday = getPreviousDayString(date);
+      const yesterdayLog = await loadDailyLog(yesterday);
+      const matchingMeals = (yesterdayLog.meals || []).filter((m) => m.mealType === selectedMeal);
+      if (matchingMeals.length === 0) {
+        Alert.alert(
+          t(`Copy yesterday's ${selectedMeal === 'snack' ? 'snacks' : selectedMeal}`),
+          t('No meals were logged yesterday for this meal.')
+        );
+        return;
+      }
+      await copyYesterdayMealType(date, selectedMeal);
+      if (onCopyYesterdayMeals) {
+        await onCopyYesterdayMeals(date);
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        handleClose();
+      }, 450);
+    } catch (err) {
+      console.error('Failed to copy yesterday meal type:', err);
+      Alert.alert(t('Error'), t('Failed to save meal.'));
+    } finally {
+      setCopyMealTypeLoading(false);
+    }
+  };
+
+  const handleLogTemplate = (template: MealTemplate) => {
+    if (isFuture) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    template.items.forEach((item) => {
+      const meal: LoggedMeal = {
+        id: createUniqueId('meal'),
+        foodId: createUniqueId('food_tmpl'),
+        name: item.name,
+        mealType: selectedMeal,
+        servings: item.servings,
+        servingSize: item.servingSize,
+        servingGrams: item.servingGrams,
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fat: item.fat,
+        fiber: item.fiber,
+        sugar: item.sugar,
+        portionUnit: item.portionUnit,
+        gramsPerUnit: item.gramsPerUnit,
+        isEstimate: item.isEstimate,
+        source: item.source ?? 'custom',
+        timestamp: new Date().toISOString(),
+      };
+      onAddMeal(meal, date);
+    });
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+      handleClose();
+    }, 450);
+  };
+
+  const handleDeleteTemplate = (template: MealTemplate) => {
+    Alert.alert(
+      t('Delete template'),
+      t('Are you sure you want to delete this template?'),
+      [
+        { text: t('Cancel'), style: 'cancel' },
+        {
+          text: t('Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            const updated = await deleteMealTemplate(template.id);
+            setMealTemplates(updated);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+          },
+        },
+      ]
+    );
+  };
+
+  const handleCreateTemplateFromCurrentMeals = async () => {
+    const trimmed = templateName.trim();
+    if (!trimmed) {
+      setTemplateError(t('Please enter a valid food name.'));
+      return;
+    }
+    const currentMeals = currentDayMeals.filter((m) => m.mealType === selectedMeal);
+    if (currentMeals.length === 0) {
+      setTemplateError(t('No meals were logged yesterday for this meal.'));
+      return;
+    }
+    setTemplateSaving(true);
+    try {
+      const newTemplate = createTemplateFromMeals(trimmed, selectedMeal, currentMeals);
+      const updated = await saveMealTemplate(newTemplate);
+      setMealTemplates(updated);
+      setTemplateModalVisible(false);
+      setTemplateName('');
+      setTemplateError(null);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    } catch {
+      setTemplateError(t('Failed to save meal.'));
+    } finally {
+      setTemplateSaving(false);
     }
   };
 
@@ -476,10 +624,14 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     let sourceList: FoodItem[] = [];
     if (foodFilter === 'recent') {
       sourceList = recentFoods;
+    } else if (foodFilter === 'frequent') {
+      sourceList = frequentFoods;
     } else if (foodFilter === 'favorites') {
       sourceList = favoriteFoods;
     } else if (foodFilter === 'custom') {
       sourceList = customFoods;
+    } else if (foodFilter === 'regional') {
+      sourceList = REGIONAL_FOODS;
     } else if (foodFilter === 'scanned') {
       sourceList = barcodeCache;
     } else {
@@ -503,7 +655,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
         localizedName.includes(normalizedQuery)
       );
     });
-  }, [foodFilter, recentFoods, favoriteFoods, customFoods, barcodeCache, searchQuery, t]);
+  }, [foodFilter, recentFoods, frequentFoods, favoriteFoods, customFoods, barcodeCache, searchQuery, t]);
 
   const mealCategories: { key: MealType; label: string }[] = useMemo(
     () => [
@@ -512,7 +664,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       { key: 'dinner', label: t('Dinner') },
       { key: 'snack', label: t('Snacks') },
     ],
-    [language, t]
+    [t]
   );
 
   const headerTitle = isToday
@@ -746,97 +898,113 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                   )}
 
                   {/* Selected Food Confirmation Box */}
-                  {selectedFood && (
-                    <View style={styles.selectedFoodCard}>
-                      <View style={styles.selectedHeaderRow}>
-                        <View style={styles.selectedBadgesRow}>
-                          {getFoodSourceLabel(selectedFood.source, t) ? (
-                            <View style={styles.sourceBadge}>
-                              <Text style={styles.sourceBadgeText}>
-                                {getFoodSourceLabel(selectedFood.source, t)}
-                              </Text>
-                            </View>
-                          ) : null}
-                          {selectedFood.barcode ? (
-                            <View style={styles.barcodeBadge}>
-                              <BarcodeIcon size={11} color={theme.colors.textMuted} />
-                              <Text style={styles.barcodeBadgeText}>{selectedFood.barcode}</Text>
-                            </View>
-                          ) : null}
-                        </View>
-                        <TouchableOpacity
-                          onPress={() => setSelectedFood(null)}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          accessibilityLabel={t('Cancel')}
-                          accessibilityRole="button"
-                        >
-                          <X size={16} color={theme.colors.textMuted} />
-                        </TouchableOpacity>
-                      </View>
+                  {selectedFood && (() => {
+                    const effectiveGramsPerUnit = selectedFood.gramsPerUnit ?? selectedFood.servingGrams;
+                    const totalGrams = Math.round(effectiveGramsPerUnit * servingsCount);
+                    const scaleRatio = totalGrams / (selectedFood.servingGrams > 0 ? selectedFood.servingGrams : 100);
 
-                      <View style={styles.selectedTop}>
-                        <FoodThumbnail
-                          name={selectedFood.name}
-                          category={selectedFood.category}
-                          imageUrl={selectedFood.imageUrl}
-                          size="medium"
-                          style={{ marginEnd: 12 }}
-                        />
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.selectedName}>{selectedFood.name}</Text>
-                          {selectedFood.brand ? (
-                            <Text style={styles.selectedBrand}>{selectedFood.brand}</Text>
-                          ) : null}
-                          <Text style={styles.selectedPortion}>
-                            {selectedFood.servingSize} ({Math.round(selectedFood.servingGrams * servingsCount)}g)
-                          </Text>
-                          <Text style={styles.selectedMacrosPreview}>
-                            {`P: ${(selectedFood.protein * servingsCount).toFixed(1)}g • C: ${(selectedFood.carbs * servingsCount).toFixed(1)}g • F: ${(selectedFood.fat * servingsCount).toFixed(1)}g`}
-                          </Text>
-                        </View>
-                        <Text style={styles.selectedKcal}>
-                          {Math.round(selectedFood.calories * servingsCount)} kcal
-                        </Text>
-                      </View>
-
-                      <View style={styles.stepperRow}>
-                        <Text style={styles.stepperLabel}>{t('Servings:')}</Text>
-                        <View style={styles.stepper}>
+                    return (
+                      <View style={styles.selectedFoodCard}>
+                        <View style={styles.selectedHeaderRow}>
+                          <View style={styles.selectedBadgesRow}>
+                            {getFoodSourceLabel(selectedFood.source, t) ? (
+                              <View style={styles.sourceBadge}>
+                                <Text style={styles.sourceBadgeText}>
+                                  {getFoodSourceLabel(selectedFood.source, t)}
+                                </Text>
+                              </View>
+                            ) : null}
+                            {selectedFood.isEstimate ? (
+                              <View style={styles.estimateBadge}>
+                                <Info size={11} color="#92400E" />
+                                <Text style={styles.estimateBadgeText}>{t('Culinary Estimate')}</Text>
+                              </View>
+                            ) : null}
+                            {selectedFood.barcode ? (
+                              <View style={styles.barcodeBadge}>
+                                <BarcodeIcon size={11} color={theme.colors.textMuted} />
+                                <Text style={styles.barcodeBadgeText}>{selectedFood.barcode}</Text>
+                              </View>
+                            ) : null}
+                          </View>
                           <TouchableOpacity
-                            style={styles.stepBtn}
-                            onPress={() => setServingsCount((c) => Math.max(0.5, c - 0.5))}
+                            onPress={() => setSelectedFood(null)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            accessibilityLabel={t('Cancel')}
+                            accessibilityRole="button"
                           >
-                            <Minus size={13} color={theme.colors.textPrimary} />
-                          </TouchableOpacity>
-                          <Text style={styles.stepVal}>{servingsCount}</Text>
-                          <TouchableOpacity
-                            style={styles.stepBtn}
-                            onPress={() => setServingsCount((c) => c + 0.5)}
-                          >
-                            <Plus size={13} color={theme.colors.textPrimary} />
+                            <X size={16} color={theme.colors.textMuted} />
                           </TouchableOpacity>
                         </View>
-                      </View>
 
-                      <View style={styles.selectedActionButtonsRow}>
-                        <TouchableOpacity
-                          style={styles.cancelSelectedBtn}
-                          onPress={() => setSelectedFood(null)}
-                          accessibilityRole="button"
-                        >
-                          <Text style={styles.cancelSelectedBtnText}>{t('Cancel')}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.confirmAddBtn, { flex: 1, marginTop: 0 }]}
-                          onPress={handleSaveSelectedFood}
-                          accessibilityRole="button"
-                        >
-                          <Check size={16} color={theme.colors.textInverted} />
-                          <Text style={styles.confirmAddBtnText}>{t('Log to Diary')}</Text>
-                        </TouchableOpacity>
+                        <View style={styles.selectedTop}>
+                          <FoodThumbnail
+                            name={selectedFood.name}
+                            category={selectedFood.category}
+                            imageUrl={selectedFood.imageUrl}
+                            size="medium"
+                            style={{ marginEnd: 12 }}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.selectedName}>{selectedFood.name}</Text>
+                            {selectedFood.brand ? (
+                              <Text style={styles.selectedBrand}>{selectedFood.brand}</Text>
+                            ) : null}
+                            <Text style={styles.selectedPortion}>
+                              {selectedFood.portionUnit
+                                ? `${servingsCount} ${t(selectedFood.portionUnit)} (${totalGrams}g)`
+                                : `${selectedFood.servingSize} (${totalGrams}g)`}
+                            </Text>
+                            <Text style={styles.selectedMacrosPreview}>
+                              {`P: ${(selectedFood.protein * scaleRatio).toFixed(1)}g • C: ${(selectedFood.carbs * scaleRatio).toFixed(1)}g • F: ${(selectedFood.fat * scaleRatio).toFixed(1)}g`}
+                            </Text>
+                          </View>
+                          <Text style={styles.selectedKcal}>
+                            {Math.round(selectedFood.calories * scaleRatio)} kcal
+                          </Text>
+                        </View>
+
+                        <View style={styles.stepperRow}>
+                          <Text style={styles.stepperLabel}>
+                            {selectedFood.portionUnit ? `${t('Portions')} (${t(selectedFood.portionUnit)}):` : t('Servings:')}
+                          </Text>
+                          <View style={styles.stepper}>
+                            <TouchableOpacity
+                              style={styles.stepBtn}
+                              onPress={() => setServingsCount((c) => Math.max(0.5, c - 0.5))}
+                            >
+                              <Minus size={13} color={theme.colors.textPrimary} />
+                            </TouchableOpacity>
+                            <Text style={styles.stepVal}>{servingsCount}</Text>
+                            <TouchableOpacity
+                              style={styles.stepBtn}
+                              onPress={() => setServingsCount((c) => c + 0.5)}
+                            >
+                              <Plus size={13} color={theme.colors.textPrimary} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+
+                        <View style={styles.selectedActionButtonsRow}>
+                          <TouchableOpacity
+                            style={styles.cancelSelectedBtn}
+                            onPress={() => setSelectedFood(null)}
+                            accessibilityRole="button"
+                          >
+                            <Text style={styles.cancelSelectedBtnText}>{t('Cancel')}</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.confirmAddBtn, { flex: 1, marginTop: 0 }]}
+                            onPress={handleSaveSelectedFood}
+                            accessibilityRole="button"
+                          >
+                            <Check size={16} color={theme.colors.textInverted} />
+                            <Text style={styles.confirmAddBtnText}>{t('Log to Diary')}</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                    </View>
-                  )}
+                    );
+                  })()}
 
                   {/* Filter Chips & Quick Actions Row */}
                   <View style={styles.filterActionsContainer}>
@@ -876,6 +1044,21 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                       </TouchableOpacity>
 
                       <TouchableOpacity
+                        style={[styles.filterChip, foodFilter === 'frequent' && styles.filterChipActive]}
+                        onPress={() => setFoodFilter('frequent')}
+                        accessibilityRole="button"
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            foodFilter === 'frequent' && styles.filterChipTextActive,
+                          ]}
+                        >
+                          {t('Frequent')} {frequentFoods.length > 0 ? `(${frequentFoods.length})` : ''}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
                         style={[styles.filterChip, foodFilter === 'favorites' && styles.filterChipActive]}
                         onPress={() => setFoodFilter('favorites')}
                         accessibilityRole="button"
@@ -887,6 +1070,36 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           ]}
                         >
                           {t('Favorites')} {favoriteFoods.length > 0 ? `(${favoriteFoods.length})` : ''}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.filterChip, foodFilter === 'templates' && styles.filterChipActive]}
+                        onPress={() => setFoodFilter('templates')}
+                        accessibilityRole="button"
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            foodFilter === 'templates' && styles.filterChipTextActive,
+                          ]}
+                        >
+                          {t('Templates')} {mealTemplates.length > 0 ? `(${mealTemplates.length})` : ''}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.filterChip, foodFilter === 'regional' && styles.filterChipActive]}
+                        onPress={() => setFoodFilter('regional')}
+                        accessibilityRole="button"
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            foodFilter === 'regional' && styles.filterChipTextActive,
+                          ]}
+                        >
+                          {t('Iraqi & Kurdish')}
                         </Text>
                       </TouchableOpacity>
 
@@ -921,7 +1134,27 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                       </TouchableOpacity>
                     </ScrollView>
 
-                    <View style={styles.quickActionsRow}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.quickActionsRow}
+                    >
+                      <TouchableOpacity
+                        style={styles.quickActionBtn}
+                        onPress={handleCopyYesterdayMealType}
+                        disabled={copyMealTypeLoading || isFuture}
+                        accessibilityRole="button"
+                      >
+                        {copyMealTypeLoading ? (
+                          <ActivityIndicator size="small" color={theme.colors.primary} />
+                        ) : (
+                          <Utensils size={13} color={theme.colors.primary} />
+                        )}
+                        <Text style={styles.quickActionBtnText} numberOfLines={1}>
+                          {t(`Copy yesterday's ${selectedMeal === 'snack' ? 'snacks' : selectedMeal}`)}
+                        </Text>
+                      </TouchableOpacity>
+
                       <TouchableOpacity
                         style={styles.quickActionBtn}
                         onPress={handleCopyYesterday}
@@ -933,7 +1166,23 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         ) : (
                           <Copy size={13} color={theme.colors.primary} />
                         )}
-                        <Text style={styles.quickActionBtnText}>{t("Copy yesterday's meals")}</Text>
+                        <Text style={styles.quickActionBtnText} numberOfLines={1}>
+                          {t("Copy yesterday's meals")}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.quickActionBtn}
+                        onPress={() => {
+                          setTemplateError(null);
+                          setTemplateModalVisible(true);
+                        }}
+                        accessibilityRole="button"
+                      >
+                        <Bookmark size={13} color={theme.colors.primary} />
+                        <Text style={styles.quickActionBtnText} numberOfLines={1}>
+                          {t('Save as template')}
+                        </Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -945,12 +1194,14 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         accessibilityRole="button"
                       >
                         <Plus size={13} color={theme.colors.primary} />
-                        <Text style={styles.quickActionBtnText}>{t('Create custom food')}</Text>
+                        <Text style={styles.quickActionBtnText} numberOfLines={1}>
+                          {t('Create custom food')}
+                        </Text>
                       </TouchableOpacity>
-                    </View>
+                    </ScrollView>
                   </View>
 
-                  {/* Foods List */}
+                  {/* Foods List / Meal Templates List */}
                   <ScrollView
                     contentContainerStyle={[
                       styles.foodListScroll,
@@ -964,8 +1215,14 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           ? `${filteredFoods.length} ${t('results')}`
                           : foodFilter === 'recent'
                           ? t('Recent foods')
+                          : foodFilter === 'frequent'
+                          ? t('Frequent foods')
                           : foodFilter === 'favorites'
                           ? t('Favorites')
+                          : foodFilter === 'templates'
+                          ? t('Meal templates')
+                          : foodFilter === 'regional'
+                          ? t('Iraqi & Kurdish')
                           : foodFilter === 'custom'
                           ? t('Custom foods')
                           : foodFilter === 'scanned'
@@ -973,13 +1230,81 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           : t('Common & Frequent Foods')}
                       </Text>
                     </View>
-                    {filteredFoods.length === 0 ? (
+
+                    {foodFilter === 'templates' ? (
+                      mealTemplates.length === 0 ? (
+                        <View style={styles.emptyStateBox}>
+                          <Bookmark size={28} color={theme.colors.textMuted} style={{ marginBottom: 8 }} />
+                          <Text style={styles.emptyStateText}>{t('No meal templates saved yet.')}</Text>
+                          <Text style={[styles.emptyStateText, { fontSize: 11, marginTop: 4, color: theme.colors.textMuted }]}>
+                            {t('Log your favorite dishes once, then tap "Save as template" to log them in 1 tap anytime.')}
+                          </Text>
+                        </View>
+                      ) : (
+                        mealTemplates.map((template) => (
+                          <View key={template.id} style={styles.templateCard}>
+                            <View style={styles.templateHeader}>
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Bookmark size={14} color={theme.colors.primary} />
+                                  <Text style={styles.templateName}>{template.name}</Text>
+                                </View>
+                                <Text style={styles.templateMealType}>
+                                  {template.mealType ? t(template.mealType.charAt(0).toUpperCase() + template.mealType.slice(1)) : t('Meal')} · {template.items.length} {template.items.length === 1 ? t('item') : t('items')}
+                                </Text>
+                              </View>
+                              <Text style={styles.templateKcal}>{Math.round(template.totalCalories)} kcal</Text>
+                            </View>
+
+                            <View style={styles.templateItemsList}>
+                              {template.items.map((it, idx) => (
+                                <Text key={idx} style={styles.templateItemText} numberOfLines={1}>
+                                  • {it.name} ({it.portionUnit ? `${it.servings} ${t(it.portionUnit)}` : it.servingSize})
+                                </Text>
+                              ))}
+                            </View>
+
+                            <View style={styles.templateMacros}>
+                              <Text style={styles.templateMacrosText}>
+                                P: {Math.round(template.totalProtein)}g • C: {Math.round(template.totalCarbs)}g • F: {Math.round(template.totalFat)}g
+                              </Text>
+                            </View>
+
+                            <View style={styles.templateActionsRow}>
+                              <TouchableOpacity
+                                style={styles.templateDeleteBtn}
+                                onPress={() => handleDeleteTemplate(template)}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('Delete template')}
+                              >
+                                <Trash2 size={14} color={theme.colors.danger} />
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={styles.templateLogBtn}
+                                onPress={() => handleLogTemplate(template)}
+                                accessibilityRole="button"
+                              >
+                                <Check size={14} color={theme.colors.textInverted} />
+                                <Text style={styles.templateLogBtnText}>
+                                  {`${t('Log to ')}${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))}`}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        ))
+                      )
+                    ) : filteredFoods.length === 0 ? (
                       <View style={styles.emptyStateBox}>
                         <Text style={styles.emptyStateText}>
                           {foodFilter === 'recent'
                             ? t('No recent foods yet.')
+                            : foodFilter === 'frequent'
+                            ? t('No frequent foods logged yet.')
                             : foodFilter === 'favorites'
                             ? t('No favorite foods yet.')
+                            : foodFilter === 'regional'
+                            ? t('No regional foods found.')
                             : foodFilter === 'custom'
                             ? t('No custom foods yet.')
                             : foodFilter === 'scanned'
@@ -1013,9 +1338,18 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                               style={{ marginEnd: 12 }}
                             />
                             <View style={{ flex: 1 }}>
-                              <Text style={styles.itemTitle}>{item.name}</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <Text style={styles.itemTitle}>{item.name}</Text>
+                                {item.isEstimate && (
+                                  <View style={styles.estimateBadgeSmall}>
+                                    <Text style={styles.estimateBadgeSmallText}>{t('Estimate')}</Text>
+                                  </View>
+                                )}
+                              </View>
                               <Text style={styles.itemSub}>
-                                {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
+                                {item.portionUnit
+                                  ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g) • P: ${item.protein}g C: ${item.carbs}g F: ${item.fat}g`
+                                  : `${item.servingSize} • P: ${item.protein}g C: ${item.carbs}g F: ${item.fat}g`}
                               </Text>
                             </View>
                             <View style={styles.itemRightCol}>
@@ -1306,6 +1640,77 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
             >
               <Check size={16} color={theme.colors.textInverted} />
               <Text style={styles.saveCustomBtnText}>{t('Save custom food')}</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+
+    {/* Meal Template Creation Modal */}
+    <Modal
+      visible={templateModalVisible}
+      animationType="fade"
+      transparent
+      onRequestClose={() => setTemplateModalVisible(false)}
+    >
+      <View style={[styles.customModalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ width: '100%', alignItems: 'center' }}
+        >
+          <View style={styles.customModalCard}>
+            <View style={styles.customModalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Bookmark size={17} color={theme.colors.primary} />
+                <Text style={styles.customModalTitle}>{t('Save as template')}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setTemplateModalVisible(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={t('Close')}
+              >
+                <X size={20} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {templateError && (
+              <View style={styles.errorNotice}>
+                <AlertTriangle size={15} color={theme.colors.danger} />
+                <Text style={styles.errorNoticeText}>{templateError}</Text>
+              </View>
+            )}
+
+            <Text style={styles.templateModalDescription}>
+              {`${t('Save current')} ${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))} (${currentDayMeals.filter((m) => m.mealType === selectedMeal).length} ${t('items')}) ${t('as a reusable template to log again in one tap.')}`}
+            </Text>
+
+            <View style={styles.customInputGroup}>
+              <Text style={styles.customInputLabel}>{t('Template name')}</Text>
+              <TextInput
+                style={styles.customTextInput}
+                placeholder={t('e.g. My Usual Breakfast, Friday BBQ')}
+                placeholderTextColor={theme.colors.textMuted}
+                value={templateName}
+                onChangeText={setTemplateName}
+                autoFocus
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.saveCustomBtn}
+              onPress={handleCreateTemplateFromCurrentMeals}
+              disabled={templateSaving}
+              accessibilityRole="button"
+            >
+              {templateSaving ? (
+                <ActivityIndicator size="small" color={theme.colors.textInverted} />
+              ) : (
+                <>
+                  <Check size={16} color={theme.colors.textInverted} />
+                  <Text style={styles.saveCustomBtnText}>{t('Save template')}</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -2007,5 +2412,118 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: theme.colors.textInverted,
+  },
+  estimateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: theme.radius.full,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  estimateBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  estimateBadgeSmall: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: theme.radius.full,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  estimateBadgeSmallText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  templateCard: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    padding: 12,
+    marginBottom: 10,
+    gap: 8,
+  },
+  templateHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  templateName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  templateMealType: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
+  templateKcal: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  templateItemsList: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.sm,
+    padding: 8,
+    gap: 3,
+  },
+  templateItemText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 16,
+  },
+  templateMacros: {
+    paddingVertical: 2,
+  },
+  templateMacrosText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  templateActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 4,
+  },
+  templateDeleteBtn: {
+    padding: 8,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  templateLogBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primary,
+  },
+  templateLogBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textInverted,
+  },
+  templateModalDescription: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 17,
+    marginBottom: 6,
   },
 });
