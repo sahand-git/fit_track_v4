@@ -10,6 +10,7 @@ import {
   WeightEntry,
   ReminderSettings,
   FoodItem,
+  AICoachReport,
 } from '../types';
 
 type Validator<T = any> = (value: unknown) => T;
@@ -142,6 +143,19 @@ const supplementRoutineItemShape = shape<SupplementRoutineItem>({
   time: choice('morning', 'afternoon', 'evening', 'bedtime'),
 });
 
+// AI Coach Report
+const aiCoachReportShape = shape<AICoachReport>({
+  overallGrade: str,
+  headline: str,
+  caloricBalance: str,
+  macroBreakdown: str,
+  mistakesAndBlindSpots: list(str),
+  actionableTomorrowFixes: list(str),
+  customMealSuggestion: str,
+  coachNote: str,
+  generatedAt: str,
+});
+
 // Daily Log
 const dayLogShape = shape<DailyLog>({
   date,
@@ -151,6 +165,7 @@ const dayLogShape = shape<DailyLog>({
   supplements: optional(list(supplementCheckShape)),
   dailySupplements: optional(list(loggedDailySupplementShape)),
   workouts: optional(list(workoutShape)),
+  aiReport: optional(aiCoachReportShape),
 });
 
 // User Profile

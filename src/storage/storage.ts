@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserProfile, DailyLog, LoggedMeal, SupplementCheck, SupplementRoutineItem, WorkoutEntry, FitTrackBackup, FoodItem } from '../types';
+import { UserProfile, DailyLog, LoggedMeal, SupplementCheck, SupplementRoutineItem, WorkoutEntry, FitTrackBackup, FoodItem, AICoachReport } from '../types';
 import { normalizeSupplementRoutine } from '../utils/supplementUtils';
 import { getDefaultProfile } from '../utils/calculator';
 import { getTodayDateString, addDaysToDateString } from '../utils/dateUtils';
@@ -180,11 +180,22 @@ export async function loadDailyLog(dateStr: string): Promise<DailyLog> {
       supplements: Array.isArray(parsed.supplements) ? parsed.supplements : [],
       dailySupplements: Array.isArray(parsed.dailySupplements) ? parsed.dailySupplements : undefined,
       workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
+      aiReport: parsed.aiReport && typeof parsed.aiReport === 'object' ? parsed.aiReport : undefined,
     };
   } catch (err) {
     console.error('Error loading daily log:', err);
     return fallback;
   }
+}
+
+export async function saveDailyAIReport(dateStr: string, report: AICoachReport): Promise<DailyLog> {
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadDailyLog(dateStr);
+    const updatedLog: DailyLog = { ...current, aiReport: report };
+    await AsyncStorage.setItem(key, JSON.stringify(updatedLog));
+    return updatedLog;
+  });
 }
 
 export async function saveDailyLog(log: DailyLog): Promise<void> {

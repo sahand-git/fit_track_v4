@@ -148,6 +148,18 @@ export interface LoggedMeal {
   timestamp: string; // ISO string
 }
 
+export interface AICoachReport {
+  overallGrade: string; // e.g. "A", "B+", "C"
+  headline: string;
+  caloricBalance: string;
+  macroBreakdown: string;
+  mistakesAndBlindSpots: string[];
+  actionableTomorrowFixes: string[];
+  customMealSuggestion: string;
+  coachNote: string;
+  generatedAt: string;
+}
+
 export interface DailyLog {
   date: string; // YYYY-MM-DD
   meals: LoggedMeal[];
@@ -156,6 +168,7 @@ export interface DailyLog {
   supplements?: SupplementCheck[];
   dailySupplements?: LoggedDailySupplement[];
   workouts?: WorkoutEntry[];
+  aiReport?: AICoachReport;
 }
 
 export interface TimeSetting {

@@ -18,7 +18,7 @@ import {
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react-native';
-import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem, LoggedDailySupplement, WorkoutEntry } from './src/types';
+import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem, LoggedDailySupplement, WorkoutEntry, AICoachReport } from './src/types';
 import {
   loadUserProfile,
   saveUserProfile,
@@ -41,6 +41,7 @@ import {
   addDailySteps,
   loadMedicalDisclaimerAccepted,
   saveMedicalDisclaimerAccepted,
+  saveDailyAIReport,
 } from './src/storage/storage';
 import {
   initNotificationService,
@@ -418,6 +419,11 @@ function FitTrackApp() {
     if (selectedDateRef.current === targetDate) setLog(updated);
   };
 
+  const handleSaveAIReport = async (report: AICoachReport, targetDate: string) => {
+    const updated = await saveDailyAIReport(targetDate, report);
+    if (selectedDateRef.current === targetDate) setLog(updated);
+  };
+
   const handleSaveSteps = async (total: number) => {
     const targetDate = selectedDateRef.current;
     if (targetDate > getTodayDateString()) return;
@@ -676,6 +682,7 @@ function FitTrackApp() {
             <CoachScreen
               profile={profile}
               log={log}
+              onSaveReport={handleSaveAIReport}
             />
           )}
 
