@@ -33,18 +33,21 @@ import { translate } from '../i18n/strings';
 import { InsightsScreen } from './InsightsScreen';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
+import { ProgressSkeleton } from '../components/SkeletonLoader';
 
 interface ProgressScreenProps {
   profile?: UserProfile;
+  isLoading?: boolean;
   onUpdateWeight?: (weightKg: number) => void;
 }
 
-export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdateWeight }) => {
+export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoading, onUpdateWeight }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(110, insets.bottom + 76);
   const t = (key: string) => translate(language, key);
 
+  const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState<'weight' | 'nutrition'>('weight');
   const [history, setHistory] = useState<WeightEntry[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -57,6 +60,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
       const data = await loadWeightHistory();
       if (isMounted) {
         setHistory(data);
+        setLoading(false);
       }
     }
     load();
@@ -64,6 +68,10 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, onUpdat
       isMounted = false;
     };
   }, []);
+
+  if (isLoading || loading) {
+    return <ProgressSkeleton />;
+  }
 
   // Handle Android back button when modal is open
   useEffect(() => {

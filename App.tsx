@@ -98,6 +98,7 @@ function FitTrackApp() {
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en');
   const [initError, setInitError] = useState<string | null>(null);
   const [initRetryCount, setInitRetryCount] = useState<number>(0);
+  const [initialLoaded, setInitialLoaded] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
   const selectedDateRef = React.useRef(selectedDate);
   useEffect(() => {
@@ -149,6 +150,7 @@ function FitTrackApp() {
     let isCancelled = false;
     async function init() {
       setInitError(null);
+      setInitialLoaded(false);
       try {
         await initNotificationService();
         const p = await loadUserProfile();
@@ -177,6 +179,9 @@ function FitTrackApp() {
               await syncAllReminders(reminderSettings, initialRoutine, appLang);
             }
           }
+        }
+        if (!isCancelled) {
+          setInitialLoaded(true);
         }
       } catch (err: any) {
         if (!isCancelled) {
@@ -579,6 +584,7 @@ function FitTrackApp() {
               log={log}
               supplementRoutine={supplementRoutine}
               streak={streak}
+              isLoading={!initialLoaded}
               onToggleSupplement={handleToggleSupplement}
               onUpdateWater={handleUpdateWater}
               onNavigateToMeals={handleNavigateToMeals}
@@ -599,6 +605,7 @@ function FitTrackApp() {
               selectedDate={selectedDate}
               onSelectDate={setSelectedDate}
               log={log}
+              isLoading={!initialLoaded}
               onAddMeal={handleAddMeal}
               onUpdateMeal={handleUpdateMeal}
               onRemoveMeal={handleRemoveMeal}
@@ -616,7 +623,7 @@ function FitTrackApp() {
 
           {/* Tab 4: Progress */}
           {tempScreen === 'none' && activeTab === 'progress' && (
-            <ProgressScreen profile={profile} />
+            <ProgressScreen profile={profile} isLoading={!initialLoaded} />
           )}
         </ScreenTransitionView>
 

@@ -29,11 +29,13 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
+import { MealsSkeleton } from '../components/SkeletonLoader';
 
 interface FoodLogScreenProps {
   selectedDate: string;
   onSelectDate: (date: string) => void;
   log: DailyLog;
+  isLoading?: boolean;
   onAddMeal: (meal: LoggedMeal, targetDate: string) => void;
   onUpdateMeal?: (meal: LoggedMeal) => void;
   onRemoveMeal: (mealId: string) => void;
@@ -44,11 +46,16 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   selectedDate,
   onSelectDate,
   log,
+  isLoading,
   onAddMeal,
   onUpdateMeal,
   onRemoveMeal,
   initialMealType = 'breakfast',
 }) => {
+  if (isLoading) {
+    return <MealsSkeleton />;
+  }
+
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const t = (value: string) => translate(language, value);

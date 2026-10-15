@@ -48,11 +48,14 @@ import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
 import { calculateActivityBudget } from '../utils/activityBudget';
 import { getCalorieRingSize } from '../utils/dashboardLayout';
 
+import { TodaySkeleton } from '../components/SkeletonLoader';
+
 interface DashboardScreenProps {
   profile: UserProfile;
   log: DailyLog;
   supplementRoutine: SupplementRoutineItem[];
   streak?: number;
+  isLoading?: boolean;
   onToggleSupplement: (id: string, taken: boolean) => void;
   onUpdateWater: (delta: number) => void;
   onNavigateToMeals: (targetMeal?: MealType) => void;
@@ -71,6 +74,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   log,
   supplementRoutine,
   streak = 0,
+  isLoading,
   onToggleSupplement,
   onUpdateWater,
   onNavigateToMeals,
@@ -83,6 +87,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onDeleteWorkout,
   onUpdateWorkout,
 }) => {
+  if (isLoading) {
+    return <TodaySkeleton />;
+  }
+
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const t = useCallback((str: string) => translate(language, str), [language]);

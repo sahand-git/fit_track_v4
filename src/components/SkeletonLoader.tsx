@@ -101,6 +101,118 @@ export const SkeletonCoachBubble: React.FC = () => {
   );
 };
 
+/**
+ * Skeleton placeholder for Today screen
+ */
+export const TodaySkeleton: React.FC = () => {
+  return (
+    <View style={styles.screenContainer}>
+      {/* Header Skeleton */}
+      <View style={styles.todayHeader}>
+        <View style={{ flex: 1, gap: 8 }}>
+          <SkeletonLoader width={110} height={14} borderRadius={4} />
+          <SkeletonLoader width={140} height={28} borderRadius={6} />
+        </View>
+        <SkeletonLoader width={38} height={38} borderRadius={19} />
+      </View>
+
+      {/* Hero Calorie Ring Area */}
+      <View style={styles.todayHero}>
+        <SkeletonLoader width={180} height={180} borderRadius={90} />
+        <SkeletonLoader width={130} height={16} borderRadius={4} style={{ marginTop: 18 }} />
+      </View>
+
+      {/* Macro cards row */}
+      <View style={styles.macroRow}>
+        <View style={{ flex: 1 }}><SkeletonLoader height={76} borderRadius={12} /></View>
+        <View style={{ flex: 1 }}><SkeletonLoader height={76} borderRadius={12} /></View>
+        <View style={{ flex: 1 }}><SkeletonLoader height={76} borderRadius={12} /></View>
+      </View>
+
+      {/* Activity & Supplement Placeholders */}
+      <View style={{ marginTop: 20, gap: 12 }}>
+        <SkeletonCard height={88} />
+        <SkeletonCard height={88} />
+        <SkeletonCard height={88} />
+      </View>
+    </View>
+  );
+};
+
+/**
+ * Skeleton placeholder for Meals screen
+ */
+export const MealsSkeleton: React.FC = () => {
+  return (
+    <View style={styles.screenContainer}>
+      {/* Date Header Strip */}
+      <View style={styles.mealsDateHeader}>
+        <SkeletonLoader width={32} height={32} borderRadius={16} />
+        <SkeletonLoader width={160} height={20} borderRadius={6} />
+        <SkeletonLoader width={32} height={32} borderRadius={16} />
+      </View>
+
+      {/* Summary Bar */}
+      <View style={styles.mealsSummaryBar}>
+        <SkeletonLoader width={48} height={26} borderRadius={4} />
+        <SkeletonLoader width={48} height={26} borderRadius={4} />
+        <SkeletonLoader width={48} height={26} borderRadius={4} />
+        <SkeletonLoader width={48} height={26} borderRadius={4} />
+      </View>
+
+      {/* Meal Group Sections */}
+      <View style={{ marginTop: 16, gap: 14 }}>
+        {[1, 2, 3, 4].map((i) => (
+          <View key={i} style={styles.mealGroupSection}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <SkeletonLoader width={90} height={18} borderRadius={4} />
+              <SkeletonLoader width={50} height={16} borderRadius={4} />
+            </View>
+            <SkeletonCard height={68} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+};
+
+/**
+ * Skeleton placeholder for Progress screen
+ */
+export const ProgressSkeleton: React.FC = () => {
+  return (
+    <View style={styles.screenContainer}>
+      {/* Segment Bar */}
+      <View style={styles.progressSegmentBar}>
+        <SkeletonLoader width="90%" height={36} borderRadius={8} />
+      </View>
+
+      {/* Metric Cards */}
+      <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+        <View style={{ flex: 1 }}><SkeletonLoader height={88} borderRadius={14} /></View>
+        <View style={{ flex: 1 }}><SkeletonLoader height={88} borderRadius={14} /></View>
+      </View>
+
+      {/* Chart Card */}
+      <View style={styles.progressChartCard}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
+          <SkeletonLoader width={130} height={18} borderRadius={4} />
+          <SkeletonLoader width={80} height={14} borderRadius={4} />
+        </View>
+        <SkeletonLoader width="100%" height={120} borderRadius={12} />
+      </View>
+
+      {/* History Items */}
+      <View style={{ marginTop: 20, gap: 10 }}>
+        <SkeletonLoader width={110} height={16} borderRadius={4} />
+        <SkeletonCard height={56} />
+        <SkeletonCard height={56} />
+        <SkeletonCard height={56} />
+      </View>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   skeleton: {
     backgroundColor: '#EBE5D8',
@@ -127,5 +239,64 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  screenContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+  },
+  todayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  todayHero: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadow.subtle,
+  },
+  macroRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  mealsDateHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  mealsSummaryBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginVertical: 10,
+  },
+  mealGroupSection: {
+    marginBottom: 6,
+  },
+  progressSegmentBar: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  progressChartCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginTop: 16,
+    ...theme.shadow.subtle,
   },
 });
