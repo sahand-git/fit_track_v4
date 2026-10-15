@@ -24,6 +24,7 @@ import { CalendarPickerModal } from '../components/CalendarPickerModal';
 import { AddFoodSheet } from '../components/addfood/AddFoodSheet';
 import { AnimatedFoodRow } from '../components/AnimatedFoodRow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
+import { FoodThumbnail } from '../components/FoodThumbnail';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -306,6 +307,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                         }}
                         activeOpacity={0.7}
                       >
+                        <FoodThumbnail name={item.name} size="small" style={{ marginEnd: 12 }} />
                         <View style={styles.foodInfo}>
                           <Text style={styles.foodName}>{item.name}</Text>
                           <Text style={styles.foodPortion}>

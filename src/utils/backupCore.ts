@@ -227,6 +227,7 @@ const foodItemShape = shape<FoodItem>({
   fat: num,
   category: optional(str),
   barcode: optional(str),
+  imageUrl: optional(str),
   source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated')),
   fiber: optional(num),
   sugar: optional(num),

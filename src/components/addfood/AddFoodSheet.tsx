@@ -42,6 +42,7 @@ import {
 import { GeminiKeyManager } from '../GeminiKeyManager';
 import { AiReview } from './AiReview';
 import { SaveSuccessOverlay } from '../SaveSuccessOverlay';
+import { FoodThumbnail } from '../FoodThumbnail';
 import { useLanguage } from '../../i18n/I18nContext';
 import { translate } from '../../i18n/strings';
 import { normalizeSearch } from '../../utils/localeUtils';
@@ -764,6 +765,13 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                       </View>
 
                       <View style={styles.selectedTop}>
+                        <FoodThumbnail
+                          name={selectedFood.name}
+                          category={selectedFood.category}
+                          imageUrl={selectedFood.imageUrl}
+                          size="medium"
+                          style={{ marginEnd: 12 }}
+                        />
                         <View style={{ flex: 1 }}>
                           <Text style={styles.selectedName}>{selectedFood.name}</Text>
                           {selectedFood.brand ? (
@@ -987,6 +995,13 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             }}
                             activeOpacity={0.7}
                           >
+                            <FoodThumbnail
+                              name={item.name}
+                              category={item.category}
+                              imageUrl={item.imageUrl}
+                              size="small"
+                              style={{ marginEnd: 12 }}
+                            />
                             <View style={{ flex: 1 }}>
                               <Text style={styles.itemTitle}>{item.name}</Text>
                               <Text style={styles.itemSub}>
