@@ -173,6 +173,7 @@ const profileShape = shape<UserProfile>({
   isOnboarded: optional(bool),
   includeWorkoutsInCalorieBudget: optional(bool),
   targetWeightKg: optional(num),
+  hasAcceptedMedicalDisclaimer: optional(bool),
 });
 
 // Reminders

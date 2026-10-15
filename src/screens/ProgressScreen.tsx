@@ -118,7 +118,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
         label: daysRange === 7 ? t(weekdayNames[dateObj.getDay()]) : d.slice(-2),
       };
     });
-  }, [dateList, logsMap, daysRange, profile, language, t]);
+  }, [dateList, logsMap, daysRange, profile, t]);
 
   const weightData: WeightTrendPoint[] = useMemo(() => {
     const minDate = dateList[0];

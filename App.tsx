@@ -39,6 +39,8 @@ import {
   loadAccurateStreak,
   setDailySteps,
   addDailySteps,
+  loadMedicalDisclaimerAccepted,
+  saveMedicalDisclaimerAccepted,
 } from './src/storage/storage';
 import {
   initNotificationService,
@@ -59,6 +61,8 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { SupplementsScreen } from './src/screens/SupplementsScreen';
 import { CoachScreen } from './src/screens/CoachScreen';
 import { AddFoodSheet } from './src/components/addfood/AddFoodSheet';
+import { MedicalDisclaimerModal } from './src/components/MedicalDisclaimerModal';
+import { ScientificReferencesModal } from './src/components/ScientificReferencesModal';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { ScreenTransitionView } from './src/components/ScreenTransitionView';
 import { persistRoutineThenCommit } from './src/utils/supplementRoutine';
@@ -99,6 +103,7 @@ function FitTrackApp() {
   const [initError, setInitError] = useState<string | null>(null);
   const [initRetryCount, setInitRetryCount] = useState<number>(0);
   const [initialLoaded, setInitialLoaded] = useState<boolean>(false);
+  const [referencesModalVisible, setReferencesModalVisible] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
   const selectedDateRef = React.useRef(selectedDate);
   useEffect(() => {
@@ -154,6 +159,10 @@ function FitTrackApp() {
       try {
         await initNotificationService();
         const p = await loadUserProfile();
+        const disclaimerAccepted = await loadMedicalDisclaimerAccepted();
+        if (disclaimerAccepted && !p.hasAcceptedMedicalDisclaimer) {
+          p.hasAcceptedMedicalDisclaimer = true;
+        }
         if (isCancelled) return;
         setProfile(p);
         const appLang = p.language || 'en';
@@ -492,6 +501,33 @@ function FitTrackApp() {
               <Text style={styles.initRetryButtonText}>{t('Retry')}</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </I18nProvider>
+    );
+  }
+
+  if (initialLoaded && !profile.hasAcceptedMedicalDisclaimer) {
+    return (
+      <I18nProvider language={language}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+          <MedicalDisclaimerModal
+            visible={true}
+            onAccept={async () => {
+              try {
+                await saveMedicalDisclaimerAccepted(true);
+              } catch (e) {
+                console.error('Failed to save medical disclaimer acceptance:', e);
+              }
+              setProfile((prev) => ({ ...prev, hasAcceptedMedicalDisclaimer: true }));
+            }}
+            isFirstRun={true}
+            onOpenReferences={() => setReferencesModalVisible(true)}
+          />
+          <ScientificReferencesModal
+            visible={referencesModalVisible}
+            onClose={() => setReferencesModalVisible(false)}
+            onOpenDisclaimer={() => setReferencesModalVisible(false)}
+          />
         </View>
       </I18nProvider>
     );

@@ -16,6 +16,7 @@ const RECENT_FOODS_KEY = '@fittrack_recent_foods';
 const FAVORITE_FOODS_KEY = '@fittrack_favorite_foods';
 const CUSTOM_FOODS_KEY = '@fittrack_custom_foods';
 const BARCODE_CACHE_KEY = '@fittrack_barcode_cache';
+const MEDICAL_DISCLAIMER_KEY = '@fittrack_disclaimer_accepted';
 let accountNamespace: string | null = null;
 
 /** Signed-in data is isolated; null preserves all existing v4 guest keys verbatim. */
@@ -120,6 +121,38 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
     } catch (err) {
       console.error('Error saving profile:', err);
       throw new Error('Failed to save user profile. Please check device storage.');
+    }
+  });
+}
+
+export async function loadMedicalDisclaimerAccepted(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(MEDICAL_DISCLAIMER_KEY));
+    if (raw === 'true') return true;
+    const profile = await loadUserProfile();
+    return !!profile.hasAcceptedMedicalDisclaimer;
+  } catch (err) {
+    console.warn('Failed to load medical disclaimer state:', err);
+    return false;
+  }
+}
+
+export async function saveMedicalDisclaimerAccepted(accepted: boolean): Promise<void> {
+  return enqueueStorageOperation(getScopedStorageKey(MEDICAL_DISCLAIMER_KEY), async () => {
+    try {
+      await AsyncStorage.setItem(
+        getScopedStorageKey(MEDICAL_DISCLAIMER_KEY),
+        accepted ? 'true' : 'false'
+      );
+      const profile = await loadUserProfile();
+      if (profile.hasAcceptedMedicalDisclaimer !== accepted) {
+        await AsyncStorage.setItem(
+          getScopedStorageKey(PROFILE_KEY),
+          JSON.stringify({ ...profile, hasAcceptedMedicalDisclaimer: accepted })
+        );
+      }
+    } catch (err) {
+      console.error('Failed to save medical disclaimer state:', err);
     }
   });
 }
@@ -836,6 +869,7 @@ export async function restoreAllData(
         getScopedStorageKey(FAVORITE_FOODS_KEY),
         getScopedStorageKey(CUSTOM_FOODS_KEY),
         getScopedStorageKey(BARCODE_CACHE_KEY),
+        getScopedStorageKey(MEDICAL_DISCLAIMER_KEY),
         ...existingLogKeys,
         ...incomingLogKeys,
       ]);
@@ -900,6 +934,13 @@ export async function restoreAllData(
           await AsyncStorage.setItem(getScopedStorageKey(BARCODE_CACHE_KEY), JSON.stringify(staged.barcodeCache));
         } else {
           await AsyncStorage.removeItem(getScopedStorageKey(BARCODE_CACHE_KEY));
+        }
+
+        // 11. Write medical disclaimer state
+        if (staged.profile.hasAcceptedMedicalDisclaimer) {
+          await AsyncStorage.setItem(getScopedStorageKey(MEDICAL_DISCLAIMER_KEY), 'true');
+        } else {
+          await AsyncStorage.removeItem(getScopedStorageKey(MEDICAL_DISCLAIMER_KEY));
         }
       } catch (restoreErr) {
         console.error('Restore failed midway, attempting rollback:', restoreErr);

@@ -105,6 +105,7 @@ export function getDefaultProfile(): UserProfile {
     ...targets,
     includeWorkoutsInCalorieBudget: false,
     stepGoal: 8000,
+    hasAcceptedMedicalDisclaimer: false,
   };
 }
 

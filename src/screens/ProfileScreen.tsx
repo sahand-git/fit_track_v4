@@ -10,12 +10,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound } from 'lucide-react-native';
+import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
 import { GeminiKeyManager } from '../components/GeminiKeyManager';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
 import { BackupModal } from '../components/BackupModal';
+import { MedicalDisclaimerModal } from '../components/MedicalDisclaimerModal';
+import { ScientificReferencesModal } from '../components/ScientificReferencesModal';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { isNotificationSupported } from '../services/notificationService';
 import { AnimatedPressable } from '../components/AnimatedPressable';
@@ -52,12 +54,22 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const [remindersModalVisible, setRemindersModalVisible] = useState(false);
   const [backupModalVisible, setBackupModalVisible] = useState(false);
+  const [disclaimerModalVisible, setDisclaimerModalVisible] = useState(false);
+  const [referencesModalVisible, setReferencesModalVisible] = useState(false);
   const [includeWorkouts, setIncludeWorkouts] = useState(!!profile.includeWorkoutsInCalorieBudget);
 
   // Handle Android back button when sub-modals are open
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const onBackPress = () => {
+      if (disclaimerModalVisible) {
+        setDisclaimerModalVisible(false);
+        return true;
+      }
+      if (referencesModalVisible) {
+        setReferencesModalVisible(false);
+        return true;
+      }
       if (remindersModalVisible) {
         setRemindersModalVisible(false);
         return true;
@@ -70,7 +82,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
-  }, [remindersModalVisible, backupModalVisible]);
+  }, [remindersModalVisible, backupModalVisible, disclaimerModalVisible, referencesModalVisible]);
   const [name, setName] = useState(profile.name);
   const [age, setAge] = useState(profile.age.toString());
   const [gender, setGender] = useState<Gender>(profile.gender);
@@ -424,6 +436,53 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </TouchableOpacity>
       </View>
 
+      {/* Evidence & Safety Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>{t('Evidence & Safety')}</Text>
+
+        <TouchableOpacity
+          style={styles.optionRow}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setDisclaimerModalVisible(true);
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('Medical Disclaimer')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <ShieldAlert size={20} color={theme.colors.danger} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Medical Disclaimer')}</Text>
+              <Text style={styles.optionDesc}>
+                {t('Educational wellness notice & emergency guidance')}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.optionRow}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setReferencesModalVisible(true);
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('Scientific References')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <BookOpen size={20} color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Scientific References')}</Text>
+              <Text style={styles.optionDesc}>
+                {t('Equations, clinical sources, & nutritional databases')}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+
       {/* Save Button */}
       <AnimatedPressable style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
         <Text style={styles.saveBtnText}>{t('Save Targets')}</Text>
@@ -439,6 +498,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         visible={backupModalVisible}
         onClose={() => setBackupModalVisible(false)}
         onRestoreComplete={onRestoreComplete || (() => {})}
+      />
+
+      <MedicalDisclaimerModal
+        visible={disclaimerModalVisible}
+        onAccept={() => setDisclaimerModalVisible(false)}
+        onClose={() => setDisclaimerModalVisible(false)}
+        isFirstRun={false}
+        onOpenReferences={() => {
+          setDisclaimerModalVisible(false);
+          setReferencesModalVisible(true);
+        }}
+      />
+
+      <ScientificReferencesModal
+        visible={referencesModalVisible}
+        onClose={() => setReferencesModalVisible(false)}
+        onOpenDisclaimer={() => {
+          setReferencesModalVisible(false);
+          setDisclaimerModalVisible(true);
+        }}
       />
     </ScrollView>
   );
