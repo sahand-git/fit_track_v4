@@ -289,6 +289,18 @@ function FitTrackApp() {
     }
   };
 
+  const handleCopyYesterdayMeals = async (targetDate: string) => {
+    try {
+      const updated = await loadDailyLog(targetDate);
+      if (selectedDateRef.current === targetDate) {
+        setLog(updated);
+      }
+      await refreshStreak();
+    } catch (err) {
+      console.error('Failed to reload after copying meals:', err);
+    }
+  };
+
   const handleSaveProfile = async (newProfile: UserProfile) => {
     try {
       const prevLanguage = language;
@@ -610,6 +622,7 @@ function FitTrackApp() {
               onUpdateMeal={handleUpdateMeal}
               onRemoveMeal={handleRemoveMeal}
               initialMealType={initialMealForAdd}
+              onCopyYesterdayMeals={handleCopyYesterdayMeals}
             />
           )}
 
@@ -634,6 +647,7 @@ function FitTrackApp() {
           date={addSheetConfig.targetDate}
           onClose={() => setAddSheetConfig((prev) => ({ ...prev, visible: false }))}
           onAddMeal={handleAddMeal}
+          onCopyYesterdayMeals={handleCopyYesterdayMeals}
         />
 
         {/* Bottom Navigation Dock: Exactly 4 Tabs */}

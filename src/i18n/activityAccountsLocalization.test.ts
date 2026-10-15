@@ -35,8 +35,16 @@ const addedKeys = [
   'Off keeps your current target. When on, FitTrack uses a sedentary baseline plus net logged workouts and steps above a daily baseline, without double-counting workout steps.',
   'Steps to add', 'Add steps', 'Enter an amount from 1 to 100000.',
   'Check verification status', 'Email verified. Cloud backup is ready.', 'No cloud backup exists for this account yet.',
-  'Cloud backup is too large. Export a local backup instead.', 'Your account changed. Sign in again and retry.',
   'Failed to start FitTrack', 'Unable to load app data. Please try again.', 'Retry',
+  'Recent foods', 'Favorites', 'Custom foods', 'Custom', 'Recent', 'All', 'Create custom food',
+  "Copy yesterday's meals", "Copy yesterday's meals to today?",
+  'This will add all meals logged yesterday to this date.',
+  'No meals were logged yesterday.', 'Meals copied from yesterday.',
+  'Food name', 'Serving description (e.g. 1 bowl, 100g)', 'Calories (kcal)',
+  'Protein (g)', 'Carbs (g)', 'Fat (g)', 'Save custom food',
+  'Please enter a valid food name.', 'Please enter valid numbers for calories and macros.',
+  'Custom food saved', 'No recent foods yet.', 'No favorite foods yet.', 'No custom foods yet.',
+  'Add to favorites', 'Remove from favorites', 'Serving size', 'Copy',
 ];
 
 for (const key of addedKeys) {

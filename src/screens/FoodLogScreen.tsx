@@ -40,6 +40,7 @@ interface FoodLogScreenProps {
   onUpdateMeal?: (meal: LoggedMeal) => void;
   onRemoveMeal: (mealId: string) => void;
   initialMealType?: MealType;
+  onCopyYesterdayMeals?: (targetDate: string) => Promise<void>;
 }
 
 export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
@@ -51,6 +52,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   onUpdateMeal,
   onRemoveMeal,
   initialMealType = 'breakfast',
+  onCopyYesterdayMeals,
 }) => {
   if (isLoading) {
     return <MealsSkeleton />;
@@ -380,6 +382,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
         date={selectedDate}
         onClose={() => setAddSheetVisible(false)}
         onAddMeal={onAddMeal}
+        onCopyYesterdayMeals={onCopyYesterdayMeals}
       />
 
       {/* Food Details & Serving Adjustment Modal */}

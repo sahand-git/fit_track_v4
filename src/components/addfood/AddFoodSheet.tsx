@@ -27,6 +27,8 @@ import {
   Image as ImageIcon,
   ChevronRight,
   Utensils,
+  Star,
+  Copy,
 } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -46,6 +48,17 @@ import { useLanguage } from '../../i18n/I18nContext';
 import { translate } from '../../i18n/strings';
 import { normalizeSearch } from '../../utils/localeUtils';
 import { formatDisplayDate, getTodayDateString } from '../../utils/dateUtils';
+import { getPreviousDayString } from '../../utils/streak';
+import {
+  loadRecentFoods,
+  addRecentFood,
+  loadFavoriteFoods,
+  toggleFavoriteFood,
+  loadCustomFoods,
+  addCustomFood,
+  copyYesterdayMeals,
+  loadDailyLog,
+} from '../../storage/storage';
 import { createUniqueId } from '../../utils/idUtils';
 import { theme } from '../../theme';
 import * as Haptics from 'expo-haptics';
@@ -56,6 +69,7 @@ export interface AddFoodSheetProps {
   mealType?: MealType;
   date: string;
   onAddMeal: (meal: LoggedMeal, targetDate: string) => void;
+  onCopyYesterdayMeals?: (targetDate: string) => Promise<void>;
 }
 
 type TabMode = 'search' | 'photo' | 'describe';
@@ -74,6 +88,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   mealType,
   date,
   onAddMeal,
+  onCopyYesterdayMeals,
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
@@ -86,6 +101,22 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [servingsCount, setServingsCount] = useState(1);
+
+  // Filter & Collections state
+  type FoodFilter = 'all' | 'recent' | 'favorites' | 'custom';
+  const [foodFilter, setFoodFilter] = useState<FoodFilter>('all');
+  const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
+  const [favoriteFoods, setFavoriteFoods] = useState<FoodItem[]>([]);
+  const [customFoods, setCustomFoods] = useState<FoodItem[]>([]);
+  const [customModalVisible, setCustomModalVisible] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customServing, setCustomServing] = useState('');
+  const [customCalories, setCustomCalories] = useState('');
+  const [customProtein, setCustomProtein] = useState('');
+  const [customCarbs, setCustomCarbs] = useState('');
+  const [customFat, setCustomFat] = useState('');
+  const [customError, setCustomError] = useState<string | null>(null);
+  const [copyLoading, setCopyLoading] = useState(false);
 
   // Barcode state
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -119,8 +150,24 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
         setSelectedMeal(getDefaultMealType());
       }
       checkApiKey();
+      loadCollections();
     }
   }, [visible, mealType]);
+
+  const loadCollections = async () => {
+    try {
+      const [recent, favs, custom] = await Promise.all([
+        loadRecentFoods(),
+        loadFavoriteFoods(),
+        loadCustomFoods(),
+      ]);
+      setRecentFoods(recent);
+      setFavoriteFoods(favs);
+      setCustomFoods(custom);
+    } catch (err) {
+      console.error('Error loading collections:', err);
+    }
+  };
 
   const checkApiKey = async () => {
     const k = await getStoredGeminiApiKey();
@@ -137,6 +184,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     setBarcodeError(null);
     setPhotoError(null);
     setDescribeError(null);
+    setCustomModalVisible(false);
+    setCustomError(null);
     onClose();
   };
 
@@ -200,11 +249,99 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     };
 
     onAddMeal(meal, date);
+    addRecentFood(selectedFood)
+      .then((updated) => setRecentFoods(updated))
+      .catch((err) => console.error('Failed to save recent food:', err));
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);
       handleClose();
     }, 450);
+  };
+
+  const handleToggleFavorite = async (item: FoodItem) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      const { favorites } = await toggleFavoriteFood(item);
+      setFavoriteFoods(favorites);
+    } catch (err) {
+      console.error('Failed to toggle favorite:', err);
+    }
+  };
+
+  const handleSaveCustomFood = async () => {
+    const trimmedName = customName.trim();
+    if (!trimmedName) {
+      setCustomError(t('Please enter a valid food name.'));
+      return;
+    }
+    const kcal = parseFloat(customCalories);
+    const p = parseFloat(customProtein || '0');
+    const c = parseFloat(customCarbs || '0');
+    const f = parseFloat(customFat || '0');
+
+    if (isNaN(kcal) || kcal < 0 || isNaN(p) || p < 0 || isNaN(c) || c < 0 || isNaN(f) || f < 0) {
+      setCustomError(t('Please enter valid numbers for calories and macros.'));
+      return;
+    }
+
+    const newFood: FoodItem = {
+      id: createUniqueId('food_custom'),
+      name: trimmedName,
+      servingSize: customServing.trim() || '1 serving',
+      servingGrams: 100,
+      calories: Math.round(kcal),
+      protein: Math.round(p * 10) / 10,
+      carbs: Math.round(c * 10) / 10,
+      fat: Math.round(f * 10) / 10,
+      source: 'custom',
+    };
+
+    try {
+      const updated = await addCustomFood(newFood);
+      setCustomFoods(updated);
+      setSelectedFood(newFood);
+      setServingsCount(1);
+      setCustomModalVisible(false);
+      setCustomName('');
+      setCustomServing('');
+      setCustomCalories('');
+      setCustomProtein('');
+      setCustomCarbs('');
+      setCustomFat('');
+      setCustomError(null);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    } catch (err) {
+      setCustomError(t('Failed to save meal.'));
+    }
+  };
+
+  const handleCopyYesterday = async () => {
+    if (isFuture || copyLoading) return;
+    setCopyLoading(true);
+    try {
+      const yesterday = getPreviousDayString(date);
+      const yesterdayLog = await loadDailyLog(yesterday);
+      if (!yesterdayLog.meals || yesterdayLog.meals.length === 0) {
+        Alert.alert(t("Copy yesterday's meals"), t('No meals were logged yesterday.'));
+        return;
+      }
+      await copyYesterdayMeals(date);
+      if (onCopyYesterdayMeals) {
+        await onCopyYesterdayMeals(date);
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        handleClose();
+      }, 450);
+    } catch (err) {
+      console.error('Failed to copy yesterday meals:', err);
+      Alert.alert(t('Error'), t('Failed to save meal.'));
+    } finally {
+      setCopyLoading(false);
+    }
   };
 
   // --- AI PHOTO HANDLERS ---
@@ -297,9 +434,21 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
   // Filtered Food Search with Arabic/Sorani variant normalization (memoized)
   const filteredFoods = useMemo(() => {
+    let sourceList: FoodItem[] = [];
+    if (foodFilter === 'recent') {
+      sourceList = recentFoods;
+    } else if (foodFilter === 'favorites') {
+      sourceList = favoriteFoods;
+    } else if (foodFilter === 'custom') {
+      sourceList = customFoods;
+    } else {
+      sourceList = [...customFoods, ...VERIFIED_FOOD_DATABASE];
+    }
+
     const normalizedQuery = normalizeSearch(searchQuery);
-    if (!normalizedQuery) return VERIFIED_FOOD_DATABASE;
-    return VERIFIED_FOOD_DATABASE.filter((f) => {
+    if (!normalizedQuery) return sourceList;
+
+    return sourceList.filter((f) => {
       const normName = normalizeSearch(f.name);
       const normCategory = f.category ? normalizeSearch(f.category) : '';
       const normBrand = f.brand ? normalizeSearch(f.brand) : '';
@@ -311,7 +460,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
         localizedName.includes(normalizedQuery)
       );
     });
-  }, [searchQuery, language]);
+  }, [foodFilter, recentFoods, favoriteFoods, customFoods, searchQuery, language]);
 
   const mealCategories: { key: MealType; label: string }[] = useMemo(
     () => [
@@ -328,7 +477,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     : `${formatDisplayDate(date, language)} · ${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))}`;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+    <>
+      <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -603,6 +753,103 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                     </View>
                   )}
 
+                  {/* Filter Chips & Quick Actions Row */}
+                  <View style={styles.filterActionsContainer}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.filterChipsRow}
+                    >
+                      <TouchableOpacity
+                        style={[styles.filterChip, foodFilter === 'all' && styles.filterChipActive]}
+                        onPress={() => setFoodFilter('all')}
+                        accessibilityRole="button"
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            foodFilter === 'all' && styles.filterChipTextActive,
+                          ]}
+                        >
+                          {t('All')}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.filterChip, foodFilter === 'recent' && styles.filterChipActive]}
+                        onPress={() => setFoodFilter('recent')}
+                        accessibilityRole="button"
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            foodFilter === 'recent' && styles.filterChipTextActive,
+                          ]}
+                        >
+                          {t('Recent')} {recentFoods.length > 0 ? `(${recentFoods.length})` : ''}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.filterChip, foodFilter === 'favorites' && styles.filterChipActive]}
+                        onPress={() => setFoodFilter('favorites')}
+                        accessibilityRole="button"
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            foodFilter === 'favorites' && styles.filterChipTextActive,
+                          ]}
+                        >
+                          {t('Favorites')} {favoriteFoods.length > 0 ? `(${favoriteFoods.length})` : ''}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.filterChip, foodFilter === 'custom' && styles.filterChipActive]}
+                        onPress={() => setFoodFilter('custom')}
+                        accessibilityRole="button"
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            foodFilter === 'custom' && styles.filterChipTextActive,
+                          ]}
+                        >
+                          {t('Custom')} {customFoods.length > 0 ? `(${customFoods.length})` : ''}
+                        </Text>
+                      </TouchableOpacity>
+                    </ScrollView>
+
+                    <View style={styles.quickActionsRow}>
+                      <TouchableOpacity
+                        style={styles.quickActionBtn}
+                        onPress={handleCopyYesterday}
+                        disabled={copyLoading || isFuture}
+                        accessibilityRole="button"
+                      >
+                        {copyLoading ? (
+                          <ActivityIndicator size="small" color={theme.colors.primary} />
+                        ) : (
+                          <Copy size={13} color={theme.colors.primary} />
+                        )}
+                        <Text style={styles.quickActionBtnText}>{t("Copy yesterday's meals")}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.quickActionBtn}
+                        onPress={() => {
+                          setCustomError(null);
+                          setCustomModalVisible(true);
+                        }}
+                        accessibilityRole="button"
+                      >
+                        <Plus size={13} color={theme.colors.primary} />
+                        <Text style={styles.quickActionBtnText}>{t('Create custom food')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
                   {/* Foods List */}
                   <ScrollView
                     contentContainerStyle={[
@@ -615,31 +862,71 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                       <Text style={styles.listHeaderTitle}>
                         {searchQuery.trim().length > 0
                           ? `${filteredFoods.length} ${t('results')}`
+                          : foodFilter === 'recent'
+                          ? t('Recent foods')
+                          : foodFilter === 'favorites'
+                          ? t('Favorites')
+                          : foodFilter === 'custom'
+                          ? t('Custom foods')
                           : t('Common & Frequent Foods')}
                       </Text>
                     </View>
-                    {filteredFoods.map((item) => (
-                      <TouchableOpacity
-                        key={item.id}
-                        style={[
-                          styles.foodListItem,
-                          selectedFood?.id === item.id && styles.foodListItemActive,
-                        ]}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                          setSelectedFood(item);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.itemTitle}>{item.name}</Text>
-                          <Text style={styles.itemSub}>
-                            {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
-                          </Text>
-                        </View>
-                        <Text style={styles.itemKcal}>{item.calories} kcal</Text>
-                      </TouchableOpacity>
-                    ))}
+                    {filteredFoods.length === 0 ? (
+                      <View style={styles.emptyStateBox}>
+                        <Text style={styles.emptyStateText}>
+                          {foodFilter === 'recent'
+                            ? t('No recent foods yet.')
+                            : foodFilter === 'favorites'
+                            ? t('No favorite foods yet.')
+                            : foodFilter === 'custom'
+                            ? t('No custom foods yet.')
+                            : t('Could not find food for this barcode.')}
+                        </Text>
+                      </View>
+                    ) : (
+                      filteredFoods.map((item) => {
+                        const isFav = favoriteFoods.some(
+                          (f) => f.id === item.id || f.name.trim().toLowerCase() === item.name.trim().toLowerCase()
+                        );
+                        return (
+                          <TouchableOpacity
+                            key={item.id}
+                            style={[
+                              styles.foodListItem,
+                              selectedFood?.id === item.id && styles.foodListItemActive,
+                            ]}
+                            onPress={() => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                              setSelectedFood(item);
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.itemTitle}>{item.name}</Text>
+                              <Text style={styles.itemSub}>
+                                {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
+                              </Text>
+                            </View>
+                            <View style={styles.itemRightCol}>
+                              <Text style={styles.itemKcal}>{item.calories} kcal</Text>
+                              <TouchableOpacity
+                                style={styles.favStarBtn}
+                                onPress={() => handleToggleFavorite(item)}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                accessibilityRole="button"
+                                accessibilityLabel={isFav ? t('Remove from favorites') : t('Add to favorites')}
+                              >
+                                <Star
+                                  size={16}
+                                  color={isFav ? '#D97706' : theme.colors.textMuted}
+                                  fill={isFav ? '#D97706' : 'none'}
+                                />
+                              </TouchableOpacity>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })
+                    )}
                   </ScrollView>
                 </>
               )}
@@ -794,6 +1081,126 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       </KeyboardAvoidingView>
     </View>
   </Modal>
+
+    {/* Custom Food Creation Modal */}
+    <Modal
+      visible={customModalVisible}
+      animationType="fade"
+      transparent
+      onRequestClose={() => setCustomModalVisible(false)}
+    >
+      <View style={[styles.customModalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ width: '100%', alignItems: 'center' }}
+        >
+          <View style={styles.customModalCard}>
+            <View style={styles.customModalHeader}>
+              <Text style={styles.customModalTitle}>{t('Create custom food')}</Text>
+              <TouchableOpacity
+                onPress={() => setCustomModalVisible(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={t('Close')}
+              >
+                <X size={20} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {customError && (
+              <View style={styles.errorNotice}>
+                <AlertTriangle size={15} color={theme.colors.danger} />
+                <Text style={styles.errorNoticeText}>{customError}</Text>
+              </View>
+            )}
+
+            <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled">
+              <View style={styles.customInputGroup}>
+                <Text style={styles.customInputLabel}>{t('Food name')}</Text>
+                <TextInput
+                  style={styles.customTextInput}
+                  placeholder={t('Food name')}
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={customName}
+                  onChangeText={setCustomName}
+                />
+              </View>
+
+              <View style={styles.customInputGroup}>
+                <Text style={styles.customInputLabel}>{t('Serving description (e.g. 1 bowl, 100g)')}</Text>
+                <TextInput
+                  style={styles.customTextInput}
+                  placeholder="e.g. 1 bowl, 150g"
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={customServing}
+                  onChangeText={setCustomServing}
+                />
+              </View>
+
+              <View style={styles.customInputGroup}>
+                <Text style={styles.customInputLabel}>{t('Calories (kcal)')}</Text>
+                <TextInput
+                  style={styles.customTextInput}
+                  placeholder="e.g. 250"
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={customCalories}
+                  onChangeText={setCustomCalories}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.macrosRowInputs}>
+                <View style={[styles.customInputGroup, { flex: 1 }]}>
+                  <Text style={styles.customInputLabel}>{t('Protein (g)')}</Text>
+                  <TextInput
+                    style={styles.customTextInput}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={customProtein}
+                    onChangeText={setCustomProtein}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={[styles.customInputGroup, { flex: 1 }]}>
+                  <Text style={styles.customInputLabel}>{t('Carbs (g)')}</Text>
+                  <TextInput
+                    style={styles.customTextInput}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={customCarbs}
+                    onChangeText={setCustomCarbs}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={[styles.customInputGroup, { flex: 1 }]}>
+                  <Text style={styles.customInputLabel}>{t('Fat (g)')}</Text>
+                  <TextInput
+                    style={styles.customTextInput}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={customFat}
+                    onChangeText={setCustomFat}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.saveCustomBtn}
+              onPress={handleSaveCustomFood}
+              accessibilityRole="button"
+            >
+              <Check size={16} color={theme.colors.textInverted} />
+              <Text style={styles.saveCustomBtnText}>{t('Save custom food')}</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  </>
   );
 };
 
@@ -1282,6 +1689,148 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   actionBtnPrimaryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textInverted,
+  },
+  filterActionsContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 2,
+    gap: 8,
+  },
+  filterChipsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 2,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  filterChipTextActive: {
+    color: theme.colors.textInverted,
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  quickActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  quickActionBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
+  itemRightCol: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  favStarBtn: {
+    padding: 2,
+  },
+  emptyStateBox: {
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateText: {
+    fontSize: 13,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+  },
+  customModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  customModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    gap: 10,
+  },
+  customModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  customModalTitle: {
+    fontFamily: theme.fonts.serif,
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  customInputGroup: {
+    marginBottom: 8,
+  },
+  customInputLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    marginBottom: 4,
+  },
+  customTextInput: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+  },
+  macrosRowInputs: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  saveCustomBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 11,
+    borderRadius: theme.radius.md,
+    marginTop: 4,
+  },
+  saveCustomBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: theme.colors.textInverted,

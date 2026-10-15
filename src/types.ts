@@ -181,6 +181,9 @@ export interface FitTrackBackup {
   supplementRoutine: SupplementRoutineItem[];
   weightHistory: WeightEntry[];
   reminderSettings?: ReminderSettings;
+  recentFoods?: FoodItem[];
+  favoriteFoods?: FoodItem[];
+  customFoods?: FoodItem[];
 }
 
 export interface BackupSummary {

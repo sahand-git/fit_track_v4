@@ -1,16 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserProfile, DailyLog, LoggedMeal, SupplementCheck, SupplementRoutineItem, WorkoutEntry, FitTrackBackup, WeightEntry, ReminderSettings } from '../types';
+import { UserProfile, DailyLog, LoggedMeal, SupplementCheck, SupplementRoutineItem, WorkoutEntry, FitTrackBackup, WeightEntry, ReminderSettings, FoodItem } from '../types';
 import { normalizeSupplementRoutine } from '../utils/supplementUtils';
 import { getDefaultProfile } from '../utils/calculator';
 import { getTodayDateString, addDaysToDateString } from '../utils/dateUtils';
 import { validateBackup } from '../utils/backupCore';
-import { calculateStreakWithChunking, calculateStreakByWalkback } from '../utils/streak';
+import { calculateStreakWithChunking, calculateStreakByWalkback, getPreviousDayString } from '../utils/streak';
 
 const PROFILE_KEY = '@fittrack_profile';
 const DAILY_LOG_PREFIX = '@fittrack_log_';
 const SUPPLEMENT_ROUTINE_KEY = '@fittrack_supplement_routine';
 const WEIGHT_HISTORY_KEY = '@fittrack_weight_history';
 const REMINDER_SETTINGS_KEY = '@fittrack_reminder_settings';
+const RECENT_FOODS_KEY = '@fittrack_recent_foods';
+const FAVORITE_FOODS_KEY = '@fittrack_favorite_foods';
+const CUSTOM_FOODS_KEY = '@fittrack_custom_foods';
 let accountNamespace: string | null = null;
 
 /** Signed-in data is isolated; null preserves all existing v4 guest keys verbatim. */
@@ -380,6 +383,154 @@ export async function loadLogsForDates(dates: string[]): Promise<Record<string, 
   return result;
 }
 
+// Food collections (Recent, Favorites, Custom Foods)
+export async function loadRecentFoods(): Promise<FoodItem[]> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(RECENT_FOODS_KEY));
+    if (!raw) return [];
+    return safeParseArray<FoodItem>(raw);
+  } catch (err) {
+    console.error('Error loading recent foods:', err);
+    return [];
+  }
+}
+
+export async function saveRecentFoods(foods: FoodItem[]): Promise<void> {
+  const key = getScopedStorageKey(RECENT_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(foods));
+    } catch (err) {
+      console.error('Error saving recent foods:', err);
+      throw new Error('Failed to save recent foods.');
+    }
+  });
+}
+
+export async function addRecentFood(food: FoodItem): Promise<FoodItem[]> {
+  const key = getScopedStorageKey(RECENT_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadRecentFoods();
+    const filtered = current.filter(
+      (f) => f.id !== food.id && f.name.trim().toLowerCase() !== food.name.trim().toLowerCase()
+    );
+    const updated = [food, ...filtered].slice(0, 30);
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  });
+}
+
+export async function loadFavoriteFoods(): Promise<FoodItem[]> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(FAVORITE_FOODS_KEY));
+    if (!raw) return [];
+    return safeParseArray<FoodItem>(raw);
+  } catch (err) {
+    console.error('Error loading favorite foods:', err);
+    return [];
+  }
+}
+
+export async function saveFavoriteFoods(foods: FoodItem[]): Promise<void> {
+  const key = getScopedStorageKey(FAVORITE_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(foods));
+    } catch (err) {
+      console.error('Error saving favorite foods:', err);
+      throw new Error('Failed to save favorite foods.');
+    }
+  });
+}
+
+export async function toggleFavoriteFood(food: FoodItem): Promise<{ favorites: FoodItem[]; isFavorite: boolean }> {
+  const key = getScopedStorageKey(FAVORITE_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadFavoriteFoods();
+    const index = current.findIndex(
+      (f) => f.id === food.id || f.name.trim().toLowerCase() === food.name.trim().toLowerCase()
+    );
+    let updated: FoodItem[];
+    let isFavorite: boolean;
+    if (index >= 0) {
+      updated = current.filter((_, i) => i !== index);
+      isFavorite = false;
+    } else {
+      updated = [food, ...current];
+      isFavorite = true;
+    }
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return { favorites: updated, isFavorite };
+  });
+}
+
+export async function loadCustomFoods(): Promise<FoodItem[]> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(CUSTOM_FOODS_KEY));
+    if (!raw) return [];
+    return safeParseArray<FoodItem>(raw);
+  } catch (err) {
+    console.error('Error loading custom foods:', err);
+    return [];
+  }
+}
+
+export async function saveCustomFoods(foods: FoodItem[]): Promise<void> {
+  const key = getScopedStorageKey(CUSTOM_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(foods));
+    } catch (err) {
+      console.error('Error saving custom foods:', err);
+      throw new Error('Failed to save custom foods.');
+    }
+  });
+}
+
+export async function addCustomFood(food: FoodItem): Promise<FoodItem[]> {
+  const key = getScopedStorageKey(CUSTOM_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadCustomFoods();
+    const filtered = current.filter((f) => f.id !== food.id);
+    const updated = [food, ...filtered];
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  });
+}
+
+export async function deleteCustomFood(id: string): Promise<FoodItem[]> {
+  const key = getScopedStorageKey(CUSTOM_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadCustomFoods();
+    const updated = current.filter((f) => f.id !== id);
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  });
+}
+
+export async function copyYesterdayMeals(targetDate: string): Promise<DailyLog> {
+  const yesterday = getPreviousDayString(targetDate);
+  const targetKey = getScopedStorageKey(`${DAILY_LOG_PREFIX}${targetDate}`);
+  return enqueueStorageOperation(targetKey, async () => {
+    const yesterdayLog = await loadDailyLog(yesterday);
+    if (!yesterdayLog.meals || yesterdayLog.meals.length === 0) {
+      return await loadDailyLog(targetDate);
+    }
+    const currentTarget = await loadDailyLog(targetDate);
+    const clonedMeals: LoggedMeal[] = yesterdayLog.meals.map((m) => ({
+      ...m,
+      id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      timestamp: new Date().toISOString(),
+    }));
+    const updatedTarget: DailyLog = {
+      ...currentTarget,
+      meals: [...currentTarget.meals, ...clonedMeals],
+    };
+    await AsyncStorage.setItem(targetKey, JSON.stringify(updatedTarget));
+    return updatedTarget;
+  });
+}
+
 export const DEFAULT_REMINDER_SETTINGS: import('../types').ReminderSettings = {
   supplementsEnabled: false,
   supplementTimes: {
@@ -601,6 +752,9 @@ export async function restoreAllData(
         getScopedStorageKey(SUPPLEMENT_ROUTINE_KEY),
         getScopedStorageKey(WEIGHT_HISTORY_KEY),
         getScopedStorageKey(REMINDER_SETTINGS_KEY),
+        getScopedStorageKey(RECENT_FOODS_KEY),
+        getScopedStorageKey(FAVORITE_FOODS_KEY),
+        getScopedStorageKey(CUSTOM_FOODS_KEY),
         ...existingLogKeys,
         ...incomingLogKeys,
       ]);
@@ -637,6 +791,27 @@ export async function restoreAllData(
           await AsyncStorage.setItem(getScopedStorageKey(REMINDER_SETTINGS_KEY), JSON.stringify(staged.reminderSettings));
         } else {
           await AsyncStorage.removeItem(getScopedStorageKey(REMINDER_SETTINGS_KEY));
+        }
+
+        // 7. Write recent foods
+        if (staged.recentFoods) {
+          await AsyncStorage.setItem(getScopedStorageKey(RECENT_FOODS_KEY), JSON.stringify(staged.recentFoods));
+        } else {
+          await AsyncStorage.removeItem(getScopedStorageKey(RECENT_FOODS_KEY));
+        }
+
+        // 8. Write favorite foods
+        if (staged.favoriteFoods) {
+          await AsyncStorage.setItem(getScopedStorageKey(FAVORITE_FOODS_KEY), JSON.stringify(staged.favoriteFoods));
+        } else {
+          await AsyncStorage.removeItem(getScopedStorageKey(FAVORITE_FOODS_KEY));
+        }
+
+        // 9. Write custom foods
+        if (staged.customFoods) {
+          await AsyncStorage.setItem(getScopedStorageKey(CUSTOM_FOODS_KEY), JSON.stringify(staged.customFoods));
+        } else {
+          await AsyncStorage.removeItem(getScopedStorageKey(CUSTOM_FOODS_KEY));
         }
       } catch (restoreErr) {
         console.error('Restore failed midway, attempting rollback:', restoreErr);
@@ -745,6 +920,39 @@ export async function restoreAllData(
     // 5. Reminders
     if (staged.reminderSettings) {
       await saveReminderSettings(staged.reminderSettings);
+    }
+
+    // 6. Recent foods
+    if (staged.recentFoods && staged.recentFoods.length > 0) {
+      const currentRecent = await loadRecentFoods();
+      const existingIds = new Set(currentRecent.map((f) => f.id));
+      const mergedRecent = [
+        ...currentRecent,
+        ...staged.recentFoods.filter((f) => !existingIds.has(f.id)),
+      ].slice(0, 30);
+      await AsyncStorage.setItem(getScopedStorageKey(RECENT_FOODS_KEY), JSON.stringify(mergedRecent));
+    }
+
+    // 7. Favorite foods
+    if (staged.favoriteFoods && staged.favoriteFoods.length > 0) {
+      const currentFavs = await loadFavoriteFoods();
+      const existingFavIds = new Set(currentFavs.map((f) => f.id));
+      const mergedFavs = [
+        ...currentFavs,
+        ...staged.favoriteFoods.filter((f) => !existingFavIds.has(f.id)),
+      ];
+      await AsyncStorage.setItem(getScopedStorageKey(FAVORITE_FOODS_KEY), JSON.stringify(mergedFavs));
+    }
+
+    // 8. Custom foods
+    if (staged.customFoods && staged.customFoods.length > 0) {
+      const currentCustom = await loadCustomFoods();
+      const existingCustomIds = new Set(currentCustom.map((f) => f.id));
+      const mergedCustom = [
+        ...currentCustom,
+        ...staged.customFoods.filter((f) => !existingCustomIds.has(f.id)),
+      ];
+      await AsyncStorage.setItem(getScopedStorageKey(CUSTOM_FOODS_KEY), JSON.stringify(mergedCustom));
     }
   }
 }

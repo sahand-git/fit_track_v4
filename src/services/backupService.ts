@@ -13,6 +13,9 @@ import {
   loadSupplementRoutine,
   loadWeightHistory,
   loadReminderSettings,
+  loadRecentFoods,
+  loadFavoriteFoods,
+  loadCustomFoods,
   restoreAllData,
 } from '../storage/storage';
 
@@ -26,14 +29,25 @@ export interface BackupTransport {
  * Strips all secrets, API keys, and temporary tokens.
  */
 export async function createBackupPayload(): Promise<FitTrackBackup> {
-  const [profile, dailyLogs, supplementRoutine, weightHistory, reminderSettings] =
-    await Promise.all([
-      loadUserProfile(),
-      getAllDailyLogs(),
-      loadSupplementRoutine(),
-      loadWeightHistory(),
-      loadReminderSettings(),
-    ]);
+  const [
+    profile,
+    dailyLogs,
+    supplementRoutine,
+    weightHistory,
+    reminderSettings,
+    recentFoods,
+    favoriteFoods,
+    customFoods,
+  ] = await Promise.all([
+    loadUserProfile(),
+    getAllDailyLogs(),
+    loadSupplementRoutine(),
+    loadWeightHistory(),
+    loadReminderSettings(),
+    loadRecentFoods(),
+    loadFavoriteFoods(),
+    loadCustomFoods(),
+  ]);
 
   const raw = {
     version: '4.0',
@@ -43,6 +57,9 @@ export async function createBackupPayload(): Promise<FitTrackBackup> {
     supplementRoutine,
     weightHistory,
     reminderSettings,
+    recentFoods,
+    favoriteFoods,
+    customFoods,
   };
 
   // Run through allowlist serialization and parser to ensure 100% schema compliance and secret stripping

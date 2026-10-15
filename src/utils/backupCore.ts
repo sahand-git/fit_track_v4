@@ -9,6 +9,7 @@ import {
   SupplementCheck,
   WeightEntry,
   ReminderSettings,
+  FoodItem,
 } from '../types';
 
 type Validator<T = any> = (value: unknown) => T;
@@ -213,6 +214,31 @@ const weightEntryShape = shape<WeightEntry>({
   timestamp: str,
 });
 
+// Food Item (Recent, Favorite, Custom)
+const foodItemShape = shape<FoodItem>({
+  id: str,
+  name: str,
+  brand: optional(str),
+  servingSize: str,
+  servingGrams: num,
+  calories: num,
+  protein: num,
+  carbs: num,
+  fat: num,
+  category: optional(str),
+  barcode: optional(str),
+  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated')),
+  fiber: optional(num),
+  sugar: optional(num),
+  sugars: optional(num),
+  nutriScore: optional(str),
+  sodium: optional(num),
+  potassium: optional(num),
+  calcium: optional(num),
+  iron: optional(num),
+  vitaminC: optional(num),
+});
+
 // Full Backup Root Validator
 const backupShape = shape<FitTrackBackup>({
   version: choice('4.0'),
@@ -234,6 +260,9 @@ const backupShape = shape<FitTrackBackup>({
   supplementRoutine: list(supplementRoutineItemShape),
   weightHistory: list(weightEntryShape),
   reminderSettings: optional(reminderSettingsShape),
+  recentFoods: optional(list(foodItemShape)),
+  favoriteFoods: optional(list(foodItemShape)),
+  customFoods: optional(list(foodItemShape)),
 });
 
 /**
