@@ -25,8 +25,6 @@ import {
   Check,
   AlertTriangle,
   Image as ImageIcon,
-  ChevronRight,
-  Utensils,
   Star,
   Copy,
 } from 'lucide-react-native';
@@ -56,9 +54,11 @@ import {
   toggleFavoriteFood,
   loadCustomFoods,
   addCustomFood,
+  loadBarcodeCache,
   copyYesterdayMeals,
   loadDailyLog,
 } from '../../storage/storage';
+import { getFoodSourceLabel } from '../../utils/foodSource';
 import { createUniqueId } from '../../utils/idUtils';
 import { theme } from '../../theme';
 import * as Haptics from 'expo-haptics';
@@ -103,11 +103,12 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [servingsCount, setServingsCount] = useState(1);
 
   // Filter & Collections state
-  type FoodFilter = 'all' | 'recent' | 'favorites' | 'custom';
+  type FoodFilter = 'all' | 'recent' | 'favorites' | 'custom' | 'scanned';
   const [foodFilter, setFoodFilter] = useState<FoodFilter>('all');
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
   const [favoriteFoods, setFavoriteFoods] = useState<FoodItem[]>([]);
   const [customFoods, setCustomFoods] = useState<FoodItem[]>([]);
+  const [barcodeCache, setBarcodeCache] = useState<FoodItem[]>([]);
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customServing, setCustomServing] = useState('');
@@ -158,11 +159,13 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       loadRecentFoods(),
       loadFavoriteFoods(),
       loadCustomFoods(),
-    ]).then(([recent, favs, custom]) => {
+      loadBarcodeCache(),
+    ]).then(([recent, favs, custom, cachedBarcodes]) => {
       if (!isMounted) return;
       setRecentFoods(recent);
       setFavoriteFoods(favs);
       setCustomFoods(custom);
+      setBarcodeCache(cachedBarcodes);
     }).catch((err) => {
       console.error('Error loading collections:', err);
     });
@@ -221,6 +224,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       setSelectedFood(food);
       setServingsCount(1);
       setIsScanningBarcode(false);
+      loadCollections();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (err: any) {
       setBarcodeError(err?.message || t('Could not find food for this barcode.'));
@@ -264,6 +268,11 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       protein: Math.round(selectedFood.protein * servingsCount * 10) / 10,
       carbs: Math.round(selectedFood.carbs * servingsCount * 10) / 10,
       fat: Math.round(selectedFood.fat * servingsCount * 10) / 10,
+      fiber: selectedFood.fiber !== undefined ? Math.round(selectedFood.fiber * servingsCount * 10) / 10 : undefined,
+      sugar: selectedFood.sugar !== undefined ? Math.round(selectedFood.sugar * servingsCount * 10) / 10 : undefined,
+      sodium: selectedFood.sodium !== undefined ? Math.round(selectedFood.sodium * servingsCount) : undefined,
+      barcode: selectedFood.barcode,
+      source: selectedFood.source ?? (selectedFood.barcode ? 'open_food_facts' : undefined),
       timestamp: new Date().toISOString(),
     };
 
@@ -460,8 +469,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       sourceList = favoriteFoods;
     } else if (foodFilter === 'custom') {
       sourceList = customFoods;
+    } else if (foodFilter === 'scanned') {
+      sourceList = barcodeCache;
     } else {
-      sourceList = [...customFoods, ...VERIFIED_FOOD_DATABASE];
+      sourceList = [...customFoods, ...barcodeCache, ...VERIFIED_FOOD_DATABASE];
     }
 
     const normalizedQuery = normalizeSearch(searchQuery);
@@ -471,15 +482,17 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       const normName = normalizeSearch(f.name);
       const normCategory = f.category ? normalizeSearch(f.category) : '';
       const normBrand = f.brand ? normalizeSearch(f.brand) : '';
+      const normBarcode = f.barcode ? normalizeSearch(f.barcode) : '';
       const localizedName = normalizeSearch(t(f.name));
       return (
         normName.includes(normalizedQuery) ||
         normCategory.includes(normalizedQuery) ||
         normBrand.includes(normalizedQuery) ||
+        normBarcode.includes(normalizedQuery) ||
         localizedName.includes(normalizedQuery)
       );
     });
-  }, [foodFilter, recentFoods, favoriteFoods, customFoods, searchQuery, language]);
+  }, [foodFilter, recentFoods, favoriteFoods, customFoods, barcodeCache, searchQuery, t]);
 
   const mealCategories: { key: MealType; label: string }[] = useMemo(
     () => [
@@ -488,7 +501,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       { key: 'dinner', label: t('Dinner') },
       { key: 'snack', label: t('Snacks') },
     ],
-    [language]
+    [language, t]
   );
 
   const headerTitle = isToday
@@ -721,9 +734,35 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                     </View>
                   )}
 
-                  {/* Selected Food Adjustment Box */}
+                  {/* Selected Food Confirmation Box */}
                   {selectedFood && (
                     <View style={styles.selectedFoodCard}>
+                      <View style={styles.selectedHeaderRow}>
+                        <View style={styles.selectedBadgesRow}>
+                          {getFoodSourceLabel(selectedFood.source, t) ? (
+                            <View style={styles.sourceBadge}>
+                              <Text style={styles.sourceBadgeText}>
+                                {getFoodSourceLabel(selectedFood.source, t)}
+                              </Text>
+                            </View>
+                          ) : null}
+                          {selectedFood.barcode ? (
+                            <View style={styles.barcodeBadge}>
+                              <BarcodeIcon size={11} color={theme.colors.textMuted} />
+                              <Text style={styles.barcodeBadgeText}>{selectedFood.barcode}</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => setSelectedFood(null)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityLabel={t('Cancel')}
+                          accessibilityRole="button"
+                        >
+                          <X size={16} color={theme.colors.textMuted} />
+                        </TouchableOpacity>
+                      </View>
+
                       <View style={styles.selectedTop}>
                         <View style={{ flex: 1 }}>
                           <Text style={styles.selectedName}>{selectedFood.name}</Text>
@@ -761,14 +800,23 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         </View>
                       </View>
 
-                      <TouchableOpacity
-                        style={styles.confirmAddBtn}
-                        onPress={handleSaveSelectedFood}
-                        accessibilityRole="button"
-                      >
-                        <Check size={16} color={theme.colors.textInverted} />
-                        <Text style={styles.confirmAddBtnText}>{t('Log to Diary')}</Text>
-                      </TouchableOpacity>
+                      <View style={styles.selectedActionButtonsRow}>
+                        <TouchableOpacity
+                          style={styles.cancelSelectedBtn}
+                          onPress={() => setSelectedFood(null)}
+                          accessibilityRole="button"
+                        >
+                          <Text style={styles.cancelSelectedBtnText}>{t('Cancel')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.confirmAddBtn, { flex: 1, marginTop: 0 }]}
+                          onPress={handleSaveSelectedFood}
+                          accessibilityRole="button"
+                        >
+                          <Check size={16} color={theme.colors.textInverted} />
+                          <Text style={styles.confirmAddBtnText}>{t('Log to Diary')}</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   )}
 
@@ -838,6 +886,21 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           {t('Custom')} {customFoods.length > 0 ? `(${customFoods.length})` : ''}
                         </Text>
                       </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.filterChip, foodFilter === 'scanned' && styles.filterChipActive]}
+                        onPress={() => setFoodFilter('scanned')}
+                        accessibilityRole="button"
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            foodFilter === 'scanned' && styles.filterChipTextActive,
+                          ]}
+                        >
+                          {t('Scanned')} {barcodeCache.length > 0 ? `(${barcodeCache.length})` : ''}
+                        </Text>
+                      </TouchableOpacity>
                     </ScrollView>
 
                     <View style={styles.quickActionsRow}>
@@ -887,6 +950,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           ? t('Favorites')
                           : foodFilter === 'custom'
                           ? t('Custom foods')
+                          : foodFilter === 'scanned'
+                          ? t('Scanned')
                           : t('Common & Frequent Foods')}
                       </Text>
                     </View>
@@ -899,6 +964,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             ? t('No favorite foods yet.')
                             : foodFilter === 'custom'
                             ? t('No custom foods yet.')
+                            : foodFilter === 'scanned'
+                            ? t('No scanned foods in cache yet.')
                             : t('Could not find food for this barcode.')}
                         </Text>
                       </View>
@@ -1537,6 +1604,68 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: theme.colors.textInverted,
+  },
+  selectedHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 2,
+  },
+  selectedBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  sourceBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryBorder,
+  },
+  sourceBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  barcodeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  barcodeBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+  },
+  selectedActionButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  cancelSelectedBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelSelectedBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
   },
   listHeaderRow: {
     paddingVertical: 6,

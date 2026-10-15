@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserProfile, DailyLog, LoggedMeal, SupplementCheck, SupplementRoutineItem, WorkoutEntry, FitTrackBackup, WeightEntry, ReminderSettings, FoodItem } from '../types';
+import { UserProfile, DailyLog, LoggedMeal, SupplementCheck, SupplementRoutineItem, WorkoutEntry, FitTrackBackup, FoodItem } from '../types';
 import { normalizeSupplementRoutine } from '../utils/supplementUtils';
 import { getDefaultProfile } from '../utils/calculator';
 import { getTodayDateString, addDaysToDateString } from '../utils/dateUtils';
 import { validateBackup } from '../utils/backupCore';
-import { calculateStreakWithChunking, calculateStreakByWalkback, getPreviousDayString } from '../utils/streak';
+import { calculateStreakByWalkback, getPreviousDayString } from '../utils/streak';
+import { normalizeSearch } from '../utils/localeUtils';
 
 const PROFILE_KEY = '@fittrack_profile';
 const DAILY_LOG_PREFIX = '@fittrack_log_';
@@ -14,6 +15,7 @@ const REMINDER_SETTINGS_KEY = '@fittrack_reminder_settings';
 const RECENT_FOODS_KEY = '@fittrack_recent_foods';
 const FAVORITE_FOODS_KEY = '@fittrack_favorite_foods';
 const CUSTOM_FOODS_KEY = '@fittrack_custom_foods';
+const BARCODE_CACHE_KEY = '@fittrack_barcode_cache';
 let accountNamespace: string | null = null;
 
 /** Signed-in data is isolated; null preserves all existing v4 guest keys verbatim. */
@@ -508,6 +510,84 @@ export async function deleteCustomFood(id: string): Promise<FoodItem[]> {
   });
 }
 
+// Barcode Offline Cache (Open Food Facts local cache)
+export async function loadBarcodeCache(): Promise<FoodItem[]> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(BARCODE_CACHE_KEY));
+    if (!raw) return [];
+    return safeParseArray<FoodItem>(raw);
+  } catch (err) {
+    console.error('Error loading barcode cache:', err);
+    return [];
+  }
+}
+
+export async function saveBarcodeCache(foods: FoodItem[]): Promise<void> {
+  const key = getScopedStorageKey(BARCODE_CACHE_KEY);
+  return enqueueStorageOperation(key, async () => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(foods));
+    } catch (err) {
+      console.error('Error saving barcode cache:', err);
+      throw new Error('Failed to save barcode cache.');
+    }
+  });
+}
+
+export async function upsertBarcodeCacheItem(food: FoodItem): Promise<FoodItem[]> {
+  const key = getScopedStorageKey(BARCODE_CACHE_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadBarcodeCache();
+    const cleanBarcode = food.barcode?.trim().replace(/[\s-]/g, '');
+    const filtered = current.filter((f) => {
+      const fb = f.barcode?.trim().replace(/[\s-]/g, '');
+      if (cleanBarcode && fb && cleanBarcode === fb) return false;
+      if (f.id === food.id) return false;
+      return true;
+    });
+    const updated = [{ ...food, source: food.source ?? 'open_food_facts' }, ...filtered].slice(0, 200);
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  });
+}
+
+export async function getBarcodeCacheItem(rawBarcode: string): Promise<FoodItem | null> {
+  const code = rawBarcode.trim().replace(/[\s-]/g, '');
+  if (!code) return null;
+  const cache = await loadBarcodeCache();
+  return (
+    cache.find((f) => {
+      const fb = f.barcode?.trim().replace(/[\s-]/g, '');
+      return fb === code || f.id === `barcode_${code}`;
+    }) ?? null
+  );
+}
+
+export async function searchBarcodeCache(query: string): Promise<FoodItem[]> {
+  const normQuery = normalizeSearch(query);
+  if (!normQuery) return [];
+  const cache = await loadBarcodeCache();
+  return cache.filter((f) => {
+    const normName = normalizeSearch(f.name);
+    const normBrand = f.brand ? normalizeSearch(f.brand) : '';
+    const normBarcode = f.barcode ? normalizeSearch(f.barcode) : '';
+    const normCategory = f.category ? normalizeSearch(f.category) : '';
+    return (
+      normName.includes(normQuery) ||
+      normBrand.includes(normQuery) ||
+      normBarcode.includes(normQuery) ||
+      normCategory.includes(normQuery)
+    );
+  });
+}
+
+export async function clearBarcodeCache(): Promise<void> {
+  const key = getScopedStorageKey(BARCODE_CACHE_KEY);
+  return enqueueStorageOperation(key, async () => {
+    await AsyncStorage.removeItem(key);
+  });
+}
+
 export async function copyYesterdayMeals(targetDate: string): Promise<DailyLog> {
   const yesterday = getPreviousDayString(targetDate);
   const targetKey = getScopedStorageKey(`${DAILY_LOG_PREFIX}${targetDate}`);
@@ -755,6 +835,7 @@ export async function restoreAllData(
         getScopedStorageKey(RECENT_FOODS_KEY),
         getScopedStorageKey(FAVORITE_FOODS_KEY),
         getScopedStorageKey(CUSTOM_FOODS_KEY),
+        getScopedStorageKey(BARCODE_CACHE_KEY),
         ...existingLogKeys,
         ...incomingLogKeys,
       ]);
@@ -812,6 +893,13 @@ export async function restoreAllData(
           await AsyncStorage.setItem(getScopedStorageKey(CUSTOM_FOODS_KEY), JSON.stringify(staged.customFoods));
         } else {
           await AsyncStorage.removeItem(getScopedStorageKey(CUSTOM_FOODS_KEY));
+        }
+
+        // 10. Write barcode cache
+        if (staged.barcodeCache) {
+          await AsyncStorage.setItem(getScopedStorageKey(BARCODE_CACHE_KEY), JSON.stringify(staged.barcodeCache));
+        } else {
+          await AsyncStorage.removeItem(getScopedStorageKey(BARCODE_CACHE_KEY));
         }
       } catch (restoreErr) {
         console.error('Restore failed midway, attempting rollback:', restoreErr);
@@ -953,6 +1041,21 @@ export async function restoreAllData(
         ...staged.customFoods.filter((f) => !existingCustomIds.has(f.id)),
       ];
       await AsyncStorage.setItem(getScopedStorageKey(CUSTOM_FOODS_KEY), JSON.stringify(mergedCustom));
+    }
+
+    // 9. Barcode cache
+    if (staged.barcodeCache && staged.barcodeCache.length > 0) {
+      const currentCache = await loadBarcodeCache();
+      const existingBarcodes = new Set(
+        currentCache.map((f) => f.barcode?.trim().replace(/[\s-]/g, '') || f.id)
+      );
+      const mergedCache = [
+        ...currentCache,
+        ...staged.barcodeCache.filter(
+          (f) => !existingBarcodes.has(f.barcode?.trim().replace(/[\s-]/g, '') || f.id)
+        ),
+      ].slice(0, 200);
+      await AsyncStorage.setItem(getScopedStorageKey(BARCODE_CACHE_KEY), JSON.stringify(mergedCache));
     }
   }
 }

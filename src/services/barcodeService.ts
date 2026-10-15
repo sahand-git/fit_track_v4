@@ -1,5 +1,6 @@
 import { FoodItem } from '../types';
 import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
+import { getBarcodeCacheItem, upsertBarcodeCacheItem } from '../storage/storage';
 
 const OFF_FIELDS = 'product_name,product_name_en,brands,nutriments,serving_size,serving_quantity,serving_quantity_unit';
 
@@ -53,6 +54,7 @@ export function normalizeOpenFoodFactsProduct(barcode: string, product: Record<s
     sugar: scale(parseNumber(nutriments.sugars_100g)),
     sodium: scale(parseNumber(nutriments.sodium_100g) ? parseNumber(nutriments.sodium_100g)! * 1000 : undefined),
     category: 'Packaged Food',
+    source: 'open_food_facts',
   };
 }
 
@@ -65,10 +67,20 @@ export async function lookupBarcodeWithFallbacks(rawCode: string): Promise<FoodI
   // 1. First check local verified offline database
   const localMatch = VERIFIED_FOOD_DATABASE.find(f => f.barcode === code || f.id === code);
   if (localMatch) {
-    return localMatch;
+    return { ...localMatch, source: localMatch.source ?? 'verified_database' };
   }
 
-  // 2. Query free Open Food Facts REST endpoint
+  // 2. Check offline barcode cache on device
+  try {
+    const cached = await getBarcodeCacheItem(code);
+    if (cached) {
+      return { ...cached, source: cached.source ?? 'open_food_facts' };
+    }
+  } catch (cacheErr) {
+    console.warn('Barcode cache lookup error:', cacheErr);
+  }
+
+  // 3. Query free Open Food Facts REST endpoint
   const url = `https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=${OFF_FIELDS}`;
   let res: Response;
   try {
@@ -82,7 +94,12 @@ export async function lookupBarcodeWithFallbacks(rawCode: string): Promise<FoodI
       },
     });
     clearTimeout(timeout);
-  } catch (err: any) {
+  } catch {
+    // If network fails (offline), check if partial match exists in barcode cache
+    const cachedAgain = await getBarcodeCacheItem(code);
+    if (cachedAgain) {
+      return cachedAgain;
+    }
     throw new Error('Could not reach food database. Check your internet connection or enter food details manually.');
   }
 
@@ -105,5 +122,14 @@ export async function lookupBarcodeWithFallbacks(rawCode: string): Promise<FoodI
     throw new Error(`Barcode ${code} not found in the global database. You can search the local database by name.`);
   }
 
-  return normalizeOpenFoodFactsProduct(code, data.product);
+  const normalized = normalizeOpenFoodFactsProduct(code, data.product);
+
+  // 4. Save to device offline barcode cache
+  try {
+    await upsertBarcodeCacheItem(normalized);
+  } catch (saveErr) {
+    console.warn('Failed to save product to barcode cache:', saveErr);
+  }
+
+  return normalized;
 }

@@ -16,6 +16,7 @@ import {
   loadRecentFoods,
   loadFavoriteFoods,
   loadCustomFoods,
+  loadBarcodeCache,
   restoreAllData,
 } from '../storage/storage';
 
@@ -38,6 +39,7 @@ export async function createBackupPayload(): Promise<FitTrackBackup> {
     recentFoods,
     favoriteFoods,
     customFoods,
+    barcodeCache,
   ] = await Promise.all([
     loadUserProfile(),
     getAllDailyLogs(),
@@ -47,6 +49,7 @@ export async function createBackupPayload(): Promise<FitTrackBackup> {
     loadRecentFoods(),
     loadFavoriteFoods(),
     loadCustomFoods(),
+    loadBarcodeCache(),
   ]);
 
   const raw = {
@@ -60,6 +63,7 @@ export async function createBackupPayload(): Promise<FitTrackBackup> {
     recentFoods,
     favoriteFoods,
     customFoods,
+    barcodeCache,
   };
 
   // Run through allowlist serialization and parser to ensure 100% schema compliance and secret stripping

@@ -140,6 +140,8 @@ export interface LoggedMeal {
   calcium?: number;
   iron?: number;
   vitaminC?: number;
+  barcode?: string;
+  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated';
   timestamp: string; // ISO string
 }
 
@@ -184,6 +186,7 @@ export interface FitTrackBackup {
   recentFoods?: FoodItem[];
   favoriteFoods?: FoodItem[];
   customFoods?: FoodItem[];
+  barcodeCache?: FoodItem[];
 }
 
 export interface BackupSummary {

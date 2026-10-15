@@ -263,6 +263,7 @@ const backupShape = shape<FitTrackBackup>({
   recentFoods: optional(list(foodItemShape)),
   favoriteFoods: optional(list(foodItemShape)),
   customFoods: optional(list(foodItemShape)),
+  barcodeCache: optional(list(foodItemShape)),
 });
 
 /**

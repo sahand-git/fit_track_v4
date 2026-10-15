@@ -41,7 +41,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "tsx src/utils/idUtils.test.ts && tsx src/utils/dashboardLayout.test.ts && tsx src/utils/supplementRoutine.test.ts && tsx src/utils/supplementUtils.test.ts && tsx src/utils/supplementDailyFlow.test.ts && tsx src/utils/backup.test.ts && tsx src/utils/workout.test.ts && tsx src/utils/workoutDisplay.test.ts && tsx src/utils/activityBudget.test.ts && tsx src/services/stepTrackingCore.test.ts && tsx src/i18n/activityAccountsLocalization.test.ts && tsx src/utils/streak.test.ts && tsx src/utils/geminiRetry.test.ts && tsx src/utils/geminiModels.test.ts && tsx src/utils/searchNormalize.test.ts && tsx src/storage/storage.test.ts && tsx src/storage/foodCollections.test.ts && tsx src/utils/waterUpdate.test.ts && tsx src/utils/goalCelebration.test.ts",
+    "test": "tsx src/utils/idUtils.test.ts && tsx src/utils/dashboardLayout.test.ts && tsx src/utils/supplementRoutine.test.ts && tsx src/utils/supplementUtils.test.ts && tsx src/utils/supplementDailyFlow.test.ts && tsx src/utils/backup.test.ts && tsx src/utils/workout.test.ts && tsx src/utils/workoutDisplay.test.ts && tsx src/utils/activityBudget.test.ts && tsx src/services/stepTrackingCore.test.ts && tsx src/i18n/activityAccountsLocalization.test.ts && tsx src/utils/streak.test.ts && tsx src/utils/geminiRetry.test.ts && tsx src/utils/geminiModels.test.ts && tsx src/utils/searchNormalize.test.ts && tsx src/storage/storage.test.ts && tsx src/storage/foodCollections.test.ts && tsx src/utils/waterUpdate.test.ts && tsx src/utils/goalCelebration.test.ts && tsx src/services/barcodeCache.test.ts",
     "lint": "expo lint"
   },
   "private": true
