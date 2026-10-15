@@ -19,6 +19,7 @@ import {
   Dumbbell,
   Trash2,
   Footprints,
+  Sparkles,
 } from 'lucide-react-native';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { UserProfile, DailyLog, MealType, SupplementRoutineItem, WorkoutEntry } from '../types';
@@ -26,6 +27,7 @@ import { CalorieRing } from '../components/CalorieRing';
 import { MacroCards } from '../components/MacroCards';
 import { WaterTracker } from '../components/WaterTracker';
 import { AddWorkoutSheet } from '../components/AddWorkoutSheet';
+import { QuickActionSheet } from '../components/QuickActionSheet';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { StreakBadge } from '../components/StreakBadge';
 import { GoalCelebration } from '../components/GoalCelebration';
@@ -59,7 +61,11 @@ interface DashboardScreenProps {
   onToggleSupplement: (id: string, taken: boolean) => void;
   onUpdateWater: (delta: number) => void;
   onNavigateToMeals: (targetMeal?: MealType) => void;
-  onOpenAddFood: (mealType?: MealType) => void;
+  onOpenAddFood: (
+    mealType?: MealType,
+    initialTab?: 'search' | 'photo' | 'describe',
+    initialScanBarcode?: boolean
+  ) => void;
   onOpenSupplements: () => void;
   onOpenProfile: () => void;
   onOpenSteps: () => void;
@@ -67,6 +73,7 @@ interface DashboardScreenProps {
   onAddWorkout: (workout: WorkoutEntry, date: string) => void;
   onDeleteWorkout: (workoutId: string) => void;
   onUpdateWorkout?: (workout: WorkoutEntry, date: string) => void;
+  onOpenLogWeight?: () => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -86,12 +93,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onAddWorkout,
   onDeleteWorkout,
   onUpdateWorkout,
+  onOpenLogWeight,
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const t = useCallback((str: string) => translate(language, str), [language]);
 
   const [workoutSheetVisible, setWorkoutSheetVisible] = useState(false);
+  const [quickActionVisible, setQuickActionVisible] = useState(false);
   const [heroWidth, setHeroWidth] = useState(0);
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
@@ -230,15 +239,30 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.profileBtn}
-            onPress={onOpenProfile}
-            activeOpacity={0.8}
-            accessibilityLabel={t('Profile & Goals')}
-            accessibilityRole="button"
-          >
-            <User size={18} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              style={styles.quickActionHeaderBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setQuickActionVisible(true);
+              }}
+              activeOpacity={0.8}
+              accessibilityLabel={t('Quick Add')}
+              accessibilityRole="button"
+            >
+              <Sparkles size={18} color="#D97706" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.profileBtn}
+              onPress={onOpenProfile}
+              activeOpacity={0.8}
+              accessibilityLabel={t('Profile & Goals')}
+              accessibilityRole="button"
+            >
+              <User size={18} color={theme.colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Hero Calorie Budget Focus */}
@@ -527,9 +551,33 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </Animated.View>
       </ScrollView>
 
-      {/* Reserved action area keeps Add Food clear of the dashboard cards. */}
+      {/* Reserved action area keeps Add Food and Quick Add clear of the dashboard cards. */}
       {!isFuture && (
-        <View style={[styles.addFoodFooter, { paddingBottom: dockClearance, alignItems: language === 'en' ? 'flex-end' : 'flex-start' }]}>
+        <View
+          style={[
+            styles.addFoodFooter,
+            {
+              paddingBottom: dockClearance,
+              flexDirection: 'row',
+              justifyContent: language === 'en' ? 'flex-end' : 'flex-start',
+              gap: 10,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.floatingQuickBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              setQuickActionVisible(true);
+            }}
+            activeOpacity={0.88}
+            accessibilityLabel={t('Quick Add')}
+            accessibilityRole="button"
+          >
+            <Sparkles size={16} color="#D97706" />
+            <Text style={styles.floatingQuickBtnText}>{t('Quick Add')}</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.floatingAddBtn}
             onPress={handleOpenFloatingAddFood}
@@ -542,6 +590,19 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </TouchableOpacity>
         </View>
       )}
+
+      <QuickActionSheet
+        visible={quickActionVisible}
+        onClose={() => setQuickActionVisible(false)}
+        onOpenBarcodeScanner={(meal) => onOpenAddFood(meal, 'search', true)}
+        onOpenPlateScanner={(meal) => onOpenAddFood(meal, 'photo', false)}
+        onOpenFoodLog={(meal) => onOpenAddFood(meal, 'search', false)}
+        onQuickWater={(glasses = 1) => onUpdateWater(glasses)}
+        onOpenAddWorkout={() => setWorkoutSheetVisible(true)}
+        onOpenStepTracker={onOpenSteps}
+        onOpenSupplements={onOpenSupplements}
+        onOpenLogWeight={onOpenLogWeight}
+      />
 
       <AddWorkoutSheet
         visible={workoutSheetVisible}
@@ -742,6 +803,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
     paddingHorizontal: 2,
+  },
+  quickActionHeaderBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...theme.shadow.subtle,
   },
   profileBtn: {
     width: 38,
@@ -981,6 +1053,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: theme.radius.full,
     ...theme.shadow.floating,
+  },
+  floatingQuickBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: theme.radius.full,
+    ...theme.shadow.subtle,
+  },
+  floatingQuickBtnText: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
   },
   addFoodFooter: {
     paddingHorizontal: 18,

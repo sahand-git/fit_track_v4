@@ -210,7 +210,7 @@ export const ScientificReferencesModal: React.FC<ScientificReferencesModalProps>
             {/* Section 4: Step-to-Calorie Formula */}
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeaderRow}>
-                <Footprints size={18} color={theme.colors.info} />
+                <Footprints size={18} color={theme.colors.water} />
                 <Text style={styles.sectionTitle}>
                   {t('4. Pedometer & Step Caloric Expenditure')}
                 </Text>
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   modalCard: {
     width: '100%',

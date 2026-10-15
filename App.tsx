@@ -126,6 +126,8 @@ function FitTrackApp() {
     visible: boolean;
     targetDate: string;
     mealType?: MealType;
+    initialTab?: 'search' | 'photo' | 'describe';
+    initialScanBarcode?: boolean;
   }>({
     visible: false,
     targetDate: getTodayDateString(),
@@ -467,11 +469,17 @@ function FitTrackApp() {
     setActiveTab(tab);
   };
 
-  const handleOpenAddFoodToday = (mealType?: MealType) => {
+  const handleOpenAddFoodToday = (
+    mealType?: MealType,
+    initialTab?: 'search' | 'photo' | 'describe',
+    initialScanBarcode?: boolean
+  ) => {
     setAddSheetConfig({
       visible: true,
       targetDate: getTodayDateString(),
       mealType,
+      initialTab,
+      initialScanBarcode,
     });
   };
 
@@ -644,6 +652,7 @@ function FitTrackApp() {
               onAddWorkout={handleAddWorkout}
               onDeleteWorkout={handleDeleteWorkout}
               onUpdateWorkout={handleUpdateWorkout}
+              onOpenLogWeight={() => handleSwitchTab('progress')}
             />
           )}
 
@@ -681,6 +690,8 @@ function FitTrackApp() {
           visible={addSheetConfig.visible}
           mealType={addSheetConfig.mealType}
           date={addSheetConfig.targetDate}
+          initialTab={addSheetConfig.initialTab}
+          initialScanBarcode={addSheetConfig.initialScanBarcode}
           onClose={() => setAddSheetConfig((prev) => ({ ...prev, visible: false }))}
           onAddMeal={handleAddMeal}
           onCopyYesterdayMeals={handleCopyYesterdayMeals}

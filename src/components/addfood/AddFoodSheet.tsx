@@ -69,6 +69,8 @@ export interface AddFoodSheetProps {
   onClose: () => void;
   mealType?: MealType;
   date: string;
+  initialTab?: TabMode;
+  initialScanBarcode?: boolean;
   onAddMeal: (meal: LoggedMeal, targetDate: string) => void;
   onCopyYesterdayMeals?: (targetDate: string) => Promise<void>;
 }
@@ -88,6 +90,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   onClose,
   mealType,
   date,
+  initialTab,
+  initialScanBarcode,
   onAddMeal,
   onCopyYesterdayMeals,
 }) => {
@@ -151,6 +155,12 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     setPrevMealType(mealType);
     if (visible) {
       setSelectedMeal(mealType || getDefaultMealType());
+      if (initialTab) {
+        setActiveTab(initialTab);
+      }
+      if (initialScanBarcode) {
+        setIsScanningBarcode(true);
+      }
     }
   }
 
