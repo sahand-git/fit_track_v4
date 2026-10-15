@@ -172,6 +172,7 @@ const profileShape = shape<UserProfile>({
   language: optional(choice('en', 'ar', 'ckb')),
   isOnboarded: optional(bool),
   includeWorkoutsInCalorieBudget: optional(bool),
+  targetWeightKg: optional(num),
 });
 
 // Reminders

@@ -64,6 +64,7 @@ export interface UserProfile {
   isOnboarded?: boolean;
   includeWorkoutsInCalorieBudget?: boolean; // off by default: workout burn is tracked without inflating food budget
   stepGoal?: number;
+  targetWeightKg?: number;
 }
 
 export type ExerciseCategory = 'strength' | 'cardio' | 'hiit' | 'sports' | 'flexibility';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -24,13 +24,20 @@ import {
   Flame,
   Info,
 } from 'lucide-react-native';
-import Svg, { Path, Circle, Line } from 'react-native-svg';
-import { UserProfile, WeightEntry } from '../types';
-import { loadWeightHistory, addWeightEntry, removeWeightEntry } from '../storage/storage';
-import { getTodayDateString, formatDisplayDate } from '../utils/dateUtils';
+import { DailyLog, UserProfile, WeightEntry } from '../types';
+import { loadWeightHistory, addWeightEntry, removeWeightEntry, loadLogsForDates } from '../storage/storage';
+import { getTodayDateString, formatDisplayDate, parseLocalDateString } from '../utils/dateUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { InsightsScreen } from './InsightsScreen';
+import { TrendLineChart } from '../components/TrendLineChart';
+import { TrendBarChart } from '../components/TrendBarChart';
+import {
+  generateDateWindow,
+  CalorieTrendPoint,
+  WeightTrendPoint,
+} from '../utils/trends';
+import { calculateLoggingStreak } from '../utils/streak';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { ProgressSkeleton } from '../components/SkeletonLoader';
@@ -54,12 +61,21 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
   const [inputWeight, setInputWeight] = useState(profile ? String(profile.weightKg) : '75');
   const [inputNote, setInputNote] = useState('');
 
+  const [daysRange, setDaysRange] = useState<7 | 30>(7);
+  const [trendCategory, setTrendCategory] = useState<'all' | 'weight' | 'calories'>('all');
+  const [logsMap, setLogsMap] = useState<Record<string, DailyLog>>({});
+
   useEffect(() => {
     let isMounted = true;
     async function load() {
-      const data = await loadWeightHistory();
+      const dates = generateDateWindow(getTodayDateString(), daysRange);
+      const [wHistory, logs] = await Promise.all([
+        loadWeightHistory(),
+        loadLogsForDates(dates),
+      ]);
       if (isMounted) {
-        setHistory(data);
+        setHistory(wHistory);
+        setLogsMap(logs);
         setLoading(false);
       }
     }
@@ -67,7 +83,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [daysRange]);
 
   // Handle Android back button when modal is open
   useEffect(() => {
@@ -82,6 +98,51 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
   }, [modalVisible]);
+
+  const isRTL = language === 'ar' || language === 'ckb';
+
+  const dateList = useMemo(() => {
+    return generateDateWindow(getTodayDateString(), daysRange);
+  }, [daysRange]);
+
+  const calorieData: CalorieTrendPoint[] = useMemo(() => {
+    const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return dateList.map((d) => {
+      const dayLog = logsMap[d];
+      const totalCal = dayLog?.meals ? dayLog.meals.reduce((sum, m) => sum + m.calories, 0) : 0;
+      const dateObj = parseLocalDateString(d);
+      return {
+        date: d,
+        calories: totalCal,
+        target: profile?.targetCalories || 2000,
+        label: daysRange === 7 ? t(weekdayNames[dateObj.getDay()]) : d.slice(-2),
+      };
+    });
+  }, [dateList, logsMap, daysRange, profile, language, t]);
+
+  const weightData: WeightTrendPoint[] = useMemo(() => {
+    const minDate = dateList[0];
+    const maxDate = dateList[dateList.length - 1];
+    const inWindow = history
+      .filter((w) => w.date >= minDate && w.date <= maxDate)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (inWindow.length > 0) {
+      return inWindow.map((w) => ({
+        date: w.date,
+        value: w.weightKg,
+        note: w.note,
+      }));
+    }
+    if (profile?.weightKg) {
+      return [{ date: getTodayDateString(), value: profile.weightKg }];
+    }
+    return [];
+  }, [dateList, history, profile]);
+
+  const streak = useMemo(() => {
+    return calculateLoggingStreak(logsMap, history, getTodayDateString());
+  }, [logsMap, history]);
 
   if (isLoading || loading) {
     return <ProgressSkeleton />;
@@ -100,6 +161,15 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
   const bmi = profile && profile.heightCm > 0
     ? (currentWeight / Math.pow(profile.heightCm / 100, 2)).toFixed(1)
     : '22.4';
+
+  const bmiNum = parseFloat(bmi);
+  const bmiCategory = bmiNum < 18.5
+    ? t('Underweight')
+    : bmiNum < 25
+    ? t('Healthy Weight')
+    : bmiNum < 30
+    ? t('Overweight')
+    : t('Obese');
 
   const handleSaveWeight = async () => {
     const num = parseFloat(inputWeight);
@@ -146,65 +216,6 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
     );
   };
 
-  const renderChart = () => {
-    if (history.length < 2) {
-      return (
-        <View style={styles.chartEmptyBox}>
-          <Scale size={24} color={theme.colors.textMuted} />
-          <Text style={styles.chartEmptyTitle}>{t('Need at least 2 entries for trend chart')}</Text>
-          <Text style={styles.chartEmptySubtitle}>
-            {t('Log your weight across multiple days to view your true trajectory curve.')}
-          </Text>
-        </View>
-      );
-    }
-
-    const minWeight = Math.min(...history.map(h => h.weightKg)) - 1;
-    const maxWeight = Math.max(...history.map(h => h.weightKg)) + 1;
-    const range = Math.max(1, maxWeight - minWeight);
-
-    const width = 320;
-    const height = 120;
-    const padding = 14;
-
-    const points = history.map((entry, idx) => {
-      const x = padding + (idx / (history.length - 1)) * (width - padding * 2);
-      const y = height - padding - ((entry.weightKg - minWeight) / range) * (height - padding * 2);
-      return { x, y, ...entry };
-    });
-
-    const pathD = points.reduce((acc, pt, idx) => {
-      return idx === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`;
-    }, '');
-
-    return (
-      <View style={styles.svgContainer}>
-        <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
-          <Line x1="0" y1={height / 2} x2={width} y2={height / 2} stroke={theme.colors.border} strokeDasharray="3 3" />
-          <Path
-            d={pathD}
-            fill="none"
-            stroke={theme.colors.primary}
-            strokeWidth={2.5}
-            strokeLinecap="round"
-          />
-          {points.map((pt, idx) => (
-            <Circle key={idx} cx={pt.x} cy={pt.y} r={3.5} fill={theme.colors.primary} />
-          ))}
-        </Svg>
-      </View>
-    );
-  };
-
-  const bmiNum = parseFloat(bmi);
-  const bmiCategory = bmiNum < 18.5
-    ? t('Underweight')
-    : bmiNum < 25
-    ? t('Healthy Weight')
-    : bmiNum < 30
-    ? t('Overweight')
-    : t('Obese');
-
   return (
     <View style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
       {/* Top Ledger Segment Bar */}
@@ -243,10 +254,10 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
       ) : (
         <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
           {/* Header */}
-          <View style={styles.headerRow}>
+          <View style={[styles.headerRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <View>
               <Text style={styles.headerSubtitle}>{t('Progress')}</Text>
-              <Text style={styles.headerTitle}>{t('Body Weight')}</Text>
+              <Text style={styles.headerTitle}>{t('Progress & Trends')}</Text>
             </View>
             <TouchableOpacity
               style={styles.addBtn}
@@ -259,12 +270,128 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
             </TouchableOpacity>
           </View>
 
+          {/* Range Selector & Category Filters */}
+          <View style={[styles.rangeRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            <View style={[styles.rangePills, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <TouchableOpacity
+                style={[styles.rangePill, daysRange === 7 && styles.rangePillActive]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setDaysRange(7);
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.rangePillText, daysRange === 7 && styles.rangePillTextActive]}>
+                  {t('7 days')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.rangePill, daysRange === 30 && styles.rangePillActive]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setDaysRange(30);
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.rangePillText, daysRange === 30 && styles.rangePillTextActive]}>
+                  {t('30 days')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.filterChipsRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <TouchableOpacity
+                style={[styles.filterChip, trendCategory === 'all' && styles.filterChipActive]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setTrendCategory('all');
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.filterChipText, trendCategory === 'all' && styles.filterChipTextActive]}>
+                  {t('All Trends')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterChip, trendCategory === 'weight' && styles.filterChipActive]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setTrendCategory('weight');
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.filterChipText, trendCategory === 'weight' && styles.filterChipTextActive]}>
+                  {t('Weight Trend')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterChip, trendCategory === 'calories' && styles.filterChipActive]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setTrendCategory('calories');
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.filterChipText, trendCategory === 'calories' && styles.filterChipTextActive]}>
+                  {t('Calorie Trend')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Streak Card */}
+          <View style={[styles.streakCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            <View style={styles.streakFlameCircle}>
+              <Flame size={20} color="#D97706" />
+            </View>
+            <View style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
+              <View style={[styles.inlineRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                <Text style={styles.streakCount}>{streak.currentStreak}</Text>
+                <Text style={styles.streakLabel}>{t('days streak')}</Text>
+              </View>
+              <Text style={styles.streakSubtitle}>
+                {streak.loggedToday ? t('Logged today') : t('Log today to keep streak')}
+              </Text>
+            </View>
+          </View>
+
+          {/* Weight Trend Chart */}
+          {(trendCategory === 'all' || trendCategory === 'weight') && (
+            <View style={styles.trendBlock}>
+              <View style={[styles.trendHeaderRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                <Text style={styles.trendSectionTitle}>{t('Weight Trend')}</Text>
+              </View>
+              <TrendLineChart
+                data={weightData}
+                targetValue={profile?.targetWeightKg}
+                unit="kg"
+                isRTL={isRTL}
+                selectedRange={daysRange}
+              />
+            </View>
+          )}
+
+          {/* Calorie Trend Chart */}
+          {(trendCategory === 'all' || trendCategory === 'calories') && (
+            <View style={styles.trendBlock}>
+              <View style={[styles.trendHeaderRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                <Text style={styles.trendSectionTitle}>{t('Calorie Consistency')}</Text>
+              </View>
+              <TrendBarChart
+                data={calorieData}
+                targetCalories={profile?.targetCalories || 2000}
+                isRTL={isRTL}
+                selectedRange={daysRange}
+              />
+            </View>
+          )}
+
           {/* Current Weight Focus Card */}
           <View style={styles.heroCard}>
-            <View style={styles.heroTop}>
+            <View style={[styles.heroTop, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
               <View>
                 <Text style={styles.heroLabel}>{t('Current Weight')}</Text>
-                <View style={styles.heroValueRow}>
+                <View style={[styles.heroValueRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                   <Text style={styles.heroValue}>{currentWeight}</Text>
                   <Text style={styles.heroUnit}>kg</Text>
                 </View>
@@ -293,20 +420,8 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
             </View>
           </View>
 
-          {/* Trajectory Card */}
-          <View style={styles.chartCard}>
-            <View style={styles.chartTop}>
-              <Text style={styles.chartTitle}>{t('Trajectory Curve')}</Text>
-              <Text style={styles.chartSubtitle}>
-                {history.length > 0 ? `${history.length} ${t(history.length > 1 ? 'logged weigh-ins' : 'logged weigh-in')}` : t('No history yet')}
-              </Text>
-            </View>
-
-            {renderChart()}
-          </View>
-
           {/* Scientific Fluctuation Notice */}
-          <View style={styles.disclaimerCard}>
+          <View style={[styles.disclaimerCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <Info size={14} color={theme.colors.secondary} />
             <Text style={styles.disclaimerText}>
               {t('Day-to-day weight fluctuations naturally reflect hydration, sodium, and digestion rather than immediate changes in fat or muscle mass. Track multi-week trends for meaningful insight.')}
@@ -559,52 +674,117 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontWeight: '600',
   },
-  chartCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.xl,
-    padding: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    ...theme.shadow.subtle,
-  },
-  chartTop: {
+  rangeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
+    gap: 8,
+    flexWrap: 'wrap',
   },
-  chartTitle: {
+  rangePills: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.full,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  rangePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: theme.radius.full,
+  },
+  rangePillActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  rangePillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+  },
+  rangePillTextActive: {
+    color: theme.colors.textInverted,
+    fontWeight: '700',
+  },
+  filterChipsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  filterChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  filterChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  filterChipTextActive: {
+    color: theme.colors.textInverted,
+    fontWeight: '700',
+  },
+  streakCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: theme.spacing.md,
+    ...theme.shadow.subtle,
+  },
+  streakFlameCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  streakCount: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: theme.colors.textPrimary,
+  },
+  streakLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  streakSubtitle: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginTop: 1,
+  },
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  trendBlock: {
+    marginBottom: theme.spacing.md,
+  },
+  trendHeaderRow: {
+    marginBottom: 6,
+  },
+  trendSectionTitle: {
     fontFamily: theme.fonts.serif,
     fontSize: 16,
     fontWeight: '700',
     color: theme.colors.textPrimary,
-  },
-  chartSubtitle: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 11,
-    color: theme.colors.textMuted,
-  },
-  svgContainer: {
-    height: 120,
-    width: '100%',
-    marginVertical: 4,
-  },
-  chartEmptyBox: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    gap: 4,
-  },
-  chartEmptyTitle: {
-    fontFamily: theme.fonts.serif,
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  chartEmptySubtitle: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
   },
   disclaimerCard: {
     flexDirection: 'row',
