@@ -21,6 +21,8 @@ export function getFoodSourceLabel(
       return tr('AI estimate');
     case 'barcode_cache':
       return tr('Barcode Cache');
+    case 'regional_culinary_estimate':
+      return tr('Regional Culinary');
     default:
       return null;
   }

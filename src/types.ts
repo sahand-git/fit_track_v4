@@ -89,6 +89,8 @@ export interface WorkoutEntry {
   note?: string;
 }
 
+export type PortionUnit = 'g' | 'piece' | 'spoon' | 'glass' | 'samoon' | 'bowl' | 'plate' | 'serving';
+
 export interface FoodItem {
   id: string;
   name: string;
@@ -102,7 +104,7 @@ export interface FoodItem {
   category?: string;
   barcode?: string;
   imageUrl?: string;
-  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated';
+  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate';
   fiber?: number;
   sugar?: number; // Canonical sugar content in grams
   sugars?: number; // Maintained for database schema compatibility
@@ -117,6 +119,9 @@ export interface FoodItem {
   vitaminB12?: number; // mcg
   magnesium?: number; // mg
   zinc?: number; // mg
+  isEstimate?: boolean;
+  portionUnit?: PortionUnit;
+  gramsPerUnit?: number;
 }
 
 export interface WeightEntry {
@@ -154,8 +159,40 @@ export interface LoggedMeal {
   magnesium?: number;
   zinc?: number;
   barcode?: string;
-  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated';
+  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate';
   timestamp: string; // ISO string
+  isEstimate?: boolean;
+  portionUnit?: PortionUnit;
+  gramsPerUnit?: number;
+}
+
+export interface MealTemplateItem {
+  name: string;
+  servingSize: string;
+  servingGrams: number;
+  servings: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+  sugar?: number;
+  portionUnit?: PortionUnit;
+  gramsPerUnit?: number;
+  isEstimate?: boolean;
+  source?: FoodItem['source'];
+}
+
+export interface MealTemplate {
+  id: string;
+  name: string;
+  mealType?: MealType;
+  items: MealTemplateItem[];
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  createdAt: string;
 }
 
 export interface AICoachReport {
@@ -213,6 +250,7 @@ export interface FitTrackBackup {
   favoriteFoods?: FoodItem[];
   customFoods?: FoodItem[];
   barcodeCache?: FoodItem[];
+  mealTemplates?: MealTemplate[];
 }
 
 export interface BackupSummary {
@@ -223,4 +261,5 @@ export interface BackupSummary {
   routineItemsCount: number;
   hasProfile: boolean;
   hasReminders: boolean;
+  templatesCount?: number;
 }
