@@ -2,19 +2,51 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /fitnessBackups/{userId} {
-      allow read, write: if request.auth != null
-        && request.auth.uid == userId
-        && request.auth.token.email_verified == true
-        && request.resource.data.keys().hasOnly(['version', 'exportedAt', 'backup', 'updatedAt'])
-        && request.resource.data.backup is map
-        && request.resource.data.backup.version == '4.0';
-      allow get: if request.auth != null
-        && request.auth.uid == userId
-        && request.auth.token.email_verified == true;
+      function isVerifiedOwner() {
+        return request.auth != null
+          && request.auth.uid == userId
+          && request.auth.token.email_verified == true;
+      }
+
+      function isValidSingleDocBackup() {
+        return (
+          request.resource.data.keys().hasOnly(['version', 'exportedAt', 'backup', 'updatedAt', 'isChunked'])
+          && (!('isChunked' in request.resource.data) || request.resource.data.isChunked == false)
+          && request.resource.data.backup is map
+          && request.resource.data.backup.version == '4.0'
+          && request.resource.data.version == '4.0'
+        );
+      }
+
+      function isValidChunkedManifest() {
+        return (
+          request.resource.data.keys().hasOnly(['version', 'exportedAt', 'isChunked', 'chunkCount', 'totalBytes', 'updatedAt'])
+          && request.resource.data.isChunked == true
+          && request.resource.data.chunkCount is int
+          && request.resource.data.chunkCount > 0
+          && request.resource.data.totalBytes is int
+          && request.resource.data.totalBytes > 0
+          && request.resource.data.version == '4.0'
+        );
+      }
+
+      allow get: if isVerifiedOwner();
       allow list: if false;
-      allow delete: if request.auth != null
-        && request.auth.uid == userId
-        && request.auth.token.email_verified == true;
+      allow create, update: if isVerifiedOwner()
+        && (isValidSingleDocBackup() || isValidChunkedManifest());
+      allow delete: if isVerifiedOwner();
+
+      match /chunks/{chunkId} {
+        allow get, list: if isVerifiedOwner();
+        allow create, update: if isVerifiedOwner()
+          && request.resource.data.keys().hasOnly(['index', 'totalChunks', 'chunk', 'updatedAt'])
+          && request.resource.data.index is int
+          && request.resource.data.index >= 0
+          && request.resource.data.totalChunks is int
+          && request.resource.data.totalChunks > 0
+          && request.resource.data.chunk is string;
+        allow delete: if isVerifiedOwner();
+      }
     }
   }
 }

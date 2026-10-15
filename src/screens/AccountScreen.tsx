@@ -45,6 +45,18 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
     }
   };
 
+  const openPrivacyPolicy = async () => {
+    const PRIVACY_POLICY_URL = 'https://github.com/sahand-git/fit_track_v4/blob/main/PRIVACY.md';
+    try {
+      await Linking.openURL(PRIVACY_POLICY_URL);
+    } catch {
+      Alert.alert(
+        t('Privacy Policy'),
+        t('FitTrack operates offline-first. Your nutrition, workout, and biometric data stays strictly on your device unless you explicitly opt in to Firebase Cloud Backup or Gemini AI plate analysis.')
+      );
+    }
+  };
+
   const cloudBackup = () => perform(async () => {
     if (!user) throw new Error(t('Sign in to use cloud backup.'));
     const result = await createCloudBackup(user.uid);
@@ -137,6 +149,26 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
           </>}
         </View>
       )}
+
+      <View style={styles.card}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <ShieldCheck size={18} color={theme.colors.primary} />
+          <Text style={styles.cardTitle}>{t('Privacy Policy')}</Text>
+        </View>
+        <Text style={styles.body}>
+          {t('FitTrack operates offline-first. Your nutrition, workout, and biometric data stays strictly on your device unless you explicitly opt in to Firebase Cloud Backup or Gemini AI plate analysis.')}
+        </Text>
+        <AnimatedPressable
+          style={styles.outlineBtn}
+          onPress={openPrivacyPolicy}
+          accessibilityRole="link"
+          accessibilityLabel={t('Open Privacy Policy')}
+        >
+          <ExternalLink size={16} color={theme.colors.primary} />
+          <Text style={styles.outlineText}>{t('Open Privacy Policy')}</Text>
+        </AnimatedPressable>
+      </View>
+
       {!!message && <Text accessibilityRole="alert" style={styles.success}>{message}</Text>}
       {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
       {busy && <Text style={styles.muted}>{t('Please wait…')}</Text>}
