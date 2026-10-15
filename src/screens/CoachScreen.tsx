@@ -48,8 +48,31 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
   const [error, setError] = useState('');
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
-  const bottomPadding = Math.max(100, insets.bottom + 76);
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setIsKeyboardVisible(true);
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
+        }, 100);
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const bottomPadding = isKeyboardVisible
+    ? theme.spacing.sm
+    : Math.max(100, insets.bottom + 76);
 
   const totals = useMemo(() => log.meals.reduce((acc, meal) => ({
     calories: acc.calories + meal.calories,
@@ -178,7 +201,7 @@ export function CoachScreen({ profile, log }: CoachScreenProps) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       style={{ flex: 1 }}
     >

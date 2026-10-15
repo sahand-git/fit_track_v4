@@ -18,6 +18,7 @@
     },
     "android": {
       "package": "com.fittrack.expo",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#FAF7F2",
         "foregroundImage": "./assets/android-icon-foreground.png",

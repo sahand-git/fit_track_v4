@@ -481,7 +481,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ width: '100%', height: '92%', justifyContent: 'flex-end' }}
         >
           <View style={[styles.sheetContainer, { height: '100%', paddingBottom: Math.max(theme.spacing.md, insets.bottom + 12) }]}>
@@ -1091,7 +1091,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     >
       <View style={[styles.customModalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ width: '100%', alignItems: 'center' }}
         >
           <View style={styles.customModalCard}>

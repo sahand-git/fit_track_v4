@@ -814,7 +814,7 @@ export function SupplementsScreen({
       >
         <View style={[styles.modalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{ width: '100%', justifyContent: 'flex-end' }}
           >
             <View style={[styles.modalCard, { paddingBottom: Math.max(theme.spacing.lg, insets.bottom + 12) }]}>
@@ -833,7 +833,11 @@ export function SupplementsScreen({
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
+            >
               {/* Catalog Search & Browse (Shown when adding a new item) */}
               {!editingItem && (
                 <View style={styles.catalogBrowseSection}>
