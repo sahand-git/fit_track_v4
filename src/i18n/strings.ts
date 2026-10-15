@@ -724,6 +724,9 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Oysters, beef, pumpkin seeds, lentils, chickpeas': 'محار، لحم بقري، بذور القرع، عدس، حمص',
     'Default dose pre-filled from catalog': 'تم ملء الجرعة الافتراضية من الدليل',
     'RDA': 'الاحتياج اليومي',
+    'FitTrack v2 Backup (Migrated)': 'نسخة احتياطية من FitTrack v2 (تمت الترقية)',
+    'Importing meals, workouts, custom foods, weight records, and routine from FitTrack v2.': 'يتم استيراد الوجبات، التمارين، الأطعمة المخصصة، سجلات الوزن، والروتين من FitTrack v2.',
+    'custom foods': 'أطعمة مخصصة',
   },
   ckb: {
     'Account': 'هەژمار',
@@ -1438,6 +1441,9 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Oysters, beef, pumpkin seeds, lentils, chickpeas': 'گوێچکە ماسی، گۆشتی مانگا، تۆوی کولەکە، نیسک، نۆک',
     'Default dose pre-filled from catalog': 'بڕی بنەڕەتی لە کەتەلۆگەوە دانرا',
     'RDA': 'بڕی پێشنیارکراو',
+    'FitTrack v2 Backup (Migrated)': 'پاشەکەوتی FitTrack v2 (نوێکراوە)',
+    'Importing meals, workouts, custom foods, weight records, and routine from FitTrack v2.': 'ژەمەکان، ڕاهێنانەکان، خۆراکە تایبەتەکان، تۆماری کێش و ڕۆتین لە FitTrack v2 دەهێنرێنە ناوەوە.',
+    'custom foods': 'خۆراکی تایبەت',
   },
 };
 

@@ -77,6 +77,9 @@ const addedKeys = [
   'Oysters, beef, pumpkin seeds, lentils, chickpeas',
   'Default dose pre-filled from catalog',
   'RDA',
+  'FitTrack v2 Backup (Migrated)',
+  'Importing meals, workouts, custom foods, weight records, and routine from FitTrack v2.',
+  'custom foods',
 ];
 
 for (const key of addedKeys) {

@@ -52,6 +52,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   const [pendingBackup, setPendingBackup] = useState<{
     backup: FitTrackBackup;
     summary: BackupSummary;
+    sourceVersion?: '4.0' | '2.0';
   } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -152,12 +153,22 @@ export const BackupModal: React.FC<BackupModalProps> = ({
             <View style={styles.summaryContainer}>
               <View style={styles.summaryBadge}>
                 <CheckCircle2 size={18} color={theme.colors.primary} />
-                <Text style={styles.summaryTitle}>{t('Valid Backup Detected')}</Text>
+                <Text style={styles.summaryTitle}>
+                  {pendingBackup.sourceVersion === '2.0'
+                    ? t('FitTrack v2 Backup (Migrated)')
+                    : t('Valid Backup Detected')}
+                </Text>
               </View>
 
               <Text style={styles.summarySubtitle}>
                 {t('Exported')}: {new Date(pendingBackup.backup.exportedAt).toLocaleDateString()}
               </Text>
+
+              {pendingBackup.sourceVersion === '2.0' && (
+                <Text style={[styles.summarySubtitle, { fontStyle: 'italic', marginTop: 2 }]}>
+                  {t('Importing meals, workouts, custom foods, weight records, and routine from FitTrack v2.')}
+                </Text>
+              )}
 
               <View style={styles.summaryGrid}>
                 <View style={styles.summaryItem}>
@@ -190,6 +201,14 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                     {pendingBackup.summary.routineItemsCount} {t('routine items')}
                   </Text>
                 </View>
+                {pendingBackup.backup.customFoods && pendingBackup.backup.customFoods.length > 0 && (
+                  <View style={styles.summaryItem}>
+                    <FileText size={15} color={theme.colors.primary} />
+                    <Text style={styles.summaryItemText}>
+                      {pendingBackup.backup.customFoods.length} {t('custom foods')}
+                    </Text>
+                  </View>
+                )}
               </View>
 
               <Text style={styles.choicePrompt}>

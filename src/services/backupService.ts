@@ -8,6 +8,10 @@ import {
   computeBackupSummary,
 } from '../utils/backupCore';
 import {
+  isV2BackupPayload,
+  validateAndMigrateV2Backup,
+} from '../utils/v2Importer';
+import {
   loadUserProfile,
   getAllDailyLogs,
   loadSupplementRoutine,
@@ -127,6 +131,7 @@ export async function exportBackupFile(
 export async function pickAndValidateBackupFile(): Promise<{
   backup: FitTrackBackup;
   summary: BackupSummary;
+  sourceVersion: '4.0' | '2.0';
 } | null> {
   const pickerResult = await DocumentPicker.getDocumentAsync({
     type: 'application/json',
@@ -143,10 +148,21 @@ export async function pickAndValidateBackupFile(): Promise<{
   });
 
   // Validate everything BEFORE touching storage
-  const backup = parseBackup(content);
-  const summary = computeBackupSummary(backup);
-
-  return { backup, summary };
+  try {
+    const backup = parseBackup(content);
+    const summary = computeBackupSummary(backup);
+    return { backup, summary, sourceVersion: '4.0' };
+  } catch {
+    if (isV2BackupPayload(content)) {
+      const migrated = validateAndMigrateV2Backup(content);
+      return {
+        backup: migrated.backup,
+        summary: migrated.summary,
+        sourceVersion: '2.0',
+      };
+    }
+    throw new Error('Invalid backup file format.');
+  }
 }
 
 /**
