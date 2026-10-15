@@ -112,6 +112,11 @@ export interface FoodItem {
   calcium?: number; // mg
   iron?: number; // mg
   vitaminC?: number; // mg
+  vitaminA?: number; // mcg
+  vitaminD?: number; // mcg
+  vitaminB12?: number; // mcg
+  magnesium?: number; // mg
+  zinc?: number; // mg
 }
 
 export interface WeightEntry {
@@ -143,6 +148,11 @@ export interface LoggedMeal {
   calcium?: number;
   iron?: number;
   vitaminC?: number;
+  vitaminA?: number;
+  vitaminD?: number;
+  vitaminB12?: number;
+  magnesium?: number;
+  zinc?: number;
   barcode?: string;
   source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated';
   timestamp: string; // ISO string

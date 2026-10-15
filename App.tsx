@@ -597,6 +597,7 @@ function FitTrackApp() {
               routine={supplementRoutine}
               dailySupplements={log.dailySupplements}
               checks={log.supplements || []}
+              meals={log.meals}
               onUpdateDailySupplements={handleUpdateDailySupplements}
               onUpdateRoutine={handleUpdateRoutine}
               onToggleSupplement={handleToggleSupplement}

@@ -88,6 +88,11 @@ const mealShape = shape<LoggedMeal>({
   calcium: optional(num),
   iron: optional(num),
   vitaminC: optional(num),
+  vitaminA: optional(num),
+  vitaminD: optional(num),
+  vitaminB12: optional(num),
+  magnesium: optional(num),
+  zinc: optional(num),
   timestamp: str,
 });
 
@@ -255,6 +260,11 @@ const foodItemShape = shape<FoodItem>({
   calcium: optional(num),
   iron: optional(num),
   vitaminC: optional(num),
+  vitaminA: optional(num),
+  vitaminD: optional(num),
+  vitaminB12: optional(num),
+  magnesium: optional(num),
+  zinc: optional(num),
 });
 
 // Full Backup Root Validator

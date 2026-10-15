@@ -38,10 +38,12 @@ import {
   SupplementTime,
   SupplementCategory,
   LoggedDailySupplement,
+  LoggedMeal,
 } from '../types';
 import { AppText as Text } from '../components/AppText';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
+import { RDAAnalysisCard } from '../components/RDAAnalysisCard';
 import { translate } from '../i18n/strings';
 import { useLanguage } from '../i18n/I18nContext';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
@@ -65,6 +67,7 @@ interface SupplementsScreenProps {
   routine: SupplementRoutineItem[];
   dailySupplements?: LoggedDailySupplement[];
   checks?: SupplementCheck[];
+  meals?: LoggedMeal[];
   onUpdateDailySupplements: (items: LoggedDailySupplement[]) => Promise<void>;
   onUpdateRoutine: (items: SupplementRoutineItem[]) => Promise<void>;
   onToggleSupplement: (id: string, taken: boolean) => Promise<void>;
@@ -93,6 +96,7 @@ export function SupplementsScreen({
   routine,
   dailySupplements,
   checks = [],
+  meals = [],
   onUpdateDailySupplements,
   onUpdateRoutine,
   onToggleSupplement,
@@ -242,8 +246,7 @@ export function SupplementsScreen({
     setFormName(catItem.name);
     setFormCategory(catItem.category);
     setFormUnit(catItem.suggestedUnit);
-    // Intentionally keep amount empty so user enters from product label
-    setFormAmount('');
+    setFormAmount(catItem.defaultAmount ? String(catItem.defaultAmount) : '');
   };
 
   const handleSaveModal = async () => {
@@ -796,6 +799,9 @@ export function SupplementsScreen({
         })
       )}
 
+      {/* Micronutrients & RDA Analysis */}
+      <RDAAnalysisCard meals={meals} supplements={activeItems} />
+
       {/* Educational Disclaimer */}
       <View style={styles.notice}>
         <AlertCircle size={15} color={theme.colors.secondary} style={{ marginTop: 1 }} />
@@ -922,7 +928,7 @@ export function SupplementsScreen({
                               styles.catalogItemPillTextSelected,
                           ]}
                         >
-                          {catItem.name}
+                          {catItem.icon ? `${catItem.icon} ` : ''}{catItem.name}
                         </Text>
                       </TouchableOpacity>
                     ))}
