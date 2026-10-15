@@ -1,5 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserProfile, DailyLog, LoggedMeal, SupplementCheck, SupplementRoutineItem, WorkoutEntry, FitTrackBackup, FoodItem, AICoachReport } from '../types';
+import {
+  UserProfile,
+  DailyLog,
+  LoggedMeal,
+  SupplementCheck,
+  SupplementRoutineItem,
+  WorkoutEntry,
+  FitTrackBackup,
+  FoodItem,
+  AICoachReport,
+  MealTemplate,
+  MealTemplateItem,
+  MealType,
+} from '../types';
 import { normalizeSupplementRoutine } from '../utils/supplementUtils';
 import { getDefaultProfile } from '../utils/calculator';
 import { getTodayDateString, addDaysToDateString } from '../utils/dateUtils';
@@ -16,6 +29,7 @@ const RECENT_FOODS_KEY = '@fittrack_recent_foods';
 const FAVORITE_FOODS_KEY = '@fittrack_favorite_foods';
 const CUSTOM_FOODS_KEY = '@fittrack_custom_foods';
 const BARCODE_CACHE_KEY = '@fittrack_barcode_cache';
+const MEAL_TEMPLATES_KEY = '@fittrack_meal_templates';
 const MEDICAL_DISCLAIMER_KEY = '@fittrack_disclaimer_accepted';
 let accountNamespace: string | null = null;
 
@@ -655,6 +669,164 @@ export async function copyYesterdayMeals(targetDate: string): Promise<DailyLog> 
   });
 }
 
+export async function copyYesterdayMealType(targetDate: string, mealType: MealType): Promise<DailyLog> {
+  const yesterday = getPreviousDayString(targetDate);
+  const targetKey = getScopedStorageKey(`${DAILY_LOG_PREFIX}${targetDate}`);
+  return enqueueStorageOperation(targetKey, async () => {
+    const yesterdayLog = await loadDailyLog(yesterday);
+    const targetMeals = (yesterdayLog.meals || []).filter((m) => m.mealType === mealType);
+    if (targetMeals.length === 0) {
+      return await loadDailyLog(targetDate);
+    }
+    const currentTarget = await loadDailyLog(targetDate);
+    const clonedMeals: LoggedMeal[] = targetMeals.map((m) => ({
+      ...m,
+      id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      timestamp: new Date().toISOString(),
+    }));
+    const updatedTarget: DailyLog = {
+      ...currentTarget,
+      meals: [...currentTarget.meals, ...clonedMeals],
+    };
+    await AsyncStorage.setItem(targetKey, JSON.stringify(updatedTarget));
+    return updatedTarget;
+  });
+}
+
+// Meal Templates (Saved meal combinations for fast 1-tap logging)
+export async function loadMealTemplates(): Promise<MealTemplate[]> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(MEAL_TEMPLATES_KEY));
+    if (!raw) return [];
+    return safeParseArray<MealTemplate>(raw);
+  } catch (err) {
+    console.error('Error loading meal templates:', err);
+    return [];
+  }
+}
+
+export async function saveMealTemplates(templates: MealTemplate[]): Promise<void> {
+  const key = getScopedStorageKey(MEAL_TEMPLATES_KEY);
+  return enqueueStorageOperation(key, async () => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(templates));
+    } catch (err) {
+      console.error('Error saving meal templates:', err);
+      throw new Error('Failed to save meal templates.');
+    }
+  });
+}
+
+export async function saveMealTemplate(template: MealTemplate): Promise<MealTemplate[]> {
+  const key = getScopedStorageKey(MEAL_TEMPLATES_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadMealTemplates();
+    const filtered = current.filter((t) => t.id !== template.id);
+    const updated = [template, ...filtered];
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  });
+}
+
+export async function deleteMealTemplate(id: string): Promise<MealTemplate[]> {
+  const key = getScopedStorageKey(MEAL_TEMPLATES_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadMealTemplates();
+    const updated = current.filter((t) => t.id !== id);
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  });
+}
+
+export function createTemplateFromMeals(
+  name: string,
+  mealType: MealType,
+  meals: LoggedMeal[]
+): MealTemplate {
+  const items: MealTemplateItem[] = meals.map((m) => ({
+    name: m.name,
+    servingSize: m.servingSize,
+    servingGrams: m.servingGrams,
+    servings: m.servings,
+    calories: m.calories,
+    protein: m.protein,
+    carbs: m.carbs,
+    fat: m.fat,
+    fiber: m.fiber,
+    sugar: m.sugar,
+    portionUnit: m.portionUnit,
+    gramsPerUnit: m.gramsPerUnit,
+    isEstimate: m.isEstimate,
+    source: m.source,
+  }));
+
+  const totalCalories = items.reduce((sum, item) => sum + item.calories, 0);
+  const totalProtein = Math.round(items.reduce((sum, item) => sum + item.protein, 0) * 10) / 10;
+  const totalCarbs = Math.round(items.reduce((sum, item) => sum + item.carbs, 0) * 10) / 10;
+  const totalFat = Math.round(items.reduce((sum, item) => sum + item.fat, 0) * 10) / 10;
+
+  return {
+    id: `template_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    name: name.trim(),
+    mealType,
+    items,
+    totalCalories,
+    totalProtein,
+    totalCarbs,
+    totalFat,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+// Frequent foods calculation from historical daily logs
+export function getFrequentFoods(
+  dailyLogs: Record<string, DailyLog>,
+  limit: number = 20
+): FoodItem[] {
+  const counts = new Map<string, { count: number; meal: LoggedMeal }>();
+  for (const dayLog of Object.values(dailyLogs || {})) {
+    for (const m of dayLog.meals || []) {
+      const key = m.foodId || m.name.trim().toLowerCase();
+      const existing = counts.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        counts.set(key, { count: 1, meal: m });
+      }
+    }
+  }
+
+  const sorted = Array.from(counts.values()).sort((a, b) => b.count - a.count);
+  return sorted.slice(0, limit).map(({ meal }) => {
+    const ratio = meal.servings > 0 ? meal.servings : 1;
+    return {
+      id: meal.foodId || `frequent_${meal.name.replace(/[^a-zA-Z0-9_-]/g, '_')}`,
+      name: meal.name,
+      brand: meal.brand,
+      category: meal.category,
+      servingSize: meal.servingSize,
+      servingGrams: Math.round(meal.servingGrams / ratio),
+      calories: Math.round(meal.calories / ratio),
+      protein: Math.round((meal.protein / ratio) * 10) / 10,
+      carbs: Math.round((meal.carbs / ratio) * 10) / 10,
+      fat: Math.round((meal.fat / ratio) * 10) / 10,
+      fiber: meal.fiber !== undefined ? Math.round((meal.fiber / ratio) * 10) / 10 : undefined,
+      sugar: meal.sugar !== undefined ? Math.round((meal.sugar / ratio) * 10) / 10 : undefined,
+      sodium: meal.sodium !== undefined ? Math.round(meal.sodium / ratio) : undefined,
+      barcode: meal.barcode,
+      source: meal.source,
+      isEstimate: meal.isEstimate,
+      portionUnit: meal.portionUnit,
+      gramsPerUnit: meal.gramsPerUnit,
+    };
+  });
+}
+
+export async function loadFrequentFoods(limit: number = 20): Promise<FoodItem[]> {
+  const recentLogs = await getRecentDailyLogs(90);
+  return getFrequentFoods(recentLogs, limit);
+}
+
 export const DEFAULT_REMINDER_SETTINGS: import('../types').ReminderSettings = {
   supplementsEnabled: false,
   supplementTimes: {
@@ -880,6 +1052,7 @@ export async function restoreAllData(
         getScopedStorageKey(FAVORITE_FOODS_KEY),
         getScopedStorageKey(CUSTOM_FOODS_KEY),
         getScopedStorageKey(BARCODE_CACHE_KEY),
+        getScopedStorageKey(MEAL_TEMPLATES_KEY),
         getScopedStorageKey(MEDICAL_DISCLAIMER_KEY),
         ...existingLogKeys,
         ...incomingLogKeys,
@@ -947,7 +1120,14 @@ export async function restoreAllData(
           await AsyncStorage.removeItem(getScopedStorageKey(BARCODE_CACHE_KEY));
         }
 
-        // 11. Write medical disclaimer state
+        // 11. Write meal templates
+        if (staged.mealTemplates) {
+          await AsyncStorage.setItem(getScopedStorageKey(MEAL_TEMPLATES_KEY), JSON.stringify(staged.mealTemplates));
+        } else {
+          await AsyncStorage.removeItem(getScopedStorageKey(MEAL_TEMPLATES_KEY));
+        }
+
+        // 12. Write medical disclaimer state
         if (staged.profile.hasAcceptedMedicalDisclaimer) {
           await AsyncStorage.setItem(getScopedStorageKey(MEDICAL_DISCLAIMER_KEY), 'true');
         } else {
@@ -1108,6 +1288,17 @@ export async function restoreAllData(
         ),
       ].slice(0, 200);
       await AsyncStorage.setItem(getScopedStorageKey(BARCODE_CACHE_KEY), JSON.stringify(mergedCache));
+    }
+
+    // 10. Meal templates
+    if (staged.mealTemplates && staged.mealTemplates.length > 0) {
+      const currentTemplates = await loadMealTemplates();
+      const existingTemplateIds = new Set(currentTemplates.map((t) => t.id));
+      const mergedTemplates = [
+        ...currentTemplates,
+        ...staged.mealTemplates.filter((t) => !existingTemplateIds.has(t.id)),
+      ];
+      await AsyncStorage.setItem(getScopedStorageKey(MEAL_TEMPLATES_KEY), JSON.stringify(mergedTemplates));
     }
   }
 }
