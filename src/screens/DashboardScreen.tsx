@@ -87,10 +87,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onDeleteWorkout,
   onUpdateWorkout,
 }) => {
-  if (isLoading) {
-    return <TodaySkeleton />;
-  }
-
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const t = useCallback((str: string) => translate(language, str), [language]);
@@ -216,6 +212,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     onOpenAddFood();
   };
+
+  if (isLoading) {
+    return <TodaySkeleton />;
+  }
 
   return (
     <View style={styles.container}>

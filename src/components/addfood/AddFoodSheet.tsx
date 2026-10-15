@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -142,37 +142,56 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const isToday = date === getTodayDateString();
   const isFuture = date > getTodayDateString();
 
-  useEffect(() => {
+  const [prevMealType, setPrevMealType] = useState<MealType | null | undefined>(mealType);
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible || mealType !== prevMealType) {
+    setPrevVisible(visible);
+    setPrevMealType(mealType);
     if (visible) {
-      if (mealType) {
-        setSelectedMeal(mealType);
-      } else {
-        setSelectedMeal(getDefaultMealType());
-      }
-      checkApiKey();
-      loadCollections();
+      setSelectedMeal(mealType || getDefaultMealType());
     }
-  }, [visible, mealType]);
+  }
 
-  const loadCollections = async () => {
-    try {
-      const [recent, favs, custom] = await Promise.all([
-        loadRecentFoods(),
-        loadFavoriteFoods(),
-        loadCustomFoods(),
-      ]);
+  const loadCollections = useCallback(() => {
+    let isMounted = true;
+    Promise.all([
+      loadRecentFoods(),
+      loadFavoriteFoods(),
+      loadCustomFoods(),
+    ]).then(([recent, favs, custom]) => {
+      if (!isMounted) return;
       setRecentFoods(recent);
       setFavoriteFoods(favs);
       setCustomFoods(custom);
-    } catch (err) {
+    }).catch((err) => {
       console.error('Error loading collections:', err);
-    }
-  };
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-  const checkApiKey = async () => {
-    const k = await getStoredGeminiApiKey();
-    setHasApiKey(Boolean(k));
-  };
+  const checkApiKey = useCallback(() => {
+    let isMounted = true;
+    getStoredGeminiApiKey().then((k) => {
+      if (isMounted) {
+        setHasApiKey(Boolean(k));
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    const cleanApiKey = checkApiKey();
+    const cleanCollections = loadCollections();
+    return () => {
+      cleanApiKey();
+      cleanCollections();
+    };
+  }, [visible, checkApiKey, loadCollections]);
 
   const handleClose = () => {
     setIsScanningBarcode(false);

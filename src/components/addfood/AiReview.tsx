@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { AppText as Text } from '../AppText';
 import { Sparkles, Plus, Check, Minus } from 'lucide-react-native';
 import { PlateAnalysisResult, PlateAnalysisItem } from '../../services/plateAnalysisService';
@@ -33,6 +33,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
   const language = useLanguage();
   const t = (str: string) => translate(language, str);
 
+  const [prevResult, setPrevResult] = useState(result);
   const [items, setItems] = useState<EditableItemState[]>(() =>
     result.items.map((it) => ({
       item: it,
@@ -41,7 +42,8 @@ export const AiReview: React.FC<AiReviewProps> = ({
     }))
   );
 
-  useEffect(() => {
+  if (result !== prevResult) {
+    setPrevResult(result);
     setItems(
       result.items.map((it) => ({
         item: it,
@@ -49,7 +51,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
         isLogged: false,
       }))
     );
-  }, [result]);
+  }
 
   const handleUpdateGrams = (index: number, newGrams: number) => {
     const val = Math.max(5, Math.min(2000, newGrams));

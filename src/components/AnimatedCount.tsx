@@ -23,9 +23,10 @@ export const AnimatedCount: React.FC<AnimatedCountProps> = ({
   const [displayValue, setDisplayValue] = useState(value);
   const prevValueRef = useRef(value);
 
+  const effectiveValue = isReducedMotion() || duration <= 0 ? value : displayValue;
+
   useEffect(() => {
     if (isReducedMotion() || duration <= 0) {
-      setDisplayValue(value);
       prevValueRef.current = value;
       return;
     }
@@ -33,7 +34,6 @@ export const AnimatedCount: React.FC<AnimatedCountProps> = ({
     const startVal = prevValueRef.current;
     const diff = value - startVal;
     if (diff === 0) {
-      setDisplayValue(value);
       return;
     }
 
@@ -64,5 +64,5 @@ export const AnimatedCount: React.FC<AnimatedCountProps> = ({
     };
   }, [value, duration]);
 
-  return <Text style={style}>{formatter(displayValue)}</Text>;
+  return <Text style={style}>{formatter(effectiveValue)}</Text>;
 };

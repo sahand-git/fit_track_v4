@@ -27,11 +27,16 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
   }, [month]);
   const dates = useMemo(() => Array.from({ length: 42 }, (_, index) => addDaysToDateString(firstDate, index)), [firstDate]);
 
-  useEffect(() => {
-    if (!visible) return;
-    const selected = parseLocalDateString(selectedDate);
-    setMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
-  }, [selectedDate, visible]);
+  const [prevSelectedDate, setPrevSelectedDate] = useState(selectedDate);
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (selectedDate !== prevSelectedDate || (visible && !prevVisible)) {
+    setPrevSelectedDate(selectedDate);
+    setPrevVisible(visible);
+    if (visible) {
+      const selected = parseLocalDateString(selectedDate);
+      setMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+    }
+  }
 
   useEffect(() => {
     if (!visible) return;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { AppText as Text } from './AppText';
 import { Key, Check, Trash2, ExternalLink, AlertCircle, RefreshCw } from 'lucide-react-native';
@@ -30,20 +30,26 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [providerDetail, setProviderDetail] = useState<string | null>(null);
 
-  useEffect(() => {
-    checkKey();
+  const checkKey = useCallback(() => {
+    let isMounted = true;
+    getStoredGeminiApiKey().then((stored) => {
+      if (!isMounted) return;
+      if (stored) {
+        setKey(stored);
+        setHasSavedKey(true);
+      } else {
+        setKey('');
+        setHasSavedKey(false);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const checkKey = async () => {
-    const stored = await getStoredGeminiApiKey();
-    if (stored) {
-      setKey(stored);
-      setHasSavedKey(true);
-    } else {
-      setKey('');
-      setHasSavedKey(false);
-    }
-  };
+  useEffect(() => {
+    return checkKey();
+  }, [checkKey]);
 
   const resetTestState = () => {
     setTestState('idle');

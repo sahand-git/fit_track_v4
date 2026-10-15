@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Animated,
   TouchableOpacityProps,
@@ -19,7 +19,7 @@ export const AnimatedPressable: React.FC<AnimatedPressableProps> = ({
   minScale = 0.975,
   ...rest
 }) => {
-  const scale = useRef(new Animated.Value(1)).current;
+  const [scale] = useState(() => new Animated.Value(1));
 
   const handlePressIn = (e: GestureResponderEvent) => {
     if (!isReducedMotion()) {

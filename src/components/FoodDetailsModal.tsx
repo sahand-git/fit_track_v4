@@ -40,14 +40,16 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
   const language = useLanguage();
   const t = (key: string) => translate(language, key);
   const [servings, setServings] = useState(1);
+  const [prevItem, setPrevItem] = useState(item);
 
-  useEffect(() => {
+  if (item !== prevItem) {
+    setPrevItem(item);
     if (item && 'servings' in item) {
       setServings(item.servings || 1);
     } else {
       setServings(1);
     }
-  }, [item, visible]);
+  }
 
   if (!item) return null;
 

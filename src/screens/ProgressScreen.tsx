@@ -69,10 +69,6 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
     };
   }, []);
 
-  if (isLoading || loading) {
-    return <ProgressSkeleton />;
-  }
-
   // Handle Android back button when modal is open
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -86,6 +82,10 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
   }, [modalVisible]);
+
+  if (isLoading || loading) {
+    return <ProgressSkeleton />;
+  }
 
   const currentWeight = history.length > 0 
     ? history[history.length - 1].weightKg 

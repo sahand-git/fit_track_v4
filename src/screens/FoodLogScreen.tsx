@@ -54,10 +54,6 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   initialMealType = 'breakfast',
   onCopyYesterdayMeals,
 }) => {
-  if (isLoading) {
-    return <MealsSkeleton />;
-  }
-
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const t = (value: string) => translate(language, value);
@@ -92,9 +88,12 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     return () => sub.remove();
   }, [addSheetVisible, calendarVisible, inspectingMeal]);
 
-  const isToday = selectedDate === getTodayDateString();
   const isPast = selectedDate < getTodayDateString();
   const isFuture = selectedDate > getTodayDateString();
+
+  if (isLoading) {
+    return <MealsSkeleton />;
+  }
 
   // Date navigation
   const handlePrevDay = () => {
