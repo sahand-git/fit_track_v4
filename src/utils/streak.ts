@@ -114,3 +114,48 @@ export async function calculateStreakWithChunking(
     loggedToday,
   };
 }
+
+/**
+ * Calculates streak by walking back date-by-date from referenceDate
+ * and stopping at the very first inactive day without loading all daily logs.
+ */
+export async function calculateStreakByWalkback(
+  fetchDayLog: (date: string) => Promise<DailyLog | null>,
+  weightHistory: WeightEntry[],
+  referenceDate: string = getTodayDateString()
+): Promise<{ currentStreak: number; loggedToday: boolean }> {
+  const weightDates = new Set(
+    Array.isArray(weightHistory) ? weightHistory.map((w) => w.date) : []
+  );
+
+  const dayCache = new Map<string, boolean>();
+
+  const checkActivity = async (date: string): Promise<boolean> => {
+    if (dayCache.has(date)) return dayCache.get(date)!;
+    if (weightDates.has(date)) {
+      dayCache.set(date, true);
+      return true;
+    }
+    const log = await fetchDayLog(date);
+    const active = Boolean(log && Array.isArray(log.meals) && log.meals.length > 0);
+    dayCache.set(date, active);
+    return active;
+  };
+
+  const loggedToday = await checkActivity(referenceDate);
+
+  let streak = 0;
+  let checkDate = loggedToday ? referenceDate : getPreviousDayString(referenceDate);
+
+  // Traverse backward day by day and stop at the first inactive day
+  while (await checkActivity(checkDate)) {
+    streak++;
+    checkDate = getPreviousDayString(checkDate);
+  }
+
+  return {
+    currentStreak: streak,
+    loggedToday,
+  };
+}
+

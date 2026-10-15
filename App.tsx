@@ -36,8 +36,6 @@ import {
   removeWorkoutFromDay,
   updateWorkoutInDay,
   loadWeightHistory,
-  getAllDailyLogs,
-  getRecentDailyLogs,
   loadAccurateStreak,
   setDailySteps,
   addDailySteps,

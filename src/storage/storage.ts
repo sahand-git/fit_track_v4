@@ -4,7 +4,7 @@ import { normalizeSupplementRoutine } from '../utils/supplementUtils';
 import { getDefaultProfile } from '../utils/calculator';
 import { getTodayDateString, addDaysToDateString } from '../utils/dateUtils';
 import { validateBackup } from '../utils/backupCore';
-import { calculateStreakWithChunking } from '../utils/streak';
+import { calculateStreakWithChunking, calculateStreakByWalkback } from '../utils/streak';
 
 const PROFILE_KEY = '@fittrack_profile';
 const DAILY_LOG_PREFIX = '@fittrack_log_';
@@ -558,19 +558,17 @@ export async function getRecentDailyLogs(days: number = 90): Promise<Record<stri
 }
 
 /**
- * Calculates current consecutive active logging streak with on-demand chunked reads.
- * Only loads older chunks if the active streak reaches the boundary of the loaded chunk.
+ * Calculates current consecutive active logging streak by walking back from referenceDate (today)
+ * and stopping at the first inactive day without calling getAllDailyLogs.
  */
 export async function loadAccurateStreak(
-  referenceDate: string = getTodayDateString(),
-  chunkSize: number = 90
+  referenceDate: string = getTodayDateString()
 ): Promise<{ currentStreak: number; loggedToday: boolean }> {
   const weights = await loadWeightHistory();
-  return calculateStreakWithChunking(
-    (endDate, days) => getDailyLogsRange(endDate, days),
+  return calculateStreakByWalkback(
+    (date) => loadDailyLog(date),
     weights,
-    referenceDate,
-    chunkSize
+    referenceDate
   );
 }
 
