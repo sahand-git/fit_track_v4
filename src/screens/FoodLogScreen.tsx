@@ -177,6 +177,10 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     { key: 'snack', label: t('Snacks') },
   ];
 
+  if (isLoading) {
+    return <MealsSkeleton />;
+  }
+
   return (
     <View style={styles.container}>
       {/* Calm Calendar Navigation */}

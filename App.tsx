@@ -54,7 +54,7 @@ import {
 import { getDefaultProfile } from './src/utils/calculator';
 import { OnboardingModal } from './src/components/OnboardingModal';
 import { getTodayDateString } from './src/utils/dateUtils';
-import { calculateLoggingStreak } from './src/utils/streak';
+import { TodaySkeleton } from './src/components/SkeletonLoader';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { FoodLogScreen } from './src/screens/FoodLogScreen';
 import { ProgressScreen } from './src/screens/ProgressScreen';
@@ -160,7 +160,6 @@ function FitTrackApp() {
       setInitError(null);
       setInitialLoaded(false);
       try {
-        await initNotificationService();
         const p = await loadUserProfile();
         const disclaimerAccepted = await loadMedicalDisclaimerAccepted();
         if (disclaimerAccepted && !p.hasAcceptedMedicalDisclaimer) {
@@ -175,22 +174,30 @@ function FitTrackApp() {
         setLog(l);
         const initialRoutine = await loadSupplementRoutine();
         if (isCancelled) return;
-        setSupplementRoutine(initialRoutine);
-        await refreshStreak();
+        try {
+          await refreshStreak();
+        } catch (streakErr) {
+          console.warn('Streak calculation warning during init:', streakErr);
+        }
 
         // Reconcile reminders safely at startup WITHOUT requesting permission
-        if (isNotificationSupported()) {
-          const perm = await checkNotificationPermissions();
-          if (perm.granted) {
-            const reminderSettings = await loadReminderSettings();
-            const hasActive =
-              reminderSettings.supplementsEnabled ||
-              reminderSettings.water.enabled ||
-              Object.values(reminderSettings.meals).some((m) => m.enabled);
-            if (hasActive) {
-              await syncAllReminders(reminderSettings, initialRoutine, appLang);
+        try {
+          await initNotificationService();
+          if (isNotificationSupported()) {
+            const perm = await checkNotificationPermissions();
+            if (perm.granted) {
+              const reminderSettings = await loadReminderSettings();
+              const hasActive =
+                reminderSettings.supplementsEnabled ||
+                reminderSettings.water.enabled ||
+                Object.values(reminderSettings.meals).some((m) => m.enabled);
+              if (hasActive) {
+                await syncAllReminders(reminderSettings, initialRoutine, appLang);
+              }
             }
           }
+        } catch (notifErr) {
+          console.warn('Notification service bypassed during startup:', notifErr);
         }
         if (!isCancelled) {
           setInitialLoaded(true);
@@ -520,7 +527,26 @@ function FitTrackApp() {
     );
   }
 
-  if (initialLoaded && !profile.hasAcceptedMedicalDisclaimer) {
+  if (!initialLoaded) {
+    return (
+      <I18nProvider language={language}>
+        <View
+          style={[
+            styles.container,
+            {
+              direction: language === 'en' ? 'ltr' : 'rtl',
+              paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0),
+            },
+          ]}
+        >
+          <StatusBar style="dark" />
+          <TodaySkeleton />
+        </View>
+      </I18nProvider>
+    );
+  }
+
+  if (!profile.hasAcceptedMedicalDisclaimer) {
     return (
       <I18nProvider language={language}>
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

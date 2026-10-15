@@ -25,7 +25,7 @@ import {
   Info,
 } from 'lucide-react-native';
 import { DailyLog, UserProfile, WeightEntry } from '../types';
-import { loadWeightHistory, addWeightEntry, removeWeightEntry, loadLogsForDates } from '../storage/storage';
+import { loadWeightHistory, addWeightEntry, removeWeightEntry, loadLogsForDates, loadAccurateStreak } from '../storage/storage';
 import { getTodayDateString, formatDisplayDate, parseLocalDateString } from '../utils/dateUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -37,7 +37,6 @@ import {
   CalorieTrendPoint,
   WeightTrendPoint,
 } from '../utils/trends';
-import { calculateLoggingStreak } from '../utils/streak';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { ProgressSkeleton } from '../components/SkeletonLoader';
@@ -64,18 +63,24 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
   const [daysRange, setDaysRange] = useState<7 | 30>(7);
   const [trendCategory, setTrendCategory] = useState<'all' | 'weight' | 'calories'>('all');
   const [logsMap, setLogsMap] = useState<Record<string, DailyLog>>({});
+  const [streak, setStreak] = useState<{ currentStreak: number; loggedToday: boolean }>({
+    currentStreak: 0,
+    loggedToday: false,
+  });
 
   useEffect(() => {
     let isMounted = true;
     async function load() {
       const dates = generateDateWindow(getTodayDateString(), daysRange);
-      const [wHistory, logs] = await Promise.all([
+      const [wHistory, logs, accurateStreak] = await Promise.all([
         loadWeightHistory(),
         loadLogsForDates(dates),
+        loadAccurateStreak(),
       ]);
       if (isMounted) {
         setHistory(wHistory);
         setLogsMap(logs);
+        setStreak(accurateStreak);
         setLoading(false);
       }
     }
@@ -139,10 +144,6 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
     }
     return [];
   }, [dateList, history, profile]);
-
-  const streak = useMemo(() => {
-    return calculateLoggingStreak(logsMap, history, getTodayDateString());
-  }, [logsMap, history]);
 
   if (isLoading || loading) {
     return <ProgressSkeleton />;

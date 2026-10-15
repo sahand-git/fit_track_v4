@@ -28,10 +28,15 @@ export const ScreenTransitionView: React.FC<ScreenTransitionViewProps> = ({
   const language = useLanguage();
   const isRTL = language === 'ar' || language === 'ckb';
 
-  const opacity = useSharedValue(isReducedMotion() ? 1 : 0);
-  const translateX = useSharedValue(isReducedMotion() ? 0 : (isRTL ? -14 : 14));
+  const isFirstMount = React.useRef(true);
+  const opacity = useSharedValue(1);
+  const translateX = useSharedValue(0);
 
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     if (isReducedMotion()) {
       opacity.value = 1;
       translateX.value = 0;
