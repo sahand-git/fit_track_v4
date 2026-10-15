@@ -820,7 +820,7 @@ export function SupplementsScreen({
       >
         <View style={[styles.modalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ width: '100%', justifyContent: 'flex-end' }}
           >
             <View style={[styles.modalCard, { paddingBottom: Math.max(theme.spacing.lg, insets.bottom + 12) }]}>

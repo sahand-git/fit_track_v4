@@ -242,7 +242,7 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       style={{ flex: 1 }}
     >

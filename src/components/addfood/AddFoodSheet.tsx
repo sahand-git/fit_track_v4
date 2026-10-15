@@ -11,8 +11,16 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Dimensions,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getSpringConfig } from '../../utils/reanimatedMotion';
+import { isReducedMotion } from '../../utils/motion';
 import { AppText as Text } from '../AppText';
 import {
   X,
@@ -87,6 +95,8 @@ export interface AddFoodSheetProps {
 
 type TabMode = 'search' | 'photo' | 'describe';
 
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 function getDefaultMealType(): MealType {
   const currentHour = new Date().getHours();
   if (currentHour < 11) return 'breakfast';
@@ -108,6 +118,27 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const t = useCallback((str: string) => translate(language, str), [language]);
+
+  const translateY = useSharedValue(SCREEN_HEIGHT);
+
+  useEffect(() => {
+    if (!visible) {
+      translateY.value = SCREEN_HEIGHT;
+      return;
+    }
+
+    if (isReducedMotion()) {
+      translateY.value = 0;
+      return;
+    }
+
+    translateY.value = SCREEN_HEIGHT;
+    translateY.value = withSpring(0, getSpringConfig('sheet'));
+  }, [visible]);
+
+  const animatedSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const [activeTab, setActiveTab] = useState<TabMode>('search');
   const [selectedMeal, setSelectedMeal] = useState<MealType>(mealType || getDefaultMealType());
@@ -673,14 +704,28 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
   return (
     <>
-      <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ width: '100%', height: '92%', justifyContent: 'flex-end' }}
-        >
-          <View style={[styles.sheetContainer, { height: '100%', paddingBottom: Math.max(theme.spacing.md, insets.bottom + 12) }]}>
-          <SaveSuccessOverlay visible={showSuccess} message={t('Food Logged')} />
+      <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
+        <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={handleClose}
+            accessibilityLabel={t('Close')}
+            accessibilityRole="button"
+          />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ width: '100%', height: '92%', justifyContent: 'flex-end' }}
+            pointerEvents="box-none"
+          >
+            <Animated.View
+              style={[
+                styles.sheetContainer,
+                animatedSheetStyle,
+                { height: '100%', paddingBottom: Math.max(theme.spacing.md, insets.bottom + 12) },
+              ]}
+            >
+              <SaveSuccessOverlay visible={showSuccess} message={t('Food Logged')} />
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
@@ -1522,7 +1567,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
               )}
             </ScrollView>
           )}
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </View>
   </Modal>
@@ -1536,7 +1581,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     >
       <View style={[styles.customModalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ width: '100%', alignItems: 'center' }}
         >
           <View style={styles.customModalCard}>
@@ -1655,7 +1700,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     >
       <View style={[styles.customModalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ width: '100%', alignItems: 'center' }}
         >
           <View style={styles.customModalCard}>
