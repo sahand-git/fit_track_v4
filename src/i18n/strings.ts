@@ -532,6 +532,9 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Gemini returned an empty response. Please try again.': 'أعاد Gemini رداً فارغاً. يرجى المحاولة مرة أخرى.',
     'The AI did not return a result. Please try again.': 'لم يقدم الذكاء الاصطناعي نتيجة. يرجى المحاولة مرة أخرى.',
     'Open Google AI Studio': 'فتح Google AI Studio',
+    'Failed to start FitTrack': 'تعذّر بدء FitTrack',
+    'Unable to load app data. Please try again.': 'تعذّر تحميل بيانات التطبيق. يرجى المحاولة مرة أخرى.',
+    'Retry': 'إعادة المحاولة',
   },
   ckb: {
     'Account': 'هەژمار',
@@ -1054,6 +1057,9 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Gemini returned an empty response. Please try again.': 'Gemini وەڵامێکی بەتاڵی ناردەوە. تکایە دووبارە هەوڵ بدەرەوە.',
     'The AI did not return a result. Please try again.': 'زیرەکی دەستکرد هیچ ئەنجامێکی نەگەڕاندەوە. تکایە دووبارە هەوڵ بدەرەوە.',
     'Open Google AI Studio': 'کردنەوەی Google AI Studio',
+    'Failed to start FitTrack': 'دەستپێکردنی FitTrack سەرکەوتوو نەبوو',
+    'Unable to load app data. Please try again.': 'بارکردنی داتای ئەپەکە سەرکەوتوو نەبوو. تکایە دووبارە هەوڵ بدەرەوە.',
+    'Retry': 'دووبارە هەوڵبدەرەوە',
   },
 };
 

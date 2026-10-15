@@ -36,6 +36,7 @@ const addedKeys = [
   'Steps to add', 'Add steps', 'Enter an amount from 1 to 100000.',
   'Check verification status', 'Email verified. Cloud backup is ready.', 'No cloud backup exists for this account yet.',
   'Cloud backup is too large. Export a local backup instead.', 'Your account changed. Sign in again and retry.',
+  'Failed to start FitTrack', 'Unable to load app data. Please try again.', 'Retry',
 ];
 
 for (const key of addedKeys) {
