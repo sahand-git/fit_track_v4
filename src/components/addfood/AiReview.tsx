@@ -104,6 +104,8 @@ export const AiReview: React.FC<AiReviewProps> = ({
       protein: nut.protein,
       carbs: nut.carbs,
       fat: nut.fat,
+      isEstimate: true,
+      source: 'gemini',
       timestamp: new Date().toISOString(),
     };
 
@@ -132,6 +134,8 @@ export const AiReview: React.FC<AiReviewProps> = ({
         protein: nut.protein,
         carbs: nut.carbs,
         fat: nut.fat,
+        isEstimate: true,
+        source: 'gemini',
         timestamp: new Date().toISOString(),
       };
     });

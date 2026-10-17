@@ -18,6 +18,7 @@ export function getFoodSourceLabel(
     case 'custom':
       return tr('Custom food');
     case 'ai_estimated':
+    case 'gemini':
       return tr('AI estimate');
     case 'barcode_cache':
       return tr('Barcode Cache');
