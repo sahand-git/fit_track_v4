@@ -51,7 +51,7 @@ import { calculateActivityBudget } from '../utils/activityBudget';
 import { getCalorieRingSize } from '../utils/dashboardLayout';
 import { NutrientDetailModal } from '../components/NutrientDetailModal';
 import { SupportedNutrientKey, calculateNutrientDayProgress } from '../utils/nutrientTotals';
-
+import { calculateTargets } from '../utils/calculator';
 import { TodaySkeleton } from '../components/SkeletonLoader';
 
 interface DashboardScreenProps {
@@ -147,6 +147,22 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       ...profile,
       customNutrientGoals: updatedGoals,
     };
+
+    if (nutrientKey === 'calories' || nutrientKey === 'protein' || nutrientKey === 'carbs' || nutrientKey === 'fat') {
+      const defaultTargets = calculateTargets(
+        profile.gender,
+        profile.weightKg,
+        profile.heightCm,
+        profile.age,
+        profile.activityLevel,
+        profile.goal
+      );
+      if (nutrientKey === 'calories') updated.targetCalories = defaultTargets.targetCalories;
+      if (nutrientKey === 'protein') updated.targetProtein = defaultTargets.targetProtein;
+      if (nutrientKey === 'carbs') updated.targetCarbs = defaultTargets.targetCarbs;
+      if (nutrientKey === 'fat') updated.targetFat = defaultTargets.targetFat;
+    }
+
     if (onUpdateProfile) {
       await onUpdateProfile(updated);
     } else {
@@ -224,12 +240,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   // Trigger celebration once per day when target is reached appropriately
   useEffect(() => {
     async function checkGoalCelebration() {
+      const resolvedCalorieTarget = profile.customNutrientGoals?.calories ?? effectiveCalorieTarget;
+      const resolvedProteinTarget = profile.customNutrientGoals?.protein ?? profile.targetProtein;
       const isGoalMet = evaluateGoalAchievement({
         goal: profile.goal,
         consumedCalories,
         consumedProtein,
-        effectiveCalorieTarget,
-        targetProtein: profile.targetProtein,
+        effectiveCalorieTarget: resolvedCalorieTarget,
+        targetProtein: resolvedProteinTarget,
       });
 
       if (!isGoalMet) return;
@@ -258,7 +276,16 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       }
     }
     checkGoalCelebration();
-  }, [consumedCalories, consumedProtein, effectiveCalorieTarget, profile.goal, profile.targetProtein, log.date]);
+  }, [
+    consumedCalories,
+    consumedProtein,
+    effectiveCalorieTarget,
+    profile.goal,
+    profile.targetProtein,
+    profile.customNutrientGoals?.calories,
+    profile.customNutrientGoals?.protein,
+    log.date,
+  ]);
 
   const handleQuickAdd = (meal: MealType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -321,9 +348,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         >
           <CalorieRing
             consumed={consumedCalories}
-            target={effectiveCalorieTarget}
+            target={profile.customNutrientGoals?.calories ?? effectiveCalorieTarget}
             proteinConsumed={consumedProtein}
-            proteinTarget={profile.targetProtein}
+            proteinTarget={profile.customNutrientGoals?.protein ?? profile.targetProtein}
             size={getCalorieRingSize(heroWidth)}
             onPress={() => setSelectedNutrientForDetail('calories')}
           />
@@ -344,13 +371,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         {/* Nutrients Bar */}
         <Animated.View entering={getStaggeredCardEntry(1)}>
           <MacroCards
-            calorieTarget={effectiveCalorieTarget}
+            calorieTarget={profile.customNutrientGoals?.calories ?? effectiveCalorieTarget}
             calorieConsumed={consumedCalories}
-            proteinTarget={profile.targetProtein}
+            proteinTarget={profile.customNutrientGoals?.protein ?? profile.targetProtein}
             proteinConsumed={consumedProtein}
-            carbsTarget={profile.targetCarbs}
+            carbsTarget={profile.customNutrientGoals?.carbs ?? profile.targetCarbs}
             carbsConsumed={consumedCarbs}
-            fatTarget={profile.targetFat}
+            fatTarget={profile.customNutrientGoals?.fat ?? profile.targetFat}
             fatConsumed={consumedFat}
             fiberConsumed={fiberProgress.current}
             fiberTarget={fiberProgress.target}

@@ -110,6 +110,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const handleSave = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    const updatedCustomGoals = { ...(profile.customNutrientGoals || {}) };
+    delete updatedCustomGoals.calories;
+    delete updatedCustomGoals.protein;
+    delete updatedCustomGoals.carbs;
+    delete updatedCustomGoals.fat;
+
     const updated: UserProfile = {
       ...profile,
       name: name.trim() || 'Athlete',
@@ -122,6 +128,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       language,
       isOnboarded: true,
       includeWorkoutsInCalorieBudget: includeWorkouts,
+      customNutrientGoals: updatedCustomGoals,
       ...liveTargets,
     };
     onSaveProfile(updated);
