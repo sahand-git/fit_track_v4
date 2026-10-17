@@ -35,7 +35,12 @@ export function normalizeOpenFoodFactsProduct(barcode: string, product: Record<s
   const servingGrams = parseNumber(product.serving_quantity) ?? (metricMatch ? parseNumber(metricMatch[1].replace(',', '.')) : undefined) ?? 100;
   const servingSize = servingLabel || `${servingGrams}g`;
 
-  const scale = (val: number | undefined) => val !== undefined ? roundVal((val * servingGrams) / 100) : 0;
+  const scale = (val: number | undefined): number => (val !== undefined ? roundVal((val * servingGrams) / 100) : 0);
+  const scaleOptional = (val: number | undefined): number | undefined =>
+    val !== undefined ? roundVal((val * servingGrams) / 100) : undefined;
+
+  const rawSodium100g = parseNumber(nutriments.sodium_100g);
+  const sodiumMg100g = rawSodium100g !== undefined ? rawSodium100g * 1000 : undefined;
 
   const effectiveKcal100g = calories100g ?? (protein100g * 4 + carbs100g * 4 + fat100g * 9);
 
@@ -50,9 +55,9 @@ export function normalizeOpenFoodFactsProduct(barcode: string, product: Record<s
     protein: scale(protein100g),
     carbs: scale(carbs100g),
     fat: scale(fat100g),
-    fiber: scale(parseNumber(nutriments.fiber_100g)),
-    sugar: scale(parseNumber(nutriments.sugars_100g)),
-    sodium: scale(parseNumber(nutriments.sodium_100g) ? parseNumber(nutriments.sodium_100g)! * 1000 : undefined),
+    fiber: scaleOptional(parseNumber(nutriments.fiber_100g)),
+    sugar: scaleOptional(parseNumber(nutriments.sugars_100g)),
+    sodium: scaleOptional(sodiumMg100g),
     category: 'Packaged Food',
     source: 'open_food_facts',
   };

@@ -9,7 +9,7 @@ import {
   restoreAllData,
   loadUserProfile,
 } from '../storage/storage';
-import { lookupBarcodeWithFallbacks } from './barcodeService';
+import { lookupBarcodeWithFallbacks, normalizeOpenFoodFactsProduct } from './barcodeService';
 import { getFoodSourceLabel } from '../utils/foodSource';
 import { validateBackup } from '../utils/backupCore';
 import { FoodItem, FitTrackBackup } from '../types';
@@ -285,6 +285,50 @@ async function runBarcodeCacheTests() {
     await restoreAllData(mergeBackup, 'merge');
     const merged = await loadBarcodeCache();
     assert(merged.length === 3, 'Merge restore unifies barcode items to 3');
+  }
+
+  // Test 6: Missing nutrient preservation in normalizeOpenFoodFactsProduct ("not available, never zero")
+  {
+    const rawOffProductMissing = {
+      product_name: 'Test Raw Grain',
+      brands: 'Natural Brand',
+      serving_size: '50g',
+      serving_quantity: 50,
+      nutriments: {
+        proteins_100g: 8,
+        carbohydrates_100g: 35,
+        fat_100g: 2,
+        // fiber_100g, sugars_100g, sodium_100g missing/undefined
+      },
+    };
+
+    const normalizedMissing = normalizeOpenFoodFactsProduct('123456789012', rawOffProductMissing);
+    assert(normalizedMissing.protein === 4, 'Protein scaled to 50g');
+    assert(normalizedMissing.carbs === 17.5, 'Carbs scaled to 50g');
+    assert(normalizedMissing.fat === 1, 'Fat scaled to 50g');
+    assert(normalizedMissing.fiber === undefined, 'Missing fiber remains undefined, never zero');
+    assert(normalizedMissing.sugar === undefined, 'Missing sugar remains undefined, never zero');
+    assert(normalizedMissing.sodium === undefined, 'Missing sodium remains undefined, never zero');
+
+    const rawOffProductPresent = {
+      product_name: 'Test Enriched Grain',
+      brands: 'Natural Brand',
+      serving_size: '50g',
+      serving_quantity: 50,
+      nutriments: {
+        proteins_100g: 8,
+        carbohydrates_100g: 35,
+        fat_100g: 2,
+        fiber_100g: 6,
+        sugars_100g: 4,
+        sodium_100g: 0.1, // 0.1g = 100mg per 100g -> 50mg for 50g
+      },
+    };
+
+    const normalizedPresent = normalizeOpenFoodFactsProduct('123456789013', rawOffProductPresent);
+    assert(normalizedPresent.fiber === 3, 'Present fiber is scaled properly');
+    assert(normalizedPresent.sugar === 2, 'Present sugar is scaled properly');
+    assert(normalizedPresent.sodium === 50, 'Present sodium is scaled properly to mg');
   }
 
   console.log('All offline barcode cache and food source tests passed successfully!');
