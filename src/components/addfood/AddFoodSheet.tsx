@@ -1871,7 +1871,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                 <Text style={styles.customInputLabel}>{t('Serving description (e.g. 1 bowl, 100g)')}</Text>
                 <TextInput
                   style={styles.customTextInput}
-                  placeholder="e.g. 1 bowl, 150g"
+                  placeholder={t('Serving description (e.g. 1 bowl, 100g)')}
                   placeholderTextColor={theme.colors.textMuted}
                   value={customServing}
                   onChangeText={setCustomServing}
@@ -1882,7 +1882,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                 <Text style={styles.customInputLabel}>{t('Calories (kcal)')}</Text>
                 <TextInput
                   style={styles.customTextInput}
-                  placeholder="e.g. 250"
+                  placeholder="250"
                   placeholderTextColor={theme.colors.textMuted}
                   value={customCalories}
                   onChangeText={setCustomCalories}
