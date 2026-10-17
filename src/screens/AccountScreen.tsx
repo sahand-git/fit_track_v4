@@ -10,6 +10,7 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FIREBASE_SETUP_GUIDE_URL, PRIVACY_POLICY_URL } from '../constants/urls';
 
 interface Props { user: AuthIdentity | null; onBack: () => void; onRestoreComplete: () => void; }
 
@@ -39,14 +40,13 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
   const googleSignIn = () => perform(async () => { await loginWithGoogle(); }, 'Signed in successfully.');
   const openSetupGuide = async () => {
     try {
-      await Linking.openURL('https://github.com/sahand-git/fit_track_v4/blob/main/docs/firebase-setup.md');
+      await Linking.openURL(FIREBASE_SETUP_GUIDE_URL);
     } catch {
       setError(t('Could not open Firebase setup guide.'));
     }
   };
 
   const openPrivacyPolicy = async () => {
-    const PRIVACY_POLICY_URL = 'https://github.com/sahand-git/fit_track_v4/blob/main/PRIVACY.md';
     try {
       await Linking.openURL(PRIVACY_POLICY_URL);
     } catch {
