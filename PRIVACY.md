@@ -63,14 +63,28 @@ FitTrack provides optional AI-assisted meal analysis and nutrition coaching powe
 
 ---
 
-## 6. Notifications & Reminders
+## 6. Optional Anonymized Crash Reporting & Diagnostics
+
+FitTrack includes an optional, privacy-first diagnostic reporting mechanism:
+- **Strict Opt-In Consent:** Crash reporting is disabled by default (`enableCrashReporting: false`). It is only activated if you explicitly opt in during onboarding or toggle it on in **Profile -> Data & Storage**.
+- **Deep Data Scrubbing:** Before any diagnostic report is created:
+  - Personal biometrics (name, email, age, height, weight) are completely stripped.
+  - All nutritional logs, meal names, custom recipes, calorie values, and macronutrients are scrubbed and replaced with `[health-data-scrubbed]`.
+  - All API keys (including Google AI Studio Gemini keys and AIza tokens) are redacted with `[redacted-token]`.
+  - Local file system paths are generalized to `app://`.
+- **Diagnostic Scope:** Only technical stack traces, error class names, platform OS version, and application version are captured to resolve application crashes.
+- **Immediate Revocation:** You can toggle crash reporting off at any time in Profile settings. Disabling it immediately stops all diagnostic collection.
+
+---
+
+## 7. Notifications & Reminders
 
 - **Local Scheduling Only:** FitTrack schedules meal, hydration, and supplement reminders using `expo-notifications`.
 - **No Remote Push Tokens:** All notifications are created, evaluated, and triggered locally on your device. We do not register push tokens with external Apple Push Notification (APNs) or Firebase Cloud Messaging (FCM) servers.
 
 ---
 
-## 7. Data Retention, Portability & Deletion
+## 8. Data Retention, Portability & Deletion
 
 You have complete authority over your data at all times:
 - **Local Data Erasure:** You can erase all local tracking logs and settings at any time by clearing application data in device settings or uninstalling the app.
@@ -79,7 +93,7 @@ You have complete authority over your data at all times:
 
 ---
 
-## 8. Policy Hosting & Configuration
+## 9. Policy Hosting & Configuration
 
 The live URL of this privacy policy is defined centrally in the application configuration:
 - Source configuration: `src/constants/urls.ts` (`PRIVACY_POLICY_URL`)
@@ -87,7 +101,7 @@ The live URL of this privacy policy is defined centrally in the application conf
 
 ---
 
-## 9. Contact & Inquiries
+## 10. Contact & Inquiries
 
 For questions regarding this Privacy Policy, data protection practices, or deletion assistance, please contact:
 - **Email:** `privacy@fittrack.app` *(or your hosting contact email)*

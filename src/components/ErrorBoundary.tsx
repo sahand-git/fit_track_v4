@@ -12,6 +12,7 @@ import { AlertTriangle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react-n
 import { theme } from '../theme';
 import { I18nContext } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
+import { recordCrash } from '../services/crashReportingService';
 
 interface Props {
   children: ReactNode;
@@ -43,6 +44,8 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('FitTrack ErrorBoundary caught error:', error, errorInfo);
     this.setState({ errorInfo });
+    // Record scrubbed crash diagnostic only if user gave explicit consent
+    recordCrash(error, errorInfo).catch(() => {});
   }
 
   handleReload = () => {

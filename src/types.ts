@@ -67,6 +67,7 @@ export interface UserProfile {
   targetWeightKg?: number;
   hasAcceptedMedicalDisclaimer?: boolean;
   customNutrientGoals?: Partial<Record<string, number>>;
+  enableCrashReporting?: boolean;
 }
 
 export type ExerciseCategory = 'strength' | 'cardio' | 'hiit' | 'sports' | 'flexibility';

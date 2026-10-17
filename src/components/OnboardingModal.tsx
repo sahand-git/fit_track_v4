@@ -18,6 +18,8 @@ import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
 import { AiSetupWizard } from './AiSetupWizardModal';
+import { AnimatedCheckbox } from './AnimatedCheckbox';
+import { setCrashReportingConsent } from '../services/crashReportingService';
 
 interface OnboardingModalProps {
   onComplete: (profile: UserProfile) => void;
@@ -51,6 +53,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
   const [heightCm, setHeightCm] = useState('178');
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>('moderate');
   const [goal, setGoal] = useState<FitnessGoal>('fat_loss_moderate');
+  const [enableCrashReporting, setEnableCrashReporting] = useState(false);
 
   const numWeight = Math.max(30, Math.min(300, parseFloat(weightKg) || 75));
   const numHeight = Math.max(100, Math.min(250, parseFloat(heightCm) || 178));
@@ -71,8 +74,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
       waterTargetGlasses: Math.max(6, Math.min(16, Math.round((numWeight * 35) / 250))),
       isOnboarded: true,
       language,
+      enableCrashReporting,
       ...targets,
     };
+    setCrashReportingConsent(enableCrashReporting).catch(() => {});
     onComplete(profile);
   };
 
@@ -277,6 +282,26 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                 </View>
               </View>
             </View>
+
+            {/* Crash Reporting Consent (Opt-in) */}
+            <TouchableOpacity
+              style={[styles.consentRow, enableCrashReporting && styles.consentRowActive]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setEnableCrashReporting(!enableCrashReporting);
+              }}
+              activeOpacity={0.7}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: enableCrashReporting }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.consentTitle}>{t('Anonymous Crash Reporting')}</Text>
+                <Text style={styles.consentDesc}>
+                  {t('Help improve stability by sharing anonymized error stacks. Meals, foods, and keys are strictly excluded.')}
+                </Text>
+              </View>
+              <AnimatedCheckbox checked={enableCrashReporting} size={20} />
+            </TouchableOpacity>
 
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.backBtn} onPress={() => setStep(2)}>
@@ -523,5 +548,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: theme.colors.textInverted,
+  },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    padding: 14,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginTop: 10,
+    gap: 12,
+  },
+  consentRowActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: `${theme.colors.primary}0D`,
+  },
+  consentTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  consentDesc: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+    lineHeight: 16,
   },
 });

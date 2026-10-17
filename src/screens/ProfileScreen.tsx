@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen } from 'lucide-react-native';
+import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
 import { GeminiKeyManager } from '../components/GeminiKeyManager';
@@ -20,6 +20,7 @@ import { MedicalDisclaimerModal } from '../components/MedicalDisclaimerModal';
 import { ScientificReferencesModal } from '../components/ScientificReferencesModal';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { isNotificationSupported } from '../services/notificationService';
+import { setCrashReportingConsent } from '../services/crashReportingService';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useLanguage } from '../i18n/I18nContext';
 import { languageNames, translate } from '../i18n/strings';
@@ -57,6 +58,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [disclaimerModalVisible, setDisclaimerModalVisible] = useState(false);
   const [referencesModalVisible, setReferencesModalVisible] = useState(false);
   const [includeWorkouts, setIncludeWorkouts] = useState(!!profile.includeWorkoutsInCalorieBudget);
+  const [enableCrashReporting, setEnableCrashReporting] = useState(!!profile.enableCrashReporting);
 
   // Handle Android back button when sub-modals are open
   useEffect(() => {
@@ -128,9 +130,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       language,
       isOnboarded: true,
       includeWorkoutsInCalorieBudget: includeWorkouts,
+      enableCrashReporting,
       customNutrientGoals: updatedCustomGoals,
       ...liveTargets,
     };
+    setCrashReportingConsent(enableCrashReporting).catch(() => {});
     onSaveProfile(updated);
   };
 
@@ -440,6 +444,34 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </Text>
             </View>
           </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Privacy & Diagnostics Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>{t('Privacy & Diagnostics')}</Text>
+        <TouchableOpacity
+          style={[styles.optionRow, enableCrashReporting && styles.optionRowActive]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            const nextVal = !enableCrashReporting;
+            setEnableCrashReporting(nextVal);
+            setCrashReportingConsent(nextVal).catch(() => {});
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: enableCrashReporting }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <ShieldCheck size={20} color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Anonymous Crash Reporting')}</Text>
+              <Text style={styles.optionDesc}>
+                {t('Help improve stability by sharing anonymized error stacks. Meals, foods, and keys are strictly excluded.')}
+              </Text>
+            </View>
+          </View>
+          <AnimatedCheckbox checked={enableCrashReporting} size={20} />
         </TouchableOpacity>
       </View>
 

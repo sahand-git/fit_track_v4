@@ -938,6 +938,9 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Not available': 'غير متوفر',
     'Daily breakdown and contribution ranking': 'التفصيل اليومي وترتيب المساهمة',
     'Vitamins & RDA': 'الفيتامينات والاحتياج اليومي',
+    'Anonymous Crash Reporting': 'تقارير الأعطال مجهولة المصدر',
+    'Help improve stability by sharing anonymized error stacks. Meals, foods, and keys are strictly excluded.': 'ساعد في تحسين الاستقرار بمشاركة تفاصيل الأخطاء المجهولة. الوجبات والأطعمة والمفاتيح مستبعدة تماماً.',
+    'Privacy & Diagnostics': 'الخصوصية والتشخيص',
   },
   ckb: {
     'Account': 'هەژمار',
@@ -1868,6 +1871,9 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Not available': 'بەردەست نییە',
     'Daily breakdown and contribution ranking': 'شیکردنەوەی ڕۆژانە و ڕیزبەندی بەشداری',
     'Vitamins & RDA': 'ڤیتامینەکان و پێداویستی ڕۆژانە',
+    'Anonymous Crash Reporting': 'ڕاپۆرتی تێکچوونی بێناو',
+    'Help improve stability by sharing anonymized error stacks. Meals, foods, and keys are strictly excluded.': 'یارمەتی بدە بۆ باشترکردنی سەقامگیری لە ڕێگەی هاوبەشکردنی هەڵە بێناوەکان. ژەمەکان، خواردنەکان و کلیلەکان بە تەواوی دوورخراونەتەوە.',
+    'Privacy & Diagnostics': 'تایبەتمەندی و دەستنیشانکردنی کێشەکان',
   },
 };
 
