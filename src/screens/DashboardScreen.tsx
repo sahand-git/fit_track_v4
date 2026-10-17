@@ -103,8 +103,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const [quickActionVisible, setQuickActionVisible] = useState(false);
   const [heroWidth, setHeroWidth] = useState(0);
 
+  const isRtl = language === 'ar' || language === 'ckb';
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const dockClearance = dockBottom + 72;
+  const scrollBottomPadding = Math.max(140, dockClearance + 24);
 
   const { consumedCalories, consumedProtein, consumedCarbs, consumedFat } = useMemo(() => {
     return log.meals.reduce(
@@ -228,7 +230,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}>
         {/* Editorial Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
@@ -306,8 +308,66 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           />
         </Animated.View>
 
-        {/* Hydration Row */}
+        {/* Meals Ledger (Positioned directly below macros for fast, seamless food logging) */}
         <Animated.View entering={getStaggeredCardEntry(2)}>
+          <View style={styles.mealsHeader}>
+            <Text style={styles.sectionHeading}>{t('Today’s Meals')}</Text>
+            <TouchableOpacity
+              onPress={() => onNavigateToMeals()}
+              style={styles.seeAllBtn}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t('View diary')}
+            >
+              <Text style={styles.seeAllText}>{t('View diary')}</Text>
+              <ChevronRight size={14} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Meals Ledger List */}
+          <View style={styles.mealsList}>
+            {mealTypes.map((m, index) => {
+              const mealsOfCategory = log.meals.filter((item) => item.mealType === m.key);
+              const cals = mealsOfCategory.reduce((sum, item) => sum + item.calories, 0);
+              const isLast = index === mealTypes.length - 1;
+
+              return (
+                <TouchableOpacity
+                  key={m.key}
+                  style={[styles.mealRow, isLast && styles.mealRowLast]}
+                  onPress={() => handleQuickAdd(m.key)}
+                  activeOpacity={0.7}
+                  accessibilityLabel={`${t('Add to')} ${m.label}`}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.mealLeft}>
+                    <View style={styles.mealIconBox}>
+                      <Utensils size={14} color={theme.colors.secondary} />
+                    </View>
+                    <View>
+                      <Text style={styles.mealName}>{m.label}</Text>
+                      <Text style={styles.mealSub}>
+                        {mealsOfCategory.length > 0
+                          ? `${mealsOfCategory.length} ${t(mealsOfCategory.length > 1 ? 'items' : 'item')}`
+                          : t('Tap to log food')}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.mealRight}>
+                    {cals > 0 && <Text style={styles.mealCals}>{cals} kcal</Text>}
+                    <View style={styles.plusIconCircle}>
+                      <Plus size={14} color={theme.colors.primary} />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Animated.View>
+
+        {/* Hydration Row */}
+        <Animated.View entering={getStaggeredCardEntry(3)}>
           <WaterTracker
             glasses={log.waterGlasses}
             target={profile.waterTargetGlasses}
@@ -315,7 +375,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           />
         </Animated.View>
 
-        <Animated.View entering={getStaggeredCardEntry(3)}>
+        {/* Steps Activity Card */}
+        <Animated.View entering={getStaggeredCardEntry(4)}>
           <TouchableOpacity style={styles.stepsCard} onPress={onOpenSteps} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel={t('Steps')}>
             <View style={styles.stepsIcon}><Footprints size={19} color={theme.colors.primary} /></View>
             <View style={styles.stepsInfo}>
@@ -327,8 +388,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Vitamins & Supplements Section (Below Water Tracker) */}
-        <Animated.View entering={getStaggeredCardEntry(4)} style={styles.supplementsContainer}>
+        {/* Vitamins & Supplements Section (Clean, dedicated checklist) */}
+        <Animated.View entering={getStaggeredCardEntry(5)} style={styles.supplementsContainer}>
           {activeSupplements.length === 0 ? (
             /* Slim row if routine/daily log is empty */
             <TouchableOpacity
@@ -401,7 +462,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </Animated.View>
 
         {/* Workouts Section */}
-        <Animated.View entering={getStaggeredCardEntry(5)} style={styles.workoutContainer}>
+        <Animated.View entering={getStaggeredCardEntry(6)} style={styles.workoutContainer}>
           <View style={styles.workoutCard}>
             <View style={styles.workoutHeader}>
               <View style={styles.workoutHeaderTop}>
@@ -493,73 +554,17 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             )}
           </View>
         </Animated.View>
-
-        {/* Meals Ledger */}
-        <Animated.View entering={getStaggeredCardEntry(6)}>
-          <View style={styles.mealsHeader}>
-            <Text style={styles.sectionHeading}>{t('Today’s Meals')}</Text>
-            <TouchableOpacity
-              onPress={() => onNavigateToMeals()}
-              style={styles.seeAllBtn}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.seeAllText}>{t('View diary')}</Text>
-              <ChevronRight size={14} color={theme.colors.primary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Meals Ledger List */}
-          <View style={styles.mealsList}>
-            {mealTypes.map((m, index) => {
-              const mealsOfCategory = log.meals.filter((item) => item.mealType === m.key);
-              const cals = mealsOfCategory.reduce((sum, item) => sum + item.calories, 0);
-              const isLast = index === mealTypes.length - 1;
-
-              return (
-                <TouchableOpacity
-                  key={m.key}
-                  style={[styles.mealRow, isLast && styles.mealRowLast]}
-                  onPress={() => handleQuickAdd(m.key)}
-                  activeOpacity={0.7}
-                  accessibilityLabel={`${t('Add to')} ${m.label}`}
-                  accessibilityRole="button"
-                >
-                  <View style={styles.mealLeft}>
-                    <View style={styles.mealIconBox}>
-                      <Utensils size={14} color={theme.colors.secondary} />
-                    </View>
-                    <View>
-                      <Text style={styles.mealName}>{m.label}</Text>
-                      <Text style={styles.mealSub}>
-                        {mealsOfCategory.length > 0
-                          ? `${mealsOfCategory.length} ${t(mealsOfCategory.length > 1 ? 'items' : 'item')}`
-                          : t('Tap to log food')}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.mealRight}>
-                    {cals > 0 && <Text style={styles.mealCals}>{cals} kcal</Text>}
-                    <View style={styles.plusIconCircle}>
-                      <Plus size={14} color={theme.colors.primary} />
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </Animated.View>
       </ScrollView>
 
-      {/* Reserved action area keeps Add Food and Quick Add clear of the dashboard cards. */}
+      {/* Reserved action area keeps Add Food and Quick Add clear of the dashboard cards */}
       {!isFuture && (
         <View
           style={[
             styles.addFoodFooter,
             {
               paddingBottom: dockClearance,
-              flexDirection: 'row',
-              justifyContent: language === 'en' ? 'flex-end' : 'flex-start',
+              flexDirection: isRtl ? 'row-reverse' : 'row',
+              justifyContent: isRtl ? 'flex-start' : 'flex-end',
               gap: 10,
             },
           ]}
@@ -575,7 +580,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             accessibilityRole="button"
           >
             <Sparkles size={16} color="#D97706" />
-            <Text style={styles.floatingQuickBtnText}>{t('Quick Add')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1055,22 +1059,15 @@ const styles = StyleSheet.create({
     ...theme.shadow.floating,
   },
   floatingQuickBtn: {
-    flexDirection: 'row',
+    width: 44,
+    height: 44,
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
     borderRadius: theme.radius.full,
     ...theme.shadow.subtle,
-  },
-  floatingQuickBtnText: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
   },
   addFoodFooter: {
     paddingHorizontal: 18,
