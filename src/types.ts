@@ -92,6 +92,29 @@ export interface WorkoutEntry {
 
 export type PortionUnit = 'g' | 'piece' | 'spoon' | 'glass' | 'samoon' | 'bowl' | 'plate' | 'serving';
 
+export interface RecipeIngredient {
+  name: string;
+  grams: number;
+  source: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+}
+
+export interface FoodVariant {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  servingSize?: string;
+  servingGrams?: number;
+  ingredients?: RecipeIngredient[];
+  description?: string;
+}
+
 export interface FoodItem {
   id: string;
   name: string;
@@ -123,6 +146,9 @@ export interface FoodItem {
   isEstimate?: boolean;
   portionUnit?: PortionUnit;
   gramsPerUnit?: number;
+  ingredients?: RecipeIngredient[];
+  variants?: FoodVariant[];
+  recipeEstimate?: boolean;
 }
 
 export interface WeightEntry {
@@ -167,6 +193,11 @@ export interface LoggedMeal {
   gramsPerUnit?: number;
   copiedFromId?: string;
   copiedFromDate?: string;
+  ingredients?: RecipeIngredient[];
+  variants?: FoodVariant[];
+  selectedVariantId?: string;
+  variantName?: string;
+  recipeEstimate?: boolean;
 }
 
 export interface CopyYesterdayResult extends DailyLog {

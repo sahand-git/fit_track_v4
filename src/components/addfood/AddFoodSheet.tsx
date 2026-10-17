@@ -149,6 +149,20 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [servingsCount, setServingsCount] = useState(1);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [showIngredients, setShowIngredients] = useState(false);
+  const [prevFoodId, setPrevFoodId] = useState<string | null>(null);
+
+  if (selectedFood?.id !== prevFoodId) {
+    setPrevFoodId(selectedFood?.id ?? null);
+    setSelectedVariantId(selectedFood?.variants?.[0]?.id ?? null);
+    setShowIngredients(false);
+  }
+
+  const activeVariant = useMemo(() => {
+    if (!selectedFood?.variants || selectedFood.variants.length === 0) return null;
+    return selectedFood.variants.find((v) => v.id === selectedVariantId) ?? selectedFood.variants[0];
+  }, [selectedFood, selectedVariantId]);
 
   // Filter & Collections state
   type FoodFilter = 'all' | 'recent' | 'frequent' | 'favorites' | 'templates' | 'regional' | 'custom' | 'scanned';
@@ -347,9 +361,14 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     if (!selectedFood || isFuture) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
-    const effectiveGramsPerUnit = selectedFood.gramsPerUnit ?? selectedFood.servingGrams;
+    const activeCalories = activeVariant ? activeVariant.calories : selectedFood.calories;
+    const activeProtein = activeVariant ? activeVariant.protein : selectedFood.protein;
+    const activeCarbs = activeVariant ? activeVariant.carbs : selectedFood.carbs;
+    const activeFat = activeVariant ? activeVariant.fat : selectedFood.fat;
+    const effectiveGramsPerUnit = activeVariant?.servingGrams ?? (selectedFood.gramsPerUnit ?? selectedFood.servingGrams);
     const totalGrams = Math.round(effectiveGramsPerUnit * servingsCount);
-    const scaleRatio = totalGrams / (selectedFood.servingGrams > 0 ? selectedFood.servingGrams : 100);
+    const baseServingGrams = activeVariant?.servingGrams ?? (selectedFood.servingGrams > 0 ? selectedFood.servingGrams : 100);
+    const scaleRatio = totalGrams / baseServingGrams;
 
     const meal: LoggedMeal = {
       id: createUniqueId('meal'),
@@ -359,12 +378,12 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       category: selectedFood.category,
       mealType: selectedMeal,
       servings: servingsCount,
-      servingSize: selectedFood.servingSize,
+      servingSize: activeVariant?.servingSize ?? selectedFood.servingSize,
       servingGrams: totalGrams,
-      calories: Math.round(selectedFood.calories * scaleRatio),
-      protein: Math.round(selectedFood.protein * scaleRatio * 10) / 10,
-      carbs: Math.round(selectedFood.carbs * scaleRatio * 10) / 10,
-      fat: Math.round(selectedFood.fat * scaleRatio * 10) / 10,
+      calories: Math.round(activeCalories * scaleRatio),
+      protein: Math.round(activeProtein * scaleRatio * 10) / 10,
+      carbs: Math.round(activeCarbs * scaleRatio * 10) / 10,
+      fat: Math.round(activeFat * scaleRatio * 10) / 10,
       fiber: selectedFood.fiber !== undefined ? Math.round(selectedFood.fiber * scaleRatio * 10) / 10 : undefined,
       sugar: selectedFood.sugar !== undefined ? Math.round(selectedFood.sugar * scaleRatio * 10) / 10 : undefined,
       sodium: selectedFood.sodium !== undefined ? Math.round(selectedFood.sodium * scaleRatio) : undefined,
@@ -382,6 +401,11 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       isEstimate: selectedFood.isEstimate,
       portionUnit: selectedFood.portionUnit,
       gramsPerUnit: selectedFood.gramsPerUnit,
+      ingredients: selectedFood.ingredients,
+      variants: selectedFood.variants,
+      selectedVariantId: activeVariant?.id,
+      variantName: activeVariant?.name,
+      recipeEstimate: selectedFood.recipeEstimate,
       timestamp: new Date().toISOString(),
     };
 
@@ -394,6 +418,25 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       setShowSuccess(false);
       handleClose();
     }, 450);
+  };
+
+  const handleCustomizeSelectedFood = () => {
+    if (!selectedFood) return;
+    const activeCalories = activeVariant ? activeVariant.calories : selectedFood.calories;
+    const activeProtein = activeVariant ? activeVariant.protein : selectedFood.protein;
+    const activeCarbs = activeVariant ? activeVariant.carbs : selectedFood.carbs;
+    const activeFat = activeVariant ? activeVariant.fat : selectedFood.fat;
+    const variantSuffix = activeVariant ? ` (${activeVariant.name})` : '';
+
+    setCustomName(`${selectedFood.name}${variantSuffix}`);
+    setCustomServing(activeVariant?.servingSize ?? selectedFood.servingSize ?? '1 serving');
+    setCustomCalories(String(activeCalories));
+    setCustomProtein(String(activeProtein));
+    setCustomCarbs(String(activeCarbs));
+    setCustomFat(String(activeFat));
+    setCustomError(null);
+    setSelectedFood(null);
+    setCustomModalVisible(true);
   };
 
   const handleToggleFavorite = async (item: FoodItem) => {
@@ -1010,9 +1053,14 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
                   {/* Selected Food Confirmation Box */}
                   {selectedFood && (() => {
-                    const effectiveGramsPerUnit = selectedFood.gramsPerUnit ?? selectedFood.servingGrams;
+                    const activeCalories = activeVariant ? activeVariant.calories : selectedFood.calories;
+                    const activeProtein = activeVariant ? activeVariant.protein : selectedFood.protein;
+                    const activeCarbs = activeVariant ? activeVariant.carbs : selectedFood.carbs;
+                    const activeFat = activeVariant ? activeVariant.fat : selectedFood.fat;
+                    const effectiveGramsPerUnit = activeVariant?.servingGrams ?? (selectedFood.gramsPerUnit ?? selectedFood.servingGrams);
                     const totalGrams = Math.round(effectiveGramsPerUnit * servingsCount);
-                    const scaleRatio = totalGrams / (selectedFood.servingGrams > 0 ? selectedFood.servingGrams : 100);
+                    const baseServingGrams = activeVariant?.servingGrams ?? (selectedFood.servingGrams > 0 ? selectedFood.servingGrams : 100);
+                    const scaleRatio = totalGrams / baseServingGrams;
 
                     return (
                       <View style={styles.selectedFoodCard}>
@@ -1025,7 +1073,12 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                 </Text>
                               </View>
                             ) : null}
-                            {selectedFood.isEstimate ? (
+                            {selectedFood.recipeEstimate ? (
+                              <View style={styles.recipeEstimateBadge}>
+                                <Sparkles size={11} color="#C2410C" />
+                                <Text style={styles.recipeEstimateBadgeText}>{t('Recipe estimate')}</Text>
+                              </View>
+                            ) : selectedFood.isEstimate ? (
                               <View style={styles.estimateBadge}>
                                 <Info size={11} color="#92400E" />
                                 <Text style={styles.estimateBadgeText}>{t('Culinary Estimate')}</Text>
@@ -1064,16 +1117,91 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             <Text style={styles.selectedPortion}>
                               {selectedFood.portionUnit
                                 ? `${servingsCount} ${t(selectedFood.portionUnit)} (${totalGrams}g)`
-                                : `${selectedFood.servingSize} (${totalGrams}g)`}
+                                : `${activeVariant?.servingSize ?? selectedFood.servingSize} (${totalGrams}g)`}
                             </Text>
                             <Text style={styles.selectedMacrosPreview}>
-                              {`P: ${(selectedFood.protein * scaleRatio).toFixed(1)}g • C: ${(selectedFood.carbs * scaleRatio).toFixed(1)}g • F: ${(selectedFood.fat * scaleRatio).toFixed(1)}g`}
+                              {`P: ${(activeProtein * scaleRatio).toFixed(1)}g • C: ${(activeCarbs * scaleRatio).toFixed(1)}g • F: ${(activeFat * scaleRatio).toFixed(1)}g`}
                             </Text>
                           </View>
                           <Text style={styles.selectedKcal}>
-                            {Math.round(selectedFood.calories * scaleRatio)} kcal
+                            {Math.round(activeCalories * scaleRatio)} kcal
                           </Text>
                         </View>
+
+                        {/* Variants Selector */}
+                        {selectedFood.variants && selectedFood.variants.length > 0 ? (
+                          <View style={styles.variantSection}>
+                            <Text style={styles.variantSectionTitle}>{t('Preparation / Variant:')}</Text>
+                            <ScrollView
+                              horizontal
+                              showsHorizontalScrollIndicator={false}
+                              contentContainerStyle={styles.variantChipsRow}
+                            >
+                              {selectedFood.variants.map((v) => {
+                                const isSelected = activeVariant?.id === v.id;
+                                return (
+                                  <TouchableOpacity
+                                    key={v.id}
+                                    style={[styles.variantChip, isSelected && styles.variantChipActive]}
+                                    onPress={() => setSelectedVariantId(v.id)}
+                                    accessibilityRole="button"
+                                  >
+                                    <Text style={[styles.variantChipText, isSelected && styles.variantChipTextActive]}>
+                                      {v.name}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </ScrollView>
+                          </View>
+                        ) : null}
+
+                        {/* Recipe Ingredients Breakdown */}
+                        {selectedFood.ingredients && selectedFood.ingredients.length > 0 ? (
+                          <View style={styles.ingredientsSection}>
+                            <TouchableOpacity
+                              style={styles.ingredientsToggleBtn}
+                              onPress={() => setShowIngredients((prev) => !prev)}
+                              accessibilityRole="button"
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Utensils size={14} color={theme.colors.primary} />
+                                <Text style={styles.ingredientsToggleText}>
+                                  {t('Recipe ingredients & USDA sources')} ({selectedFood.ingredients.length})
+                                </Text>
+                              </View>
+                              <Text style={styles.ingredientsToggleAction}>
+                                {showIngredients ? t('Hide ingredients') : t('Show ingredients')}
+                              </Text>
+                            </TouchableOpacity>
+
+                            {showIngredients ? (
+                              <View style={styles.ingredientsListCard}>
+                                {selectedFood.ingredients.map((ing, idx) => (
+                                  <View key={idx} style={styles.ingredientRow}>
+                                    <View style={{ flex: 1 }}>
+                                      <Text style={styles.ingredientName}>{ing.name}</Text>
+                                      <Text style={styles.ingredientSource}>{t('Source:')} {ing.source}</Text>
+                                    </View>
+                                    <View style={{ alignItems: 'flex-end', marginStart: 8 }}>
+                                      <Text style={styles.ingredientGrams}>{ing.grams}g</Text>
+                                      {ing.calories !== undefined ? (
+                                        <Text style={styles.ingredientKcal}>{ing.calories} kcal</Text>
+                                      ) : null}
+                                    </View>
+                                  </View>
+                                ))}
+                                <TouchableOpacity
+                                  style={styles.customizeRecipeBtn}
+                                  onPress={handleCustomizeSelectedFood}
+                                  accessibilityRole="button"
+                                >
+                                  <Text style={styles.customizeRecipeBtnText}>{t('Customize recipe')}</Text>
+                                </TouchableOpacity>
+                              </View>
+                            ) : null}
+                          </View>
+                        ) : null}
 
                         <View style={styles.stepperRow}>
                           <Text style={styles.stepperLabel}>
@@ -1453,11 +1581,15 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             <View style={{ flex: 1 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                 <Text style={styles.itemTitle}>{item.name}</Text>
-                                {item.isEstimate && (
+                                {item.recipeEstimate ? (
+                                  <View style={styles.recipeEstimateBadgeSmall}>
+                                    <Text style={styles.recipeEstimateBadgeSmallText}>{t('Recipe estimate')}</Text>
+                                  </View>
+                                ) : item.isEstimate ? (
                                   <View style={styles.estimateBadgeSmall}>
                                     <Text style={styles.estimateBadgeSmallText}>{t('Estimate')}</Text>
                                   </View>
-                                )}
+                                ) : null}
                               </View>
                               <Text style={styles.itemSub}>
                                 {item.portionUnit
@@ -2554,6 +2686,140 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     color: '#92400E',
+  },
+  recipeEstimateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: theme.radius.full,
+    backgroundColor: '#FFEDD5',
+    borderWidth: 1,
+    borderColor: '#FDBA74',
+  },
+  recipeEstimateBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#C2410C',
+  },
+  recipeEstimateBadgeSmall: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: theme.radius.full,
+    backgroundColor: '#FFEDD5',
+    borderWidth: 1,
+    borderColor: '#FDBA74',
+  },
+  recipeEstimateBadgeSmallText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#C2410C',
+  },
+  variantSection: {
+    marginTop: 10,
+    gap: 6,
+  },
+  variantSectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+  },
+  variantChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 2,
+  },
+  variantChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  variantChipActive: {
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primary,
+  },
+  variantChipText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    fontWeight: '500',
+  },
+  variantChipTextActive: {
+    color: theme.colors.primary,
+    fontWeight: '700',
+  },
+  ingredientsSection: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingTop: 8,
+  },
+  ingredientsToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  ingredientsToggleText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  ingredientsToggleAction: {
+    fontSize: 11,
+    color: theme.colors.primary,
+    fontWeight: '600',
+  },
+  ingredientsListCard: {
+    marginTop: 6,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.md,
+    padding: 8,
+    gap: 6,
+  },
+  ingredientRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    paddingBottom: 4,
+  },
+  ingredientName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  ingredientSource: {
+    fontSize: 10,
+    color: theme.colors.textMuted,
+    marginTop: 1,
+  },
+  ingredientGrams: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  ingredientKcal: {
+    fontSize: 10,
+    color: theme.colors.textSecondary,
+  },
+  customizeRecipeBtn: {
+    marginTop: 4,
+    paddingVertical: 6,
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.radius.sm,
+  },
+  customizeRecipeBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.colors.primary,
   },
   templateCard: {
     backgroundColor: theme.colors.surface,

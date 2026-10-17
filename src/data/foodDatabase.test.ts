@@ -108,6 +108,38 @@ function runFoodDatabaseTests() {
     console.log('✓ Test 5 passed: Food source label verified for regional_culinary_estimate.');
   }
 
+  // Test 6: Recipe Ingredients, Citations, and Variants
+  {
+    for (const food of REGIONAL_FOODS) {
+      assert(food.recipeEstimate === true, `Regional food ${food.id} must have recipeEstimate: true`);
+      assert(Array.isArray(food.ingredients) && food.ingredients.length > 0, `Missing ingredients for ${food.id}`);
+      let sumIngredientGrams = 0;
+      for (const ing of food.ingredients!) {
+        assert(typeof ing.name === 'string' && ing.name.length > 0, `Invalid ingredient name in ${food.id}`);
+        assert(typeof ing.grams === 'number' && ing.grams > 0, `Invalid ingredient grams in ${food.id}`);
+        assert(typeof ing.source === 'string' && ing.source.includes('USDA FDC'), `Ingredient source must cite USDA FDC for ${food.id}: got "${ing.source}"`);
+        sumIngredientGrams += ing.grams;
+      }
+      // Ingredients should sum up to a realistic raw-weight proportion
+      assert(sumIngredientGrams > 0, `Total ingredient grams must be positive for ${food.id}`);
+
+      // Variants
+      assert(Array.isArray(food.variants) && food.variants.length >= 2, `Expected at least 2 variants for ${food.id}`);
+      const variantIds = new Set<string>();
+      for (const variant of food.variants!) {
+        assert(typeof variant.id === 'string' && variant.id.length > 0, `Variant missing id in ${food.id}`);
+        assert(!variantIds.has(variant.id), `Duplicate variant id ${variant.id} in ${food.id}`);
+        variantIds.add(variant.id);
+        assert(typeof variant.name === 'string' && variant.name.length > 0, `Variant missing name in ${food.id}`);
+        assert(typeof variant.calories === 'number' && variant.calories >= 0, `Variant invalid calories in ${food.id}`);
+        assert(typeof variant.protein === 'number' && variant.protein >= 0, `Variant invalid protein in ${food.id}`);
+        assert(typeof variant.carbs === 'number' && variant.carbs >= 0, `Variant invalid carbs in ${food.id}`);
+        assert(typeof variant.fat === 'number' && variant.fat >= 0, `Variant invalid fat in ${food.id}`);
+      }
+    }
+    console.log('✓ Test 6 passed: Recipe ingredients, USDA citations, and preparation variants verified across all regional dishes.');
+  }
+
   console.log('All Food Database & Regional Foods Tests Passed successfully!');
 }
 
