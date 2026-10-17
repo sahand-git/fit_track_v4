@@ -18,6 +18,7 @@
     },
     "android": {
       "package": "com.fittrack.expo",
+      "versionCode": 1,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#FAF7F2",
@@ -33,6 +34,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/withReleaseSigning",
       [
         "expo-camera",
         {
