@@ -151,6 +151,12 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     const baseFat = inspectingMeal.fat / baseServings;
     const baseGrams = inspectingMeal.servingGrams / baseServings;
 
+    const scaleNutrient = (val: number | undefined): number | undefined => {
+      if (val === undefined) return undefined;
+      const base = val / baseServings;
+      return Math.round(base * newServings * 10) / 10;
+    };
+
     const updatedMeal: LoggedMeal = {
       ...inspectingMeal,
       servings: newServings,
@@ -159,6 +165,18 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       carbs: Math.round(baseCarbs * newServings * 10) / 10,
       fat: Math.round(baseFat * newServings * 10) / 10,
       servingGrams: Math.round(baseGrams * newServings),
+      fiber: scaleNutrient(inspectingMeal.fiber),
+      sugar: scaleNutrient(inspectingMeal.sugar),
+      sodium: scaleNutrient(inspectingMeal.sodium),
+      potassium: scaleNutrient(inspectingMeal.potassium),
+      calcium: scaleNutrient(inspectingMeal.calcium),
+      iron: scaleNutrient(inspectingMeal.iron),
+      vitaminC: scaleNutrient(inspectingMeal.vitaminC),
+      vitaminA: scaleNutrient(inspectingMeal.vitaminA),
+      vitaminD: scaleNutrient(inspectingMeal.vitaminD),
+      vitaminB12: scaleNutrient(inspectingMeal.vitaminB12),
+      magnesium: scaleNutrient(inspectingMeal.magnesium),
+      zinc: scaleNutrient(inspectingMeal.zinc),
     };
 
     if (onUpdateMeal) {
@@ -311,7 +329,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                         }}
                         activeOpacity={0.7}
                       >
-                        <FoodThumbnail name={item.name} size="small" style={{ marginEnd: 12 }} />
+                        <FoodThumbnail name={item.name} category={item.category} size="small" style={{ marginEnd: 12 }} />
                         <View style={styles.foodInfo}>
                           <Text style={styles.foodName}>{item.name}</Text>
                           <Text style={styles.foodPortion}>
