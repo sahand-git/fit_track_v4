@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { AppText as Text } from '../AppText';
 import { Sparkles, Plus, Check, Minus } from 'lucide-react-native';
 import { PlateAnalysisResult, PlateAnalysisItem } from '../../services/plateAnalysisService';
@@ -33,6 +33,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
   const language = useLanguage();
   const t = (str: string) => translate(language, str);
 
+  const [prevResult, setPrevResult] = useState(result);
   const [items, setItems] = useState<EditableItemState[]>(() =>
     result.items.map((it) => ({
       item: it,
@@ -41,7 +42,8 @@ export const AiReview: React.FC<AiReviewProps> = ({
     }))
   );
 
-  useEffect(() => {
+  if (result !== prevResult) {
+    setPrevResult(result);
     setItems(
       result.items.map((it) => ({
         item: it,
@@ -49,7 +51,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
         isLogged: false,
       }))
     );
-  }, [result]);
+  }
 
   const handleUpdateGrams = (index: number, newGrams: number) => {
     const val = Math.max(5, Math.min(2000, newGrams));
@@ -102,6 +104,8 @@ export const AiReview: React.FC<AiReviewProps> = ({
       protein: nut.protein,
       carbs: nut.carbs,
       fat: nut.fat,
+      isEstimate: true,
+      source: 'gemini',
       timestamp: new Date().toISOString(),
     };
 
@@ -130,6 +134,8 @@ export const AiReview: React.FC<AiReviewProps> = ({
         protein: nut.protein,
         carbs: nut.carbs,
         fat: nut.fat,
+        isEstimate: true,
+        source: 'gemini',
         timestamp: new Date().toISOString(),
       };
     });
@@ -212,6 +218,9 @@ export const AiReview: React.FC<AiReviewProps> = ({
                     style={styles.stepBtn}
                     onPress={() => handleUpdateGrams(idx, entry.currentGrams - 25)}
                     disabled={entry.isLogged}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Decrease portion')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Minus size={13} color={theme.colors.textPrimary} />
                   </TouchableOpacity>
@@ -230,6 +239,9 @@ export const AiReview: React.FC<AiReviewProps> = ({
                     style={styles.stepBtn}
                     onPress={() => handleUpdateGrams(idx, entry.currentGrams + 25)}
                     disabled={entry.isLogged}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Increase portion')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Plus size={13} color={theme.colors.textPrimary} />
                   </TouchableOpacity>
@@ -241,6 +253,8 @@ export const AiReview: React.FC<AiReviewProps> = ({
                   onPress={() => handleLogSingle(idx)}
                   disabled={entry.isLogged}
                   accessibilityRole="button"
+                  accessibilityLabel={entry.isLogged ? t('All foods added to diary.') : t('Add')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   {entry.isLogged ? (
                     <Check size={14} color={theme.colors.primary} />
@@ -263,6 +277,8 @@ export const AiReview: React.FC<AiReviewProps> = ({
         onPress={handleLogAll}
         disabled={allLogged}
         accessibilityRole="button"
+        accessibilityLabel={allLogged ? t('All foods added to diary.') : `${t('Log to Diary')} (${items.length})`}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <Check size={16} color={theme.colors.textInverted} />
         <Text style={styles.logAllText}>

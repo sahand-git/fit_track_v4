@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,7 +9,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  withSequence,
   withSpring,
   Easing,
   FadeIn,
@@ -24,7 +23,7 @@ import { isReducedMotion } from '../utils/motion';
 import { getSpringConfig } from '../utils/reanimatedMotion';
 import { theme } from '../theme';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface ParticleData {
   id: number;
@@ -141,7 +140,7 @@ export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
     }, 3200);
 
     return () => clearTimeout(timer);
-  }, [visible]);
+  }, [visible, onDismiss, cardScale, progress]);
 
   const animatedCardStyle = useAnimatedStyle(() => {
     return {
@@ -172,6 +171,8 @@ export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
         activeOpacity={0.9}
         onPress={onDismiss}
         style={styles.touchArea}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss celebration"
       >
         <Animated.View style={[styles.card, animatedCardStyle]}>
           <View style={styles.iconCircle}>

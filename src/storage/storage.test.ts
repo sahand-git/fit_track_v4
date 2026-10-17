@@ -1,4 +1,19 @@
 // Setup mock window.localStorage for AsyncStorage in Node
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  enqueueStorageOperation,
+  restoreAllData,
+  loadDailyLog,
+  addMealToDay,
+  loadUserProfile,
+  saveUserProfile,
+  loadSupplementRoutine,
+  setAccountStorageNamespace,
+  setDailySteps,
+  addDailySteps,
+} from './storage';
+import { FitTrackBackup, UserProfile, DailyLog } from '../types';
+
 const mockStore: Record<string, string> = {};
 (globalThis as any).window = {
   localStorage: {
@@ -10,20 +25,6 @@ const mockStore: Record<string, string> = {};
     get length() { return Object.keys(mockStore).length; },
   },
 };
-
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  enqueueStorageOperation,
-  restoreAllData,
-  loadDailyLog,
-  loadUserProfile,
-  saveUserProfile,
-  loadSupplementRoutine,
-  setAccountStorageNamespace,
-  setDailySteps,
-  addDailySteps,
-} from './storage';
-import { FitTrackBackup, UserProfile, DailyLog } from '../types';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(`Assertion failed: ${message}`);
@@ -278,6 +279,49 @@ async function runStorageTests() {
   const stepLog = await addDailySteps(stepDate, 500);
   assert(stepLog.steps === 1500, 'manual step add updates only the selected daily total');
   assert(stepLog.meals.length >= 0, 'step update preserves unrelated daily log fields');
+
+  // A failed/corrupt read must abort a read-modify-write instead of replacing
+  // the saved day with loadDailyLog's empty UI fallback.
+  {
+    const date = '2026-10-16';
+    const key = `@fittrack_log_${date}`;
+    const original = JSON.stringify({ date, meals: [{ id: 'keep-me', name: 'Saved meal' }], waterGlasses: 3, steps: 10 });
+    await AsyncStorage.setItem(key, original);
+    const originalGetItem = AsyncStorage.getItem;
+    const originalSetItem = AsyncStorage.setItem;
+    let writes = 0;
+    (AsyncStorage as any).getItem = async (requestedKey: string) => {
+      if (requestedKey === key) throw new Error('Storage read failed');
+      return originalGetItem(requestedKey);
+    };
+    (AsyncStorage as any).setItem = async (...args: any[]) => {
+      writes++;
+      return (originalSetItem as any)(...args);
+    };
+    let readFailureRejected = false;
+    try {
+      await addMealToDay(date, { id: 'new-meal' } as any);
+    } catch {
+      readFailureRejected = true;
+    } finally {
+      (AsyncStorage as any).getItem = originalGetItem;
+      (AsyncStorage as any).setItem = originalSetItem;
+    }
+    assert(readFailureRejected, 'Mutation rejects when the existing daily log cannot be read');
+    assert(writes === 0, 'Mutation does not write an empty fallback after a read failure');
+    assert(await AsyncStorage.getItem(key) === original, 'Original saved log remains unchanged after a read failure');
+
+    const corrupt = '{broken-json';
+    await AsyncStorage.setItem(key, corrupt);
+    let corruptRejected = false;
+    try {
+      await addMealToDay(date, { id: 'new-meal' } as any);
+    } catch {
+      corruptRejected = true;
+    }
+    assert(corruptRejected, 'Mutation rejects when existing daily-log JSON is corrupt');
+    assert(await AsyncStorage.getItem(key) === corrupt, 'Corrupt source data is preserved for recovery instead of overwritten');
+  }
 
   console.log('All storage, account isolation, step tracking, and backup rollback tests passed successfully!');
 }

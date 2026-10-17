@@ -1,4 +1,10 @@
-import { calculateLoggingStreak, hasActivityOnDate, getPreviousDayString } from './streak';
+import {
+  calculateLoggingStreak,
+  hasActivityOnDate,
+  getPreviousDayString,
+  calculateStreakWithChunking,
+  calculateStreakByWalkback,
+} from './streak';
 import { DailyLog, WeightEntry, LoggedMeal } from '../types';
 
 function assert(condition: boolean, message: string): void {
@@ -55,7 +61,6 @@ assert(getPreviousDayString('2026-01-01') === '2025-12-31', 'Year boundary trans
 const today = '2026-10-13';
 const yesterday = '2026-10-12';
 const twoDaysAgo = '2026-10-11';
-const threeDaysAgo = '2026-10-10';
 
 const logsMapActiveToday: Record<string, DailyLog> = {
   [today]: { date: today, waterGlasses: 4, steps: 5000, meals: [dummyMeal] },
@@ -96,11 +101,6 @@ const weightsSeries: WeightEntry[] = [
 ];
 const streakWeights = calculateLoggingStreak(logsEmpty, weightsSeries, today);
 assert(streakWeights.currentStreak === 2, `Weight logs maintain streak of 2, got ${streakWeights.currentStreak}`);
-
-// -------------------------------------------------------------
-// CHUNKED STREAK REGRESSION TESTS (Issue 1)
-// -------------------------------------------------------------
-import { calculateStreakWithChunking } from './streak';
 
 async function runChunkedTests() {
   // Test A: A streak longer than 90 days (120 consecutive days of food logs)
@@ -229,9 +229,78 @@ async function runChunkedTests() {
   assert(resAlt.currentStreak === 100, `Alternating food and weights should maintain streak of 100, got ${resAlt.currentStreak}`);
 }
 
-runChunkedTests().then(() => {
+async function runWalkbackTests() {
+  const mockDailyStore: Record<string, DailyLog> = {};
+  const fetchedDates: string[] = [];
+
+  // Setup: 5 consecutive days of logs up to today (2026-10-15)
+  // 2026-10-15 (active)
+  // 2026-10-14 (active)
+  // 2026-10-13 (active)
+  // 2026-10-12 (active)
+  // 2026-10-11 (active)
+  // 2026-10-10 (inactive)
+  // 2026-10-09 .. 2025-01-01 (100 days of active logs in the past)
+  const activeDates = ['2026-10-15', '2026-10-14', '2026-10-13', '2026-10-12', '2026-10-11'];
+  for (const d of activeDates) {
+    mockDailyStore[d] = { date: d, waterGlasses: 2, steps: 5000, meals: [dummyMeal] };
+  }
+  // Past logs beyond the gap
+  let older = '2026-10-09';
+  for (let i = 0; i < 50; i++) {
+    mockDailyStore[older] = { date: older, waterGlasses: 2, steps: 5000, meals: [dummyMeal] };
+    older = getPreviousDayString(older);
+  }
+
+  const mockFetchDayLog = async (date: string): Promise<DailyLog | null> => {
+    fetchedDates.push(date);
+    return mockDailyStore[date] || null;
+  };
+
+  // Test 1: Today active -> streak is 5, stops at 2026-10-10 (first inactive day)
+  fetchedDates.length = 0;
+  const resActive = await calculateStreakByWalkback(mockFetchDayLog, [], '2026-10-15');
+  assert(resActive.currentStreak === 5, `Expected streak 5, got ${resActive.currentStreak}`);
+  assert(resActive.loggedToday === true, 'loggedToday should be true');
+  // Should have fetched 2026-10-15 down to 2026-10-10 (inactive), exactly 6 dates, and NEVER touched 2026-10-09 or older
+  assert(fetchedDates.length === 6, `Expected exactly 6 day fetches, got ${fetchedDates.length}: ${fetchedDates.join(', ')}`);
+  assert(fetchedDates.includes('2026-10-10'), 'Should have fetched the inactive boundary day');
+  assert(!fetchedDates.includes('2026-10-09'), 'Should NEVER fetch past the first inactive day');
+
+  // Test 2: Today inactive, yesterday active -> streak is 4 (yesterday fallback), stops at 2026-10-10
+  fetchedDates.length = 0;
+  // Make 2026-10-16 today (inactive)
+  const resMorning = await calculateStreakByWalkback(mockFetchDayLog, [], '2026-10-16');
+  assert(resMorning.currentStreak === 5, `Expected streak 5 preserved from yesterday, got ${resMorning.currentStreak}`);
+  assert(resMorning.loggedToday === false, 'loggedToday should be false');
+  // Fetched 2026-10-16 (inactive today), 2026-10-15..11 (active), 2026-10-10 (inactive) -> stops
+  assert(!fetchedDates.includes('2026-10-09'), 'Should not fetch past inactive day on morning fallback');
+
+  // Test 3: Today inactive, yesterday inactive -> streak is 0, stops immediately after 2 fetches
+  fetchedDates.length = 0;
+  // Today is 2026-10-18 (both 18 and 17 have no activity)
+  const resZero = await calculateStreakByWalkback(mockFetchDayLog, [], '2026-10-18');
+  assert(resZero.currentStreak === 0, `Expected streak 0, got ${resZero.currentStreak}`);
+  assert(resZero.loggedToday === false, 'loggedToday is false');
+  // Must only fetch 2026-10-18 and 2026-10-17, then STOP!
+  assert(fetchedDates.length === 2, `Expected exactly 2 fetches for 0-streak, got ${fetchedDates.length}: ${fetchedDates.join(', ')}`);
+
+  // Test 4: Weight entry counts as activity without needing food meals
+  fetchedDates.length = 0;
+  const weights: WeightEntry[] = [
+    { id: 'w1', date: '2026-10-10', weightKg: 70, timestamp: '2026-10-10T08:00:00Z' },
+  ];
+  // With weight on 2026-10-10, the streak bridges to 2026-10-09!
+  const resWithWeight = await calculateStreakByWalkback(mockFetchDayLog, weights, '2026-10-15');
+  assert(resWithWeight.currentStreak > 5, `Streak bridged across weight day: ${resWithWeight.currentStreak}`);
+  // Weight day did not even need fetchDayLog because weight dates are checked first
+  assert(!fetchedDates.includes('2026-10-10'), 'Weight date should be recognized without querying daily log');
+}
+
+Promise.all([runChunkedTests(), runWalkbackTests()]).then(() => {
   console.log('All streak calculation tests passed successfully.');
 }).catch((err) => {
   console.error('Streak tests failed:', err);
   process.exit(1);
 });
+

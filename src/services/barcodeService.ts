@@ -1,5 +1,6 @@
 import { FoodItem } from '../types';
 import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
+import { getBarcodeCacheItem, upsertBarcodeCacheItem } from '../storage/storage';
 
 const OFF_FIELDS = 'product_name,product_name_en,brands,nutriments,serving_size,serving_quantity,serving_quantity_unit';
 
@@ -34,7 +35,12 @@ export function normalizeOpenFoodFactsProduct(barcode: string, product: Record<s
   const servingGrams = parseNumber(product.serving_quantity) ?? (metricMatch ? parseNumber(metricMatch[1].replace(',', '.')) : undefined) ?? 100;
   const servingSize = servingLabel || `${servingGrams}g`;
 
-  const scale = (val: number | undefined) => val !== undefined ? roundVal((val * servingGrams) / 100) : 0;
+  const scale = (val: number | undefined): number => (val !== undefined ? roundVal((val * servingGrams) / 100) : 0);
+  const scaleOptional = (val: number | undefined): number | undefined =>
+    val !== undefined ? roundVal((val * servingGrams) / 100) : undefined;
+
+  const rawSodium100g = parseNumber(nutriments.sodium_100g);
+  const sodiumMg100g = rawSodium100g !== undefined ? rawSodium100g * 1000 : undefined;
 
   const effectiveKcal100g = calories100g ?? (protein100g * 4 + carbs100g * 4 + fat100g * 9);
 
@@ -49,10 +55,11 @@ export function normalizeOpenFoodFactsProduct(barcode: string, product: Record<s
     protein: scale(protein100g),
     carbs: scale(carbs100g),
     fat: scale(fat100g),
-    fiber: scale(parseNumber(nutriments.fiber_100g)),
-    sugar: scale(parseNumber(nutriments.sugars_100g)),
-    sodium: scale(parseNumber(nutriments.sodium_100g) ? parseNumber(nutriments.sodium_100g)! * 1000 : undefined),
+    fiber: scaleOptional(parseNumber(nutriments.fiber_100g)),
+    sugar: scaleOptional(parseNumber(nutriments.sugars_100g)),
+    sodium: scaleOptional(sodiumMg100g),
     category: 'Packaged Food',
+    source: 'open_food_facts',
   };
 }
 
@@ -65,10 +72,20 @@ export async function lookupBarcodeWithFallbacks(rawCode: string): Promise<FoodI
   // 1. First check local verified offline database
   const localMatch = VERIFIED_FOOD_DATABASE.find(f => f.barcode === code || f.id === code);
   if (localMatch) {
-    return localMatch;
+    return { ...localMatch, source: localMatch.source ?? 'verified_database' };
   }
 
-  // 2. Query free Open Food Facts REST endpoint
+  // 2. Check offline barcode cache on device
+  try {
+    const cached = await getBarcodeCacheItem(code);
+    if (cached) {
+      return { ...cached, source: cached.source ?? 'open_food_facts' };
+    }
+  } catch (cacheErr) {
+    console.warn('Barcode cache lookup error:', cacheErr);
+  }
+
+  // 3. Query free Open Food Facts REST endpoint
   const url = `https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=${OFF_FIELDS}`;
   let res: Response;
   try {
@@ -82,7 +99,12 @@ export async function lookupBarcodeWithFallbacks(rawCode: string): Promise<FoodI
       },
     });
     clearTimeout(timeout);
-  } catch (err: any) {
+  } catch {
+    // If network fails (offline), check if partial match exists in barcode cache
+    const cachedAgain = await getBarcodeCacheItem(code);
+    if (cachedAgain) {
+      return cachedAgain;
+    }
     throw new Error('Could not reach food database. Check your internet connection or enter food details manually.');
   }
 
@@ -105,5 +127,14 @@ export async function lookupBarcodeWithFallbacks(rawCode: string): Promise<FoodI
     throw new Error(`Barcode ${code} not found in the global database. You can search the local database by name.`);
   }
 
-  return normalizeOpenFoodFactsProduct(code, data.product);
+  const normalized = normalizeOpenFoodFactsProduct(code, data.product);
+
+  // 4. Save to device offline barcode cache
+  try {
+    await upsertBarcodeCacheItem(normalized);
+  } catch (saveErr) {
+    console.warn('Failed to save product to barcode cache:', saveErr);
+  }
+
+  return normalized;
 }

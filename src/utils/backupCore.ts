@@ -9,6 +9,10 @@ import {
   SupplementCheck,
   WeightEntry,
   ReminderSettings,
+  FoodItem,
+  AICoachReport,
+  MealTemplate,
+  MealTemplateItem,
 } from '../types';
 
 type Validator<T = any> = (value: unknown) => T;
@@ -64,6 +68,9 @@ const shape = <T extends object>(
   return result as T;
 };
 
+// Portion Unit Choice
+const portionUnitChoice = choice('g', 'piece', 'spoon', 'glass', 'samoon', 'bowl', 'plate', 'serving');
+
 // Nutrients & Food Meal
 const mealShape = shape<LoggedMeal>({
   id: str,
@@ -86,7 +93,17 @@ const mealShape = shape<LoggedMeal>({
   calcium: optional(num),
   iron: optional(num),
   vitaminC: optional(num),
+  vitaminA: optional(num),
+  vitaminD: optional(num),
+  vitaminB12: optional(num),
+  magnesium: optional(num),
+  zinc: optional(num),
+  barcode: optional(str),
+  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate')),
   timestamp: str,
+  isEstimate: optional(bool),
+  portionUnit: optional(portionUnitChoice),
+  gramsPerUnit: optional(num),
 });
 
 // Exercise & Workout
@@ -141,6 +158,19 @@ const supplementRoutineItemShape = shape<SupplementRoutineItem>({
   time: choice('morning', 'afternoon', 'evening', 'bedtime'),
 });
 
+// AI Coach Report
+const aiCoachReportShape = shape<AICoachReport>({
+  overallGrade: str,
+  headline: str,
+  caloricBalance: str,
+  macroBreakdown: str,
+  mistakesAndBlindSpots: list(str),
+  actionableTomorrowFixes: list(str),
+  customMealSuggestion: str,
+  coachNote: str,
+  generatedAt: str,
+});
+
 // Daily Log
 const dayLogShape = shape<DailyLog>({
   date,
@@ -150,6 +180,7 @@ const dayLogShape = shape<DailyLog>({
   supplements: optional(list(supplementCheckShape)),
   dailySupplements: optional(list(loggedDailySupplementShape)),
   workouts: optional(list(workoutShape)),
+  aiReport: optional(aiCoachReportShape),
 });
 
 // User Profile
@@ -171,6 +202,8 @@ const profileShape = shape<UserProfile>({
   language: optional(choice('en', 'ar', 'ckb')),
   isOnboarded: optional(bool),
   includeWorkoutsInCalorieBudget: optional(bool),
+  targetWeightKg: optional(num),
+  hasAcceptedMedicalDisclaimer: optional(bool),
 });
 
 // Reminders
@@ -213,6 +246,70 @@ const weightEntryShape = shape<WeightEntry>({
   timestamp: str,
 });
 
+// Food Item (Recent, Favorite, Custom)
+const foodItemShape = shape<FoodItem>({
+  id: str,
+  name: str,
+  brand: optional(str),
+  servingSize: str,
+  servingGrams: num,
+  calories: num,
+  protein: num,
+  carbs: num,
+  fat: num,
+  category: optional(str),
+  barcode: optional(str),
+  imageUrl: optional(str),
+  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate')),
+  fiber: optional(num),
+  sugar: optional(num),
+  sugars: optional(num),
+  nutriScore: optional(str),
+  sodium: optional(num),
+  potassium: optional(num),
+  calcium: optional(num),
+  iron: optional(num),
+  vitaminC: optional(num),
+  vitaminA: optional(num),
+  vitaminD: optional(num),
+  vitaminB12: optional(num),
+  magnesium: optional(num),
+  zinc: optional(num),
+  isEstimate: optional(bool),
+  portionUnit: optional(portionUnitChoice),
+  gramsPerUnit: optional(num),
+});
+
+// Meal Template
+const mealTemplateItemShape = shape<MealTemplateItem>({
+  name: str,
+  servingSize: str,
+  servingGrams: num,
+  servings: num,
+  calories: num,
+  protein: num,
+  carbs: num,
+  fat: num,
+  fiber: optional(num),
+  sugar: optional(num),
+  portionUnit: optional(portionUnitChoice),
+  gramsPerUnit: optional(num),
+  isEstimate: optional(bool),
+  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate')),
+});
+
+const mealTemplateShape = shape<MealTemplate>({
+  id: str,
+  name: str,
+  mealType: optional(choice('breakfast', 'lunch', 'dinner', 'snack')),
+  items: list(mealTemplateItemShape),
+  totalCalories: num,
+  totalProtein: num,
+  totalCarbs: num,
+  totalFat: num,
+  createdAt: str,
+});
+
 // Full Backup Root Validator
 const backupShape = shape<FitTrackBackup>({
   version: choice('4.0'),
@@ -234,6 +331,11 @@ const backupShape = shape<FitTrackBackup>({
   supplementRoutine: list(supplementRoutineItemShape),
   weightHistory: list(weightEntryShape),
   reminderSettings: optional(reminderSettingsShape),
+  recentFoods: optional(list(foodItemShape)),
+  favoriteFoods: optional(list(foodItemShape)),
+  customFoods: optional(list(foodItemShape)),
+  barcodeCache: optional(list(foodItemShape)),
+  mealTemplates: optional(list(mealTemplateShape)),
 });
 
 /**
@@ -282,5 +384,6 @@ export function computeBackupSummary(backup: FitTrackBackup): BackupSummary {
     routineItemsCount: (backup.supplementRoutine || []).length,
     hasProfile: Boolean(backup.profile?.name),
     hasReminders: Boolean(backup.reminderSettings),
+    templatesCount: (backup.mealTemplates || []).length,
   };
 }

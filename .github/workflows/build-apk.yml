@@ -95,11 +95,43 @@ jobs:
       - name: Generate Android native project (Expo Prebuild)
         run: npx expo prebuild --platform android --clean
 
+      - name: Configure Production Release Signing Keys
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "Production keystore secret detected. Decoding release keystore..."
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+            echo "" >> android/gradle.properties
+            echo "# FitTrack Production Release Signing" >> android/gradle.properties
+            echo "FITTRACK_RELEASE_STORE_FILE=release.keystore" >> android/gradle.properties
+            echo "FITTRACK_RELEASE_STORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> android/gradle.properties
+            echo "FITTRACK_RELEASE_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> android/gradle.properties
+            echo "FITTRACK_RELEASE_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> android/gradle.properties
+            echo "PRODUCTION_SIGNING_CONFIGURED=true" >> $GITHUB_ENV
+            echo "Release keystore configured successfully."
+          else
+            echo "::warning::ANDROID_KEYSTORE_BASE64 secret is not configured. Falling back to default debug signing."
+            echo "PRODUCTION_SIGNING_CONFIGURED=false" >> $GITHUB_ENV
+          fi
+
       - name: Build Standalone Release APK with Gradle
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
+
+      - name: Verify APK Signature (apksigner)
+        run: |
+          APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
+          if [ -f "$APK_PATH" ]; then
+            BUILD_TOOLS=$(find $ANDROID_HOME/build-tools -maxdepth 1 -mindepth 1 | sort -V | tail -n 1)
+            echo "Using apksigner from $BUILD_TOOLS"
+            $BUILD_TOOLS/apksigner verify --verbose --print-certs "$APK_PATH" || true
+          fi
 
       - name: Prepare APK download
         run: |

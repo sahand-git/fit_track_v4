@@ -3,9 +3,7 @@ import {
   LoggedDailySupplement,
   SupplementCheck,
   DailyLog,
-  ReminderSettings,
 } from '../types';
-import { normalizeSupplementRoutine } from './supplementUtils';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) {

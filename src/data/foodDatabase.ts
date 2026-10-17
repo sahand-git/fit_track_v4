@@ -1,9 +1,11 @@
 import { FoodItem } from '../types';
 import { DAILY_FOODS } from './dailyFoods';
+import { REGIONAL_FOODS } from './regionalFoods';
 
-export { DAILY_FOODS };
+export { DAILY_FOODS, REGIONAL_FOODS };
 
 export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
+  ...REGIONAL_FOODS,
   ...DAILY_FOODS,
   {
     "id": "food_chicken_breast",

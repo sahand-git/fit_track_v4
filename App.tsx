@@ -15,8 +15,10 @@ import {
   UtensilsCrossed,
   Bot,
   TrendingUp,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react-native';
-import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem, LoggedDailySupplement, WorkoutEntry } from './src/types';
+import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem, LoggedDailySupplement, WorkoutEntry, AICoachReport } from './src/types';
 import {
   loadUserProfile,
   saveUserProfile,
@@ -34,11 +36,12 @@ import {
   removeWorkoutFromDay,
   updateWorkoutInDay,
   loadWeightHistory,
-  getAllDailyLogs,
-  getRecentDailyLogs,
   loadAccurateStreak,
   setDailySteps,
   addDailySteps,
+  loadMedicalDisclaimerAccepted,
+  saveMedicalDisclaimerAccepted,
+  saveDailyAIReport,
 } from './src/storage/storage';
 import {
   initNotificationService,
@@ -51,7 +54,7 @@ import {
 import { getDefaultProfile } from './src/utils/calculator';
 import { OnboardingModal } from './src/components/OnboardingModal';
 import { getTodayDateString } from './src/utils/dateUtils';
-import { calculateLoggingStreak } from './src/utils/streak';
+import { TodaySkeleton } from './src/components/SkeletonLoader';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { FoodLogScreen } from './src/screens/FoodLogScreen';
 import { ProgressScreen } from './src/screens/ProgressScreen';
@@ -59,6 +62,8 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { SupplementsScreen } from './src/screens/SupplementsScreen';
 import { CoachScreen } from './src/screens/CoachScreen';
 import { AddFoodSheet } from './src/components/addfood/AddFoodSheet';
+import { MedicalDisclaimerModal } from './src/components/MedicalDisclaimerModal';
+import { ScientificReferencesModal } from './src/components/ScientificReferencesModal';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { ScreenTransitionView } from './src/components/ScreenTransitionView';
 import { persistRoutineThenCommit } from './src/utils/supplementRoutine';
@@ -67,7 +72,6 @@ import { translate } from './src/i18n/strings';
 import { theme } from './src/theme';
 import * as Haptics from 'expo-haptics';
 
-import { shouldUpdateVisibleDate } from './src/utils/dateSync';
 import { StepsScreen } from './src/screens/StepsScreen';
 import { WorkoutsScreen } from './src/screens/WorkoutsScreen';
 import { AccountScreen } from './src/screens/AccountScreen';
@@ -96,6 +100,10 @@ function FitTrackApp() {
 
   const [profile, setProfile] = useState<UserProfile>(getDefaultProfile());
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en');
+  const [initError, setInitError] = useState<string | null>(null);
+  const [initRetryCount, setInitRetryCount] = useState<number>(0);
+  const [initialLoaded, setInitialLoaded] = useState<boolean>(false);
+  const [referencesModalVisible, setReferencesModalVisible] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
   const selectedDateRef = React.useRef(selectedDate);
   useEffect(() => {
@@ -118,6 +126,8 @@ function FitTrackApp() {
     visible: boolean;
     targetDate: string;
     mealType?: MealType;
+    initialTab?: 'search' | 'photo' | 'describe';
+    initialScanBarcode?: boolean;
   }>({
     visible: false,
     targetDate: getTodayDateString(),
@@ -146,38 +156,62 @@ function FitTrackApp() {
     if (!authReady) return;
     let isCancelled = false;
     async function init() {
-      await initNotificationService();
-      const p = await loadUserProfile();
-      if (isCancelled) return;
-      setProfile(p);
-      const appLang = p.language || 'en';
-      setAppLanguage(appLang);
-      const l = await loadDailyLog(selectedDate);
-      if (isCancelled) return;
-      setLog(l);
-      const initialRoutine = await loadSupplementRoutine();
-      if (isCancelled) return;
-      setSupplementRoutine(initialRoutine);
-      await refreshStreak();
+      setInitError(null);
+      setInitialLoaded(false);
+      try {
+        const p = await loadUserProfile();
+        const disclaimerAccepted = await loadMedicalDisclaimerAccepted();
+        if (disclaimerAccepted && !p.hasAcceptedMedicalDisclaimer) {
+          p.hasAcceptedMedicalDisclaimer = true;
+        }
+        if (isCancelled) return;
+        setProfile(p);
+        const appLang = p.language || 'en';
+        setAppLanguage(appLang);
+        const l = await loadDailyLog(selectedDate);
+        if (isCancelled) return;
+        setLog(l);
+        const initialRoutine = await loadSupplementRoutine();
+        if (isCancelled) return;
+        setSupplementRoutine(initialRoutine);
+        try {
+          await refreshStreak();
+        } catch (streakErr) {
+          console.warn('Streak calculation warning during init:', streakErr);
+        }
 
-      // Reconcile reminders safely at startup WITHOUT requesting permission
-      if (isNotificationSupported()) {
-        const perm = await checkNotificationPermissions();
-        if (perm.granted) {
-          const reminderSettings = await loadReminderSettings();
-          const hasActive =
-            reminderSettings.supplementsEnabled ||
-            reminderSettings.water.enabled ||
-            Object.values(reminderSettings.meals).some((m) => m.enabled);
-          if (hasActive) {
-            await syncAllReminders(reminderSettings, initialRoutine, appLang);
+        // Reconcile reminders safely at startup WITHOUT requesting permission
+        try {
+          await initNotificationService();
+          if (isNotificationSupported()) {
+            const perm = await checkNotificationPermissions();
+            if (perm.granted) {
+              const reminderSettings = await loadReminderSettings();
+              const hasActive =
+                reminderSettings.supplementsEnabled ||
+                reminderSettings.water.enabled ||
+                Object.values(reminderSettings.meals).some((m) => m.enabled);
+              if (hasActive) {
+                await syncAllReminders(reminderSettings, initialRoutine, appLang);
+              }
+            }
           }
+        } catch (notifErr) {
+          console.warn('Notification service bypassed during startup:', notifErr);
+        }
+        if (!isCancelled) {
+          setInitialLoaded(true);
+        }
+      } catch (err: any) {
+        if (!isCancelled) {
+          console.error('Initialization error in App:', err);
+          setInitError(err?.message || 'Failed to initialize app');
         }
       }
     }
     init();
     return () => { isCancelled = true; };
-  }, [authReady, authUser?.uid]);
+  }, [authReady, authUser?.uid, initRetryCount]);
 
   // Reload log whenever date changes with cancellation to prevent race conditions
   useEffect(() => {
@@ -271,6 +305,18 @@ function FitTrackApp() {
     } catch (err) {
       console.error('Failed to remove meal:', err);
       Alert.alert(t('Error'), t('Failed to remove meal.'));
+    }
+  };
+
+  const handleCopyYesterdayMeals = async (targetDate: string) => {
+    try {
+      const updated = await loadDailyLog(targetDate);
+      if (selectedDateRef.current === targetDate) {
+        setLog(updated);
+      }
+      await refreshStreak();
+    } catch (err) {
+      console.error('Failed to reload after copying meals:', err);
     }
   };
 
@@ -380,6 +426,11 @@ function FitTrackApp() {
     if (selectedDateRef.current === targetDate) setLog(updated);
   };
 
+  const handleSaveAIReport = async (report: AICoachReport, targetDate: string) => {
+    const updated = await saveDailyAIReport(targetDate, report);
+    if (selectedDateRef.current === targetDate) setLog(updated);
+  };
+
   const handleSaveSteps = async (total: number) => {
     const targetDate = selectedDateRef.current;
     if (targetDate > getTodayDateString()) return;
@@ -431,13 +482,96 @@ function FitTrackApp() {
     setActiveTab(tab);
   };
 
-  const handleOpenAddFoodToday = (mealType?: MealType) => {
+  const handleOpenAddFoodToday = (
+    mealType?: MealType,
+    initialTab?: 'search' | 'photo' | 'describe',
+    initialScanBarcode?: boolean
+  ) => {
     setAddSheetConfig({
       visible: true,
       targetDate: getTodayDateString(),
       mealType,
+      initialTab,
+      initialScanBarcode,
     });
   };
+
+  if (initError) {
+    return (
+      <I18nProvider language={language}>
+        <View style={styles.initErrorContainer}>
+          <View style={styles.initErrorCard}>
+            <View style={styles.initErrorIconCircle}>
+              <AlertTriangle size={36} color={theme.colors.danger} />
+            </View>
+            <Text style={styles.initErrorTitle}>{t('Failed to start FitTrack')}</Text>
+            <Text style={styles.initErrorMessage}>
+              {t('Unable to load app data. Please try again.')}
+            </Text>
+            <TouchableOpacity
+              style={styles.initRetryButton}
+              onPress={() => {
+                setInitError(null);
+                setInitRetryCount((c) => c + 1);
+              }}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={t('Retry')}
+            >
+              <RefreshCw size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.initRetryButtonText}>{t('Retry')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </I18nProvider>
+    );
+  }
+
+  if (!initialLoaded) {
+    return (
+      <I18nProvider language={language}>
+        <View
+          style={[
+            styles.container,
+            {
+              direction: language === 'en' ? 'ltr' : 'rtl',
+              paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0),
+            },
+          ]}
+        >
+          <StatusBar style="dark" />
+          <TodaySkeleton />
+        </View>
+      </I18nProvider>
+    );
+  }
+
+  if (!profile.hasAcceptedMedicalDisclaimer) {
+    return (
+      <I18nProvider language={language}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+          <MedicalDisclaimerModal
+            visible={true}
+            onAccept={async () => {
+              try {
+                await saveMedicalDisclaimerAccepted(true);
+              } catch (e) {
+                console.error('Failed to save medical disclaimer acceptance:', e);
+              }
+              setProfile((prev) => ({ ...prev, hasAcceptedMedicalDisclaimer: true }));
+            }}
+            isFirstRun={true}
+            onOpenReferences={() => setReferencesModalVisible(true)}
+          />
+          <ScientificReferencesModal
+            visible={referencesModalVisible}
+            onClose={() => setReferencesModalVisible(false)}
+            onOpenDisclaimer={() => setReferencesModalVisible(false)}
+          />
+        </View>
+      </I18nProvider>
+    );
+  }
 
   if (!profile.isOnboarded) {
     return (
@@ -489,6 +623,9 @@ function FitTrackApp() {
               routine={supplementRoutine}
               dailySupplements={log.dailySupplements}
               checks={log.supplements || []}
+              meals={log.meals}
+              profile={profile}
+              onUpdateProfile={handleSaveProfile}
               onUpdateDailySupplements={handleUpdateDailySupplements}
               onUpdateRoutine={handleUpdateRoutine}
               onToggleSupplement={handleToggleSupplement}
@@ -538,6 +675,7 @@ function FitTrackApp() {
               log={log}
               supplementRoutine={supplementRoutine}
               streak={streak}
+              isLoading={!initialLoaded}
               onToggleSupplement={handleToggleSupplement}
               onUpdateWater={handleUpdateWater}
               onNavigateToMeals={handleNavigateToMeals}
@@ -549,6 +687,11 @@ function FitTrackApp() {
               onAddWorkout={handleAddWorkout}
               onDeleteWorkout={handleDeleteWorkout}
               onUpdateWorkout={handleUpdateWorkout}
+              onOpenLogWeight={() => handleSwitchTab('progress')}
+              onUpdateProfile={async (p: UserProfile) => {
+                await saveUserProfile(p);
+                setProfile(p);
+              }}
             />
           )}
 
@@ -558,10 +701,12 @@ function FitTrackApp() {
               selectedDate={selectedDate}
               onSelectDate={setSelectedDate}
               log={log}
+              isLoading={!initialLoaded}
               onAddMeal={handleAddMeal}
               onUpdateMeal={handleUpdateMeal}
               onRemoveMeal={handleRemoveMeal}
               initialMealType={initialMealForAdd}
+              onCopyYesterdayMeals={handleCopyYesterdayMeals}
             />
           )}
 
@@ -570,12 +715,13 @@ function FitTrackApp() {
             <CoachScreen
               profile={profile}
               log={log}
+              onSaveReport={handleSaveAIReport}
             />
           )}
 
           {/* Tab 4: Progress */}
           {tempScreen === 'none' && activeTab === 'progress' && (
-            <ProgressScreen profile={profile} />
+            <ProgressScreen profile={profile} isLoading={!initialLoaded} />
           )}
         </ScreenTransitionView>
 
@@ -584,8 +730,11 @@ function FitTrackApp() {
           visible={addSheetConfig.visible}
           mealType={addSheetConfig.mealType}
           date={addSheetConfig.targetDate}
+          initialTab={addSheetConfig.initialTab}
+          initialScanBarcode={addSheetConfig.initialScanBarcode}
           onClose={() => setAddSheetConfig((prev) => ({ ...prev, visible: false }))}
           onAddMeal={handleAddMeal}
+          onCopyYesterdayMeals={handleCopyYesterdayMeals}
         />
 
         {/* Bottom Navigation Dock: Exactly 4 Tabs */}
@@ -734,5 +883,64 @@ const styles = StyleSheet.create({
   navLabelActive: {
     color: theme.colors.primary,
     fontWeight: '600',
+  },
+  initErrorContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  initErrorCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 28,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 380,
+    ...theme.shadow.floating,
+  },
+  initErrorIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.dangerLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  initErrorTitle: {
+    fontFamily: theme.fonts.serif,
+    fontSize: 22,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  initErrorMessage: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 15,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  initRetryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.md,
+    paddingVertical: 13,
+    paddingHorizontal: 28,
+    minWidth: 140,
+  },
+  initRetryButtonText: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

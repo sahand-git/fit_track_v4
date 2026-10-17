@@ -19,6 +19,7 @@ import {
   Dumbbell,
   Trash2,
   Footprints,
+  Sparkles,
 } from 'lucide-react-native';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { UserProfile, DailyLog, MealType, SupplementRoutineItem, WorkoutEntry } from '../types';
@@ -26,6 +27,7 @@ import { CalorieRing } from '../components/CalorieRing';
 import { MacroCards } from '../components/MacroCards';
 import { WaterTracker } from '../components/WaterTracker';
 import { AddWorkoutSheet } from '../components/AddWorkoutSheet';
+import { QuickActionSheet } from '../components/QuickActionSheet';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { StreakBadge } from '../components/StreakBadge';
 import { GoalCelebration } from '../components/GoalCelebration';
@@ -42,21 +44,30 @@ import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { getScopedStorageKey } from '../storage/storage';
+import { getScopedStorageKey, saveUserProfile } from '../storage/storage';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
 import { calculateActivityBudget } from '../utils/activityBudget';
 import { getCalorieRingSize } from '../utils/dashboardLayout';
+import { NutrientDetailModal } from '../components/NutrientDetailModal';
+import { SupportedNutrientKey, calculateNutrientDayProgress } from '../utils/nutrientTotals';
+import { calculateTargets } from '../utils/calculator';
+import { TodaySkeleton } from '../components/SkeletonLoader';
 
 interface DashboardScreenProps {
   profile: UserProfile;
   log: DailyLog;
   supplementRoutine: SupplementRoutineItem[];
   streak?: number;
+  isLoading?: boolean;
   onToggleSupplement: (id: string, taken: boolean) => void;
   onUpdateWater: (delta: number) => void;
   onNavigateToMeals: (targetMeal?: MealType) => void;
-  onOpenAddFood: (mealType?: MealType) => void;
+  onOpenAddFood: (
+    mealType?: MealType,
+    initialTab?: 'search' | 'photo' | 'describe',
+    initialScanBarcode?: boolean
+  ) => void;
   onOpenSupplements: () => void;
   onOpenProfile: () => void;
   onOpenSteps: () => void;
@@ -64,6 +75,8 @@ interface DashboardScreenProps {
   onAddWorkout: (workout: WorkoutEntry, date: string) => void;
   onDeleteWorkout: (workoutId: string) => void;
   onUpdateWorkout?: (workout: WorkoutEntry, date: string) => void;
+  onOpenLogWeight?: () => void;
+  onUpdateProfile?: (profile: UserProfile) => Promise<void> | void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -71,6 +84,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   log,
   supplementRoutine,
   streak = 0,
+  isLoading,
   onToggleSupplement,
   onUpdateWater,
   onNavigateToMeals,
@@ -82,16 +96,79 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onAddWorkout,
   onDeleteWorkout,
   onUpdateWorkout,
+  onOpenLogWeight,
+  onUpdateProfile,
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const t = useCallback((str: string) => translate(language, str), [language]);
 
   const [workoutSheetVisible, setWorkoutSheetVisible] = useState(false);
+  const [quickActionVisible, setQuickActionVisible] = useState(false);
   const [heroWidth, setHeroWidth] = useState(0);
+  const [selectedNutrientForDetail, setSelectedNutrientForDetail] = useState<SupportedNutrientKey | string | null>(null);
 
+  const isRtl = language === 'ar' || language === 'ckb';
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const dockClearance = dockBottom + 72;
+  const scrollBottomPadding = Math.max(140, dockClearance + 24);
+
+  const fiberProgress = useMemo(
+    () => calculateNutrientDayProgress('fiber', log.meals, log.dailySupplements, profile),
+    [log.meals, log.dailySupplements, profile]
+  );
+  const sugarProgress = useMemo(
+    () => calculateNutrientDayProgress('sugar', log.meals, log.dailySupplements, profile),
+    [log.meals, log.dailySupplements, profile]
+  );
+
+  const handleSaveNutrientGoal = async (nutrientKey: SupportedNutrientKey, newTarget: number) => {
+    const updatedGoals = { ...(profile.customNutrientGoals || {}), [nutrientKey]: newTarget };
+    const updated: UserProfile = {
+      ...profile,
+      customNutrientGoals: updatedGoals,
+    };
+    if (nutrientKey === 'calories') updated.targetCalories = newTarget;
+    if (nutrientKey === 'protein') updated.targetProtein = newTarget;
+    if (nutrientKey === 'carbs') updated.targetCarbs = newTarget;
+    if (nutrientKey === 'fat') updated.targetFat = newTarget;
+
+    if (onUpdateProfile) {
+      await onUpdateProfile(updated);
+    } else {
+      await saveUserProfile(updated);
+    }
+  };
+
+  const handleResetNutrientGoal = async (nutrientKey: SupportedNutrientKey) => {
+    const updatedGoals = { ...(profile.customNutrientGoals || {}) };
+    delete updatedGoals[nutrientKey];
+    const updated: UserProfile = {
+      ...profile,
+      customNutrientGoals: updatedGoals,
+    };
+
+    if (nutrientKey === 'calories' || nutrientKey === 'protein' || nutrientKey === 'carbs' || nutrientKey === 'fat') {
+      const defaultTargets = calculateTargets(
+        profile.gender,
+        profile.weightKg,
+        profile.heightCm,
+        profile.age,
+        profile.activityLevel,
+        profile.goal
+      );
+      if (nutrientKey === 'calories') updated.targetCalories = defaultTargets.targetCalories;
+      if (nutrientKey === 'protein') updated.targetProtein = defaultTargets.targetProtein;
+      if (nutrientKey === 'carbs') updated.targetCarbs = defaultTargets.targetCarbs;
+      if (nutrientKey === 'fat') updated.targetFat = defaultTargets.targetFat;
+    }
+
+    if (onUpdateProfile) {
+      await onUpdateProfile(updated);
+    } else {
+      await saveUserProfile(updated);
+    }
+  };
 
   const { consumedCalories, consumedProtein, consumedCarbs, consumedFat } = useMemo(() => {
     return log.meals.reduce(
@@ -163,12 +240,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   // Trigger celebration once per day when target is reached appropriately
   useEffect(() => {
     async function checkGoalCelebration() {
+      const resolvedCalorieTarget = profile.customNutrientGoals?.calories ?? effectiveCalorieTarget;
+      const resolvedProteinTarget = profile.customNutrientGoals?.protein ?? profile.targetProtein;
       const isGoalMet = evaluateGoalAchievement({
         goal: profile.goal,
         consumedCalories,
         consumedProtein,
-        effectiveCalorieTarget,
-        targetProtein: profile.targetProtein,
+        effectiveCalorieTarget: resolvedCalorieTarget,
+        targetProtein: resolvedProteinTarget,
       });
 
       if (!isGoalMet) return;
@@ -197,7 +276,16 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       }
     }
     checkGoalCelebration();
-  }, [consumedCalories, consumedProtein, effectiveCalorieTarget, profile.goal, profile.targetProtein, log.date]);
+  }, [
+    consumedCalories,
+    consumedProtein,
+    effectiveCalorieTarget,
+    profile.goal,
+    profile.targetProtein,
+    profile.customNutrientGoals?.calories,
+    profile.customNutrientGoals?.protein,
+    log.date,
+  ]);
 
   const handleQuickAdd = (meal: MealType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -209,9 +297,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     onOpenAddFood();
   };
 
+  if (isLoading) {
+    return <TodaySkeleton />;
+  }
+
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}>
         {/* Editorial Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
@@ -222,15 +314,30 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.profileBtn}
-            onPress={onOpenProfile}
-            activeOpacity={0.8}
-            accessibilityLabel={t('Profile & Goals')}
-            accessibilityRole="button"
-          >
-            <User size={18} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              style={styles.quickActionHeaderBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setQuickActionVisible(true);
+              }}
+              activeOpacity={0.8}
+              accessibilityLabel={t('Quick Add')}
+              accessibilityRole="button"
+            >
+              <Sparkles size={18} color="#D97706" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.profileBtn}
+              onPress={onOpenProfile}
+              activeOpacity={0.8}
+              accessibilityLabel={t('Profile & Goals')}
+              accessibilityRole="button"
+            >
+              <User size={18} color={theme.colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Hero Calorie Budget Focus */}
@@ -241,10 +348,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         >
           <CalorieRing
             consumed={consumedCalories}
-            target={effectiveCalorieTarget}
+            target={profile.customNutrientGoals?.calories ?? effectiveCalorieTarget}
             proteinConsumed={consumedProtein}
-            proteinTarget={profile.targetProtein}
+            proteinTarget={profile.customNutrientGoals?.protein ?? profile.targetProtein}
             size={getCalorieRingSize(heroWidth)}
+            onPress={() => setSelectedNutrientForDetail('calories')}
           />
 
           {burnedCalories > 0 && (
@@ -263,213 +371,34 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         {/* Nutrients Bar */}
         <Animated.View entering={getStaggeredCardEntry(1)}>
           <MacroCards
-            calorieTarget={effectiveCalorieTarget}
+            calorieTarget={profile.customNutrientGoals?.calories ?? effectiveCalorieTarget}
             calorieConsumed={consumedCalories}
-            proteinTarget={profile.targetProtein}
+            proteinTarget={profile.customNutrientGoals?.protein ?? profile.targetProtein}
             proteinConsumed={consumedProtein}
-            carbsTarget={profile.targetCarbs}
+            carbsTarget={profile.customNutrientGoals?.carbs ?? profile.targetCarbs}
             carbsConsumed={consumedCarbs}
-            fatTarget={profile.targetFat}
+            fatTarget={profile.customNutrientGoals?.fat ?? profile.targetFat}
             fatConsumed={consumedFat}
+            fiberConsumed={fiberProgress.current}
+            fiberTarget={fiberProgress.target}
+            fiberIsIncomplete={fiberProgress.isIncomplete}
+            sugarConsumed={sugarProgress.current}
+            sugarTarget={sugarProgress.target}
+            sugarIsIncomplete={sugarProgress.isIncomplete}
+            onSelectNutrient={(key) => setSelectedNutrientForDetail(key)}
           />
         </Animated.View>
 
-        {/* Hydration Row */}
+        {/* Meals Ledger (Positioned directly below macros for fast, seamless food logging) */}
         <Animated.View entering={getStaggeredCardEntry(2)}>
-          <WaterTracker
-            glasses={log.waterGlasses}
-            target={profile.waterTargetGlasses}
-            onUpdate={onUpdateWater}
-          />
-        </Animated.View>
-
-        <Animated.View entering={getStaggeredCardEntry(3)}>
-          <TouchableOpacity style={styles.stepsCard} onPress={onOpenSteps} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel={t('Steps')}>
-            <View style={styles.stepsIcon}><Footprints size={19} color={theme.colors.primary} /></View>
-            <View style={styles.stepsInfo}>
-              <View style={styles.stepsTitleRow}><Text style={styles.stepsTitle}>{t('Steps')}</Text><Text style={styles.stepsCount}>{(log.steps || 0).toLocaleString()} / {(profile.stepGoal || 8000).toLocaleString()}</Text></View>
-              <View style={styles.stepsTrack}><View style={[styles.stepsFill, { width: `${Math.min(100, ((log.steps || 0) / (profile.stepGoal || 8000)) * 100)}%` }]} /></View>
-              <Text style={styles.stepsHint}>{t('Tap to view activity details')}</Text>
-            </View>
-            <ChevronRight size={17} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Vitamins & Supplements Section (Below Water Tracker) */}
-        <Animated.View entering={getStaggeredCardEntry(4)} style={styles.supplementsContainer}>
-          {activeSupplements.length === 0 ? (
-            /* Slim row if routine/daily log is empty */
-            <TouchableOpacity
-              style={styles.slimRoutineRow}
-              onPress={onOpenSupplements}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-            >
-              <View style={styles.slimRoutineLeft}>
-                <View style={styles.pillIconBox}>
-                  <Pill size={15} color={theme.colors.primary} />
-                </View>
-                <Text style={styles.slimRoutineText}>{t('Track vitamins & supplements')}</Text>
-              </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          ) : (
-            /* Checklists with small Manage link if items exist */
-            <View style={styles.routineCard}>
-              <View style={styles.routineHeader}>
-                <View style={styles.routineTitleRow}>
-                  <Pill size={16} color={theme.colors.primary} />
-                  <Text style={styles.routineTitle}>{t('Vitamins & supplements')}</Text>
-                  <Text style={styles.routineCount}>
-                    {takenSupplementsCount}/{activeSupplements.length}
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  onPress={onOpenSupplements}
-                  style={styles.manageBtn}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.manageBtnText}>{t('Manage')}</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.routineItemsList}>
-                {activeSupplements.map((item) => {
-                  return (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={styles.routineItemRow}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                        onToggleSupplement(item.id, !item.isTaken);
-                      }}
-                      disabled={isFuture}
-                      activeOpacity={0.7}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: item.isTaken }}
-                    >
-                      <View style={styles.checkboxCircle}>
-                        <AnimatedCheckbox checked={item.isTaken} size={19} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.routineItemName, item.isTaken && styles.routineItemNameTaken]}>
-                          {item.name}
-                        </Text>
-                        {item.doseText ? (
-                          <Text style={styles.routineItemDose}>{item.doseText}</Text>
-                        ) : null}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-        </Animated.View>
-
-        {/* Workouts Section */}
-        <Animated.View entering={getStaggeredCardEntry(5)} style={styles.workoutContainer}>
-          <View style={styles.workoutCard}>
-            <View style={styles.workoutHeader}>
-              <View style={styles.workoutHeaderTop}>
-                <View style={styles.workoutTitleRow}>
-                  <Dumbbell size={17} color={theme.colors.primary} />
-                  <Text style={styles.workoutTitle}>{t('Workouts')}</Text>
-                </View>
-                <AnimatedPressable onPress={onOpenWorkouts} style={styles.manageBtn} accessibilityRole="button">
-                  <Text style={styles.manageBtnText}>{t('History')}</Text>
-                </AnimatedPressable>
-              </View>
-              {burnedCalories > 0 && (
-                <Text style={styles.workoutBurnBadge}>
-                  {burnedCalories} {t('kcal')}
-                </Text>
-              )}
-              <AnimatedPressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setWorkoutSheetVisible(true);
-                }}
-                style={styles.addWorkoutBtn}
-                disabled={isFuture}
-                accessibilityRole="button"
-                accessibilityLabel={t('Add workout')}
-              >
-                <Plus size={14} color={theme.colors.primary} />
-                <Text style={styles.addWorkoutBtnText}>{t('Add workout')}</Text>
-              </AnimatedPressable>
-            </View>
-
-            {(!log.workouts || log.workouts.length === 0) ? (
-              <TouchableOpacity
-                style={styles.emptyWorkoutRow}
-                onPress={() => {
-                  if (!isFuture) setWorkoutSheetVisible(true);
-                }}
-                disabled={isFuture}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.emptyWorkoutText}>
-                  {isFuture
-                    ? t('Workouts cannot be logged for future dates.')
-                    : t('No workouts logged yet. Tap to log exercise.')}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.workoutItemsList}>
-                {log.workouts.map((w) => (
-                  <Animated.View
-                    key={w.id}
-                    entering={getItemEnterAnimation()}
-                    exiting={getItemExitAnimation()}
-                    layout={getListLayoutTransition()}
-                    style={styles.workoutItemRow}
-                  >
-                    <View style={styles.workoutItemInfo}>
-                      <Text style={styles.workoutItemName} numberOfLines={2}>{t(w.name)}</Text>
-                      <View style={styles.workoutItemMetaList}>
-                        {Object.values(getWorkoutDisplayMeta(w, t)).map((label, index) => (
-                          <Text key={`${w.id}_meta_${index}`} style={styles.workoutItemMeta}>{label}</Text>
-                        ))}
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                        Alert.alert(
-                          t('Delete workout'),
-                          t('Are you sure you want to delete this workout?'),
-                          [
-                            { text: t('Cancel'), style: 'cancel' },
-                            {
-                              text: t('Delete'),
-                              style: 'destructive',
-                              onPress: () => onDeleteWorkout(w.id),
-                            },
-                          ]
-                        );
-                      }}
-                      style={styles.deleteWorkoutBtn}
-                      accessibilityLabel={t('Delete workout')}
-                    >
-                      <Trash2 size={16} color={theme.colors.textMuted} />
-                    </TouchableOpacity>
-                  </Animated.View>
-                ))}
-              </View>
-            )}
-          </View>
-        </Animated.View>
-
-        {/* Meals Ledger */}
-        <Animated.View entering={getStaggeredCardEntry(6)}>
           <View style={styles.mealsHeader}>
             <Text style={styles.sectionHeading}>{t('Today’s Meals')}</Text>
             <TouchableOpacity
               onPress={() => onNavigateToMeals()}
               style={styles.seeAllBtn}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t('View diary')}
             >
               <Text style={styles.seeAllText}>{t('View diary')}</Text>
               <ChevronRight size={14} color={theme.colors.primary} />
@@ -517,11 +446,245 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             })}
           </View>
         </Animated.View>
+
+        {/* Hydration Row */}
+        <Animated.View entering={getStaggeredCardEntry(3)}>
+          <WaterTracker
+            glasses={log.waterGlasses}
+            target={profile.waterTargetGlasses}
+            onUpdate={onUpdateWater}
+          />
+        </Animated.View>
+
+        {/* Steps Activity Card */}
+        <Animated.View entering={getStaggeredCardEntry(4)}>
+          <TouchableOpacity style={styles.stepsCard} onPress={onOpenSteps} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel={t('Steps')}>
+            <View style={styles.stepsIcon}><Footprints size={19} color={theme.colors.primary} /></View>
+            <View style={styles.stepsInfo}>
+              <View style={styles.stepsTitleRow}><Text style={styles.stepsTitle}>{t('Steps')}</Text><Text style={styles.stepsCount}>{(log.steps || 0).toLocaleString()} / {(profile.stepGoal || 8000).toLocaleString()}</Text></View>
+              <View style={styles.stepsTrack}><View style={[styles.stepsFill, { width: `${Math.min(100, ((log.steps || 0) / (profile.stepGoal || 8000)) * 100)}%` }]} /></View>
+              <Text style={styles.stepsHint}>{t('Tap to view activity details')}</Text>
+            </View>
+            <ChevronRight size={17} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Vitamins & Supplements Section (Clean, dedicated checklist) */}
+        <Animated.View entering={getStaggeredCardEntry(5)} style={styles.supplementsContainer}>
+          {activeSupplements.length === 0 ? (
+            /* Slim row if routine/daily log is empty */
+            <TouchableOpacity
+              style={styles.slimRoutineRow}
+              onPress={onOpenSupplements}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t('Track vitamins & supplements')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <View style={styles.slimRoutineLeft}>
+                <View style={styles.pillIconBox}>
+                  <Pill size={15} color={theme.colors.primary} />
+                </View>
+                <Text style={styles.slimRoutineText}>{t('Track vitamins & supplements')}</Text>
+              </View>
+              <ChevronRight size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          ) : (
+            /* Checklists with small Manage link if items exist */
+            <View style={styles.routineCard}>
+              <View style={styles.routineHeader}>
+                <View style={styles.routineTitleRow}>
+                  <Pill size={16} color={theme.colors.primary} />
+                  <Text style={styles.routineTitle}>{t('Vitamins & supplements')}</Text>
+                  <Text style={styles.routineCount}>
+                    {takenSupplementsCount}/{activeSupplements.length}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={onOpenSupplements}
+                  style={styles.manageBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('Manage')} ${t('Vitamins & supplements')}`}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.manageBtnText}>{t('Manage')}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.routineItemsList}>
+                {activeSupplements.map((item) => {
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.routineItemRow}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        onToggleSupplement(item.id, !item.isTaken);
+                      }}
+                      disabled={isFuture}
+                      activeOpacity={0.7}
+                      accessibilityRole="checkbox"
+                      accessibilityLabel={`${item.name}${item.doseText ? ` (${item.doseText})` : ''}, ${item.isTaken ? t('taken') : t('not taken')}`}
+                      accessibilityState={{ checked: item.isTaken }}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <View style={styles.checkboxCircle}>
+                        <AnimatedCheckbox checked={item.isTaken} size={19} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.routineItemName, item.isTaken && styles.routineItemNameTaken]}>
+                          {item.name}
+                        </Text>
+                        {item.doseText ? (
+                          <Text style={styles.routineItemDose}>{item.doseText}</Text>
+                        ) : null}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+        </Animated.View>
+
+        {/* Workouts Section */}
+        <Animated.View entering={getStaggeredCardEntry(6)} style={styles.workoutContainer}>
+          <View style={styles.workoutCard}>
+            <View style={styles.workoutHeader}>
+              <View style={styles.workoutHeaderTop}>
+                <View style={styles.workoutTitleRow}>
+                  <Dumbbell size={17} color={theme.colors.primary} />
+                  <Text style={styles.workoutTitle}>{t('Workouts')}</Text>
+                </View>
+                <AnimatedPressable
+                  onPress={onOpenWorkouts}
+                  style={styles.manageBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('History')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.manageBtnText}>{t('History')}</Text>
+                </AnimatedPressable>
+              </View>
+              {burnedCalories > 0 && (
+                <Text style={styles.workoutBurnBadge}>
+                  {burnedCalories} {t('kcal')}
+                </Text>
+              )}
+              <AnimatedPressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setWorkoutSheetVisible(true);
+                }}
+                style={styles.addWorkoutBtn}
+                disabled={isFuture}
+                accessibilityRole="button"
+                accessibilityLabel={t('Add workout')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Plus size={14} color={theme.colors.primary} />
+                <Text style={styles.addWorkoutBtnText}>{t('Add workout')}</Text>
+              </AnimatedPressable>
+            </View>
+
+            {(!log.workouts || log.workouts.length === 0) ? (
+              <TouchableOpacity
+                style={styles.emptyWorkoutRow}
+                onPress={() => {
+                  if (!isFuture) setWorkoutSheetVisible(true);
+                }}
+                disabled={isFuture}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isFuture
+                    ? t('Workouts cannot be logged for future dates.')
+                    : t('No workouts logged yet. Tap to log exercise.')
+                }
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.emptyWorkoutText}>
+                  {isFuture
+                    ? t('Workouts cannot be logged for future dates.')
+                    : t('No workouts logged yet. Tap to log exercise.')}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.workoutItemsList}>
+                {log.workouts.map((w) => (
+                  <Animated.View
+                    key={w.id}
+                    entering={getItemEnterAnimation()}
+                    exiting={getItemExitAnimation()}
+                    layout={getListLayoutTransition()}
+                    style={styles.workoutItemRow}
+                  >
+                    <View style={styles.workoutItemInfo}>
+                      <Text style={styles.workoutItemName} numberOfLines={2}>{t(w.name)}</Text>
+                      <View style={styles.workoutItemMetaList}>
+                        {Object.values(getWorkoutDisplayMeta(w, t)).map((label, index) => (
+                          <Text key={`${w.id}_meta_${index}`} style={styles.workoutItemMeta}>{label}</Text>
+                        ))}
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        Alert.alert(
+                          t('Delete workout'),
+                          t('Are you sure you want to delete this workout?'),
+                          [
+                            { text: t('Cancel'), style: 'cancel' },
+                            {
+                              text: t('Delete'),
+                              style: 'destructive',
+                              onPress: () => onDeleteWorkout(w.id),
+                            },
+                          ]
+                        );
+                      }}
+                      style={styles.deleteWorkoutBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('Delete workout')}: ${t(w.name)}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Trash2 size={16} color={theme.colors.textMuted} />
+                    </TouchableOpacity>
+                  </Animated.View>
+                ))}
+              </View>
+            )}
+          </View>
+        </Animated.View>
       </ScrollView>
 
-      {/* Reserved action area keeps Add Food clear of the dashboard cards. */}
+      {/* Reserved action area keeps Add Food and Quick Add clear of the dashboard cards */}
       {!isFuture && (
-        <View style={[styles.addFoodFooter, { paddingBottom: dockClearance, alignItems: language === 'en' ? 'flex-end' : 'flex-start' }]}>
+        <View
+          style={[
+            styles.addFoodFooter,
+            {
+              paddingBottom: dockClearance,
+              flexDirection: isRtl ? 'row-reverse' : 'row',
+              justifyContent: isRtl ? 'flex-start' : 'flex-end',
+              gap: 10,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.floatingQuickBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              setQuickActionVisible(true);
+            }}
+            activeOpacity={0.88}
+            accessibilityLabel={t('Quick Add')}
+            accessibilityRole="button"
+          >
+            <Sparkles size={16} color="#D97706" />
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.floatingAddBtn}
             onPress={handleOpenFloatingAddFood}
@@ -535,6 +698,19 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </View>
       )}
 
+      <QuickActionSheet
+        visible={quickActionVisible}
+        onClose={() => setQuickActionVisible(false)}
+        onOpenBarcodeScanner={(meal) => onOpenAddFood(meal, 'search', true)}
+        onOpenPlateScanner={(meal) => onOpenAddFood(meal, 'photo', false)}
+        onOpenFoodLog={(meal) => onOpenAddFood(meal, 'search', false)}
+        onQuickWater={(glasses = 1) => onUpdateWater(glasses)}
+        onOpenAddWorkout={() => setWorkoutSheetVisible(true)}
+        onOpenStepTracker={onOpenSteps}
+        onOpenSupplements={onOpenSupplements}
+        onOpenLogWeight={onOpenLogWeight}
+      />
+
       <AddWorkoutSheet
         visible={workoutSheetVisible}
         onClose={() => setWorkoutSheetVisible(false)}
@@ -547,6 +723,17 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       <GoalCelebration
         visible={showCelebration}
         onDismiss={() => setShowCelebration(false)}
+      />
+
+      <NutrientDetailModal
+        visible={!!selectedNutrientForDetail}
+        initialNutrientKey={selectedNutrientForDetail || 'calories'}
+        meals={log.meals}
+        supplements={log.dailySupplements}
+        profile={profile}
+        onClose={() => setSelectedNutrientForDetail(null)}
+        onSaveGoal={handleSaveNutrientGoal}
+        onResetGoal={handleResetNutrientGoal}
       />
     </View>
   );
@@ -734,6 +921,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
     paddingHorizontal: 2,
+  },
+  quickActionHeaderBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...theme.shadow.subtle,
   },
   profileBtn: {
     width: 38,
@@ -973,6 +1171,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: theme.radius.full,
     ...theme.shadow.floating,
+  },
+  floatingQuickBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.full,
+    ...theme.shadow.subtle,
   },
   addFoodFooter: {
     paddingHorizontal: 18,

@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { AppText as Text } from './AppText';
-import { Key, Check, Trash2, ExternalLink, AlertCircle, RefreshCw } from 'lucide-react-native';
+import { Key, Check, Trash2, ExternalLink, AlertCircle, Sparkles } from 'lucide-react-native';
 import { getStoredGeminiApiKey, setStoredGeminiApiKey, clearGeminiApiKey } from '../services/plateAnalysisService';
 import { testGeminiConnection, GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
+import { AiSetupWizard } from './AiSetupWizardModal';
 
 interface GeminiKeyManagerProps {
   onKeyChanged?: () => void;
@@ -29,21 +30,28 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [providerDetail, setProviderDetail] = useState<string | null>(null);
+  const [showWizardModal, setShowWizardModal] = useState(false);
 
-  useEffect(() => {
-    checkKey();
+  const checkKey = useCallback(() => {
+    let isMounted = true;
+    getStoredGeminiApiKey().then((stored) => {
+      if (!isMounted) return;
+      if (stored) {
+        setKey(stored);
+        setHasSavedKey(true);
+      } else {
+        setKey('');
+        setHasSavedKey(false);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const checkKey = async () => {
-    const stored = await getStoredGeminiApiKey();
-    if (stored) {
-      setKey(stored);
-      setHasSavedKey(true);
-    } else {
-      setKey('');
-      setHasSavedKey(false);
-    }
-  };
+  useEffect(() => {
+    return checkKey();
+  }, [checkKey]);
 
   const resetTestState = () => {
     setTestState('idle');
@@ -128,6 +136,16 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
           {t('A Gemini API key enables text meal estimates, plate scanning, and AI Coach. Requests send your prompt and the relevant meal or goal context to Google. Google usage limits and billing apply.')}
         </Text>
       )}
+
+      <TouchableOpacity
+        style={[styles.wizardLaunchBtn, isRTL && styles.rowRTL]}
+        onPress={() => setShowWizardModal(true)}
+        accessibilityRole="button"
+        accessibilityLabel={t('Guided Setup Wizard')}
+      >
+        <Sparkles size={14} color={theme.colors.accent} />
+        <Text style={styles.wizardLaunchBtnText}>{t('Guided Setup Wizard')}</Text>
+      </TouchableOpacity>
 
       {hasSavedKey && !isEditing ? (
         <View style={styles.savedSection}>
@@ -296,11 +314,40 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
       {statusMessage && (
         <Text style={styles.statusToast}>{statusMessage}</Text>
       )}
+
+      <AiSetupWizard
+        visible={showWizardModal}
+        onClose={() => setShowWizardModal(false)}
+        onComplete={() => {
+          setShowWizardModal(false);
+          checkKey();
+          if (onKeyChanged) onKeyChanged();
+        }}
+        onSkip={() => setShowWizardModal(false)}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wizardLaunchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: `${theme.colors.accent}12`,
+    borderWidth: 1,
+    borderColor: `${theme.colors.accent}30`,
+    borderRadius: theme.radius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-start',
+    minHeight: 36,
+  },
+  wizardLaunchBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.accent,
+  },
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,

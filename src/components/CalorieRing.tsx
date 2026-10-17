@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedProps,
@@ -22,12 +22,14 @@ interface CalorieRingProps {
   proteinConsumed?: number;
   proteinTarget?: number;
   size?: number;
+  onPress?: () => void;
 }
 
 export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
   consumed,
   target,
   size = 200,
+  onPress,
 }) => {
   const language = useLanguage();
   const t = (key: string) => translate(language, key);
@@ -49,7 +51,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
         easing: Easing.out(Easing.cubic),
       });
     }
-  }, [calorieRatio]);
+  }, [calorieRatio, progress]);
 
   const animatedCircleProps = useAnimatedProps(() => {
     'worklet';
@@ -63,7 +65,14 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
 
   return (
     <View style={styles.wrapper}>
-      <View style={[styles.container, { width: size, height: size }]}>
+      <TouchableOpacity
+        style={[styles.container, { width: size, height: size }]}
+        onPress={onPress}
+        disabled={!onPress}
+        activeOpacity={0.82}
+        accessibilityRole="button"
+        accessibilityLabel={t('Calories')}
+      >
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           {/* Track */}
           <Circle
@@ -100,7 +109,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
             {isOver ? t('kcal over budget') : t('kcal remaining')}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* 3-Point Calorie Ledger: Consumed | Remaining | Daily Target */}
       <View style={styles.ledgerRow}>
@@ -200,3 +209,5 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.border,
   },
 });
+
+CalorieRing.displayName = 'CalorieRing';

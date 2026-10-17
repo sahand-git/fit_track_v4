@@ -64,6 +64,10 @@ export interface UserProfile {
   isOnboarded?: boolean;
   includeWorkoutsInCalorieBudget?: boolean; // off by default: workout burn is tracked without inflating food budget
   stepGoal?: number;
+  targetWeightKg?: number;
+  hasAcceptedMedicalDisclaimer?: boolean;
+  customNutrientGoals?: Partial<Record<string, number>>;
+  enableCrashReporting?: boolean;
 }
 
 export type ExerciseCategory = 'strength' | 'cardio' | 'hiit' | 'sports' | 'flexibility';
@@ -87,6 +91,31 @@ export interface WorkoutEntry {
   note?: string;
 }
 
+export type PortionUnit = 'g' | 'piece' | 'spoon' | 'glass' | 'samoon' | 'bowl' | 'plate' | 'serving';
+
+export interface RecipeIngredient {
+  name: string;
+  grams: number;
+  source: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+}
+
+export interface FoodVariant {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  servingSize?: string;
+  servingGrams?: number;
+  ingredients?: RecipeIngredient[];
+  description?: string;
+}
+
 export interface FoodItem {
   id: string;
   name: string;
@@ -99,7 +128,8 @@ export interface FoodItem {
   fat: number;
   category?: string;
   barcode?: string;
-  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated';
+  imageUrl?: string;
+  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate' | 'gemini';
   fiber?: number;
   sugar?: number; // Canonical sugar content in grams
   sugars?: number; // Maintained for database schema compatibility
@@ -109,6 +139,17 @@ export interface FoodItem {
   calcium?: number; // mg
   iron?: number; // mg
   vitaminC?: number; // mg
+  vitaminA?: number; // mcg
+  vitaminD?: number; // mcg
+  vitaminB12?: number; // mcg
+  magnesium?: number; // mg
+  zinc?: number; // mg
+  isEstimate?: boolean;
+  portionUnit?: PortionUnit;
+  gramsPerUnit?: number;
+  ingredients?: RecipeIngredient[];
+  variants?: FoodVariant[];
+  recipeEstimate?: boolean;
 }
 
 export interface WeightEntry {
@@ -125,6 +166,7 @@ export interface LoggedMeal {
   name: string;
   brand?: string;
   category?: string;
+  imageUrl?: string;
   mealType: MealType;
   servings: number;
   servingSize: string;
@@ -140,7 +182,72 @@ export interface LoggedMeal {
   calcium?: number;
   iron?: number;
   vitaminC?: number;
+  vitaminA?: number;
+  vitaminD?: number;
+  vitaminB12?: number;
+  magnesium?: number;
+  zinc?: number;
+  barcode?: string;
+  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate' | 'gemini';
   timestamp: string; // ISO string
+  isEstimate?: boolean;
+  portionUnit?: PortionUnit;
+  gramsPerUnit?: number;
+  copiedFromId?: string;
+  copiedFromDate?: string;
+  ingredients?: RecipeIngredient[];
+  variants?: FoodVariant[];
+  selectedVariantId?: string;
+  variantName?: string;
+  recipeEstimate?: boolean;
+}
+
+export interface CopyYesterdayResult extends DailyLog {
+  addedCount: number;
+  alreadyCopiedCount: number;
+  totalYesterdayCount: number;
+  totalYesterdayKcal: number;
+}
+
+export interface MealTemplateItem {
+  name: string;
+  servingSize: string;
+  servingGrams: number;
+  servings: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+  sugar?: number;
+  portionUnit?: PortionUnit;
+  gramsPerUnit?: number;
+  isEstimate?: boolean;
+  source?: FoodItem['source'];
+}
+
+export interface MealTemplate {
+  id: string;
+  name: string;
+  mealType?: MealType;
+  items: MealTemplateItem[];
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  createdAt: string;
+}
+
+export interface AICoachReport {
+  overallGrade: string; // e.g. "A", "B+", "C"
+  headline: string;
+  caloricBalance: string;
+  macroBreakdown: string;
+  mistakesAndBlindSpots: string[];
+  actionableTomorrowFixes: string[];
+  customMealSuggestion: string;
+  coachNote: string;
+  generatedAt: string;
 }
 
 export interface DailyLog {
@@ -151,6 +258,7 @@ export interface DailyLog {
   supplements?: SupplementCheck[];
   dailySupplements?: LoggedDailySupplement[];
   workouts?: WorkoutEntry[];
+  aiReport?: AICoachReport;
 }
 
 export interface TimeSetting {
@@ -181,6 +289,11 @@ export interface FitTrackBackup {
   supplementRoutine: SupplementRoutineItem[];
   weightHistory: WeightEntry[];
   reminderSettings?: ReminderSettings;
+  recentFoods?: FoodItem[];
+  favoriteFoods?: FoodItem[];
+  customFoods?: FoodItem[];
+  barcodeCache?: FoodItem[];
+  mealTemplates?: MealTemplate[];
 }
 
 export interface BackupSummary {
@@ -191,4 +304,5 @@ export interface BackupSummary {
   routineItemsCount: number;
   hasProfile: boolean;
   hasReminders: boolean;
+  templatesCount?: number;
 }

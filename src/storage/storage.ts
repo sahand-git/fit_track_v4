@@ -1,16 +1,37 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserProfile, DailyLog, LoggedMeal, SupplementCheck, SupplementRoutineItem, WorkoutEntry, FitTrackBackup, WeightEntry, ReminderSettings } from '../types';
+import {
+  UserProfile,
+  DailyLog,
+  LoggedMeal,
+  SupplementCheck,
+  SupplementRoutineItem,
+  WorkoutEntry,
+  FitTrackBackup,
+  FoodItem,
+  AICoachReport,
+  MealTemplate,
+  MealTemplateItem,
+  MealType,
+  CopyYesterdayResult,
+} from '../types';
 import { normalizeSupplementRoutine } from '../utils/supplementUtils';
 import { getDefaultProfile } from '../utils/calculator';
 import { getTodayDateString, addDaysToDateString } from '../utils/dateUtils';
 import { validateBackup } from '../utils/backupCore';
-import { calculateStreakWithChunking } from '../utils/streak';
+import { calculateStreakByWalkback, getPreviousDayString } from '../utils/streak';
+import { normalizeSearch } from '../utils/localeUtils';
 
 const PROFILE_KEY = '@fittrack_profile';
 const DAILY_LOG_PREFIX = '@fittrack_log_';
 const SUPPLEMENT_ROUTINE_KEY = '@fittrack_supplement_routine';
 const WEIGHT_HISTORY_KEY = '@fittrack_weight_history';
 const REMINDER_SETTINGS_KEY = '@fittrack_reminder_settings';
+const RECENT_FOODS_KEY = '@fittrack_recent_foods';
+const FAVORITE_FOODS_KEY = '@fittrack_favorite_foods';
+const CUSTOM_FOODS_KEY = '@fittrack_custom_foods';
+const BARCODE_CACHE_KEY = '@fittrack_barcode_cache';
+const MEAL_TEMPLATES_KEY = '@fittrack_meal_templates';
+const MEDICAL_DISCLAIMER_KEY = '@fittrack_disclaimer_accepted';
 let accountNamespace: string | null = null;
 
 /** Signed-in data is isolated; null preserves all existing v4 guest keys verbatim. */
@@ -119,8 +140,40 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
   });
 }
 
-export async function loadDailyLog(dateStr: string): Promise<DailyLog> {
-  const fallback: DailyLog = {
+export async function loadMedicalDisclaimerAccepted(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(MEDICAL_DISCLAIMER_KEY));
+    if (raw === 'true') return true;
+    const profile = await loadUserProfile();
+    return !!profile.hasAcceptedMedicalDisclaimer;
+  } catch (err) {
+    console.warn('Failed to load medical disclaimer state:', err);
+    return false;
+  }
+}
+
+export async function saveMedicalDisclaimerAccepted(accepted: boolean): Promise<void> {
+  return enqueueStorageOperation(getScopedStorageKey(MEDICAL_DISCLAIMER_KEY), async () => {
+    try {
+      await AsyncStorage.setItem(
+        getScopedStorageKey(MEDICAL_DISCLAIMER_KEY),
+        accepted ? 'true' : 'false'
+      );
+      const profile = await loadUserProfile();
+      if (profile.hasAcceptedMedicalDisclaimer !== accepted) {
+        await AsyncStorage.setItem(
+          getScopedStorageKey(PROFILE_KEY),
+          JSON.stringify({ ...profile, hasAcceptedMedicalDisclaimer: accepted })
+        );
+      }
+    } catch (err) {
+      console.error('Failed to save medical disclaimer state:', err);
+    }
+  });
+}
+
+function emptyDailyLog(dateStr: string): DailyLog {
+  return {
     date: dateStr,
     meals: [],
     waterGlasses: 0,
@@ -128,25 +181,72 @@ export async function loadDailyLog(dateStr: string): Promise<DailyLog> {
     supplements: [],
     workouts: [],
   };
+}
+
+function normalizeDailyLog(dateStr: string, value: Record<string, unknown>): DailyLog {
+  const parsed = value as Partial<DailyLog>;
+  if (parsed.meals !== undefined && !Array.isArray(parsed.meals)) {
+    throw new Error(`Saved daily log for ${dateStr} has an invalid meals list.`);
+  }
+  if (parsed.supplements !== undefined && !Array.isArray(parsed.supplements)) {
+    throw new Error(`Saved daily log for ${dateStr} has an invalid supplements list.`);
+  }
+  if (parsed.dailySupplements !== undefined && !Array.isArray(parsed.dailySupplements)) {
+    throw new Error(`Saved daily log for ${dateStr} has an invalid supplement checklist.`);
+  }
+  if (parsed.workouts !== undefined && !Array.isArray(parsed.workouts)) {
+    throw new Error(`Saved daily log for ${dateStr} has an invalid workouts list.`);
+  }
+  return {
+    ...emptyDailyLog(dateStr),
+    ...parsed,
+    date: dateStr,
+    meals: Array.isArray(parsed.meals) ? parsed.meals : [],
+    waterGlasses: typeof parsed.waterGlasses === 'number' && !isNaN(parsed.waterGlasses) ? Math.max(0, parsed.waterGlasses) : 0,
+    steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, parsed.steps) : 0,
+    supplements: Array.isArray(parsed.supplements) ? parsed.supplements : [],
+    dailySupplements: Array.isArray(parsed.dailySupplements) ? parsed.dailySupplements : undefined,
+    workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
+    aiReport: parsed.aiReport && typeof parsed.aiReport === 'object' ? parsed.aiReport : undefined,
+  };
+}
+
+/** Strict read for mutation paths. A failed/corrupt read must never turn into an empty log write. */
+async function loadDailyLogForUpdate(dateStr: string): Promise<DailyLog> {
+  const raw = await AsyncStorage.getItem(getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`));
+  if (!raw) return emptyDailyLog(dateStr);
+  let parsed: unknown;
   try {
-    const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
-    const raw = await AsyncStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = safeParseObject<DailyLog>(raw, fallback);
-    return {
-      ...parsed,
-      date: dateStr,
-      meals: Array.isArray(parsed.meals) ? parsed.meals : [],
-      waterGlasses: typeof parsed.waterGlasses === 'number' && !isNaN(parsed.waterGlasses) ? Math.max(0, parsed.waterGlasses) : 0,
-      steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, parsed.steps) : 0,
-      supplements: Array.isArray(parsed.supplements) ? parsed.supplements : [],
-      dailySupplements: Array.isArray(parsed.dailySupplements) ? parsed.dailySupplements : undefined,
-      workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
-    };
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`Saved daily log for ${dateStr} is unreadable and was not changed.`);
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`Saved daily log for ${dateStr} is invalid and was not changed.`);
+  }
+  return normalizeDailyLog(dateStr, parsed as Record<string, unknown>);
+}
+
+export async function loadDailyLog(dateStr: string): Promise<DailyLog> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`));
+    if (!raw) return emptyDailyLog(dateStr);
+    const parsed = safeParseObject<Record<string, unknown>>(raw, emptyDailyLog(dateStr) as unknown as Record<string, unknown>);
+    return normalizeDailyLog(dateStr, parsed);
   } catch (err) {
     console.error('Error loading daily log:', err);
-    return fallback;
+    return emptyDailyLog(dateStr);
   }
+}
+
+export async function saveDailyAIReport(dateStr: string, report: AICoachReport): Promise<DailyLog> {
+  const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadDailyLogForUpdate(dateStr);
+    const updatedLog: DailyLog = { ...current, aiReport: report };
+    await AsyncStorage.setItem(key, JSON.stringify(updatedLog));
+    return updatedLog;
+  });
 }
 
 export async function saveDailyLog(log: DailyLog): Promise<void> {
@@ -164,7 +264,7 @@ export async function saveDailyLog(log: DailyLog): Promise<void> {
 export async function addMealToDay(dateStr: string, meal: LoggedMeal): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
-    const current = await loadDailyLog(dateStr);
+    const current = await loadDailyLogForUpdate(dateStr);
     const updatedMeals = [...current.meals, meal];
     const updatedLog: DailyLog = { ...current, meals: updatedMeals };
     await AsyncStorage.setItem(key, JSON.stringify(updatedLog));
@@ -175,7 +275,7 @@ export async function addMealToDay(dateStr: string, meal: LoggedMeal): Promise<D
 export async function updateMealInDay(dateStr: string, updatedMeal: LoggedMeal): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
-    const current = await loadDailyLog(dateStr);
+    const current = await loadDailyLogForUpdate(dateStr);
     const updatedMeals = current.meals.map(m => m.id === updatedMeal.id ? updatedMeal : m);
     const updatedLog: DailyLog = { ...current, meals: updatedMeals };
     await AsyncStorage.setItem(key, JSON.stringify(updatedLog));
@@ -186,7 +286,7 @@ export async function updateMealInDay(dateStr: string, updatedMeal: LoggedMeal):
 export async function removeMealFromDay(dateStr: string, mealId: string): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
-    const current = await loadDailyLog(dateStr);
+    const current = await loadDailyLogForUpdate(dateStr);
     const updatedMeals = current.meals.filter(m => m.id !== mealId);
     const updatedLog: DailyLog = { ...current, meals: updatedMeals };
     await AsyncStorage.setItem(key, JSON.stringify(updatedLog));
@@ -197,7 +297,7 @@ export async function removeMealFromDay(dateStr: string, mealId: string): Promis
 export async function updateWater(dateStr: string, delta: number): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
-    const current = await loadDailyLog(dateStr);
+    const current = await loadDailyLogForUpdate(dateStr);
     const updatedGlasses = Math.max(0, current.waterGlasses + delta);
     const updatedLog: DailyLog = { ...current, waterGlasses: updatedGlasses };
     await AsyncStorage.setItem(key, JSON.stringify(updatedLog));
@@ -208,7 +308,7 @@ export async function updateWater(dateStr: string, delta: number): Promise<Daily
 export async function setDailySteps(dateStr: string, steps: number): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
-    const current = await loadDailyLog(dateStr);
+    const current = await loadDailyLogForUpdate(dateStr);
     const updatedLog: DailyLog = { ...current, steps: Math.max(0, Math.round(Number.isFinite(steps) ? steps : 0)) };
     await AsyncStorage.setItem(key, JSON.stringify(updatedLog));
     return updatedLog;
@@ -218,7 +318,7 @@ export async function setDailySteps(dateStr: string, steps: number): Promise<Dai
 export async function addDailySteps(dateStr: string, amount: number): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
-    const current = await loadDailyLog(dateStr);
+    const current = await loadDailyLogForUpdate(dateStr);
     const safeAmount = Math.max(0, Math.round(Number.isFinite(amount) ? amount : 0));
     const updatedLog: DailyLog = { ...current, steps: current.steps + safeAmount };
     await AsyncStorage.setItem(key, JSON.stringify(updatedLog));
@@ -255,7 +355,7 @@ export async function saveDailySupplements(
 ): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
-    const current = await loadDailyLog(dateStr);
+    const current = await loadDailyLogForUpdate(dateStr);
     const updatedChecks: SupplementCheck[] = items.map((it) => ({
       itemId: it.id,
       taken: it.taken,
@@ -274,7 +374,7 @@ export async function saveDailySupplements(
 export async function setSupplementTaken(dateStr: string, itemId: string, taken: boolean): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
-    const current = await loadDailyLog(dateStr);
+    const current = await loadDailyLogForUpdate(dateStr);
     const takenAt = taken ? new Date().toISOString() : undefined;
 
     let updatedDailySupplements: import('../types').LoggedDailySupplement[];
@@ -380,6 +480,486 @@ export async function loadLogsForDates(dates: string[]): Promise<Record<string, 
   return result;
 }
 
+// Food collections (Recent, Favorites, Custom Foods)
+export async function loadRecentFoods(): Promise<FoodItem[]> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(RECENT_FOODS_KEY));
+    if (!raw) return [];
+    return safeParseArray<FoodItem>(raw);
+  } catch (err) {
+    console.error('Error loading recent foods:', err);
+    return [];
+  }
+}
+
+export async function saveRecentFoods(foods: FoodItem[]): Promise<void> {
+  const key = getScopedStorageKey(RECENT_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(foods));
+    } catch (err) {
+      console.error('Error saving recent foods:', err);
+      throw new Error('Failed to save recent foods.');
+    }
+  });
+}
+
+export async function addRecentFood(food: FoodItem): Promise<FoodItem[]> {
+  const key = getScopedStorageKey(RECENT_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadRecentFoods();
+    const filtered = current.filter(
+      (f) => f.id !== food.id && f.name.trim().toLowerCase() !== food.name.trim().toLowerCase()
+    );
+    const updated = [food, ...filtered].slice(0, 30);
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  });
+}
+
+export async function loadFavoriteFoods(): Promise<FoodItem[]> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(FAVORITE_FOODS_KEY));
+    if (!raw) return [];
+    return safeParseArray<FoodItem>(raw);
+  } catch (err) {
+    console.error('Error loading favorite foods:', err);
+    return [];
+  }
+}
+
+export async function saveFavoriteFoods(foods: FoodItem[]): Promise<void> {
+  const key = getScopedStorageKey(FAVORITE_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(foods));
+    } catch (err) {
+      console.error('Error saving favorite foods:', err);
+      throw new Error('Failed to save favorite foods.');
+    }
+  });
+}
+
+export async function toggleFavoriteFood(food: FoodItem): Promise<{ favorites: FoodItem[]; isFavorite: boolean }> {
+  const key = getScopedStorageKey(FAVORITE_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadFavoriteFoods();
+    const index = current.findIndex(
+      (f) => f.id === food.id || f.name.trim().toLowerCase() === food.name.trim().toLowerCase()
+    );
+    let updated: FoodItem[];
+    let isFavorite: boolean;
+    if (index >= 0) {
+      updated = current.filter((_, i) => i !== index);
+      isFavorite = false;
+    } else {
+      updated = [food, ...current];
+      isFavorite = true;
+    }
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return { favorites: updated, isFavorite };
+  });
+}
+
+export async function loadCustomFoods(): Promise<FoodItem[]> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(CUSTOM_FOODS_KEY));
+    if (!raw) return [];
+    return safeParseArray<FoodItem>(raw);
+  } catch (err) {
+    console.error('Error loading custom foods:', err);
+    return [];
+  }
+}
+
+export async function saveCustomFoods(foods: FoodItem[]): Promise<void> {
+  const key = getScopedStorageKey(CUSTOM_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(foods));
+    } catch (err) {
+      console.error('Error saving custom foods:', err);
+      throw new Error('Failed to save custom foods.');
+    }
+  });
+}
+
+export async function addCustomFood(food: FoodItem): Promise<FoodItem[]> {
+  const key = getScopedStorageKey(CUSTOM_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadCustomFoods();
+    const filtered = current.filter((f) => f.id !== food.id);
+    const updated = [food, ...filtered];
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  });
+}
+
+export async function deleteCustomFood(id: string): Promise<FoodItem[]> {
+  const key = getScopedStorageKey(CUSTOM_FOODS_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadCustomFoods();
+    const updated = current.filter((f) => f.id !== id);
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  });
+}
+
+// Barcode Offline Cache (Open Food Facts local cache)
+export async function loadBarcodeCache(): Promise<FoodItem[]> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(BARCODE_CACHE_KEY));
+    if (!raw) return [];
+    return safeParseArray<FoodItem>(raw);
+  } catch (err) {
+    console.error('Error loading barcode cache:', err);
+    return [];
+  }
+}
+
+export async function saveBarcodeCache(foods: FoodItem[]): Promise<void> {
+  const key = getScopedStorageKey(BARCODE_CACHE_KEY);
+  return enqueueStorageOperation(key, async () => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(foods));
+    } catch (err) {
+      console.error('Error saving barcode cache:', err);
+      throw new Error('Failed to save barcode cache.');
+    }
+  });
+}
+
+export async function upsertBarcodeCacheItem(food: FoodItem): Promise<FoodItem[]> {
+  const key = getScopedStorageKey(BARCODE_CACHE_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadBarcodeCache();
+    const cleanBarcode = food.barcode?.trim().replace(/[\s-]/g, '');
+    const filtered = current.filter((f) => {
+      const fb = f.barcode?.trim().replace(/[\s-]/g, '');
+      if (cleanBarcode && fb && cleanBarcode === fb) return false;
+      if (f.id === food.id) return false;
+      return true;
+    });
+    const updated = [{ ...food, source: food.source ?? 'open_food_facts' }, ...filtered].slice(0, 200);
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  });
+}
+
+export async function getBarcodeCacheItem(rawBarcode: string): Promise<FoodItem | null> {
+  const code = rawBarcode.trim().replace(/[\s-]/g, '');
+  if (!code) return null;
+  const cache = await loadBarcodeCache();
+  return (
+    cache.find((f) => {
+      const fb = f.barcode?.trim().replace(/[\s-]/g, '');
+      return fb === code || f.id === `barcode_${code}`;
+    }) ?? null
+  );
+}
+
+export async function searchBarcodeCache(query: string): Promise<FoodItem[]> {
+  const normQuery = normalizeSearch(query);
+  if (!normQuery) return [];
+  const cache = await loadBarcodeCache();
+  return cache.filter((f) => {
+    const normName = normalizeSearch(f.name);
+    const normBrand = f.brand ? normalizeSearch(f.brand) : '';
+    const normBarcode = f.barcode ? normalizeSearch(f.barcode) : '';
+    const normCategory = f.category ? normalizeSearch(f.category) : '';
+    return (
+      normName.includes(normQuery) ||
+      normBrand.includes(normQuery) ||
+      normBarcode.includes(normQuery) ||
+      normCategory.includes(normQuery)
+    );
+  });
+}
+
+export async function clearBarcodeCache(): Promise<void> {
+  const key = getScopedStorageKey(BARCODE_CACHE_KEY);
+  return enqueueStorageOperation(key, async () => {
+    await AsyncStorage.removeItem(key);
+  });
+}
+
+export interface YesterdayMealsPreview {
+  count: number;
+  calories: number;
+}
+
+export async function getYesterdayMealsPreview(targetDate: string, mealType?: MealType): Promise<YesterdayMealsPreview> {
+  const yesterday = getPreviousDayString(targetDate);
+  const yesterdayLog = await loadDailyLog(yesterday);
+  const meals = (yesterdayLog.meals || []).filter((m) => !mealType || m.mealType === mealType);
+  return {
+    count: meals.length,
+    calories: meals.reduce((sum, m) => sum + (m.calories || 0), 0),
+  };
+}
+
+export async function copyYesterdayMeals(targetDate: string): Promise<CopyYesterdayResult> {
+  const yesterday = getPreviousDayString(targetDate);
+  const targetKey = getScopedStorageKey(`${DAILY_LOG_PREFIX}${targetDate}`);
+  return enqueueStorageOperation(targetKey, async () => {
+    const yesterdayLog = await loadDailyLogForUpdate(yesterday);
+    const candidateMeals = yesterdayLog.meals || [];
+    const totalYesterdayCount = candidateMeals.length;
+    const totalYesterdayKcal = candidateMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
+    const currentTarget = await loadDailyLogForUpdate(targetDate);
+
+    if (candidateMeals.length === 0) {
+      return {
+        ...currentTarget,
+        addedCount: 0,
+        alreadyCopiedCount: 0,
+        totalYesterdayCount: 0,
+        totalYesterdayKcal: 0,
+      };
+    }
+
+    const alreadyCopiedIds = new Set(
+      currentTarget.meals
+        .filter((existing) => existing.copiedFromId && (!existing.copiedFromDate || existing.copiedFromDate === yesterday))
+        .map((existing) => existing.copiedFromId!)
+    );
+
+    const mealsToCopy = candidateMeals.filter((m) => !alreadyCopiedIds.has(m.id));
+    const alreadyCopiedCount = candidateMeals.length - mealsToCopy.length;
+
+    if (mealsToCopy.length === 0) {
+      return {
+        ...currentTarget,
+        addedCount: 0,
+        alreadyCopiedCount,
+        totalYesterdayCount,
+        totalYesterdayKcal,
+      };
+    }
+
+    const clonedMeals: LoggedMeal[] = mealsToCopy.map((m) => ({
+      ...m,
+      id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      copiedFromId: m.id,
+      copiedFromDate: yesterday,
+    }));
+
+    const updatedTarget: DailyLog = {
+      ...currentTarget,
+      meals: [...currentTarget.meals, ...clonedMeals],
+    };
+
+    await AsyncStorage.setItem(targetKey, JSON.stringify(updatedTarget));
+
+    return {
+      ...updatedTarget,
+      addedCount: clonedMeals.length,
+      alreadyCopiedCount,
+      totalYesterdayCount,
+      totalYesterdayKcal,
+    };
+  });
+}
+
+export async function copyYesterdayMealType(targetDate: string, mealType: MealType): Promise<CopyYesterdayResult> {
+  const yesterday = getPreviousDayString(targetDate);
+  const targetKey = getScopedStorageKey(`${DAILY_LOG_PREFIX}${targetDate}`);
+  return enqueueStorageOperation(targetKey, async () => {
+    const yesterdayLog = await loadDailyLogForUpdate(yesterday);
+    const candidateMeals = (yesterdayLog.meals || []).filter((m) => m.mealType === mealType);
+    const totalYesterdayCount = candidateMeals.length;
+    const totalYesterdayKcal = candidateMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
+    const currentTarget = await loadDailyLogForUpdate(targetDate);
+
+    if (candidateMeals.length === 0) {
+      return {
+        ...currentTarget,
+        addedCount: 0,
+        alreadyCopiedCount: 0,
+        totalYesterdayCount: 0,
+        totalYesterdayKcal: 0,
+      };
+    }
+
+    const alreadyCopiedIds = new Set(
+      currentTarget.meals
+        .filter((existing) => existing.copiedFromId && (!existing.copiedFromDate || existing.copiedFromDate === yesterday))
+        .map((existing) => existing.copiedFromId!)
+    );
+
+    const mealsToCopy = candidateMeals.filter((m) => !alreadyCopiedIds.has(m.id));
+    const alreadyCopiedCount = candidateMeals.length - mealsToCopy.length;
+
+    if (mealsToCopy.length === 0) {
+      return {
+        ...currentTarget,
+        addedCount: 0,
+        alreadyCopiedCount,
+        totalYesterdayCount,
+        totalYesterdayKcal,
+      };
+    }
+
+    const clonedMeals: LoggedMeal[] = mealsToCopy.map((m) => ({
+      ...m,
+      id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      copiedFromId: m.id,
+      copiedFromDate: yesterday,
+    }));
+
+    const updatedTarget: DailyLog = {
+      ...currentTarget,
+      meals: [...currentTarget.meals, ...clonedMeals],
+    };
+
+    await AsyncStorage.setItem(targetKey, JSON.stringify(updatedTarget));
+
+    return {
+      ...updatedTarget,
+      addedCount: clonedMeals.length,
+      alreadyCopiedCount,
+      totalYesterdayCount,
+      totalYesterdayKcal,
+    };
+  });
+}
+
+// Meal Templates (Saved meal combinations for fast 1-tap logging)
+export async function loadMealTemplates(): Promise<MealTemplate[]> {
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(MEAL_TEMPLATES_KEY));
+    if (!raw) return [];
+    return safeParseArray<MealTemplate>(raw);
+  } catch (err) {
+    console.error('Error loading meal templates:', err);
+    return [];
+  }
+}
+
+export async function saveMealTemplates(templates: MealTemplate[]): Promise<void> {
+  const key = getScopedStorageKey(MEAL_TEMPLATES_KEY);
+  return enqueueStorageOperation(key, async () => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(templates));
+    } catch (err) {
+      console.error('Error saving meal templates:', err);
+      throw new Error('Failed to save meal templates.');
+    }
+  });
+}
+
+export async function saveMealTemplate(template: MealTemplate): Promise<MealTemplate[]> {
+  const key = getScopedStorageKey(MEAL_TEMPLATES_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadMealTemplates();
+    const filtered = current.filter((t) => t.id !== template.id);
+    const updated = [template, ...filtered];
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  });
+}
+
+export async function deleteMealTemplate(id: string): Promise<MealTemplate[]> {
+  const key = getScopedStorageKey(MEAL_TEMPLATES_KEY);
+  return enqueueStorageOperation(key, async () => {
+    const current = await loadMealTemplates();
+    const updated = current.filter((t) => t.id !== id);
+    await AsyncStorage.setItem(key, JSON.stringify(updated));
+    return updated;
+  });
+}
+
+export function createTemplateFromMeals(
+  name: string,
+  mealType: MealType,
+  meals: LoggedMeal[]
+): MealTemplate {
+  const items: MealTemplateItem[] = meals.map((m) => ({
+    name: m.name,
+    servingSize: m.servingSize,
+    servingGrams: m.servingGrams,
+    servings: m.servings,
+    calories: m.calories,
+    protein: m.protein,
+    carbs: m.carbs,
+    fat: m.fat,
+    fiber: m.fiber,
+    sugar: m.sugar,
+    portionUnit: m.portionUnit,
+    gramsPerUnit: m.gramsPerUnit,
+    isEstimate: m.isEstimate,
+    source: m.source,
+  }));
+
+  const totalCalories = items.reduce((sum, item) => sum + item.calories, 0);
+  const totalProtein = Math.round(items.reduce((sum, item) => sum + item.protein, 0) * 10) / 10;
+  const totalCarbs = Math.round(items.reduce((sum, item) => sum + item.carbs, 0) * 10) / 10;
+  const totalFat = Math.round(items.reduce((sum, item) => sum + item.fat, 0) * 10) / 10;
+
+  return {
+    id: `template_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    name: name.trim(),
+    mealType,
+    items,
+    totalCalories,
+    totalProtein,
+    totalCarbs,
+    totalFat,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+// Frequent foods calculation from historical daily logs
+export function getFrequentFoods(
+  dailyLogs: Record<string, DailyLog>,
+  limit: number = 20
+): FoodItem[] {
+  const counts = new Map<string, { count: number; meal: LoggedMeal }>();
+  for (const dayLog of Object.values(dailyLogs || {})) {
+    for (const m of dayLog.meals || []) {
+      const key = m.foodId || m.name.trim().toLowerCase();
+      const existing = counts.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        counts.set(key, { count: 1, meal: m });
+      }
+    }
+  }
+
+  const sorted = Array.from(counts.values()).sort((a, b) => b.count - a.count);
+  return sorted.slice(0, limit).map(({ meal }) => {
+    const ratio = meal.servings > 0 ? meal.servings : 1;
+    return {
+      id: meal.foodId || `frequent_${meal.name.replace(/[^a-zA-Z0-9_-]/g, '_')}`,
+      name: meal.name,
+      brand: meal.brand,
+      category: meal.category,
+      servingSize: meal.servingSize,
+      servingGrams: Math.round(meal.servingGrams / ratio),
+      calories: Math.round(meal.calories / ratio),
+      protein: Math.round((meal.protein / ratio) * 10) / 10,
+      carbs: Math.round((meal.carbs / ratio) * 10) / 10,
+      fat: Math.round((meal.fat / ratio) * 10) / 10,
+      fiber: meal.fiber !== undefined ? Math.round((meal.fiber / ratio) * 10) / 10 : undefined,
+      sugar: meal.sugar !== undefined ? Math.round((meal.sugar / ratio) * 10) / 10 : undefined,
+      sodium: meal.sodium !== undefined ? Math.round(meal.sodium / ratio) : undefined,
+      barcode: meal.barcode,
+      source: meal.source,
+      isEstimate: meal.isEstimate,
+      portionUnit: meal.portionUnit,
+      gramsPerUnit: meal.gramsPerUnit,
+    };
+  });
+}
+
+export async function loadFrequentFoods(limit: number = 20): Promise<FoodItem[]> {
+  const recentLogs = await getRecentDailyLogs(90);
+  return getFrequentFoods(recentLogs, limit);
+}
+
 export const DEFAULT_REMINDER_SETTINGS: import('../types').ReminderSettings = {
   supplementsEnabled: false,
   supplementTimes: {
@@ -444,7 +1024,7 @@ export async function saveReminderSettings(settings: import('../types').Reminder
 export async function addWorkoutToDay(dateStr: string, workout: WorkoutEntry): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
-    const current = await loadDailyLog(dateStr);
+    const current = await loadDailyLogForUpdate(dateStr);
     const existingWorkouts = current.workouts || [];
     const updatedWorkouts = [...existingWorkouts, workout];
     const updatedLog: DailyLog = { ...current, workouts: updatedWorkouts };
@@ -456,7 +1036,7 @@ export async function addWorkoutToDay(dateStr: string, workout: WorkoutEntry): P
 export async function updateWorkoutInDay(dateStr: string, updatedWorkout: WorkoutEntry): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
-    const current = await loadDailyLog(dateStr);
+    const current = await loadDailyLogForUpdate(dateStr);
     const existingWorkouts = current.workouts || [];
     const updatedWorkouts = existingWorkouts.map((w) => (w.id === updatedWorkout.id ? updatedWorkout : w));
     const updatedLog: DailyLog = { ...current, workouts: updatedWorkouts };
@@ -468,7 +1048,7 @@ export async function updateWorkoutInDay(dateStr: string, updatedWorkout: Workou
 export async function removeWorkoutFromDay(dateStr: string, workoutId: string): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
-    const current = await loadDailyLog(dateStr);
+    const current = await loadDailyLogForUpdate(dateStr);
     const existingWorkouts = current.workouts || [];
     const updatedWorkouts = existingWorkouts.filter((w) => w.id !== workoutId);
     const updatedLog: DailyLog = { ...current, workouts: updatedWorkouts };
@@ -558,19 +1138,17 @@ export async function getRecentDailyLogs(days: number = 90): Promise<Record<stri
 }
 
 /**
- * Calculates current consecutive active logging streak with on-demand chunked reads.
- * Only loads older chunks if the active streak reaches the boundary of the loaded chunk.
+ * Calculates current consecutive active logging streak by walking back from referenceDate (today)
+ * and stopping at the first inactive day without calling getAllDailyLogs.
  */
 export async function loadAccurateStreak(
-  referenceDate: string = getTodayDateString(),
-  chunkSize: number = 90
+  referenceDate: string = getTodayDateString()
 ): Promise<{ currentStreak: number; loggedToday: boolean }> {
   const weights = await loadWeightHistory();
-  return calculateStreakWithChunking(
-    (endDate, days) => getDailyLogsRange(endDate, days),
+  return calculateStreakByWalkback(
+    (date) => loadDailyLog(date),
     weights,
-    referenceDate,
-    chunkSize
+    referenceDate
   );
 }
 
@@ -603,6 +1181,12 @@ export async function restoreAllData(
         getScopedStorageKey(SUPPLEMENT_ROUTINE_KEY),
         getScopedStorageKey(WEIGHT_HISTORY_KEY),
         getScopedStorageKey(REMINDER_SETTINGS_KEY),
+        getScopedStorageKey(RECENT_FOODS_KEY),
+        getScopedStorageKey(FAVORITE_FOODS_KEY),
+        getScopedStorageKey(CUSTOM_FOODS_KEY),
+        getScopedStorageKey(BARCODE_CACHE_KEY),
+        getScopedStorageKey(MEAL_TEMPLATES_KEY),
+        getScopedStorageKey(MEDICAL_DISCLAIMER_KEY),
         ...existingLogKeys,
         ...incomingLogKeys,
       ]);
@@ -639,6 +1223,48 @@ export async function restoreAllData(
           await AsyncStorage.setItem(getScopedStorageKey(REMINDER_SETTINGS_KEY), JSON.stringify(staged.reminderSettings));
         } else {
           await AsyncStorage.removeItem(getScopedStorageKey(REMINDER_SETTINGS_KEY));
+        }
+
+        // 7. Write recent foods
+        if (staged.recentFoods) {
+          await AsyncStorage.setItem(getScopedStorageKey(RECENT_FOODS_KEY), JSON.stringify(staged.recentFoods));
+        } else {
+          await AsyncStorage.removeItem(getScopedStorageKey(RECENT_FOODS_KEY));
+        }
+
+        // 8. Write favorite foods
+        if (staged.favoriteFoods) {
+          await AsyncStorage.setItem(getScopedStorageKey(FAVORITE_FOODS_KEY), JSON.stringify(staged.favoriteFoods));
+        } else {
+          await AsyncStorage.removeItem(getScopedStorageKey(FAVORITE_FOODS_KEY));
+        }
+
+        // 9. Write custom foods
+        if (staged.customFoods) {
+          await AsyncStorage.setItem(getScopedStorageKey(CUSTOM_FOODS_KEY), JSON.stringify(staged.customFoods));
+        } else {
+          await AsyncStorage.removeItem(getScopedStorageKey(CUSTOM_FOODS_KEY));
+        }
+
+        // 10. Write barcode cache
+        if (staged.barcodeCache) {
+          await AsyncStorage.setItem(getScopedStorageKey(BARCODE_CACHE_KEY), JSON.stringify(staged.barcodeCache));
+        } else {
+          await AsyncStorage.removeItem(getScopedStorageKey(BARCODE_CACHE_KEY));
+        }
+
+        // 11. Write meal templates
+        if (staged.mealTemplates) {
+          await AsyncStorage.setItem(getScopedStorageKey(MEAL_TEMPLATES_KEY), JSON.stringify(staged.mealTemplates));
+        } else {
+          await AsyncStorage.removeItem(getScopedStorageKey(MEAL_TEMPLATES_KEY));
+        }
+
+        // 12. Write medical disclaimer state
+        if (staged.profile.hasAcceptedMedicalDisclaimer) {
+          await AsyncStorage.setItem(getScopedStorageKey(MEDICAL_DISCLAIMER_KEY), 'true');
+        } else {
+          await AsyncStorage.removeItem(getScopedStorageKey(MEDICAL_DISCLAIMER_KEY));
         }
       } catch (restoreErr) {
         console.error('Restore failed midway, attempting rollback:', restoreErr);
@@ -686,7 +1312,7 @@ export async function restoreAllData(
 
     // 2. Daily logs: merge per date
     for (const [dateStr, incomingLog] of Object.entries(staged.dailyLogs || {})) {
-      const currentLog = await loadDailyLog(dateStr);
+      const currentLog = await loadDailyLogForUpdate(dateStr);
 
       // Merge meals: avoid duplicate IDs
       const existingMealIds = new Set(currentLog.meals.map((m) => m.id));
@@ -747,6 +1373,65 @@ export async function restoreAllData(
     // 5. Reminders
     if (staged.reminderSettings) {
       await saveReminderSettings(staged.reminderSettings);
+    }
+
+    // 6. Recent foods
+    if (staged.recentFoods && staged.recentFoods.length > 0) {
+      const currentRecent = await loadRecentFoods();
+      const existingIds = new Set(currentRecent.map((f) => f.id));
+      const mergedRecent = [
+        ...currentRecent,
+        ...staged.recentFoods.filter((f) => !existingIds.has(f.id)),
+      ].slice(0, 30);
+      await AsyncStorage.setItem(getScopedStorageKey(RECENT_FOODS_KEY), JSON.stringify(mergedRecent));
+    }
+
+    // 7. Favorite foods
+    if (staged.favoriteFoods && staged.favoriteFoods.length > 0) {
+      const currentFavs = await loadFavoriteFoods();
+      const existingFavIds = new Set(currentFavs.map((f) => f.id));
+      const mergedFavs = [
+        ...currentFavs,
+        ...staged.favoriteFoods.filter((f) => !existingFavIds.has(f.id)),
+      ];
+      await AsyncStorage.setItem(getScopedStorageKey(FAVORITE_FOODS_KEY), JSON.stringify(mergedFavs));
+    }
+
+    // 8. Custom foods
+    if (staged.customFoods && staged.customFoods.length > 0) {
+      const currentCustom = await loadCustomFoods();
+      const existingCustomIds = new Set(currentCustom.map((f) => f.id));
+      const mergedCustom = [
+        ...currentCustom,
+        ...staged.customFoods.filter((f) => !existingCustomIds.has(f.id)),
+      ];
+      await AsyncStorage.setItem(getScopedStorageKey(CUSTOM_FOODS_KEY), JSON.stringify(mergedCustom));
+    }
+
+    // 9. Barcode cache
+    if (staged.barcodeCache && staged.barcodeCache.length > 0) {
+      const currentCache = await loadBarcodeCache();
+      const existingBarcodes = new Set(
+        currentCache.map((f) => f.barcode?.trim().replace(/[\s-]/g, '') || f.id)
+      );
+      const mergedCache = [
+        ...currentCache,
+        ...staged.barcodeCache.filter(
+          (f) => !existingBarcodes.has(f.barcode?.trim().replace(/[\s-]/g, '') || f.id)
+        ),
+      ].slice(0, 200);
+      await AsyncStorage.setItem(getScopedStorageKey(BARCODE_CACHE_KEY), JSON.stringify(mergedCache));
+    }
+
+    // 10. Meal templates
+    if (staged.mealTemplates && staged.mealTemplates.length > 0) {
+      const currentTemplates = await loadMealTemplates();
+      const existingTemplateIds = new Set(currentTemplates.map((t) => t.id));
+      const mergedTemplates = [
+        ...currentTemplates,
+        ...staged.mealTemplates.filter((t) => !existingTemplateIds.has(t.id)),
+      ];
+      await AsyncStorage.setItem(getScopedStorageKey(MEAL_TEMPLATES_KEY), JSON.stringify(mergedTemplates));
     }
   }
 }

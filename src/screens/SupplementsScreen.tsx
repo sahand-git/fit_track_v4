@@ -38,10 +38,17 @@ import {
   SupplementTime,
   SupplementCategory,
   LoggedDailySupplement,
+  LoggedMeal,
+  UserProfile,
 } from '../types';
 import { AppText as Text } from '../components/AppText';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
+import { RDAAnalysisCard } from '../components/RDAAnalysisCard';
+import { NutrientDetailModal } from '../components/NutrientDetailModal';
+import { SupportedNutrientKey } from '../utils/nutrientTotals';
+import { calculateTargets } from '../utils/calculator';
+import { saveUserProfile } from '../storage/storage';
 import { translate } from '../i18n/strings';
 import { useLanguage } from '../i18n/I18nContext';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
@@ -65,9 +72,12 @@ interface SupplementsScreenProps {
   routine: SupplementRoutineItem[];
   dailySupplements?: LoggedDailySupplement[];
   checks?: SupplementCheck[];
+  meals?: LoggedMeal[];
+  profile?: UserProfile;
   onUpdateDailySupplements: (items: LoggedDailySupplement[]) => Promise<void>;
   onUpdateRoutine: (items: SupplementRoutineItem[]) => Promise<void>;
   onToggleSupplement: (id: string, taken: boolean) => Promise<void>;
+  onUpdateProfile?: (profile: UserProfile) => Promise<void>;
   onBack?: () => void;
 }
 
@@ -93,9 +103,12 @@ export function SupplementsScreen({
   routine,
   dailySupplements,
   checks = [],
+  meals = [],
+  profile,
   onUpdateDailySupplements,
   onUpdateRoutine,
   onToggleSupplement,
+  onUpdateProfile,
   onBack,
 }: SupplementsScreenProps) {
   const language = useLanguage();
@@ -103,6 +116,56 @@ export function SupplementsScreen({
   const t = (value: string) => translate(language, value);
 
   const isFuture = selectedDate > getTodayDateString();
+  const [selectedNutrientForDetail, setSelectedNutrientForDetail] = useState<SupportedNutrientKey | string | null>(null);
+
+  const handleSaveNutrientGoal = async (nutrientKey: SupportedNutrientKey, newTarget: number) => {
+    if (!profile) return;
+    const updatedGoals = { ...(profile.customNutrientGoals || {}), [nutrientKey]: newTarget };
+    const updated: UserProfile = {
+      ...profile,
+      customNutrientGoals: updatedGoals,
+    };
+    if (nutrientKey === 'calories') updated.targetCalories = newTarget;
+    if (nutrientKey === 'protein') updated.targetProtein = newTarget;
+    if (nutrientKey === 'carbs') updated.targetCarbs = newTarget;
+    if (nutrientKey === 'fat') updated.targetFat = newTarget;
+
+    if (onUpdateProfile) {
+      await onUpdateProfile(updated);
+    } else {
+      await saveUserProfile(updated);
+    }
+  };
+
+  const handleResetNutrientGoal = async (nutrientKey: SupportedNutrientKey) => {
+    if (!profile) return;
+    const updatedGoals = { ...(profile.customNutrientGoals || {}) };
+    delete updatedGoals[nutrientKey];
+    const updated: UserProfile = {
+      ...profile,
+      customNutrientGoals: updatedGoals,
+    };
+    if (nutrientKey === 'calories' || nutrientKey === 'protein' || nutrientKey === 'carbs' || nutrientKey === 'fat') {
+      const defaultTargets = calculateTargets(
+        profile.gender,
+        profile.weightKg,
+        profile.heightCm,
+        profile.age,
+        profile.activityLevel,
+        profile.goal
+      );
+      if (nutrientKey === 'calories') updated.targetCalories = defaultTargets.targetCalories;
+      if (nutrientKey === 'protein') updated.targetProtein = defaultTargets.targetProtein;
+      if (nutrientKey === 'carbs') updated.targetCarbs = defaultTargets.targetCarbs;
+      if (nutrientKey === 'fat') updated.targetFat = defaultTargets.targetFat;
+    }
+
+    if (onUpdateProfile) {
+      await onUpdateProfile(updated);
+    } else {
+      await saveUserProfile(updated);
+    }
+  };
 
   // Resolved list of items for the selected day:
   // If the day already has specific daily items, use them.
@@ -242,8 +305,7 @@ export function SupplementsScreen({
     setFormName(catItem.name);
     setFormCategory(catItem.category);
     setFormUnit(catItem.suggestedUnit);
-    // Intentionally keep amount empty so user enters from product label
-    setFormAmount('');
+    setFormAmount(catItem.defaultAmount ? String(catItem.defaultAmount) : '');
   };
 
   const handleSaveModal = async () => {
@@ -586,6 +648,8 @@ export function SupplementsScreen({
             style={styles.actionStripBtn}
             onPress={handleLoadRoutine}
             accessibilityRole="button"
+            accessibilityLabel={t('Load routine')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <RotateCcw size={14} color={theme.colors.primary} />
             <Text style={styles.actionStripBtnText} numberOfLines={2}>{t('Load routine')}</Text>
@@ -595,6 +659,8 @@ export function SupplementsScreen({
             style={styles.actionStripBtn}
             onPress={handleSaveDayAsRoutine}
             accessibilityRole="button"
+            accessibilityLabel={t('Save day as routine')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <BookmarkCheck size={14} color={theme.colors.secondary} />
             <Text style={styles.actionStripBtnText} numberOfLines={2}>{t('Save day as routine')}</Text>
@@ -604,6 +670,8 @@ export function SupplementsScreen({
             style={[styles.actionStripBtn, styles.actionStripBtnPrimary]}
             onPress={() => openAddModal()}
             accessibilityRole="button"
+            accessibilityLabel={t('Add supplement')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Plus size={15} color={theme.colors.textInverted} strokeWidth={2.5} />
             <Text style={styles.actionStripBtnPrimaryText} numberOfLines={2}>{t('Add supplement')}</Text>
@@ -627,6 +695,9 @@ export function SupplementsScreen({
                 <TouchableOpacity
                   style={[styles.actionStripBtn, { paddingVertical: 10, paddingHorizontal: 14 }]}
                   onPress={handleLoadRoutine}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Load routine')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <RotateCcw size={15} color={theme.colors.primary} />
                   <Text style={styles.actionStripBtnText} numberOfLines={2}>{t('Load routine')}</Text>
@@ -635,6 +706,9 @@ export function SupplementsScreen({
               <TouchableOpacity
                 style={[styles.actionStripBtn, styles.actionStripBtnPrimary, { paddingVertical: 10, paddingHorizontal: 16 }]}
                 onPress={() => openAddModal()}
+                accessibilityRole="button"
+                accessibilityLabel={t('Browse catalog')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Plus size={16} color={theme.colors.textInverted} />
                 <Text style={styles.actionStripBtnPrimaryText} numberOfLines={2}>{t('Browse catalog')}</Text>
@@ -796,6 +870,13 @@ export function SupplementsScreen({
         })
       )}
 
+      {/* Micronutrients & RDA Analysis */}
+      <RDAAnalysisCard
+        meals={meals}
+        supplements={activeItems}
+        onSelectNutrient={(key) => setSelectedNutrientForDetail(key)}
+      />
+
       {/* Educational Disclaimer */}
       <View style={styles.notice}>
         <AlertCircle size={15} color={theme.colors.secondary} style={{ marginTop: 1 }} />
@@ -833,7 +914,11 @@ export function SupplementsScreen({
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
+            >
               {/* Catalog Search & Browse (Shown when adding a new item) */}
               {!editingItem && (
                 <View style={styles.catalogBrowseSection}>
@@ -851,7 +936,12 @@ export function SupplementsScreen({
                       returnKeyType="search"
                     />
                     {catalogSearch.length > 0 && (
-                      <TouchableOpacity onPress={() => setCatalogSearch('')}>
+                      <TouchableOpacity
+                        onPress={() => setCatalogSearch('')}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Clear')}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
                         <X size={15} color={theme.colors.textMuted} />
                       </TouchableOpacity>
                     )}
@@ -884,6 +974,9 @@ export function SupplementsScreen({
                               isSelected && styles.catalogChipActive,
                             ]}
                             onPress={() => setSelectedCatalogCategory(catKey)}
+                            accessibilityRole="button"
+                            accessibilityLabel={labelText}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                           >
                             <Text
                               style={[
@@ -910,6 +1003,9 @@ export function SupplementsScreen({
                             styles.catalogItemPillSelected,
                         ]}
                         onPress={() => handleSelectCatalogItem(catItem)}
+                        accessibilityRole="button"
+                        accessibilityLabel={catItem.name}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                       >
                         <Text
                           style={[
@@ -918,7 +1014,7 @@ export function SupplementsScreen({
                               styles.catalogItemPillTextSelected,
                           ]}
                         >
-                          {catItem.name}
+                          {catItem.icon ? `${catItem.icon} ` : ''}{catItem.name}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -953,6 +1049,9 @@ export function SupplementsScreen({
                             formCategory === cat && styles.optionChipActive,
                           ]}
                           onPress={() => setFormCategory(cat)}
+                          accessibilityRole="button"
+                          accessibilityLabel={t(categoryLabels[cat])}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
                           <Text
                             style={[
@@ -1000,6 +1099,9 @@ export function SupplementsScreen({
                             formUnit === unit && styles.unitChipActive,
                           ]}
                           onPress={() => setFormUnit(unit)}
+                          accessibilityRole="button"
+                          accessibilityLabel={t(unit)}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
                           <Text
                             style={[
@@ -1039,6 +1141,9 @@ export function SupplementsScreen({
                           formTime === slot && styles.optionChipActive,
                         ]}
                         onPress={() => setFormTime(slot)}
+                        accessibilityRole="button"
+                        accessibilityLabel={t(timeLabels[slot])}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                       >
                         <Text
                           style={[
@@ -1063,6 +1168,9 @@ export function SupplementsScreen({
                         formSaveTarget === 'both' && styles.targetChoiceRowActive,
                       ]}
                       onPress={() => setFormSaveTarget('both')}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Both this day and routine')}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     >
                       <View style={styles.radioCircle}>
                         {formSaveTarget === 'both' && <View style={styles.radioDot} />}
@@ -1078,6 +1186,9 @@ export function SupplementsScreen({
                         formSaveTarget === 'day' && styles.targetChoiceRowActive,
                       ]}
                       onPress={() => setFormSaveTarget('day')}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('This day only')}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     >
                       <View style={styles.radioCircle}>
                         {formSaveTarget === 'day' && <View style={styles.radioDot} />}
@@ -1092,6 +1203,9 @@ export function SupplementsScreen({
                           formSaveTarget === 'routine' && styles.targetChoiceRowActive,
                         ]}
                         onPress={() => setFormSaveTarget('routine')}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Repeating routine only')}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                       >
                         <View style={styles.radioCircle}>
                           {formSaveTarget === 'routine' && <View style={styles.radioDot} />}
@@ -1113,6 +1227,8 @@ export function SupplementsScreen({
                   onPress={handleSaveModal}
                   disabled={!formName.trim() || isSavingSupplement}
                   accessibilityRole="button"
+                  accessibilityLabel={editingItem ? t('Update supplement') : t('Save Supplement')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Text style={styles.modalSaveBtnText}>
                     {editingItem ? t('Update supplement') : t('Save Supplement')}
@@ -1168,6 +1284,8 @@ export function SupplementsScreen({
                     onPress={handleConfirmDeleteDayOnly}
                     activeOpacity={0.8}
                     accessibilityRole="button"
+                    accessibilityLabel={t('Remove from this day')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Text style={styles.deleteModalBtnSecondaryText}>
                       {t('Remove from this day')}
@@ -1179,6 +1297,8 @@ export function SupplementsScreen({
                     onPress={handleConfirmDeleteRoutineToo}
                     activeOpacity={0.8}
                     accessibilityRole="button"
+                    accessibilityLabel={t('Remove from routine too')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Text style={styles.deleteModalBtnDangerText}>
                       {t('Remove from routine too')}
@@ -1191,6 +1311,8 @@ export function SupplementsScreen({
                   onPress={handleConfirmDeleteDayOnly}
                   activeOpacity={0.8}
                   accessibilityRole="button"
+                  accessibilityLabel={t('Delete')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Text style={styles.deleteModalBtnDangerText}>
                     {t('Delete')}
@@ -1203,6 +1325,8 @@ export function SupplementsScreen({
                 onPress={() => setItemToDelete(null)}
                 activeOpacity={0.8}
                 accessibilityRole="button"
+                accessibilityLabel={t('Cancel')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.deleteModalBtnCancelText}>{t('Cancel')}</Text>
               </TouchableOpacity>
@@ -1215,6 +1339,17 @@ export function SupplementsScreen({
         visible={reminderModalVisible}
         onClose={() => setReminderModalVisible(false)}
         routine={routine}
+      />
+
+      <NutrientDetailModal
+        visible={!!selectedNutrientForDetail}
+        initialNutrientKey={selectedNutrientForDetail || 'vitaminC'}
+        meals={meals}
+        supplements={activeItems}
+        profile={profile}
+        onClose={() => setSelectedNutrientForDetail(null)}
+        onSaveGoal={handleSaveNutrientGoal}
+        onResetGoal={handleResetNutrientGoal}
       />
     </View>
   );

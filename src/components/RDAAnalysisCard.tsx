@@ -1,0 +1,376 @@
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { AppText as Text } from './AppText';
+import {
+  calculateMicronutrientIntake,
+  ORDERED_MICRONUTRIENT_KEYS,
+} from '../utils/micronutrients';
+import { MicronutrientKey } from '../data/supplementCatalog';
+import { LoggedMeal, LoggedDailySupplement } from '../types';
+import { useLanguage } from '../i18n/I18nContext';
+import { translate } from '../i18n/strings';
+import { theme } from '../theme';
+import {
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+  Sparkles,
+  Info,
+} from 'lucide-react-native';
+
+interface RDAAnalysisCardProps {
+  meals?: LoggedMeal[];
+  supplements?: LoggedDailySupplement[];
+  onSelectNutrient?: (key: MicronutrientKey) => void;
+}
+
+export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
+  meals = [],
+  supplements = [],
+  onSelectNutrient,
+}) => {
+  const language = useLanguage();
+  const isRtl = language === 'ar' || language === 'ckb';
+  const [expanded, setExpanded] = useState(false);
+
+  const analysis = calculateMicronutrientIntake(meals, supplements);
+  const { nutrients, deficiencies, targetsMetCount } = analysis;
+
+  return (
+    <View style={styles.card}>
+      {/* Header */}
+      <View style={[styles.headerRow, isRtl && styles.rowRtl]}>
+        <View style={[styles.titleGroup, isRtl && styles.titleGroupRtl]}>
+          <View style={styles.iconCircle}>
+            <Sparkles size={16} color={theme.colors.primary} />
+          </View>
+          <View>
+            <Text style={styles.cardTitle}>
+              {translate(language, 'Micronutrients & Daily Allowance (RDA)')}
+            </Text>
+            <Text style={styles.cardSubtitle}>
+              {translate(language, 'Estimated intake from meals & taken supplements')}
+            </Text>
+          </View>
+        </View>
+
+        {/* Met score pill */}
+        <View style={styles.scoreBadge}>
+          <Text style={styles.scoreBadgeText}>
+            {targetsMetCount}/9 {translate(language, 'targets met')}
+          </Text>
+        </View>
+      </View>
+
+      {/* Deficiency Alerts Banner (if any) */}
+      {deficiencies.length > 0 && (
+        <View style={styles.alertBanner}>
+          <View style={[styles.alertHeader, isRtl && styles.rowRtl]}>
+            <AlertTriangle size={15} color="#D97706" style={{ marginTop: 1 }} />
+            <Text style={styles.alertTitle}>
+              {translate(language, 'Deficiency risks detected (<50% RDA):')}
+            </Text>
+          </View>
+          <View style={styles.deficiencyList}>
+            {deficiencies.slice(0, 4).map((d) => (
+              <View key={d.key} style={[styles.deficiencyItem, isRtl && styles.rowRtl]}>
+                <Text style={styles.deficiencyNutrient}>
+                  • {translate(language, d.label)} ({d.percent}%):
+                </Text>
+                <Text style={styles.deficiencySources}>
+                  {' '}{translate(language, d.foodSources)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Primary Highlights (Top 3 or when expanded) */}
+      <View style={styles.grid}>
+        {(expanded
+          ? ORDERED_MICRONUTRIENT_KEYS
+          : ORDERED_MICRONUTRIENT_KEYS.slice(0, 3)
+        ).map((key) => {
+          const item = nutrients[key];
+          const pctWidth = Math.min(100, item.percent);
+          const barColor =
+            item.percent >= 80
+              ? '#10B981' // emerald
+              : item.percent >= 50
+              ? '#F59E0B' // amber
+              : '#EF4444'; // red
+
+          return (
+            <TouchableOpacity
+              key={key}
+              style={styles.nutrientCard}
+              onPress={() => onSelectNutrient?.(key)}
+              disabled={!onSelectNutrient}
+              activeOpacity={0.75}
+              accessibilityRole={onSelectNutrient ? 'button' : 'none'}
+              accessibilityLabel={`${translate(language, item.label)}: ${item.current} / ${item.target} ${item.unit}`}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <View style={[styles.nutrientTopRow, isRtl && styles.rowRtl]}>
+                <Text style={styles.nutrientName}>
+                  {translate(language, item.label)}
+                </Text>
+                <Text style={styles.nutrientValues}>
+                  {item.current} / {item.target} {item.unit}
+                </Text>
+              </View>
+
+              {/* Progress track */}
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${pctWidth}%`,
+                      backgroundColor: barColor,
+                    },
+                  ]}
+                />
+              </View>
+
+              {/* Nutrient details sub-row */}
+              <View style={[styles.nutrientBottomRow, isRtl && styles.rowRtl]}>
+                <Text style={styles.breakdownText}>
+                  {translate(language, 'Food')}: {item.foodAmount} • {translate(language, 'Supp')}: {item.supplementAmount}
+                </Text>
+                <Text
+                  style={[
+                    styles.pctBadgeText,
+                    {
+                      color:
+                        item.percent >= 80
+                          ? '#059669'
+                          : item.percent >= 50
+                          ? '#D97706'
+                          : '#DC2626',
+                    },
+                  ]}
+                >
+                  {item.percent}% {translate(language, 'RDA')}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Expand / Collapse Button */}
+      <TouchableOpacity
+        style={[styles.toggleBtn, isRtl && styles.rowRtl]}
+        onPress={() => setExpanded(!expanded)}
+        accessibilityRole="button"
+        accessibilityLabel={
+          expanded
+            ? translate(language, 'Hide micronutrient breakdown')
+            : translate(language, 'Show all 9 micronutrients')
+        }
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Text style={styles.toggleBtnText}>
+          {expanded
+            ? translate(language, 'Hide micronutrient breakdown')
+            : translate(language, 'Show all 9 micronutrients')}
+        </Text>
+        {expanded ? (
+          <ChevronUp size={16} color={theme.colors.primary} />
+        ) : (
+          <ChevronDown size={16} color={theme.colors.primary} />
+        )}
+      </TouchableOpacity>
+
+      {/* Footnote */}
+      <View style={[styles.footnoteRow, isRtl && styles.rowRtl]}>
+        <Info size={12} color={theme.colors.textMuted} style={{ marginTop: 1 }} />
+        <Text style={styles.footnoteText}>
+          {translate(
+            language,
+            'NIH/IOM adult Recommended Dietary Allowances. For wellness tracking only.'
+          )}
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: theme.spacing.lg,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  rowRtl: {
+    flexDirection: 'row-reverse',
+  },
+  titleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  titleGroupRtl: {
+    flexDirection: 'row-reverse',
+  },
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceSubtle,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  cardSubtitle: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    marginTop: 1,
+  },
+  scoreBadge: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  scoreBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  alertBanner: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  alertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  alertTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  deficiencyList: {
+    gap: 4,
+  },
+  deficiencyItem: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  deficiencyNutrient: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  deficiencySources: {
+    fontSize: 11,
+    color: '#78350F',
+    flex: 1,
+  },
+  grid: {
+    gap: 8,
+  },
+  nutrientCard: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.md,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  nutrientTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  nutrientName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  nutrientValues: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    color: theme.colors.textSecondary,
+  },
+  progressTrack: {
+    height: 6,
+    backgroundColor: theme.colors.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  nutrientBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  breakdownText: {
+    fontSize: 10,
+    color: theme.colors.textMuted,
+  },
+  pctBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  toggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  toggleBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
+  footnoteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  footnoteText: {
+    fontSize: 10,
+    color: theme.colors.textMuted,
+    flex: 1,
+    lineHeight: 14,
+  },
+});

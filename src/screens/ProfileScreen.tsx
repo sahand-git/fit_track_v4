@@ -10,14 +10,18 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound } from 'lucide-react-native';
+import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
 import { GeminiKeyManager } from '../components/GeminiKeyManager';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
 import { BackupModal } from '../components/BackupModal';
+import { MedicalDisclaimerModal } from '../components/MedicalDisclaimerModal';
+import { ScientificReferencesModal } from '../components/ScientificReferencesModal';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { isNotificationSupported } from '../services/notificationService';
+import { setCrashReportingConsent } from '../services/crashReportingService';
+import { sendFeedback } from '../utils/feedback';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useLanguage } from '../i18n/I18nContext';
 import { languageNames, translate } from '../i18n/strings';
@@ -52,12 +56,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const [remindersModalVisible, setRemindersModalVisible] = useState(false);
   const [backupModalVisible, setBackupModalVisible] = useState(false);
+  const [disclaimerModalVisible, setDisclaimerModalVisible] = useState(false);
+  const [referencesModalVisible, setReferencesModalVisible] = useState(false);
   const [includeWorkouts, setIncludeWorkouts] = useState(!!profile.includeWorkoutsInCalorieBudget);
+  const [enableCrashReporting, setEnableCrashReporting] = useState(!!profile.enableCrashReporting);
 
   // Handle Android back button when sub-modals are open
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const onBackPress = () => {
+      if (disclaimerModalVisible) {
+        setDisclaimerModalVisible(false);
+        return true;
+      }
+      if (referencesModalVisible) {
+        setReferencesModalVisible(false);
+        return true;
+      }
       if (remindersModalVisible) {
         setRemindersModalVisible(false);
         return true;
@@ -70,7 +85,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
-  }, [remindersModalVisible, backupModalVisible]);
+  }, [remindersModalVisible, backupModalVisible, disclaimerModalVisible, referencesModalVisible]);
   const [name, setName] = useState(profile.name);
   const [age, setAge] = useState(profile.age.toString());
   const [gender, setGender] = useState<Gender>(profile.gender);
@@ -98,6 +113,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const handleSave = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    const updatedCustomGoals = { ...(profile.customNutrientGoals || {}) };
+    delete updatedCustomGoals.calories;
+    delete updatedCustomGoals.protein;
+    delete updatedCustomGoals.carbs;
+    delete updatedCustomGoals.fat;
+
     const updated: UserProfile = {
       ...profile,
       name: name.trim() || 'Athlete',
@@ -110,8 +131,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       language,
       isOnboarded: true,
       includeWorkoutsInCalorieBudget: includeWorkouts,
+      enableCrashReporting,
+      customNutrientGoals: updatedCustomGoals,
       ...liveTargets,
     };
+    setCrashReportingConsent(enableCrashReporting).catch(() => {});
     onSaveProfile(updated);
   };
 
@@ -188,7 +212,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 language === option && styles.languageOptionActive,
               ]}
               accessibilityRole="button"
+              accessibilityLabel={languageNames[option]}
               accessibilityState={{ selected: language === option }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
               <Text
                 style={[
@@ -301,6 +327,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               style={[styles.genderBtn, gender === g && styles.genderBtnActive]}
               onPress={() => setGender(g)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={g === 'male' ? t('Male') : t('Female')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={[styles.genderBtnText, gender === g && styles.genderBtnTextActive]}>
                 {g === 'male' ? t('Male') : t('Female')}
@@ -319,6 +348,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             style={[styles.optionRow, activityLevel === act.key && styles.optionRowActive]}
             onPress={() => setActivityLevel(act.key)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${act.label}: ${act.desc}`}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
             <View style={{ flex: 1 }}>
               <Text style={styles.optionLabel}>{act.label}</Text>
@@ -338,6 +370,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             style={[styles.optionRow, goal === g.key && styles.optionRowActive]}
             onPress={() => setGoal(g.key)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${g.label}: ${g.desc}`}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
             <View style={{ flex: 1 }}>
               <Text style={styles.optionLabel}>{g.label}</Text>
@@ -359,6 +394,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           }}
           activeOpacity={0.7}
           accessibilityRole="button"
+          accessibilityLabel={t('Configure Reminders')}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
             <Bell size={20} color={theme.colors.primary} />
@@ -385,7 +422,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           }}
           activeOpacity={0.7}
           accessibilityRole="checkbox"
+          accessibilityLabel={t('Use adaptive activity budget')}
           accessibilityState={{ checked: includeWorkouts }}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
             <Flame size={20} color={theme.colors.warning} />
@@ -411,6 +450,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           }}
           activeOpacity={0.7}
           accessibilityRole="button"
+          accessibilityLabel={t('Backup & Restore')}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
             <Database size={20} color={theme.colors.primary} />
@@ -424,8 +465,114 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </TouchableOpacity>
       </View>
 
+      {/* Privacy & Diagnostics Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>{t('Privacy & Diagnostics')}</Text>
+        <TouchableOpacity
+          style={[styles.optionRow, enableCrashReporting && styles.optionRowActive]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            const nextVal = !enableCrashReporting;
+            setEnableCrashReporting(nextVal);
+            setCrashReportingConsent(nextVal).catch(() => {});
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="checkbox"
+          accessibilityLabel={t('Anonymous Crash Reporting')}
+          accessibilityState={{ checked: enableCrashReporting }}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <ShieldCheck size={20} color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Anonymous Crash Reporting')}</Text>
+              <Text style={styles.optionDesc}>
+                {t('Help improve stability by sharing anonymized error stacks. Meals, foods, and keys are strictly excluded.')}
+              </Text>
+            </View>
+          </View>
+          <AnimatedCheckbox checked={enableCrashReporting} size={20} />
+        </TouchableOpacity>
+
+        {/* In-app Send Feedback */}
+        <TouchableOpacity
+          style={styles.optionRow}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            sendFeedback(language).catch(() => {});
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('Send Feedback')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <MessageSquare size={20} color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Send Feedback')}</Text>
+              <Text style={styles.optionDesc}>
+                {t('Share suggestions or report bugs. App version and device model are attached; health data is never included.')}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Evidence & Safety Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>{t('Evidence & Safety')}</Text>
+
+        <TouchableOpacity
+          style={styles.optionRow}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setDisclaimerModalVisible(true);
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('Medical Disclaimer')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <ShieldAlert size={20} color={theme.colors.danger} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Medical Disclaimer')}</Text>
+              <Text style={styles.optionDesc}>
+                {t('Educational wellness notice & emergency guidance')}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.optionRow}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setReferencesModalVisible(true);
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('Scientific References')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <BookOpen size={20} color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Scientific References')}</Text>
+              <Text style={styles.optionDesc}>
+                {t('Equations, clinical sources, & nutritional databases')}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+
       {/* Save Button */}
-      <AnimatedPressable style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
+      <AnimatedPressable
+        style={styles.saveBtn}
+        onPress={handleSave}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={t('Save Targets')}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
         <Text style={styles.saveBtnText}>{t('Save Targets')}</Text>
       </AnimatedPressable>
 
@@ -439,6 +586,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         visible={backupModalVisible}
         onClose={() => setBackupModalVisible(false)}
         onRestoreComplete={onRestoreComplete || (() => {})}
+      />
+
+      <MedicalDisclaimerModal
+        visible={disclaimerModalVisible}
+        onAccept={() => setDisclaimerModalVisible(false)}
+        onClose={() => setDisclaimerModalVisible(false)}
+        isFirstRun={false}
+        onOpenReferences={() => {
+          setDisclaimerModalVisible(false);
+          setReferencesModalVisible(true);
+        }}
+      />
+
+      <ScientificReferencesModal
+        visible={referencesModalVisible}
+        onClose={() => setReferencesModalVisible(false)}
+        onOpenDisclaimer={() => {
+          setReferencesModalVisible(false);
+          setDisclaimerModalVisible(true);
+        }}
       />
     </ScrollView>
   );

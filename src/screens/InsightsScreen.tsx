@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -29,7 +29,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(110, insets.bottom + 76);
-  const t = (key: string) => translate(language, key);
+  const t = useCallback((key: string) => translate(language, key), [language]);
 
   const [daysLogs, setDaysLogs] = useState<{ date: string; log: DailyLog; dayLabel: string }[]>([]);
   const [selectedDayIdx, setSelectedDayIdx] = useState<number | null>(null);
@@ -59,15 +59,13 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
     return () => {
       isMounted = false;
     };
-  }, [language]);
+  }, [language, t]);
 
   const calorieTarget = profile?.targetCalories || 2000;
   const proteinTarget = profile?.targetProtein || 140;
 
   const {
     activeDays,
-    totalCaloriesLogged,
-    totalProteinLogged,
     dailyAvgCalories,
     dailyAvgProtein,
     maxWeeklyCalories,

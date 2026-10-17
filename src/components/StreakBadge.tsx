@@ -34,7 +34,7 @@ export const StreakBadge: React.FC<StreakBadgeProps> = ({ streak, style }) => {
       withTiming(1.18, { duration: 160 }),
       withSpring(1, getSpringConfig('pop'))
     );
-  }, [streak]);
+  }, [streak, scale]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {

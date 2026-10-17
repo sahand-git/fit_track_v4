@@ -17,7 +17,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   activeColor = theme.colors.primary,
   inactiveColor = theme.colors.textMuted,
 }) => {
-  const scale = useRef(new Animated.Value(1)).current;
+  const [scale] = React.useState(() => new Animated.Value(1));
   const isFirstRender = useRef(true);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
         useNativeDriver: true,
       }).start();
     }
-  }, [checked]);
+  }, [checked, scale]);
 
   return (
     <Animated.View style={{ transform: [{ scale }] }}>

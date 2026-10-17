@@ -105,6 +105,7 @@ export function getDefaultProfile(): UserProfile {
     ...targets,
     includeWorkoutsInCalorieBudget: false,
     stepGoal: 8000,
+    hasAcceptedMedicalDisclaimer: false,
   };
 }
 
@@ -167,7 +168,7 @@ export function estimateWorkoutSteps(workout: { category?: string; durationMinut
  */
 export function deduplicateWorkoutSteps(
   totalSteps: number,
-  workouts: Array<{ category?: string; durationMinutes?: number; name?: string }>
+  workouts: { category?: string; durationMinutes?: number; name?: string }[]
 ): { workoutSteps: number; nonWorkoutSteps: number } {
   const safeTotal = Math.max(0, totalSteps);
   const workoutSteps = workouts.reduce((sum, w) => sum + estimateWorkoutSteps(w), 0);

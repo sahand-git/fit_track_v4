@@ -109,6 +109,43 @@ const sampleBackup: FitTrackBackup = {
       snack: { enabled: false, hour: 16, minute: 0 },
     },
   },
+  recentFoods: [
+    {
+      id: 'food_recent_1',
+      name: 'Oatmeal',
+      servingSize: '1 bowl',
+      servingGrams: 80,
+      calories: 300,
+      protein: 10,
+      carbs: 54,
+      fat: 5,
+    },
+  ],
+  favoriteFoods: [
+    {
+      id: 'food_fav_1',
+      name: 'Greek Yogurt',
+      servingSize: '1 cup',
+      servingGrams: 170,
+      calories: 130,
+      protein: 22,
+      carbs: 6,
+      fat: 0,
+    },
+  ],
+  customFoods: [
+    {
+      id: 'food_custom_1',
+      name: 'Special Protein Shake',
+      servingSize: '1 shake',
+      servingGrams: 350,
+      calories: 280,
+      protein: 35,
+      carbs: 20,
+      fat: 4,
+      source: 'custom',
+    },
+  ],
 };
 
 // Test A: Round-trip serialization & parsing
@@ -120,6 +157,9 @@ assert(parsed.profile?.includeWorkoutsInCalorieBudget === false, 'workout budget
 assert(parsed.dailyLogs['2026-10-12']?.workouts?.[0]?.caloriesBurned === 390, 'workout burned calories restored');
 assert(parsed.weightHistory[0]?.weightKg === 78.2, 'weight history restored');
 assert(parsed.supplementRoutine[0]?.name === 'Creatine Monohydrate', 'supplement routine restored');
+assert(parsed.recentFoods?.[0]?.name === 'Oatmeal', 'recent foods round-trip preserved');
+assert(parsed.favoriteFoods?.[0]?.name === 'Greek Yogurt', 'favorite foods round-trip preserved');
+assert(parsed.customFoods?.[0]?.name === 'Special Protein Shake', 'custom foods round-trip preserved');
 
 // Test B: Secrets and unauthorized fields are strictly stripped
 const untrustedData = {
@@ -147,7 +187,7 @@ assert(!('adminRole' in sanitized.profile!), 'unauthorized role excluded from pr
 let threwOnInvalidVersion = false;
 try {
   parseBackup(JSON.stringify({ ...sampleBackup, version: '3.0' }));
-} catch (e) {
+} catch {
   threwOnInvalidVersion = true;
 }
 assert(threwOnInvalidVersion, 'rejects wrong version string');
@@ -155,7 +195,7 @@ assert(threwOnInvalidVersion, 'rejects wrong version string');
 let threwOnMalformedJson = false;
 try {
   parseBackup('{ broken json:');
-} catch (e) {
+} catch {
   threwOnMalformedJson = true;
 }
 assert(threwOnMalformedJson, 'rejects syntax-invalid json');
@@ -163,7 +203,7 @@ assert(threwOnMalformedJson, 'rejects syntax-invalid json');
 let threwOnNonObject = false;
 try {
   parseBackup(JSON.stringify('a plain string'));
-} catch (e) {
+} catch {
   threwOnNonObject = true;
 }
 assert(threwOnNonObject, 'rejects primitive non-object json');

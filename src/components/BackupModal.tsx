@@ -52,6 +52,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   const [pendingBackup, setPendingBackup] = useState<{
     backup: FitTrackBackup;
     summary: BackupSummary;
+    sourceVersion?: '4.0' | '2.0';
   } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -82,7 +83,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
       if (result) {
         setPendingBackup(result);
       }
-    } catch (err: any) {
+    } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       Alert.alert(
         t('Invalid Backup File'),
@@ -137,12 +138,24 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('Close')}
+        />
         <View style={styles.modalCard}>
           <SaveSuccessOverlay visible={Boolean(successMessage)} message={successMessage || ''} />
           <View style={styles.header}>
             <Text style={styles.title}>{t('Backup & Restore')}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t('Close')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <X size={18} color={theme.colors.textPrimary} />
             </TouchableOpacity>
           </View>
@@ -152,12 +165,22 @@ export const BackupModal: React.FC<BackupModalProps> = ({
             <View style={styles.summaryContainer}>
               <View style={styles.summaryBadge}>
                 <CheckCircle2 size={18} color={theme.colors.primary} />
-                <Text style={styles.summaryTitle}>{t('Valid Backup Detected')}</Text>
+                <Text style={styles.summaryTitle}>
+                  {pendingBackup.sourceVersion === '2.0'
+                    ? t('FitTrack v2 Backup (Migrated)')
+                    : t('Valid Backup Detected')}
+                </Text>
               </View>
 
               <Text style={styles.summarySubtitle}>
                 {t('Exported')}: {new Date(pendingBackup.backup.exportedAt).toLocaleDateString()}
               </Text>
+
+              {pendingBackup.sourceVersion === '2.0' && (
+                <Text style={[styles.summarySubtitle, { fontStyle: 'italic', marginTop: 2 }]}>
+                  {t('Importing meals, workouts, custom foods, weight records, and routine from FitTrack v2.')}
+                </Text>
+              )}
 
               <View style={styles.summaryGrid}>
                 <View style={styles.summaryItem}>
@@ -190,6 +213,14 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                     {pendingBackup.summary.routineItemsCount} {t('routine items')}
                   </Text>
                 </View>
+                {pendingBackup.backup.customFoods && pendingBackup.backup.customFoods.length > 0 && (
+                  <View style={styles.summaryItem}>
+                    <FileText size={15} color={theme.colors.primary} />
+                    <Text style={styles.summaryItemText}>
+                      {pendingBackup.backup.customFoods.length} {t('custom foods')}
+                    </Text>
+                  </View>
+                )}
               </View>
 
               <Text style={styles.choicePrompt}>
@@ -201,6 +232,9 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                   style={styles.mergeBtn}
                   onPress={() => handleApplyRestore('merge')}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Merge with current data')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Text style={styles.mergeBtnText}>{t('Merge with current data')}</Text>
                 </TouchableOpacity>
@@ -209,6 +243,9 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                   style={styles.replaceBtn}
                   onPress={() => handleApplyRestore('replace')}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Replace current data')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Text style={styles.replaceBtnText}>{t('Replace current data')}</Text>
                 </TouchableOpacity>
@@ -217,6 +254,9 @@ export const BackupModal: React.FC<BackupModalProps> = ({
               <TouchableOpacity
                 style={styles.cancelPendingBtn}
                 onPress={() => setPendingBackup(null)}
+                accessibilityRole="button"
+                accessibilityLabel={t('Cancel file')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.cancelPendingText}>{t('Cancel file')}</Text>
               </TouchableOpacity>
@@ -235,6 +275,9 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                   onPress={handleExport}
                   disabled={isExporting}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Export Backup')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <View style={styles.actionBtnLeft}>
                     <Download size={20} color={theme.colors.primary} />
@@ -254,6 +297,9 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                   onPress={handleImportPick}
                   disabled={isImporting}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Import Backup')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <View style={styles.actionBtnLeft}>
                     <Upload size={20} color={theme.colors.primary} />

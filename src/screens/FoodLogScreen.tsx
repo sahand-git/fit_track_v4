@@ -24,30 +24,36 @@ import { CalendarPickerModal } from '../components/CalendarPickerModal';
 import { AddFoodSheet } from '../components/addfood/AddFoodSheet';
 import { AnimatedFoodRow } from '../components/AnimatedFoodRow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
+import { FoodThumbnail } from '../components/FoodThumbnail';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
+import { MealsSkeleton } from '../components/SkeletonLoader';
 
 interface FoodLogScreenProps {
   selectedDate: string;
   onSelectDate: (date: string) => void;
   log: DailyLog;
+  isLoading?: boolean;
   onAddMeal: (meal: LoggedMeal, targetDate: string) => void;
   onUpdateMeal?: (meal: LoggedMeal) => void;
   onRemoveMeal: (mealId: string) => void;
   initialMealType?: MealType;
+  onCopyYesterdayMeals?: (targetDate: string) => Promise<void>;
 }
 
 export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   selectedDate,
   onSelectDate,
   log,
+  isLoading,
   onAddMeal,
   onUpdateMeal,
   onRemoveMeal,
   initialMealType = 'breakfast',
+  onCopyYesterdayMeals,
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
@@ -83,9 +89,12 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     return () => sub.remove();
   }, [addSheetVisible, calendarVisible, inspectingMeal]);
 
-  const isToday = selectedDate === getTodayDateString();
   const isPast = selectedDate < getTodayDateString();
   const isFuture = selectedDate > getTodayDateString();
+
+  if (isLoading) {
+    return <MealsSkeleton />;
+  }
 
   // Date navigation
   const handlePrevDay = () => {
@@ -142,6 +151,12 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     const baseFat = inspectingMeal.fat / baseServings;
     const baseGrams = inspectingMeal.servingGrams / baseServings;
 
+    const scaleNutrient = (val: number | undefined): number | undefined => {
+      if (val === undefined) return undefined;
+      const base = val / baseServings;
+      return Math.round(base * newServings * 10) / 10;
+    };
+
     const updatedMeal: LoggedMeal = {
       ...inspectingMeal,
       servings: newServings,
@@ -150,6 +165,18 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       carbs: Math.round(baseCarbs * newServings * 10) / 10,
       fat: Math.round(baseFat * newServings * 10) / 10,
       servingGrams: Math.round(baseGrams * newServings),
+      fiber: scaleNutrient(inspectingMeal.fiber),
+      sugar: scaleNutrient(inspectingMeal.sugar),
+      sodium: scaleNutrient(inspectingMeal.sodium),
+      potassium: scaleNutrient(inspectingMeal.potassium),
+      calcium: scaleNutrient(inspectingMeal.calcium),
+      iron: scaleNutrient(inspectingMeal.iron),
+      vitaminC: scaleNutrient(inspectingMeal.vitaminC),
+      vitaminA: scaleNutrient(inspectingMeal.vitaminA),
+      vitaminD: scaleNutrient(inspectingMeal.vitaminD),
+      vitaminB12: scaleNutrient(inspectingMeal.vitaminB12),
+      magnesium: scaleNutrient(inspectingMeal.magnesium),
+      zinc: scaleNutrient(inspectingMeal.zinc),
     };
 
     if (onUpdateMeal) {
@@ -167,6 +194,10 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     { key: 'dinner', label: t('Dinner') },
     { key: 'snack', label: t('Snacks') },
   ];
+
+  if (isLoading) {
+    return <MealsSkeleton />;
+  }
 
   return (
     <View style={styles.container}>
@@ -209,6 +240,8 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
           onPress={handleBackToToday}
           activeOpacity={0.8}
           accessibilityRole="button"
+          accessibilityLabel={`${t('Viewing')} ${formatDisplayDate(selectedDate, language)} · ${t('Back to today')}`}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <CalendarIcon size={14} color={theme.colors.secondary} />
           <Text style={styles.pastDateBannerText}>
@@ -278,6 +311,9 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                   onPress={() => openAddSheet(cat.key)}
                   disabled={isFuture}
                   activeOpacity={0.6}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('No meals logged yet.')} ${t('Add food')}`}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Text style={styles.emptyPromptText}>
                     {t('No meals logged yet.')}
@@ -297,7 +333,11 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                           setInspectingMeal(item);
                         }}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${item.name}, ${item.calories} kcal`}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
+                        <FoodThumbnail name={item.name} category={item.category} imageUrl={item.imageUrl} size="small" style={{ marginEnd: 12 }} />
                         <View style={styles.foodInfo}>
                           <Text style={styles.foodName}>{item.name}</Text>
                           <Text style={styles.foodPortion}>
@@ -373,6 +413,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
         date={selectedDate}
         onClose={() => setAddSheetVisible(false)}
         onAddMeal={onAddMeal}
+        onCopyYesterdayMeals={onCopyYesterdayMeals}
       />
 
       {/* Food Details & Serving Adjustment Modal */}

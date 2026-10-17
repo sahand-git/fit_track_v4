@@ -1,14 +1,11 @@
 import {
   rankCandidates,
   fetchAvailableModels,
-  verifyCandidate,
   discoverAndVerifyModel,
-  getActiveModel,
   clearActiveModelCache,
   parseGoogleErrorBody,
   sanitizeGeminiString,
   GeminiError,
-  GeminiErrorKind,
   StorageInterface,
   inMemoryStorage,
   ACTIVE_MODEL_STORAGE_KEY,
@@ -20,7 +17,7 @@ import {
   TINY_16X16_WHITE_PNG_BASE64,
   testGeminiConnection,
 } from './geminiModels';
-import { executeGeminiRequest, sanitizeGeminiError } from './geminiCore';
+import { executeGeminiRequest } from './geminiCore';
 import { translate } from '../i18n/strings';
 
 declare const require: (moduleName: string) => { inflateSync: (data: Uint8Array) => Uint8Array };
@@ -70,7 +67,7 @@ async function runAllTests() {
   {
     const png = decodeBase64(TINY_16X16_WHITE_PNG_BASE64);
     assert(Array.from(png.subarray(0, 8)).join(',') === '137,80,78,71,13,10,26,10', 'PNG signature is valid');
-    const chunks: Array<{ type: string; data: Uint8Array }> = [];
+    const chunks: { type: string; data: Uint8Array }[] = [];
     let offset = 8;
     while (offset < png.length) {
       assert(offset + 12 <= png.length, 'Chunk header and CRC are complete');
@@ -449,6 +446,7 @@ async function runAllTests() {
     assert(result === 'Recovered response', `Successfully recovered from 404 with new model: ${result}`);
     const cachedNow = await inMemoryStorage.getItem(ACTIVE_MODEL_STORAGE_KEY);
     assert(cachedNow === 'gemini-new-model-flash', `Cache updated to new model: ${cachedNow}`);
+    assert(requestsCount > 0, 'Requests were executed during 404 recovery');
     console.log('✓ Scenario 7: 404 re-discovery retry tested successfully');
   }
 
