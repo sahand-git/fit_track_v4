@@ -5,6 +5,7 @@ import {
   calculateMicronutrientIntake,
   ORDERED_MICRONUTRIENT_KEYS,
 } from '../utils/micronutrients';
+import { MicronutrientKey } from '../data/supplementCatalog';
 import { LoggedMeal, LoggedDailySupplement } from '../types';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -20,11 +21,13 @@ import {
 interface RDAAnalysisCardProps {
   meals?: LoggedMeal[];
   supplements?: LoggedDailySupplement[];
+  onSelectNutrient?: (key: MicronutrientKey) => void;
 }
 
 export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
   meals = [],
   supplements = [],
+  onSelectNutrient,
 }) => {
   const language = useLanguage();
   const isRtl = language === 'ar' || language === 'ckb';
@@ -99,7 +102,14 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
               : '#EF4444'; // red
 
           return (
-            <View key={key} style={styles.nutrientCard}>
+            <TouchableOpacity
+              key={key}
+              style={styles.nutrientCard}
+              onPress={() => onSelectNutrient?.(key)}
+              disabled={!onSelectNutrient}
+              activeOpacity={0.75}
+              accessibilityRole={onSelectNutrient ? 'button' : undefined}
+            >
               <View style={[styles.nutrientTopRow, isRtl && styles.rowRtl]}>
                 <Text style={styles.nutrientName}>
                   {translate(language, item.label)}
@@ -143,7 +153,7 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
                   {item.percent}% {translate(language, 'RDA')}
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>

@@ -66,6 +66,7 @@ export interface UserProfile {
   stepGoal?: number;
   targetWeightKg?: number;
   hasAcceptedMedicalDisclaimer?: boolean;
+  customNutrientGoals?: Partial<Record<string, number>>;
 }
 
 export type ExerciseCategory = 'strength' | 'cardio' | 'hiit' | 'sports' | 'flexibility';

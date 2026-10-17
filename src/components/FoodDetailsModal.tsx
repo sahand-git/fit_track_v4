@@ -4,7 +4,7 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  ScrollView
+  ScrollView,
 } from 'react-native';
 import { AppText as Text } from './AppText';
 import {
@@ -15,6 +15,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { LoggedMeal, FoodItem } from '../types';
+import { formattedNutrientValue } from '../utils/nutrientTotals';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
@@ -38,6 +39,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
   onDelete,
 }) => {
   const language = useLanguage();
+  const isRtl = language === 'ar' || language === 'ckb';
   const t = (key: string) => translate(language, key);
   const [servings, setServings] = useState(1);
   const [prevItem, setPrevItem] = useState(item);
@@ -76,6 +78,31 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
   const currentFat = Math.round(baseFat * servings * 10) / 10;
   const currentGrams = Math.round(baseGrams * servings);
 
+  const getScaledNutrient = (key: keyof LoggedMeal): number | undefined => {
+    const raw = (item as unknown as Record<string, unknown>)[key as string];
+    if (raw === undefined || raw === null || (typeof raw === 'number' && isNaN(raw))) {
+      return undefined;
+    }
+    const num = Number(raw);
+    const base = 'servings' in item && item.servings > 0 ? num / item.servings : num;
+    return Math.round(base * servings * 10) / 10;
+  };
+
+  const detailedNutrients = [
+    { label: 'Fiber', value: getScaledNutrient('fiber'), unit: 'g' },
+    { label: 'Sugar', value: getScaledNutrient('sugar'), unit: 'g' },
+    { label: 'Sodium', value: getScaledNutrient('sodium'), unit: 'mg' },
+    { label: 'Potassium', value: getScaledNutrient('potassium'), unit: 'mg' },
+    { label: 'Calcium', value: getScaledNutrient('calcium'), unit: 'mg' },
+    { label: 'Iron', value: getScaledNutrient('iron'), unit: 'mg' },
+    { label: 'Vitamin C', value: getScaledNutrient('vitaminC'), unit: 'mg' },
+    { label: 'Vitamin A', value: getScaledNutrient('vitaminA'), unit: 'mcg' },
+    { label: 'Vitamin D', value: getScaledNutrient('vitaminD'), unit: 'mcg' },
+    { label: 'Vitamin B12', value: getScaledNutrient('vitaminB12'), unit: 'mcg' },
+    { label: 'Magnesium', value: getScaledNutrient('magnesium'), unit: 'mg' },
+    { label: 'Zinc', value: getScaledNutrient('zinc'), unit: 'mg' },
+  ];
+
   const handleMinus = () => {
     if (servings > 0.5) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -90,10 +117,10 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
+      <View style={[styles.backdrop, { direction: isRtl ? 'rtl' : 'ltr' }]}>
         <View style={styles.sheet}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, isRtl && styles.rowRtl]}>
             <View style={{ flex: 1 }}>
               <Text style={styles.foodName}>{item.name}</Text>
               {item.brand && <Text style={styles.brand}>{item.brand}</Text>}
@@ -103,9 +130,9 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={styles.content}>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             {/* Energy Overview */}
-            <View style={styles.energyCard}>
+            <View style={[styles.energyCard, isRtl && styles.rowRtl]}>
               <View>
                 <Text style={styles.kcalValue}>{currentKcal}</Text>
                 <Text style={styles.kcalLabel}>{t('Total Calories (kcal)')}</Text>
@@ -116,7 +143,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
             </View>
 
             {/* Macronutrients Row */}
-            <View style={styles.macroRow}>
+            <View style={[styles.macroRow, isRtl && styles.rowRtl]}>
               <View style={styles.macroCard}>
                 <Text style={styles.macroTitle}>{t('Protein')}</Text>
                 <Text style={[styles.macroValue, { color: theme.colors.macroProtein }]}>
@@ -138,7 +165,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
             </View>
 
             {/* Servings Stepper */}
-            <View style={styles.stepperContainer}>
+            <View style={[styles.stepperContainer, isRtl && styles.rowRtl]}>
               <Text style={styles.stepperLabel}>{t('Portion Multiplier')}</Text>
               <View style={styles.stepper}>
                 <TouchableOpacity style={styles.stepperBtn} onPress={handleMinus}>
@@ -150,10 +177,38 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
                 </TouchableOpacity>
               </View>
             </View>
+
+            {/* Micronutrients & Detailed Breakdown (Item 3 requirement: show "Not available", never zero) */}
+            <View style={styles.detailsCard}>
+              <Text style={styles.detailsSectionTitle}>
+                {t('Micronutrients & Vitamins')}
+              </Text>
+              <View style={styles.nutrientsGrid}>
+                {detailedNutrients.map((n) => {
+                  const isMissing = n.value === undefined;
+                  return (
+                    <View key={n.label} style={[styles.nutrientRowItem, isRtl && styles.rowRtl]}>
+                      <Text style={styles.nutrientItemLabel}>{t(n.label)}</Text>
+                      {isMissing ? (
+                        <View style={styles.notAvailPill}>
+                          <Text style={styles.notAvailText}>
+                            {formattedNutrientValue(undefined, n.unit, t)}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.nutrientItemValue}>
+                          {n.value} {n.unit}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
           </ScrollView>
 
           {/* Actions Bottom Bar */}
-          <View style={styles.footer}>
+          <View style={[styles.footer, isRtl && styles.rowRtl]}>
             {isLogged && onDelete && (
               <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} accessibilityLabel={t('Delete')}>
                 <Trash2 size={18} color={theme.colors.danger} />
@@ -189,7 +244,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderTopLeftRadius: theme.radius.xl,
     borderTopRightRadius: theme.radius.xl,
-    maxHeight: '80%',
+    maxHeight: '85%',
     padding: theme.spacing.lg,
   },
   header: {
@@ -197,6 +252,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginBottom: 16,
+  },
+  rowRtl: {
+    flexDirection: 'row-reverse',
   },
   foodName: {
     fontSize: 18,
@@ -293,6 +351,52 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     minWidth: 70,
     textAlign: 'center',
+  },
+  detailsCard: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.lg,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 10,
+  },
+  detailsSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  nutrientsGrid: {
+    gap: 8,
+  },
+  nutrientRowItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  nutrientItemLabel: {
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+  },
+  nutrientItemValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  notAvailPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  notAvailText: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    fontStyle: 'italic',
   },
   footer: {
     flexDirection: 'row',

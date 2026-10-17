@@ -44,11 +44,13 @@ import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { getScopedStorageKey } from '../storage/storage';
+import { getScopedStorageKey, saveUserProfile } from '../storage/storage';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
 import { calculateActivityBudget } from '../utils/activityBudget';
 import { getCalorieRingSize } from '../utils/dashboardLayout';
+import { NutrientDetailModal } from '../components/NutrientDetailModal';
+import { SupportedNutrientKey, calculateNutrientDayProgress } from '../utils/nutrientTotals';
 
 import { TodaySkeleton } from '../components/SkeletonLoader';
 
@@ -74,6 +76,7 @@ interface DashboardScreenProps {
   onDeleteWorkout: (workoutId: string) => void;
   onUpdateWorkout?: (workout: WorkoutEntry, date: string) => void;
   onOpenLogWeight?: () => void;
+  onUpdateProfile?: (profile: UserProfile) => Promise<void> | void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -94,6 +97,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onDeleteWorkout,
   onUpdateWorkout,
   onOpenLogWeight,
+  onUpdateProfile,
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
@@ -102,11 +106,53 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const [workoutSheetVisible, setWorkoutSheetVisible] = useState(false);
   const [quickActionVisible, setQuickActionVisible] = useState(false);
   const [heroWidth, setHeroWidth] = useState(0);
+  const [selectedNutrientForDetail, setSelectedNutrientForDetail] = useState<SupportedNutrientKey | string | null>(null);
 
   const isRtl = language === 'ar' || language === 'ckb';
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const dockClearance = dockBottom + 72;
   const scrollBottomPadding = Math.max(140, dockClearance + 24);
+
+  const fiberProgress = useMemo(
+    () => calculateNutrientDayProgress('fiber', log.meals, log.dailySupplements, profile),
+    [log.meals, log.dailySupplements, profile]
+  );
+  const sugarProgress = useMemo(
+    () => calculateNutrientDayProgress('sugar', log.meals, log.dailySupplements, profile),
+    [log.meals, log.dailySupplements, profile]
+  );
+
+  const handleSaveNutrientGoal = async (nutrientKey: SupportedNutrientKey, newTarget: number) => {
+    const updatedGoals = { ...(profile.customNutrientGoals || {}), [nutrientKey]: newTarget };
+    const updated: UserProfile = {
+      ...profile,
+      customNutrientGoals: updatedGoals,
+    };
+    if (nutrientKey === 'calories') updated.targetCalories = newTarget;
+    if (nutrientKey === 'protein') updated.targetProtein = newTarget;
+    if (nutrientKey === 'carbs') updated.targetCarbs = newTarget;
+    if (nutrientKey === 'fat') updated.targetFat = newTarget;
+
+    if (onUpdateProfile) {
+      await onUpdateProfile(updated);
+    } else {
+      await saveUserProfile(updated);
+    }
+  };
+
+  const handleResetNutrientGoal = async (nutrientKey: SupportedNutrientKey) => {
+    const updatedGoals = { ...(profile.customNutrientGoals || {}) };
+    delete updatedGoals[nutrientKey];
+    const updated: UserProfile = {
+      ...profile,
+      customNutrientGoals: updatedGoals,
+    };
+    if (onUpdateProfile) {
+      await onUpdateProfile(updated);
+    } else {
+      await saveUserProfile(updated);
+    }
+  };
 
   const { consumedCalories, consumedProtein, consumedCarbs, consumedFat } = useMemo(() => {
     return log.meals.reduce(
@@ -279,6 +325,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             proteinConsumed={consumedProtein}
             proteinTarget={profile.targetProtein}
             size={getCalorieRingSize(heroWidth)}
+            onPress={() => setSelectedNutrientForDetail('calories')}
           />
 
           {burnedCalories > 0 && (
@@ -305,6 +352,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             carbsConsumed={consumedCarbs}
             fatTarget={profile.targetFat}
             fatConsumed={consumedFat}
+            fiberConsumed={fiberProgress.current}
+            fiberTarget={fiberProgress.target}
+            fiberIsIncomplete={fiberProgress.isIncomplete}
+            sugarConsumed={sugarProgress.current}
+            sugarTarget={sugarProgress.target}
+            sugarIsIncomplete={sugarProgress.isIncomplete}
+            onSelectNutrient={(key) => setSelectedNutrientForDetail(key)}
           />
         </Animated.View>
 
@@ -620,6 +674,17 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       <GoalCelebration
         visible={showCelebration}
         onDismiss={() => setShowCelebration(false)}
+      />
+
+      <NutrientDetailModal
+        visible={!!selectedNutrientForDetail}
+        initialNutrientKey={selectedNutrientForDetail || 'calories'}
+        meals={log.meals}
+        supplements={log.dailySupplements}
+        profile={profile}
+        onClose={() => setSelectedNutrientForDetail(null)}
+        onSaveGoal={handleSaveNutrientGoal}
+        onResetGoal={handleResetNutrientGoal}
       />
     </View>
   );

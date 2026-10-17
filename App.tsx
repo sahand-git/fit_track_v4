@@ -686,6 +686,10 @@ function FitTrackApp() {
               onDeleteWorkout={handleDeleteWorkout}
               onUpdateWorkout={handleUpdateWorkout}
               onOpenLogWeight={() => handleSwitchTab('progress')}
+              onUpdateProfile={async (p: UserProfile) => {
+                await saveUserProfile(p);
+                setProfile(p);
+              }}
             />
           )}
 
