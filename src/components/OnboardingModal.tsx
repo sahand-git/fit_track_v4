@@ -17,6 +17,7 @@ import { calculateTargets } from '../utils/calculator';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
+import { AiSetupWizard } from './AiSetupWizardModal';
 
 interface OnboardingModalProps {
   onComplete: (profile: UserProfile) => void;
@@ -96,7 +97,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
         {/* Step Indicator */}
         <View style={styles.stepHeader}>
           <Text style={styles.badgeText}>{t('Welcome to FitTrack')}</Text>
-          <Text style={styles.stepCounter}>{t('Step')} {step} {t('of')} 3</Text>
+          <Text style={styles.stepCounter}>{t('Step')} {step} {t('of')} 4</Text>
         </View>
         <View style={styles.languageBlock}>
           <Text style={styles.languageLabel}>{t('Language')}</Text>
@@ -281,9 +282,26 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
               <TouchableOpacity style={styles.backBtn} onPress={() => setStep(2)}>
                 <Text style={styles.backBtnText}>{t('Back')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.nextBtn, { flex: 2 }]} onPress={handleFinish}>
-                <Text style={styles.nextBtnText}>{t('Start Tracking')}</Text>
-                <Check size={16} color={theme.colors.textInverted} />
+              <TouchableOpacity style={[styles.nextBtn, { flex: 2 }]} onPress={() => setStep(4)}>
+                <Text style={styles.nextBtnText}>{t('Next: AI Setup (Optional)')}</Text>
+                <ArrowRight size={16} color={theme.colors.textInverted} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* STEP 4: Optional AI Setup Wizard */}
+        {step === 4 && (
+          <View style={styles.stepContainer}>
+            <AiSetupWizard
+              isModal={false}
+              isSkippable={true}
+              onSkip={handleFinish}
+              onComplete={handleFinish}
+            />
+            <View style={[styles.buttonRow, { marginTop: 8 }]}>
+              <TouchableOpacity style={styles.backBtn} onPress={() => setStep(3)}>
+                <Text style={styles.backBtnText}>{t('Back')}</Text>
               </TouchableOpacity>
             </View>
           </View>
