@@ -1,3 +1,4 @@
+/* eslint-disable import/first */
 const mockStore: Record<string, string> = {};
 (globalThis as any).window = {
   localStorage: {

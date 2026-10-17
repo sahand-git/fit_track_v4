@@ -140,6 +140,70 @@ function runFoodDatabaseTests() {
     console.log('✓ Test 6 passed: Recipe ingredients, USDA citations, and preparation variants verified across all regional dishes.');
   }
 
+  // Test 7: Category Validity for Every Food in Database
+  {
+    const recognizedCategories = new Set([
+      'Meat',
+      'Fish',
+      'Fish & Seafood',
+      'Drinks',
+      'Beverages',
+      'Eggs & Dairy',
+      'Dairy',
+      'Dairy Alternative',
+      'Grains & Bread',
+      'Grains',
+      'Bakery',
+      'Fruit',
+      'Fruits',
+      'Vegetables',
+      'Beans & Lentils',
+      'Plant Protein',
+      'Nuts & Seeds',
+      'Nuts',
+      'Snacks & Protein',
+      'Snacks',
+      'Protein',
+      'Supplements',
+      'Prepared Meals',
+      'Meals',
+      'Breakfast',
+      'Soups',
+      'Oils',
+      'Pantry',
+      'Dips',
+      'Other',
+    ]);
+
+    for (const food of VERIFIED_FOOD_DATABASE) {
+      assert(typeof food.category === 'string', `Food ${food.id} category must be a string`);
+      const category = food.category as string;
+      const trimmedCategory = category.trim();
+      assert(trimmedCategory.length > 0, `Food ${food.id} has empty category`);
+      assert(trimmedCategory === category, `Food ${food.id} category has leading/trailing whitespace`);
+      assert(
+        recognizedCategories.has(category),
+        `Food ${food.id} has unrecognized category: "${category}"`
+      );
+    }
+    console.log(`✓ Test 7 passed: All ${VERIFIED_FOOD_DATABASE.length} foods verified to have valid, recognized categories.`);
+  }
+
+  // Test 8: Serving Size and Grams Validity for Every Food
+  {
+    for (const food of VERIFIED_FOOD_DATABASE) {
+      assert(
+        typeof food.servingSize === 'string' && food.servingSize.trim().length > 0,
+        `Food ${food.id} must have a non-empty servingSize string`
+      );
+      assert(
+        typeof food.servingGrams === 'number' && food.servingGrams > 0 && Number.isFinite(food.servingGrams),
+        `Food ${food.id} must have a positive, finite servingGrams number: got ${food.servingGrams}`
+      );
+    }
+    console.log(`✓ Test 8 passed: All ${VERIFIED_FOOD_DATABASE.length} foods verified to have valid serving sizes and positive gram weights.`);
+  }
+
   console.log('All Food Database & Regional Foods Tests Passed successfully!');
 }
 
