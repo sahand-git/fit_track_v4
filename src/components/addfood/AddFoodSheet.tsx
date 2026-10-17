@@ -451,6 +451,20 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     }
   };
 
+  const getCopyMealTypeLabel = (meal: MealType) => {
+    switch (meal) {
+      case 'breakfast':
+        return t("Copy yesterday's breakfast");
+      case 'lunch':
+        return t("Copy yesterday's lunch");
+      case 'dinner':
+        return t("Copy yesterday's dinner");
+      case 'snack':
+      default:
+        return t("Copy yesterday's snacks");
+    }
+  };
+
   const handleCopyYesterdayMealType = async () => {
     if (isFuture || copyMealTypeLoading) return;
     setCopyMealTypeLoading(true);
@@ -460,7 +474,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       const matchingMeals = (yesterdayLog.meals || []).filter((m) => m.mealType === selectedMeal);
       if (matchingMeals.length === 0) {
         Alert.alert(
-          t(`Copy yesterday's ${selectedMeal === 'snack' ? 'snacks' : selectedMeal}`),
+          getCopyMealTypeLabel(selectedMeal),
           t('No meals were logged yesterday for this meal.')
         );
         return;
@@ -1196,7 +1210,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           <Utensils size={13} color={theme.colors.primary} />
                         )}
                         <Text style={styles.quickActionBtnText} numberOfLines={1}>
-                          {t(`Copy yesterday's ${selectedMeal === 'snack' ? 'snacks' : selectedMeal}`)}
+                          {getCopyMealTypeLabel(selectedMeal)}
                         </Text>
                       </TouchableOpacity>
 

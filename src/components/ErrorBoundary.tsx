@@ -10,6 +10,8 @@ import {
 import { AppText as Text } from './AppText';
 import { AlertTriangle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { theme } from '../theme';
+import { I18nContext } from '../i18n/I18nContext';
+import { translate } from '../i18n/strings';
 
 interface Props {
   children: ReactNode;
@@ -63,59 +65,66 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <SafeAreaView style={styles.safeArea}>
-          <ScrollView contentContainerStyle={styles.container}>
-            <View style={styles.iconCircle}>
-              <AlertTriangle size={36} color={theme.colors.warning} />
-            </View>
+        <I18nContext.Consumer>
+          {(language) => {
+            const t = (key: string) => translate(language, key);
+            return (
+              <SafeAreaView style={styles.safeArea}>
+                <ScrollView contentContainerStyle={styles.container}>
+                  <View style={styles.iconCircle}>
+                    <AlertTriangle size={36} color={theme.colors.warning} />
+                  </View>
 
-            <Text style={styles.title}>Something went wrong</Text>
-            <Text style={styles.subtitle}>
-              FitTrack encountered an unexpected issue, but your saved data and meals are safe.
-            </Text>
-
-            <TouchableOpacity
-              style={styles.reloadBtn}
-              onPress={this.handleReload}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Reload application"
-            >
-              <RefreshCw size={18} color={theme.colors.textInverted} style={{ marginRight: 8 }} />
-              <Text style={styles.reloadBtnText}>Try Again</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.detailsToggle}
-              onPress={this.toggleDetails}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.detailsToggleText}>
-                {this.state.showDetails ? 'Hide error details' : 'Show error details'}
-              </Text>
-              {this.state.showDetails ? (
-                <ChevronUp size={16} color={theme.colors.textMuted} />
-              ) : (
-                <ChevronDown size={16} color={theme.colors.textMuted} />
-              )}
-            </TouchableOpacity>
-
-            {this.state.showDetails && (
-              <View style={styles.detailsBox}>
-                <Text style={styles.errorText}>
-                  {__DEV__
-                    ? (this.state.error?.toString() || 'Unknown error')
-                    : 'An unexpected application error occurred. Details have been logged securely.'}
-                </Text>
-                {__DEV__ && this.state.errorInfo?.componentStack && (
-                  <Text style={styles.stackText}>
-                    {this.state.errorInfo.componentStack.slice(0, 1000)}
+                  <Text style={styles.title}>{t('Something went wrong')}</Text>
+                  <Text style={styles.subtitle}>
+                    {t('FitTrack encountered an unexpected issue, but your saved data and meals are safe.')}
                   </Text>
-                )}
-              </View>
-            )}
-          </ScrollView>
-        </SafeAreaView>
+
+                  <TouchableOpacity
+                    style={styles.reloadBtn}
+                    onPress={this.handleReload}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Reload application')}
+                  >
+                    <RefreshCw size={18} color={theme.colors.textInverted} style={{ marginRight: 8 }} />
+                    <Text style={styles.reloadBtnText}>{t('Try Again')}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.detailsToggle}
+                    onPress={this.toggleDetails}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.detailsToggleText}>
+                      {this.state.showDetails ? t('Hide error details') : t('Show error details')}
+                    </Text>
+                    {this.state.showDetails ? (
+                      <ChevronUp size={16} color={theme.colors.textMuted} />
+                    ) : (
+                      <ChevronDown size={16} color={theme.colors.textMuted} />
+                    )}
+                  </TouchableOpacity>
+
+                  {this.state.showDetails && (
+                    <View style={styles.detailsBox}>
+                      <Text style={styles.errorText}>
+                        {__DEV__
+                          ? (this.state.error?.toString() || t('Unknown error'))
+                          : t('An unexpected application error occurred. Details have been logged securely.')}
+                      </Text>
+                      {__DEV__ && this.state.errorInfo?.componentStack && (
+                        <Text style={styles.stackText}>
+                          {this.state.errorInfo.componentStack.slice(0, 1000)}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </ScrollView>
+              </SafeAreaView>
+            );
+          }}
+        </I18nContext.Consumer>
       );
     }
 
