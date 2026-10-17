@@ -8,9 +8,12 @@ export const languageNames: Record<AppLanguage, string> = {
   ckb: 'کوردی سۆرانی',
 };
 
-const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
+export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
   ar: {
     'Account': 'الحساب',
+    'Privacy policy': 'سياسة الخصوصية',
+    'Contact support': 'التواصل مع الدعم',
+    'Support': 'الدعم',
     'Sign in & backup': 'تسجيل الدخول والنسخ الاحتياطي',
     'Account services need setup': 'تحتاج خدمات الحساب إلى الإعداد',
     'Open Firebase setup guide': 'افتح دليل إعداد Firebase',
@@ -39,7 +42,6 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'This permanently deletes your Firebase account and its cloud backup. Local records on this device remain available as guest data.': 'سيحذف هذا حساب Firebase ونسخته السحابية نهائيًا. ستبقى السجلات المحلية على هذا الجهاز متاحة كبيانات ضيف.',
     'Account deleted': 'تم حذف الحساب',
     'Privacy Policy': 'سياسة الخصوصية',
-    'Privacy policy': 'سياسة الخصوصية',
     'Read how FitTrack protects your personal health and nutrition data.': 'اقرأ كيف يحمي فيت تراك بيانات صحتك وتغذيتك الشخصية.',
     'FitTrack operates offline-first. Your nutrition, workout, and biometric data stays strictly on your device unless you explicitly opt in to Firebase Cloud Backup or Gemini AI plate analysis.': 'يعمل فيت تراك وفق مبدأ عدم الاتصال أولاً. تظل بيانات التغذية والتمارين والقياسات الحيوية على جهازك فقط إلا إذا اشتركت صراحة في النسخ الاحتياطي السحابي أو تحليل الوجبات بالذكاء الاصطناعي.',
     'Open Privacy Policy': 'فتح سياسة الخصوصية',
@@ -957,6 +959,11 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
   },
   ckb: {
     'Account': 'هەژمار',
+    'Privacy policy': 'سیاسەتی تایبەتمەندی',
+    'Contact support': 'پەیوەندی بە پشتگیری',
+    'Support': 'پشتگیری',
+    'No foods found matching': 'هیچ خواردنێک نەدۆزرایەوە کە بگونجێت لەگەڵ',
+    'Get an estimate, review portions, then log': 'خەمڵاندنێک وەربگرە، بەشەکان بپشکنە، پاشان تۆماری بکە',
     'Sign in & backup': 'چوونەژوورەوە و پاشەکەوت',
     'Account services need setup': 'خزمەتگوزارییەکانی هەژمار پێویستیان بە ڕێکخستنە',
     'Open Firebase setup guide': 'کردنەوەی ڕێنمای ڕێکخستنی Firebase',
@@ -985,7 +992,6 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'This permanently deletes your Firebase account and its cloud backup. Local records on this device remain available as guest data.': 'ئەمە هەژماری Firebase و پاشەکەوتی هەوری بە هەمیشەیی دەسڕێتەوە. تۆمارە ناوخۆییەکانی ئەم ئامێرە وەک داتای میوان دەمێننەوە.',
     'Account deleted': 'هەژمار سڕایەوە',
     'Privacy Policy': 'سیاسەتی تایبەتمەندی',
-    'Privacy policy': 'سیاسەتی تایبەتمەندی',
     'Read how FitTrack protects your personal health and nutrition data.': 'بزانە چۆن فیت تراک داتای تەندروستی و خۆراکی کەسییت دەپارێزێت.',
     'FitTrack operates offline-first. Your nutrition, workout, and biometric data stays strictly on your device unless you explicitly opt in to Firebase Cloud Backup or Gemini AI plate analysis.': 'فیت تراک بە بنەمای ئۆفلاین کار دەکات. داتاکانی خۆراک، ڕاهێنان و پێوانە تەندروستییەکانت تەنها لەسەر ئامێرەکەت دەمێننەوە مەگەر خۆت بە ئاشکرا بەشداری بکەیت لە باکئەپی هەوری یان شیکردنەوەی ژەم بە ژیری دەستکرد.',
     'Open Privacy Policy': 'کردنەوەی سیاسەتی تایبەتمەندی',
@@ -1796,7 +1802,6 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Failed to save meal.': 'پاشەکەوتکردنی ژەم سەرکەوتوو نەبوو.',
     'Failed to save routine. Please try again.': 'پاشەکەوتکردنی ڕۆتین سەرکەوتوو نەبوو. تکایە دووبارە هەوڵ بدەرەوە.',
     'FitTrack saves all your data locally on your device. Export a backup JSON file to keep a personal offline copy or transfer to another device.': 'فیت تراک هەموو داتاکانت بە شێوەی ناوخۆیی لەسەر ئامێرەکەت پاشەکەوت دەکات. پەڕگەیەکی پاڵپشتی JSON هەناردە بکە بۆ هێشتنەوەی وێنەیەکی بێ هێڵ یان گواستنەوە بۆ ئامێرێکی تر.',
-    'Get an estimate, review portions, then log': 'خەمڵاندنێک وەربگرە، قەبارەی بەشەکان بپشکنە، پاشان تۆماری بکە',
     'HIIT': 'ڕاهێنانی چڕی بەرزی پچڕپچڕ (HIIT)',
     'Import Backup': 'هاوردەکردنی پاڵپشتی',
     'Important wellness guidance & emergency safety protocols': 'ڕێنمایی گرنگی تەندروستی و پرۆتۆکۆڵی سەلامەتی کاتی فریاگوزاری',
@@ -1806,7 +1811,6 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Meal': 'ژەم',
     'Merge with current data': 'تێکەڵکردن لەگەڵ داتای ئێستا',
     'No data yet': 'هێشتا هیچ داتایەک نییە',
-    'No foods found matching': 'هیچ خواردنێک نەدۆزرایەوە کە هاوتا بێت',
     'No meals logged in this period.': 'هیچ ژەمێک لەم ماوەیەدا تۆمار نەکراوە.',
     'No workouts logged yet. Tap to log exercise.': 'هێشتا هیچ ڕاهێنانێک تۆمار نەکراوە. دابگرە بۆ تۆمارکردنی وەرزش.',
     'Replace': 'جێگرتنەوە',
@@ -1902,8 +1906,6 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'not taken': 'وەرنەگیراوە',
   },
 };
-
-export { translations };
 
 export function translate(language: AppLanguage, text: string): string {
   if (language === 'en') return text;

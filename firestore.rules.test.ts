@@ -23,7 +23,7 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 
-const PROJECT_ID = 'fittrack-rules-test';
+const PROJECT_ID = process.env.GCLOUD_PROJECT || 'fittrack-rules-test';
 
 async function runRulesTestSuite() {
   console.log('====================================================');
