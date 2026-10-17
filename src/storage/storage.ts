@@ -12,6 +12,7 @@ import {
   MealTemplate,
   MealTemplateItem,
   MealType,
+  CopyYesterdayResult,
 } from '../types';
 import { normalizeSupplementRoutine } from '../utils/supplementUtils';
 import { getDefaultProfile } from '../utils/calculator';
@@ -646,50 +647,146 @@ export async function clearBarcodeCache(): Promise<void> {
   });
 }
 
-export async function copyYesterdayMeals(targetDate: string): Promise<DailyLog> {
+export interface YesterdayMealsPreview {
+  count: number;
+  calories: number;
+}
+
+export async function getYesterdayMealsPreview(targetDate: string, mealType?: MealType): Promise<YesterdayMealsPreview> {
+  const yesterday = getPreviousDayString(targetDate);
+  const yesterdayLog = await loadDailyLog(yesterday);
+  const meals = (yesterdayLog.meals || []).filter((m) => !mealType || m.mealType === mealType);
+  return {
+    count: meals.length,
+    calories: meals.reduce((sum, m) => sum + (m.calories || 0), 0),
+  };
+}
+
+export async function copyYesterdayMeals(targetDate: string): Promise<CopyYesterdayResult> {
   const yesterday = getPreviousDayString(targetDate);
   const targetKey = getScopedStorageKey(`${DAILY_LOG_PREFIX}${targetDate}`);
   return enqueueStorageOperation(targetKey, async () => {
     const yesterdayLog = await loadDailyLog(yesterday);
-    if (!yesterdayLog.meals || yesterdayLog.meals.length === 0) {
-      return await loadDailyLog(targetDate);
-    }
+    const candidateMeals = yesterdayLog.meals || [];
+    const totalYesterdayCount = candidateMeals.length;
+    const totalYesterdayKcal = candidateMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
     const currentTarget = await loadDailyLog(targetDate);
-    const clonedMeals: LoggedMeal[] = yesterdayLog.meals.map((m) => ({
+
+    if (candidateMeals.length === 0) {
+      return {
+        ...currentTarget,
+        addedCount: 0,
+        alreadyCopiedCount: 0,
+        totalYesterdayCount: 0,
+        totalYesterdayKcal: 0,
+      };
+    }
+
+    const alreadyCopiedIds = new Set(
+      currentTarget.meals
+        .filter((existing) => existing.copiedFromId && (!existing.copiedFromDate || existing.copiedFromDate === yesterday))
+        .map((existing) => existing.copiedFromId!)
+    );
+
+    const mealsToCopy = candidateMeals.filter((m) => !alreadyCopiedIds.has(m.id));
+    const alreadyCopiedCount = candidateMeals.length - mealsToCopy.length;
+
+    if (mealsToCopy.length === 0) {
+      return {
+        ...currentTarget,
+        addedCount: 0,
+        alreadyCopiedCount,
+        totalYesterdayCount,
+        totalYesterdayKcal,
+      };
+    }
+
+    const clonedMeals: LoggedMeal[] = mealsToCopy.map((m) => ({
       ...m,
       id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       timestamp: new Date().toISOString(),
+      copiedFromId: m.id,
+      copiedFromDate: yesterday,
     }));
+
     const updatedTarget: DailyLog = {
       ...currentTarget,
       meals: [...currentTarget.meals, ...clonedMeals],
     };
+
     await AsyncStorage.setItem(targetKey, JSON.stringify(updatedTarget));
-    return updatedTarget;
+
+    return {
+      ...updatedTarget,
+      addedCount: clonedMeals.length,
+      alreadyCopiedCount,
+      totalYesterdayCount,
+      totalYesterdayKcal,
+    };
   });
 }
 
-export async function copyYesterdayMealType(targetDate: string, mealType: MealType): Promise<DailyLog> {
+export async function copyYesterdayMealType(targetDate: string, mealType: MealType): Promise<CopyYesterdayResult> {
   const yesterday = getPreviousDayString(targetDate);
   const targetKey = getScopedStorageKey(`${DAILY_LOG_PREFIX}${targetDate}`);
   return enqueueStorageOperation(targetKey, async () => {
     const yesterdayLog = await loadDailyLog(yesterday);
-    const targetMeals = (yesterdayLog.meals || []).filter((m) => m.mealType === mealType);
-    if (targetMeals.length === 0) {
-      return await loadDailyLog(targetDate);
-    }
+    const candidateMeals = (yesterdayLog.meals || []).filter((m) => m.mealType === mealType);
+    const totalYesterdayCount = candidateMeals.length;
+    const totalYesterdayKcal = candidateMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
     const currentTarget = await loadDailyLog(targetDate);
-    const clonedMeals: LoggedMeal[] = targetMeals.map((m) => ({
+
+    if (candidateMeals.length === 0) {
+      return {
+        ...currentTarget,
+        addedCount: 0,
+        alreadyCopiedCount: 0,
+        totalYesterdayCount: 0,
+        totalYesterdayKcal: 0,
+      };
+    }
+
+    const alreadyCopiedIds = new Set(
+      currentTarget.meals
+        .filter((existing) => existing.copiedFromId && (!existing.copiedFromDate || existing.copiedFromDate === yesterday))
+        .map((existing) => existing.copiedFromId!)
+    );
+
+    const mealsToCopy = candidateMeals.filter((m) => !alreadyCopiedIds.has(m.id));
+    const alreadyCopiedCount = candidateMeals.length - mealsToCopy.length;
+
+    if (mealsToCopy.length === 0) {
+      return {
+        ...currentTarget,
+        addedCount: 0,
+        alreadyCopiedCount,
+        totalYesterdayCount,
+        totalYesterdayKcal,
+      };
+    }
+
+    const clonedMeals: LoggedMeal[] = mealsToCopy.map((m) => ({
       ...m,
       id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       timestamp: new Date().toISOString(),
+      copiedFromId: m.id,
+      copiedFromDate: yesterday,
     }));
+
     const updatedTarget: DailyLog = {
       ...currentTarget,
       meals: [...currentTarget.meals, ...clonedMeals],
     };
+
     await AsyncStorage.setItem(targetKey, JSON.stringify(updatedTarget));
-    return updatedTarget;
+
+    return {
+      ...updatedTarget,
+      addedCount: clonedMeals.length,
+      alreadyCopiedCount,
+      totalYesterdayCount,
+      totalYesterdayKcal,
+    };
   });
 }
 

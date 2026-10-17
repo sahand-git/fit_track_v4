@@ -70,6 +70,8 @@ import {
   loadBarcodeCache,
   copyYesterdayMeals,
   copyYesterdayMealType,
+  getYesterdayMealsPreview,
+  YesterdayMealsPreview,
   loadDailyLog,
   loadFrequentFoods,
   loadMealTemplates,
@@ -174,6 +176,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [customError, setCustomError] = useState<string | null>(null);
   const [copyLoading, setCopyLoading] = useState(false);
   const [copyMealTypeLoading, setCopyMealTypeLoading] = useState(false);
+  const [yesterdayMealTypePreview, setYesterdayMealTypePreview] = useState<YesterdayMealsPreview>({ count: 0, calories: 0 });
+  const [yesterdayAllPreview, setYesterdayAllPreview] = useState<YesterdayMealsPreview>({ count: 0, calories: 0 });
 
   // Barcode state
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -225,7 +229,9 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       loadFrequentFoods(),
       loadMealTemplates(),
       loadDailyLog(date),
-    ]).then(([recent, favs, custom, cachedBarcodes, frequent, templates, daily]) => {
+      getYesterdayMealsPreview(date, selectedMeal),
+      getYesterdayMealsPreview(date),
+    ]).then(([recent, favs, custom, cachedBarcodes, frequent, templates, daily, mealTypePrev, allPrev]) => {
       if (!isMounted) return;
       setRecentFoods(recent);
       setFavoriteFoods(favs);
@@ -236,13 +242,28 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       if (daily?.meals) {
         setCurrentDayMeals(daily.meals);
       }
+      setYesterdayMealTypePreview(mealTypePrev);
+      setYesterdayAllPreview(allPrev);
     }).catch((err) => {
       console.error('Error loading collections:', err);
     });
     return () => {
       isMounted = false;
     };
-  }, [date]);
+  }, [date, selectedMeal]);
+
+  useEffect(() => {
+    if (!visible) return;
+    let isMounted = true;
+    getYesterdayMealsPreview(date, selectedMeal)
+      .then((prev) => {
+        if (isMounted) setYesterdayMealTypePreview(prev);
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [visible, date, selectedMeal]);
 
   const checkApiKey = useCallback(() => {
     let isMounted = true;
@@ -433,16 +454,27 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
         Alert.alert(t("Copy yesterday's meals"), t('No meals were logged yesterday.'));
         return;
       }
-      await copyYesterdayMeals(date);
+      const res = await copyYesterdayMeals(date);
       if (onCopyYesterdayMeals) {
         await onCopyYesterdayMeals(date);
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        handleClose();
-      }, 450);
+      if (res.addedCount > 0) {
+        Alert.alert(
+          t("Copy yesterday's meals"),
+          `${t('Added')} ${res.addedCount} ${res.addedCount === 1 ? t('meal added') : t('meals added')}.`
+        );
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          handleClose();
+        }, 450);
+      } else {
+        Alert.alert(
+          t("Copy yesterday's meals"),
+          t('Nothing new to copy.')
+        );
+      }
     } catch (err) {
       console.error('Failed to copy yesterday meals:', err);
       Alert.alert(t('Error'), t('Failed to save meal.'));
@@ -479,16 +511,27 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
         );
         return;
       }
-      await copyYesterdayMealType(date, selectedMeal);
+      const res = await copyYesterdayMealType(date, selectedMeal);
       if (onCopyYesterdayMeals) {
         await onCopyYesterdayMeals(date);
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        handleClose();
-      }, 450);
+      if (res.addedCount > 0) {
+        Alert.alert(
+          getCopyMealTypeLabel(selectedMeal),
+          `${t('Added')} ${res.addedCount} ${res.addedCount === 1 ? t('meal added') : t('meals added')}.`
+        );
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          handleClose();
+        }, 450);
+      } else {
+        Alert.alert(
+          getCopyMealTypeLabel(selectedMeal),
+          t('Nothing new to copy.')
+        );
+      }
     } catch (err) {
       console.error('Failed to copy yesterday meal type:', err);
       Alert.alert(t('Error'), t('Failed to save meal.'));
@@ -1211,6 +1254,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         )}
                         <Text style={styles.quickActionBtnText} numberOfLines={1}>
                           {getCopyMealTypeLabel(selectedMeal)}
+                          {yesterdayMealTypePreview.count > 0 ? ` (${yesterdayMealTypePreview.count} • ${yesterdayMealTypePreview.calories} kcal)` : ''}
                         </Text>
                       </TouchableOpacity>
 
@@ -1227,6 +1271,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         )}
                         <Text style={styles.quickActionBtnText} numberOfLines={1}>
                           {t("Copy yesterday's meals")}
+                          {yesterdayAllPreview.count > 0 ? ` (${yesterdayAllPreview.count} • ${yesterdayAllPreview.calories} kcal)` : ''}
                         </Text>
                       </TouchableOpacity>
 

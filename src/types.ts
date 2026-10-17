@@ -164,6 +164,15 @@ export interface LoggedMeal {
   isEstimate?: boolean;
   portionUnit?: PortionUnit;
   gramsPerUnit?: number;
+  copiedFromId?: string;
+  copiedFromDate?: string;
+}
+
+export interface CopyYesterdayResult extends DailyLog {
+  addedCount: number;
+  alreadyCopiedCount: number;
+  totalYesterdayCount: number;
+  totalYesterdayKcal: number;
 }
 
 export interface MealTemplateItem {
