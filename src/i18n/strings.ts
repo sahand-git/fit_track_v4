@@ -8,9 +8,11 @@ export const languageNames: Record<AppLanguage, string> = {
   ckb: 'کوردی سۆرانی',
 };
 
-const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
+export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
   ar: {
     'Account': 'الحساب',
+    'Privacy policy': 'سياسة الخصوصية',
+    'Contact support': 'التواصل مع الدعم',
     'Sign in & backup': 'تسجيل الدخول والنسخ الاحتياطي',
     'Account services need setup': 'تحتاج خدمات الحساب إلى الإعداد',
     'Open Firebase setup guide': 'افتح دليل إعداد Firebase',
@@ -535,6 +537,10 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
   },
   ckb: {
     'Account': 'هەژمار',
+    'Privacy policy': 'سیاسەتی تایبەتمەندی',
+    'Contact support': 'پەیوەندی بە پشتگیری',
+    'No foods found matching': 'هیچ خواردنێک نەدۆزرایەوە کە بگونجێت لەگەڵ',
+    'Get an estimate, review portions, then log': 'خەمڵاندنێک وەربگرە، بەشەکان بپشکنە، پاشان تۆماری بکە',
     'Sign in & backup': 'چوونەژوورەوە و پاشەکەوت',
     'Account services need setup': 'خزمەتگوزارییەکانی هەژمار پێویستیان بە ڕێکخستنە',
     'Open Firebase setup guide': 'کردنەوەی ڕێنمای ڕێکخستنی Firebase',

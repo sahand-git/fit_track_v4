@@ -10,6 +10,7 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PRIVACY_POLICY_URL, SUPPORT_EMAIL } from '../constants/urls';
 
 interface Props { user: AuthIdentity | null; onBack: () => void; onRestoreComplete: () => void; }
 
@@ -91,6 +92,17 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
           </AnimatedPressable>
         </View>
       )}
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>{t('Privacy policy')}</Text>
+        <TouchableOpacity style={styles.outlineBtn} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} accessibilityRole="link" accessibilityLabel={t('Privacy policy')}>
+          <ExternalLink size={16} color={theme.colors.primary} />
+          <Text style={styles.outlineText}>{t('Privacy policy')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.switchMode} onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)} accessibilityRole="link" accessibilityLabel={t('Contact support')}>
+          <Text style={styles.outlineText}>{t('Contact support')} · {SUPPORT_EMAIL}</Text>
+        </TouchableOpacity>
+      </View>
 
       {user ? (
         <>

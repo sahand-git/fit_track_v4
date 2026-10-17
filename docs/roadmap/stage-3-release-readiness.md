@@ -15,6 +15,8 @@ This list is a release planning record, not a claim that each item has been comp
 - Complete the device and localization evidence in [Stage 1 QA checklist](stage-1-qa-checklist.md).
 - Before offering paid AI, complete the proxy/quota/spend design gate in [Stage 2 premium AI design](stage-2-premium-ai-design.md); billing itself is intentionally out of scope here.
 - Verify Firebase project configuration, published Firestore rules, email verification, Google sign-in configuration, account deletion, and privacy disclosures using production-like test accounts.
+- Before store release, verify that the privacy policy published from GitHub Pages is reachable and that the in-app policy link opens it.
+- Before Play upload, configure a protected production signing key and verify the signed app bundle with Play App Signing. The current APK workflow does not yet create a Play-ready signed bundle.
 - Validate native builds, camera/barcode permissions, notifications, health permissions, and store listing disclosures on real Android and iOS devices.
 - Complete privacy policy, nutrition/AI disclaimers, data retention/deletion behavior, crash monitoring, and a tested support/contact path.
 
