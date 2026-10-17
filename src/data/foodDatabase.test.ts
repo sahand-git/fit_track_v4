@@ -204,6 +204,25 @@ function runFoodDatabaseTests() {
     console.log(`✓ Test 8 passed: All ${VERIFIED_FOOD_DATABASE.length} foods verified to have valid serving sizes and positive gram weights.`);
   }
 
+  // Test 9: Strict Recipe Ingredient Grams and Calorie Reconciliation
+  {
+    for (const food of REGIONAL_FOODS) {
+      assert(Array.isArray(food.ingredients) && food.ingredients.length > 0, `Missing ingredients for ${food.id}`);
+      const sumGrams = food.ingredients!.reduce((s, i) => s + i.grams, 0);
+      assert(
+        Math.abs(sumGrams - food.servingGrams) < 0.01,
+        `Ingredient grams mismatch for ${food.id}: sum ${sumGrams}g != serving ${food.servingGrams}g`
+      );
+      const sumCalories = food.ingredients!.reduce((s, i) => s + (i.calories ?? 0), 0);
+      const calDiff = Math.abs(sumCalories - food.calories);
+      assert(
+        calDiff <= 5,
+        `Ingredient calories mismatch for ${food.id}: sum ${sumCalories} kcal vs food ${food.calories} kcal (diff: ${calDiff})`
+      );
+    }
+    console.log(`✓ Test 9 passed: All ${REGIONAL_FOODS.length} regional dishes reconciled: ingredient grams equal servingGrams and ingredient calories match food calories within ±5 kcal.`);
+  }
+
   console.log('All Food Database & Regional Foods Tests Passed successfully!');
 }
 
