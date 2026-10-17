@@ -1,90 +1,292 @@
 /**
- * Firestore Rules Emulator Test Suite
+ * Real Firestore Security Rules Test Suite
  *
- * Requirements to run against live local Firebase emulator:
- *   1. Install firebase-tools: npm install -g firebase-tools
- *   2. Install rules testing SDK: npm install --save-dev @firebase/rules-unit-testing
- *   3. Start emulator: firebase emulators:start --only firestore
- *   4. Run tests: npx tsx firestore.rules.test.ts
+ * Runs against the REAL `firestore.rules` file using `@firebase/rules-unit-testing`.
+ * This validates security rules in the actual Firebase Firestore Emulator environment.
+ *
+ * To run:
+ *   1. Start the emulator in another terminal:
+ *        npx firebase-tools emulators:start --only firestore
+ *   2. Run this suite:
+ *        npm run test:rules
+ *
+ * Or run self-contained in one command:
+ *   npx firebase-tools emulators:exec --only firestore "npm run test:rules"
  */
 
-import assert from 'node:assert';
-import fs from 'node:fs';
-import path from 'node:path';
+import {
+  initializeTestEnvironment,
+  assertSucceeds,
+  assertFails,
+  RulesTestEnvironment,
+} from '@firebase/rules-unit-testing';
+import * as fs from 'fs';
+import * as path from 'path';
 
-async function runEmulatorRulesTest() {
-  console.log('--- Firestore Emulator Test Runner ---');
+const PROJECT_ID = 'fittrack-rules-test';
+
+async function runRulesTestSuite() {
+  console.log('====================================================');
+  console.log('Starting Real Firestore Security Rules Emulator Tests');
+  console.log('====================================================');
+
   const rulesPath = path.resolve(__dirname, 'firestore.rules');
+  if (!fs.existsSync(rulesPath)) {
+    throw new Error(`firestore.rules not found at: ${rulesPath}`);
+  }
   const rules = fs.readFileSync(rulesPath, 'utf8');
 
-  let testEnv: any;
+  // Emulator host configuration (defaults to 127.0.0.1:8080 if FIRESTORE_EMULATOR_HOST not set)
+  const hostAndPort = process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8080';
+  const [host, portStr] = hostAndPort.split(':');
+  const port = parseInt(portStr || '8080', 10);
+
+  let testEnv: RulesTestEnvironment;
   try {
-    // Dynamic import to avoid hard failure when @firebase/rules-unit-testing is not installed
-    const testing = await import('@firebase/rules-unit-testing');
-    testEnv = await testing.initializeTestEnvironment({
-      projectId: 'fittrack-test-project',
+    testEnv = await initializeTestEnvironment({
+      projectId: PROJECT_ID,
       firestore: {
         rules,
-        host: '127.0.0.1',
-        port: 8080,
+        host,
+        port,
       },
     });
-    console.log('Connected to local Firestore emulator on 127.0.0.1:8080.');
-  } catch {
-    console.log('[INFO] Local Java Firestore emulator daemon is not running on 127.0.0.1:8080.');
-    console.log('[INFO] Complete rule assertion suite has been executed via src/services/firestoreRules.test.ts.');
-    console.log('[INFO] To run with live emulator: npm install -g firebase-tools && firebase emulators:start --only firestore');
-    return;
+  } catch (err: any) {
+    console.error('\n[ERROR] Failed to connect to Firebase Firestore emulator:');
+    console.error(`  Host: ${host}:${port}`);
+    console.error(`  Details: ${err?.message || err}`);
+    console.error('\nTo run this test suite, the Firebase emulator must be running:');
+    console.error('  npx firebase-tools emulators:start --only firestore');
+    console.error('Or run via exec wrapper:');
+    console.error('  npx firebase-tools emulators:exec --only firestore "npm run test:rules"\n');
+    process.exit(1);
   }
 
   try {
-    const aliceContext = testEnv.authenticatedContext('alice', { email_verified: true });
-    const aliceDb = aliceContext.firestore();
+    // Clear data before running
+    await testEnv.clearFirestore();
 
-    // 1. Alice writes valid single doc backup
-    await testing.assertSucceeds(
-      aliceDb.doc('fitnessBackups/alice').set({
+    const aliceAuth = testEnv.authenticatedContext('alice', { email_verified: true });
+    const aliceDb = aliceAuth.firestore();
+
+    const unverifiedAlice = testEnv.authenticatedContext('alice', { email_verified: false });
+    const unverifiedDb = unverifiedAlice.firestore();
+
+    const bobAuth = testEnv.authenticatedContext('bob', { email_verified: true });
+    const bobDb = bobAuth.firestore();
+
+    const unauth = testEnv.unauthenticatedContext();
+    const unauthDb = unauth.firestore();
+
+    // ----------------------------------------------------
+    // 1. Unauthenticated & Unverified Denials
+    // ----------------------------------------------------
+    console.log('Test 1: Unauthenticated operations are strictly denied...');
+    await assertFails(unauthDb.doc('fitnessBackups/alice').get());
+    await assertFails(
+      unauthDb.doc('fitnessBackups/alice').set({
         version: '4.0',
         exportedAt: '2026-10-15T12:00:00Z',
-        backup: { version: '4.0', profile: {}, dailyLogs: {} },
+        backup: { version: '4.0' },
         updatedAt: new Date(),
       })
     );
+    await assertFails(unauthDb.doc('fitnessBackups/alice/chunks/0').get());
+    console.log('✓ Test 1 passed: Unauthenticated access denied.');
 
-    // 2. Alice writes valid chunked manifest
-    await testing.assertSucceeds(
-      aliceDb.doc('fitnessBackups/alice').set({
+    console.log('Test 2: Unverified email accounts are locked out...');
+    await assertFails(unverifiedDb.doc('fitnessBackups/alice').get());
+    await assertFails(
+      unverifiedDb.doc('fitnessBackups/alice').set({
         version: '4.0',
         exportedAt: '2026-10-15T12:00:00Z',
-        isChunked: true,
-        chunkCount: 2,
-        totalBytes: 500000,
+        backup: { version: '4.0' },
         updatedAt: new Date(),
       })
     );
+    console.log('✓ Test 2 passed: Unverified email locked out.');
 
-    // 3. Alice writes chunks
-    await testing.assertSucceeds(
-      aliceDb.doc('fitnessBackups/alice/chunks/0').set({
+    // ----------------------------------------------------
+    // 2. Cross-User Access Denials (Non-Owner)
+    // ----------------------------------------------------
+    console.log('Test 3: Non-owner access is strictly denied...');
+    await assertFails(bobDb.doc('fitnessBackups/alice').get());
+    await assertFails(
+      bobDb.doc('fitnessBackups/alice').set({
+        version: '4.0',
+        exportedAt: '2026-10-15T12:00:00Z',
+        backup: { version: '4.0' },
+        updatedAt: new Date(),
+      })
+    );
+    await assertFails(bobDb.doc('fitnessBackups/alice/chunks/0').get());
+    await assertFails(
+      bobDb.doc('fitnessBackups/alice/chunks/0').set({
+        index: 0,
+        totalChunks: 1,
+        chunk: 'fake',
+        updatedAt: new Date(),
+      })
+    );
+    await assertFails(bobDb.doc('fitnessBackups/alice').delete());
+    console.log('✓ Test 3 passed: Cross-user access rejected.');
+
+    // ----------------------------------------------------
+    // 3. Collection Enumeration Denied
+    // ----------------------------------------------------
+    console.log('Test 4: Global collection enumeration is denied...');
+    await assertFails(aliceDb.collection('fitnessBackups').get());
+    await assertFails(bobDb.collection('fitnessBackups').get());
+    console.log('✓ Test 4 passed: Collection listing denied.');
+
+    // ----------------------------------------------------
+    // 4. Verified Owner Single-Doc Backup
+    // ----------------------------------------------------
+    console.log('Test 5: Verified owner can write and read valid single-doc backup...');
+    const validSingleDoc = {
+      version: '4.0',
+      exportedAt: '2026-10-15T12:00:00Z',
+      backup: { version: '4.0', profile: {}, dailyLogs: {} },
+      updatedAt: new Date(),
+      isChunked: false,
+    };
+    await assertSucceeds(aliceDb.doc('fitnessBackups/alice').set(validSingleDoc));
+    await assertSucceeds(aliceDb.doc('fitnessBackups/alice').get());
+    console.log('✓ Test 5 passed: Single-doc backup read/write succeeded.');
+
+    // ----------------------------------------------------
+    // 5. Malformed Single-Doc Backups
+    // ----------------------------------------------------
+    console.log('Test 6: Malformed single-doc backups are rejected...');
+    // Extra root key
+    await assertFails(
+      aliceDb.doc('fitnessBackups/alice').set({
+        ...validSingleDoc,
+        unauthorizedField: 'malicious_payload',
+      })
+    );
+    // Outdated or wrong version
+    await assertFails(
+      aliceDb.doc('fitnessBackups/alice').set({
+        ...validSingleDoc,
+        version: '3.0',
+      })
+    );
+    // Non-map backup
+    await assertFails(
+      aliceDb.doc('fitnessBackups/alice').set({
+        ...validSingleDoc,
+        backup: 'not_a_map',
+      })
+    );
+    // backup.version mismatch
+    await assertFails(
+      aliceDb.doc('fitnessBackups/alice').set({
+        ...validSingleDoc,
+        backup: { version: '1.0' },
+      })
+    );
+    console.log('✓ Test 6 passed: Malformed single-doc variations rejected.');
+
+    // ----------------------------------------------------
+    // 6. Verified Owner Chunked Manifest & Subcollection
+    // ----------------------------------------------------
+    console.log('Test 7: Verified owner can write valid chunked manifest...');
+    const validManifest = {
+      version: '4.0',
+      exportedAt: '2026-10-15T12:00:00Z',
+      isChunked: true,
+      chunkCount: 2,
+      totalBytes: 1500000,
+      updatedAt: new Date(),
+    };
+    await assertSucceeds(aliceDb.doc('fitnessBackups/alice').set(validManifest));
+    console.log('✓ Test 7 passed: Valid chunked manifest succeeded.');
+
+    console.log('Test 8: Chunked subcollection read/write/list/delete...');
+    const chunk0 = {
+      index: 0,
+      totalChunks: 2,
+      chunk: 'abcdef1234567890',
+      updatedAt: new Date(),
+    };
+    const chunk1 = {
+      index: 1,
+      totalChunks: 2,
+      chunk: '0987654321fedcba',
+      updatedAt: new Date(),
+    };
+    await assertSucceeds(aliceDb.doc('fitnessBackups/alice/chunks/0').set(chunk0));
+    await assertSucceeds(aliceDb.doc('fitnessBackups/alice/chunks/1').set(chunk1));
+    await assertSucceeds(aliceDb.collection('fitnessBackups/alice/chunks').get());
+    await assertSucceeds(aliceDb.doc('fitnessBackups/alice/chunks/0').get());
+    await assertSucceeds(aliceDb.doc('fitnessBackups/alice/chunks/0').delete());
+    console.log('✓ Test 8 passed: Chunk subcollection operations succeeded.');
+
+    // ----------------------------------------------------
+    // 7. Malformed Chunks & Manifests
+    // ----------------------------------------------------
+    console.log('Test 9: Malformed chunk documents are rejected...');
+    // Negative chunk index
+    await assertFails(
+      aliceDb.doc('fitnessBackups/alice/chunks/bad_idx').set({
+        index: -1,
+        totalChunks: 2,
+        chunk: 'data',
+        updatedAt: new Date(),
+      })
+    );
+    // Non-string chunk data
+    await assertFails(
+      aliceDb.doc('fitnessBackups/alice/chunks/bad_data').set({
         index: 0,
         totalChunks: 2,
-        chunk: 'part1',
+        chunk: 12345,
         updatedAt: new Date(),
       })
     );
+    // Extra unauthorized field in chunk
+    await assertFails(
+      aliceDb.doc('fitnessBackups/alice/chunks/bad_extra').set({
+        index: 0,
+        totalChunks: 2,
+        chunk: 'data',
+        updatedAt: new Date(),
+        hackerField: true,
+      })
+    );
+    // Zero or negative totalChunks in manifest
+    await assertFails(
+      aliceDb.doc('fitnessBackups/alice').set({
+        ...validManifest,
+        chunkCount: 0,
+      })
+    );
+    // Zero or negative totalBytes in manifest
+    await assertFails(
+      aliceDb.doc('fitnessBackups/alice').set({
+        ...validManifest,
+        totalBytes: -50,
+      })
+    );
+    console.log('✓ Test 9 passed: Malformed chunk schemas rejected.');
 
-    // 4. Bob cannot read Alice's backup
-    const bobContext = testEnv.authenticatedContext('bob', { email_verified: true });
-    const bobDb = bobContext.firestore();
-    await testing.assertFails(bobDb.doc('fitnessBackups/alice').get());
-    await testing.assertFails(bobDb.doc('fitnessBackups/alice/chunks/0').get());
+    // ----------------------------------------------------
+    // 8. Delete operations
+    // ----------------------------------------------------
+    console.log('Test 10: Verified owner can delete account backup...');
+    await assertSucceeds(aliceDb.doc('fitnessBackups/alice').delete());
+    console.log('✓ Test 10 passed: Verified owner delete succeeded.');
 
-    console.log('All live Firestore emulator assertions passed!');
+    console.log('\n====================================================');
+    console.log('ALL 10 REAL FIRESTORE SECURITY RULES TESTS PASSED!');
+    console.log('====================================================\n');
   } finally {
-    if (testEnv) {
-      await testEnv.cleanup();
-    }
+    await testEnv.cleanup();
   }
 }
 
-runEmulatorRulesTest().catch(console.error);
+runRulesTestSuite().catch((err) => {
+  console.error('Test execution failed:', err);
+  process.exit(1);
+});
