@@ -191,6 +191,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [customProtein, setCustomProtein] = useState('');
   const [customCarbs, setCustomCarbs] = useState('');
   const [customFat, setCustomFat] = useState('');
+  const [customServingGrams, setCustomServingGrams] = useState<number>(100);
   const [customError, setCustomError] = useState<string | null>(null);
   const [copyLoading, setCopyLoading] = useState(false);
   const [copyMealTypeLoading, setCopyMealTypeLoading] = useState(false);
@@ -432,8 +433,14 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     const activeFat = activeVariant ? activeVariant.fat : selectedFood.fat;
     const variantSuffix = activeVariant ? ` (${activeVariant.name})` : '';
 
+    const rawServing = activeVariant?.servingSize ?? selectedFood.servingSize ?? '';
+    const gramMatch = rawServing.match(/(\d+(?:\.\d+)?)\s*g/i);
+    const parsedGrams = gramMatch ? parseFloat(gramMatch[1]) : 100;
+    const initialServingGrams = activeVariant?.servingGrams ?? selectedFood.servingGrams ?? (Number.isFinite(parsedGrams) ? parsedGrams : 100);
+
     setCustomName(`${selectedFood.name}${variantSuffix}`);
-    setCustomServing(activeVariant?.servingSize ?? selectedFood.servingSize ?? '1 serving');
+    setCustomServing(rawServing || '1 serving');
+    setCustomServingGrams(initialServingGrams);
     setCustomCalories(String(activeCalories));
     setCustomProtein(String(activeProtein));
     setCustomCarbs(String(activeCarbs));
@@ -469,11 +476,16 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       return;
     }
 
+    const userGramMatch = customServing.match(/(\d+(?:\.\d+)?)\s*g/i);
+    const resolvedServingGrams = userGramMatch
+      ? parseFloat(userGramMatch[1])
+      : (customServingGrams > 0 ? customServingGrams : 100);
+
     const newFood: FoodItem = {
       id: createUniqueId('food_custom'),
       name: trimmedName,
       servingSize: customServing.trim() || '1 serving',
-      servingGrams: 100,
+      servingGrams: Math.round(resolvedServingGrams),
       calories: Math.round(kcal),
       protein: Math.round(p * 10) / 10,
       carbs: Math.round(c * 10) / 10,
@@ -1447,6 +1459,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         style={styles.quickActionBtn}
                         onPress={() => {
                           setCustomError(null);
+                          setCustomServingGrams(100);
                           setCustomModalVisible(true);
                         }}
                         accessibilityRole="button"
