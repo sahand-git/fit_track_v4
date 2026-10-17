@@ -47,6 +47,9 @@ export const AnimatedPressable: React.FC<AnimatedPressableProps> = ({
 
   return (
     <TouchableOpacity
+      accessibilityRole={rest.accessibilityRole ?? 'button'}
+      accessibilityLabel={rest.accessibilityLabel}
+      hitSlop={rest.hitSlop ?? { top: 8, bottom: 8, left: 8, right: 8 }}
       {...rest}
       activeOpacity={rest.activeOpacity ?? 0.85}
       onPressIn={handlePressIn}

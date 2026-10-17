@@ -111,16 +111,51 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
             <Text style={styles.noticeTitle}>{user.displayName || user.email || t('Account')}</Text>
             <Text style={styles.body}>{emailVerified ? t('Verified account') : t('Email not verified yet. Cloud backup stays locked until verification.')}</Text>
             {!emailVerified && <>
-              <TouchableOpacity style={styles.outlineBtn} onPress={() => perform(resendVerification, 'Verification email sent.')}><Text style={styles.outlineText}>{t('Resend verification email')}</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.outlineBtn} onPress={() => perform(async () => { const refreshed = await refreshVerificationStatus(); setVerificationOverride({ uid: user.uid, verified: !!refreshed?.emailVerified }); if (!refreshed?.emailVerified) throw new Error('Email not verified yet. Cloud backup stays locked until verification.'); }, 'Email verified. Cloud backup is ready.') }><Text style={styles.outlineText}>{t('Check verification status')}</Text></TouchableOpacity>
+              <TouchableOpacity
+                style={styles.outlineBtn}
+                onPress={() => perform(resendVerification, 'Verification email sent.')}
+                accessibilityRole="button"
+                accessibilityLabel={t('Resend verification email')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.outlineText}>{t('Resend verification email')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.outlineBtn}
+                onPress={() => perform(async () => { const refreshed = await refreshVerificationStatus(); setVerificationOverride({ uid: user.uid, verified: !!refreshed?.emailVerified }); if (!refreshed?.emailVerified) throw new Error('Email not verified yet. Cloud backup stays locked until verification.'); }, 'Email verified. Cloud backup is ready.') }
+                accessibilityRole="button"
+                accessibilityLabel={t('Check verification status')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.outlineText}>{t('Check verification status')}</Text>
+              </TouchableOpacity>
             </>}
           </View>
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{t('Cloud backup')}</Text>
             <Text style={styles.body}>{t('Backups are manual and account-owned. Gemini credentials are never included.')}</Text>
-            <TouchableOpacity disabled={busy || !emailVerified} style={[styles.primaryBtn, (busy || !emailVerified) && styles.disabled]} onPress={cloudBackup} accessibilityRole="button"><Cloud size={17} color={theme.colors.textInverted} /><Text style={styles.primaryText}>{t('Back up now')}</Text></TouchableOpacity>
-            <TouchableOpacity disabled={busy || !emailVerified} style={[styles.outlineBtn, (busy || !emailVerified) && styles.disabled]} onPress={restore} accessibilityRole="button"><Text style={styles.outlineText}>{t('Restore cloud backup')}</Text></TouchableOpacity>
+            <TouchableOpacity
+              disabled={busy || !emailVerified}
+              style={[styles.primaryBtn, (busy || !emailVerified) && styles.disabled]}
+              onPress={cloudBackup}
+              accessibilityRole="button"
+              accessibilityLabel={t('Back up now')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Cloud size={17} color={theme.colors.textInverted} />
+              <Text style={styles.primaryText}>{t('Back up now')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              disabled={busy || !emailVerified}
+              style={[styles.outlineBtn, (busy || !emailVerified) && styles.disabled]}
+              onPress={restore}
+              accessibilityRole="button"
+              accessibilityLabel={t('Restore cloud backup')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.outlineText}>{t('Restore cloud backup')}</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.card}>
@@ -129,8 +164,28 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
           </View>
 
           <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder={t('Current password, for account deletion')} placeholderTextColor={theme.colors.textMuted} style={styles.input} accessibilityLabel={t('Current password, for account deletion')} />
-          <TouchableOpacity style={styles.outlineBtn} onPress={() => perform(logout, 'Signed out. Your local and account records are preserved.')} disabled={busy}><LogOut size={17} color={theme.colors.primary} /><Text style={styles.outlineText}>{t('Sign out')}</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.deleteBtn, (!emailVerified || busy) && styles.disabled]} onPress={removeAccount} disabled={busy || !emailVerified} accessibilityRole="button"><Trash2 size={17} color={theme.colors.danger} /><Text style={styles.deleteText}>{t('Delete account')}</Text></TouchableOpacity>
+          <TouchableOpacity
+            style={styles.outlineBtn}
+            onPress={() => perform(logout, 'Signed out. Your local and account records are preserved.')}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel={t('Sign out')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <LogOut size={17} color={theme.colors.primary} />
+            <Text style={styles.outlineText}>{t('Sign out')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.deleteBtn, (!emailVerified || busy) && styles.disabled]}
+            onPress={removeAccount}
+            disabled={busy || !emailVerified}
+            accessibilityRole="button"
+            accessibilityLabel={t('Delete account')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Trash2 size={17} color={theme.colors.danger} />
+            <Text style={styles.deleteText}>{t('Delete account')}</Text>
+          </TouchableOpacity>
         </>
       ) : (
         <View style={styles.card}>
@@ -139,12 +194,50 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
           {!firebaseConfigured && <Text style={styles.small}>{t('Connect Firebase before using sign in or account creation.')}</Text>}
           <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder={t('Email')} placeholderTextColor={theme.colors.textMuted} style={styles.input} accessibilityLabel={t('Email')} />
           <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder={t('Password')} placeholderTextColor={theme.colors.textMuted} style={styles.input} accessibilityLabel={t('Password')} />
-          <AnimatedPressable disabled={busy || !firebaseConfigured || !email.trim() || password.length < 6} style={[styles.primaryBtn, (busy || !firebaseConfigured || !email.trim() || password.length < 6) && styles.disabled]} onPress={signIn} accessibilityRole="button"><LogIn size={17} color={theme.colors.textInverted} /><Text style={styles.primaryText}>{t(mode === 'create' ? 'Create account' : 'Sign in')}</Text></AnimatedPressable>
-          <TouchableOpacity onPress={() => setMode(mode === 'create' ? 'login' : 'create')} style={styles.switchMode}><Text style={styles.outlineText}>{t(mode === 'create' ? 'Already have an account? Sign in' : 'New to FitTrack? Create an account')}</Text></TouchableOpacity>
-          {mode === 'login' && <TouchableOpacity disabled={!firebaseConfigured || busy} onPress={() => perform(async () => { await requestPasswordReset(email); }, 'Password reset email sent.')} style={styles.switchMode}><Text style={styles.outlineText}>{t('Forgot password?')}</Text></TouchableOpacity>}
+          <AnimatedPressable
+            disabled={busy || !firebaseConfigured || !email.trim() || password.length < 6}
+            style={[styles.primaryBtn, (busy || !firebaseConfigured || !email.trim() || password.length < 6) && styles.disabled]}
+            onPress={signIn}
+            accessibilityRole="button"
+            accessibilityLabel={t(mode === 'create' ? 'Create account' : 'Sign in')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <LogIn size={17} color={theme.colors.textInverted} />
+            <Text style={styles.primaryText}>{t(mode === 'create' ? 'Create account' : 'Sign in')}</Text>
+          </AnimatedPressable>
+          <TouchableOpacity
+            onPress={() => setMode(mode === 'create' ? 'login' : 'create')}
+            style={styles.switchMode}
+            accessibilityRole="button"
+            accessibilityLabel={t(mode === 'create' ? 'Already have an account? Sign in' : 'New to FitTrack? Create an account')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.outlineText}>{t(mode === 'create' ? 'Already have an account? Sign in' : 'New to FitTrack? Create an account')}</Text>
+          </TouchableOpacity>
+          {mode === 'login' && (
+            <TouchableOpacity
+              disabled={!firebaseConfigured || busy}
+              onPress={() => perform(async () => { await requestPasswordReset(email); }, 'Password reset email sent.')}
+              style={styles.switchMode}
+              accessibilityRole="button"
+              accessibilityLabel={t('Forgot password?')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.outlineText}>{t('Forgot password?')}</Text>
+            </TouchableOpacity>
+          )}
           <View style={styles.separator}><View style={styles.rule} /><Text style={styles.muted}>{t('or')}</Text><View style={styles.rule} /></View>
           {Platform.OS !== 'web' && <>
-            <TouchableOpacity disabled={busy || !firebaseConfigured} style={[styles.outlineBtn, styles.googleBtn, (busy || !firebaseConfigured) && styles.disabled]} onPress={googleSignIn}><Text style={styles.outlineText}>{t('Continue with Google')}</Text></TouchableOpacity>
+            <TouchableOpacity
+              disabled={busy || !firebaseConfigured}
+              style={[styles.outlineBtn, styles.googleBtn, (busy || !firebaseConfigured) && styles.disabled]}
+              onPress={googleSignIn}
+              accessibilityRole="button"
+              accessibilityLabel={t('Continue with Google')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.outlineText}>{t('Continue with Google')}</Text>
+            </TouchableOpacity>
             <Text style={styles.small}>{t('Google sign-in needs a configured mobile development build. It uses your Google identity only, not Gmail or Gemini.')}</Text>
           </>}
         </View>

@@ -478,6 +478,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               onPress={onOpenSupplements}
               activeOpacity={0.7}
               accessibilityRole="button"
+              accessibilityLabel={t('Track vitamins & supplements')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <View style={styles.slimRoutineLeft}>
                 <View style={styles.pillIconBox}>
@@ -503,6 +505,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   onPress={onOpenSupplements}
                   style={styles.manageBtn}
                   accessibilityRole="button"
+                  accessibilityLabel={`${t('Manage')} ${t('Vitamins & supplements')}`}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Text style={styles.manageBtnText}>{t('Manage')}</Text>
                 </TouchableOpacity>
@@ -521,7 +525,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       disabled={isFuture}
                       activeOpacity={0.7}
                       accessibilityRole="checkbox"
+                      accessibilityLabel={`${item.name}${item.doseText ? ` (${item.doseText})` : ''}, ${item.isTaken ? t('taken') : t('not taken')}`}
                       accessibilityState={{ checked: item.isTaken }}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     >
                       <View style={styles.checkboxCircle}>
                         <AnimatedCheckbox checked={item.isTaken} size={19} />
@@ -551,7 +557,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   <Dumbbell size={17} color={theme.colors.primary} />
                   <Text style={styles.workoutTitle}>{t('Workouts')}</Text>
                 </View>
-                <AnimatedPressable onPress={onOpenWorkouts} style={styles.manageBtn} accessibilityRole="button">
+                <AnimatedPressable
+                  onPress={onOpenWorkouts}
+                  style={styles.manageBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('History')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
                   <Text style={styles.manageBtnText}>{t('History')}</Text>
                 </AnimatedPressable>
               </View>
@@ -569,6 +581,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 disabled={isFuture}
                 accessibilityRole="button"
                 accessibilityLabel={t('Add workout')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Plus size={14} color={theme.colors.primary} />
                 <Text style={styles.addWorkoutBtnText}>{t('Add workout')}</Text>
@@ -583,6 +596,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 }}
                 disabled={isFuture}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isFuture
+                    ? t('Workouts cannot be logged for future dates.')
+                    : t('No workouts logged yet. Tap to log exercise.')
+                }
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.emptyWorkoutText}>
                   {isFuture
@@ -625,7 +645,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         );
                       }}
                       style={styles.deleteWorkoutBtn}
-                      accessibilityLabel={t('Delete workout')}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('Delete workout')}: ${t(w.name)}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <Trash2 size={16} color={theme.colors.textMuted} />
                     </TouchableOpacity>

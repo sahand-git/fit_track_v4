@@ -118,29 +118,75 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
         <Text style={styles.cardTitle}>{t('Update steps')}</Text>
         <Text style={styles.muted}>{t('Set the total for this date, or add steps to the saved total.')}</Text>
         <View style={styles.entryRow}>
-          <TouchableOpacity disabled={isFuture} style={styles.roundBtn} onPress={() => { const n = Math.max(0, steps - 500); setStepInput(String(n)); onSetSteps(n).catch(() => setError(t('Could not save steps. Please try again.'))); }} accessibilityLabel={t('Remove 500 steps')}>
+          <TouchableOpacity
+            disabled={isFuture}
+            style={styles.roundBtn}
+            onPress={() => { const n = Math.max(0, steps - 500); setStepInput(String(n)); onSetSteps(n).catch(() => setError(t('Could not save steps. Please try again.'))); }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Remove 500 steps')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <Minus size={18} color={theme.colors.primary} />
           </TouchableOpacity>
           <TextInput value={stepInput} onChangeText={setStepInput} keyboardType="number-pad" editable={!isFuture} style={styles.input} accessibilityLabel={t('Step count')} />
-          <TouchableOpacity disabled={isFuture} style={styles.roundBtn} onPress={() => { const n = steps + 500; setStepInput(String(n)); onSetSteps(n).catch(() => setError(t('Could not save steps. Please try again.'))); }} accessibilityLabel={t('Add 500 steps')}>
+          <TouchableOpacity
+            disabled={isFuture}
+            style={styles.roundBtn}
+            onPress={() => { const n = steps + 500; setStepInput(String(n)); onSetSteps(n).catch(() => setError(t('Could not save steps. Please try again.'))); }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Add 500 steps')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <Plus size={18} color={theme.colors.primary} />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity disabled={isFuture} style={styles.primaryButton} onPress={saveTotal} accessibilityRole="button">
+        <TouchableOpacity
+          disabled={isFuture}
+          style={styles.primaryButton}
+          onPress={saveTotal}
+          accessibilityRole="button"
+          accessibilityLabel={t('Save total')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Text style={styles.primaryButtonText}>{t('Save total')}</Text>
         </TouchableOpacity>
         <View style={styles.goalRow}>
           <TextInput value={amountInput} onChangeText={setAmountInput} keyboardType="number-pad" editable={!isFuture} style={[styles.input, styles.goalInput]} accessibilityLabel={t('Steps to add')} />
-          <TouchableOpacity disabled={isFuture} style={styles.outlineButton} onPress={addManualSteps}><Text style={styles.outlineButtonText}>{t('Add steps')}</Text></TouchableOpacity>
+          <TouchableOpacity
+            disabled={isFuture}
+            style={styles.outlineButton}
+            onPress={addManualSteps}
+            accessibilityRole="button"
+            accessibilityLabel={t('Add steps')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.outlineButtonText}>{t('Add steps')}</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.goalRow}>
           <Target size={17} color={theme.colors.secondary} />
           <TextInput value={goalInput} onChangeText={setGoalInput} keyboardType="number-pad" editable={!isFuture} style={[styles.input, styles.goalInput]} accessibilityLabel={t('Daily step goal')} />
-          <TouchableOpacity disabled={isFuture} style={styles.outlineButton} onPress={saveGoal}><Text style={styles.outlineButtonText}>{t('Save goal')}</Text></TouchableOpacity>
+          <TouchableOpacity
+            disabled={isFuture}
+            style={styles.outlineButton}
+            onPress={saveGoal}
+            accessibilityRole="button"
+            accessibilityLabel={t('Save goal')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.outlineButtonText}>{t('Save goal')}</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
-      <TouchableOpacity disabled={busy || isFuture} style={[styles.healthButton, (busy || isFuture) && { opacity: 0.55 }]} onPress={syncHealth} accessibilityRole="button">
+      <TouchableOpacity
+        disabled={busy || isFuture}
+        style={[styles.healthButton, (busy || isFuture) && { opacity: 0.55 }]}
+        onPress={syncHealth}
+        accessibilityRole="button"
+        accessibilityLabel={busy ? t('Syncing health data…') : t('Sync Apple Health / Health Connect')}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
         <RefreshCw size={18} color={theme.colors.primary} />
         <Text style={styles.healthButtonText}>{busy ? t('Syncing health data…') : t('Sync Apple Health / Health Connect')}</Text>
       </TouchableOpacity>

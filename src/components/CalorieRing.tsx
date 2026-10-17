@@ -70,7 +70,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
         onPress={onPress}
         disabled={!onPress}
         activeOpacity={0.82}
-        accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityRole="button"
         accessibilityLabel={t('Calories')}
       >
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>

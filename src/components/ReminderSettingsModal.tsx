@@ -315,6 +315,8 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
               style={styles.permWarningCard}
               onPress={verifyAndRequestPermission}
               accessibilityRole="button"
+              accessibilityLabel={t('Notification permissions are required to schedule reminders.')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <AlertCircle size={16} color={theme.colors.accent} />
               <View style={{ flex: 1 }}>
@@ -391,7 +393,9 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                             <TouchableOpacity
                               style={styles.stepperBtn}
                               onPress={() => handleAdjustSlotTime(slot, -1, 0)}
+                              accessibilityRole="button"
                               accessibilityLabel={t('Previous hour')}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
                               <Minus size={13} color={theme.colors.textPrimary} />
                             </TouchableOpacity>
@@ -401,7 +405,9 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                             <TouchableOpacity
                               style={styles.stepperBtn}
                               onPress={() => handleAdjustSlotTime(slot, 1, 0)}
+                              accessibilityRole="button"
                               accessibilityLabel={t('Next hour')}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
                               <Plus size={13} color={theme.colors.textPrimary} />
                             </TouchableOpacity>
@@ -454,6 +460,9 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                               water: { ...prev.water, intervalHours: intv },
                             }));
                           }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${intv} ${t('hours')}`}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
                           <Text
                             style={[
@@ -587,7 +596,9 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                           <TouchableOpacity
                             style={styles.stepperBtn}
                             onPress={() => handleAdjustMealTime(mKey, -1, 0)}
+                            accessibilityRole="button"
                             accessibilityLabel={t('Previous hour')}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           >
                             <Minus size={13} color={theme.colors.textPrimary} />
                           </TouchableOpacity>
@@ -597,7 +608,9 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                           <TouchableOpacity
                             style={styles.stepperBtn}
                             onPress={() => handleAdjustMealTime(mKey, 1, 0)}
+                            accessibilityRole="button"
                             accessibilityLabel={t('Next hour')}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           >
                             <Plus size={13} color={theme.colors.textPrimary} />
                           </TouchableOpacity>
@@ -623,6 +636,8 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
             onPress={handleSave}
             disabled={isSaving}
             accessibilityRole="button"
+            accessibilityLabel={t('Save')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Check size={18} color={theme.colors.textInverted} />
             <Text style={styles.saveBtnText}>{t('Save')}</Text>

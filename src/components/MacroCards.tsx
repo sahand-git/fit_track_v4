@@ -120,8 +120,9 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
             onPress={() => onSelectNutrient?.(m.key)}
             disabled={!onSelectNutrient}
             activeOpacity={0.72}
-            accessibilityRole={onSelectNutrient ? 'button' : undefined}
+            accessibilityRole={onSelectNutrient ? 'button' : 'none'}
             accessibilityLabel={`${t(m.name)}: ${m.consumed} / ${m.target}g`}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <View style={[styles.headerRow, isRtl && styles.rowRtl]}>
               <Text style={styles.macroName}>{t(m.name)}</Text>

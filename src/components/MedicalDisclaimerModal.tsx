@@ -75,6 +75,8 @@ export const MedicalDisclaimerModal: React.FC<MedicalDisclaimerModalProps> = ({
           onPress={() => {
             if (!isFirstRun && onClose) onClose();
           }}
+          accessibilityRole="button"
+          accessibilityLabel={t('Close')}
         />
         <View style={[styles.modalCard, { direction: isRTL ? 'rtl' : 'ltr' }]}>
           {/* Header */}
@@ -177,6 +179,9 @@ export const MedicalDisclaimerModal: React.FC<MedicalDisclaimerModalProps> = ({
                   onOpenReferences();
                 }}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={t('Scientific References')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <BookOpen size={16} color={theme.colors.primary} />
                 <Text style={styles.secondaryBtnText}>{t('Scientific References')}</Text>

@@ -171,6 +171,8 @@ export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
         activeOpacity={0.9}
         onPress={onDismiss}
         style={styles.touchArea}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss celebration"
       >
         <Animated.View style={[styles.card, animatedCardStyle]}>
           <View style={styles.iconCircle}>

@@ -878,6 +878,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                 style={[styles.mealSlotChip, selectedMeal === m.key && styles.mealSlotChipActive]}
                 onPress={() => setSelectedMeal(m.key)}
                 accessibilityRole="button"
+                accessibilityLabel={m.label}
               >
                 <Text
                   style={[
@@ -900,6 +901,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                 setIsScanningBarcode(false);
               }}
               accessibilityRole="button"
+              accessibilityLabel={t('Search')}
             >
               <Search
                 size={14}
@@ -923,6 +925,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                 setIsScanningBarcode(false);
               }}
               accessibilityRole="button"
+              accessibilityLabel={t('Analyze meal photo')}
             >
               <Sparkles
                 size={14}
@@ -946,6 +949,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                 setIsScanningBarcode(false);
               }}
               accessibilityRole="button"
+              accessibilityLabel={t('Describe with AI')}
             >
               <Sparkles
                 size={14}
@@ -978,6 +982,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                       <TouchableOpacity
                         style={styles.actionBtnPrimary}
                         onPress={() => setIsScanningBarcode(false)}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Enter digits')}
                       >
                         <Text style={styles.actionBtnPrimaryText}>{t('Enter digits')}</Text>
                       </TouchableOpacity>
@@ -999,6 +1005,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         <TouchableOpacity
                           style={styles.cancelScanBtn}
                           onPress={() => setIsScanningBarcode(false)}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('Close')}
                         >
                           <Text style={styles.cancelScanText}>{t('Close')}</Text>
                         </TouchableOpacity>
@@ -1021,7 +1029,11 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         autoFocus={!selectedFood}
                       />
                       {searchQuery.length > 0 && (
-                        <TouchableOpacity onPress={() => setSearchQuery('')}>
+                        <TouchableOpacity
+                          onPress={() => setSearchQuery('')}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('Clear search')}
+                        >
                           <X size={15} color={theme.colors.textMuted} />
                         </TouchableOpacity>
                       )}
@@ -1052,6 +1064,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                       style={styles.manualBarcodeSubmitBtn}
                       onPress={() => handlePerformBarcodeLookup(manualBarcode)}
                       disabled={barcodeLoading || !manualBarcode.trim()}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Search')}
                     >
                       {barcodeLoading ? (
                         <ActivityIndicator size="small" color={theme.colors.textInverted} />
@@ -1075,6 +1089,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           setRequestModalVisible(true);
                         }}
                         accessibilityRole="button"
+                        accessibilityLabel={t('Request a Food')}
                       >
                         <Text style={styles.requestBarcodeBtnText}>{t('Request a Food')}</Text>
                       </TouchableOpacity>
@@ -1175,6 +1190,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                     style={[styles.variantChip, isSelected && styles.variantChipActive]}
                                     onPress={() => setSelectedVariantId(v.id)}
                                     accessibilityRole="button"
+                                    accessibilityLabel={v.name}
                                   >
                                     <Text style={[styles.variantChipText, isSelected && styles.variantChipTextActive]}>
                                       {v.name}
@@ -1193,6 +1209,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                               style={styles.ingredientsToggleBtn}
                               onPress={() => setShowIngredients((prev) => !prev)}
                               accessibilityRole="button"
+                              accessibilityLabel={t('Recipe ingredients & USDA sources')}
                             >
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                 <Utensils size={14} color={theme.colors.primary} />
@@ -1225,6 +1242,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                   style={styles.customizeRecipeBtn}
                                   onPress={handleCustomizeSelectedFood}
                                   accessibilityRole="button"
+                                  accessibilityLabel={t('Customize recipe')}
                                 >
                                   <Text style={styles.customizeRecipeBtnText}>{t('Customize recipe')}</Text>
                                 </TouchableOpacity>
@@ -1241,6 +1259,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             <TouchableOpacity
                               style={styles.stepBtn}
                               onPress={() => setServingsCount((c) => Math.max(0.5, c - 0.5))}
+                              accessibilityRole="button"
+                              accessibilityLabel={t('Decrease')}
                             >
                               <Minus size={13} color={theme.colors.textPrimary} />
                             </TouchableOpacity>
@@ -1248,6 +1268,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             <TouchableOpacity
                               style={styles.stepBtn}
                               onPress={() => setServingsCount((c) => c + 0.5)}
+                              accessibilityRole="button"
+                              accessibilityLabel={t('Increase')}
                             >
                               <Plus size={13} color={theme.colors.textPrimary} />
                             </TouchableOpacity>
@@ -1259,6 +1281,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             style={styles.cancelSelectedBtn}
                             onPress={() => setSelectedFood(null)}
                             accessibilityRole="button"
+                            accessibilityLabel={t('Cancel')}
                           >
                             <Text style={styles.cancelSelectedBtnText}>{t('Cancel')}</Text>
                           </TouchableOpacity>
@@ -1266,6 +1289,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             style={[styles.confirmAddBtn, { flex: 1, marginTop: 0 }]}
                             onPress={handleSaveSelectedFood}
                             accessibilityRole="button"
+                            accessibilityLabel={t('Log to Diary')}
                           >
                             <Check size={16} color={theme.colors.textInverted} />
                             <Text style={styles.confirmAddBtnText}>{t('Log to Diary')}</Text>
@@ -1286,6 +1310,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         style={[styles.filterChip, foodFilter === 'all' && styles.filterChipActive]}
                         onPress={() => setFoodFilter('all')}
                         accessibilityRole="button"
+                        accessibilityLabel={t('All')}
                       >
                         <Text
                           style={[
@@ -1301,6 +1326,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         style={[styles.filterChip, foodFilter === 'recent' && styles.filterChipActive]}
                         onPress={() => setFoodFilter('recent')}
                         accessibilityRole="button"
+                        accessibilityLabel={`${t('Recent')} ${recentFoods.length > 0 ? `(${recentFoods.length})` : ''}`.trim()}
                       >
                         <Text
                           style={[
@@ -1316,6 +1342,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         style={[styles.filterChip, foodFilter === 'frequent' && styles.filterChipActive]}
                         onPress={() => setFoodFilter('frequent')}
                         accessibilityRole="button"
+                        accessibilityLabel={`${t('Frequent')} ${frequentFoods.length > 0 ? `(${frequentFoods.length})` : ''}`.trim()}
                       >
                         <Text
                           style={[
@@ -1331,6 +1358,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         style={[styles.filterChip, foodFilter === 'favorites' && styles.filterChipActive]}
                         onPress={() => setFoodFilter('favorites')}
                         accessibilityRole="button"
+                        accessibilityLabel={`${t('Favorites')} ${favoriteFoods.length > 0 ? `(${favoriteFoods.length})` : ''}`.trim()}
                       >
                         <Text
                           style={[
@@ -1346,6 +1374,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         style={[styles.filterChip, foodFilter === 'templates' && styles.filterChipActive]}
                         onPress={() => setFoodFilter('templates')}
                         accessibilityRole="button"
+                        accessibilityLabel={`${t('Templates')} ${mealTemplates.length > 0 ? `(${mealTemplates.length})` : ''}`.trim()}
                       >
                         <Text
                           style={[
@@ -1361,6 +1390,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         style={[styles.filterChip, foodFilter === 'regional' && styles.filterChipActive]}
                         onPress={() => setFoodFilter('regional')}
                         accessibilityRole="button"
+                        accessibilityLabel={t('Iraqi & Kurdish')}
                       >
                         <Text
                           style={[
@@ -1376,6 +1406,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         style={[styles.filterChip, foodFilter === 'custom' && styles.filterChipActive]}
                         onPress={() => setFoodFilter('custom')}
                         accessibilityRole="button"
+                        accessibilityLabel={`${t('Custom')} ${customFoods.length > 0 ? `(${customFoods.length})` : ''}`.trim()}
                       >
                         <Text
                           style={[
@@ -1391,6 +1422,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         style={[styles.filterChip, foodFilter === 'scanned' && styles.filterChipActive]}
                         onPress={() => setFoodFilter('scanned')}
                         accessibilityRole="button"
+                        accessibilityLabel={`${t('Scanned')} ${barcodeCache.length > 0 ? `(${barcodeCache.length})` : ''}`.trim()}
                       >
                         <Text
                           style={[
@@ -1413,6 +1445,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         onPress={handleCopyYesterdayMealType}
                         disabled={copyMealTypeLoading || isFuture}
                         accessibilityRole="button"
+                        accessibilityLabel={getCopyMealTypeLabel(selectedMeal)}
                       >
                         {copyMealTypeLoading ? (
                           <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -1430,6 +1463,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         onPress={handleCopyYesterday}
                         disabled={copyLoading || isFuture}
                         accessibilityRole="button"
+                        accessibilityLabel={t("Copy yesterday's meals")}
                       >
                         {copyLoading ? (
                           <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -1449,6 +1483,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           setTemplateModalVisible(true);
                         }}
                         accessibilityRole="button"
+                        accessibilityLabel={t('Save as template')}
                       >
                         <Bookmark size={13} color={theme.colors.primary} />
                         <Text style={styles.quickActionBtnText} numberOfLines={1}>
@@ -1464,6 +1499,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           setCustomModalVisible(true);
                         }}
                         accessibilityRole="button"
+                        accessibilityLabel={t('Create custom food')}
                       >
                         <Plus size={13} color={theme.colors.primary} />
                         <Text style={styles.quickActionBtnText} numberOfLines={1}>
@@ -1556,6 +1592,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                 style={styles.templateLogBtn}
                                 onPress={() => handleLogTemplate(template)}
                                 accessibilityRole="button"
+                                accessibilityLabel={`${t('Log to ')}${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))}`}
                               >
                                 <Check size={14} color={theme.colors.textInverted} />
                                 <Text style={styles.templateLogBtnText}>
@@ -1591,6 +1628,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             setRequestModalVisible(true);
                           }}
                           accessibilityRole="button"
+                          accessibilityLabel={t('Request a Food')}
                         >
                           <Plus size={14} color={theme.colors.primary} />
                           <Text style={styles.requestFoodPromptBtnText}>
@@ -1616,6 +1654,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                 setSelectedFood(item);
                               }}
                               activeOpacity={0.7}
+                              accessibilityRole="button"
+                              accessibilityLabel={item.name}
                             >
                               <FoodThumbnail
                                 name={item.name}
@@ -1671,6 +1711,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                               setRequestModalVisible(true);
                             }}
                             accessibilityRole="button"
+                            accessibilityLabel={t('Request a food')}
                           >
                             <Text style={styles.searchFooterRequestText}>
                               {t("Can't find what you are looking for?")}{' '}
@@ -1712,6 +1753,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                     style={styles.photoPickBtn}
                     onPress={() => handlePickPhoto(true)}
                     activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Take plate photo')}
                   >
                     <CameraIcon size={16} color={theme.colors.textInverted} />
                     <Text style={styles.photoPickBtnText}>{t('Take plate photo')}</Text>
@@ -1721,6 +1764,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                     style={styles.photoPickBtnSecondary}
                     onPress={() => handlePickPhoto(false)}
                     activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('From gallery')}
                   >
                     <ImageIcon size={16} color={theme.colors.textPrimary} />
                     <Text style={styles.photoPickBtnSecondaryText}>{t('From gallery')}</Text>
@@ -1802,6 +1847,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                   ]}
                   onPress={handleEstimateDescribe}
                   disabled={!describeText.trim() || describeLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Estimate nutrition')}
                 >
                   {describeLoading ? (
                     <ActivityIndicator size="small" color={theme.colors.textInverted} />
@@ -1947,6 +1994,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
               style={styles.saveCustomBtn}
               onPress={handleSaveCustomFood}
               accessibilityRole="button"
+              accessibilityLabel={t('Save custom food')}
             >
               <Check size={16} color={theme.colors.textInverted} />
               <Text style={styles.saveCustomBtnText}>{t('Save custom food')}</Text>
@@ -2012,6 +2060,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
               onPress={handleCreateTemplateFromCurrentMeals}
               disabled={templateSaving}
               accessibilityRole="button"
+              accessibilityLabel={t('Save template')}
             >
               {templateSaving ? (
                 <ActivityIndicator size="small" color={theme.colors.textInverted} />

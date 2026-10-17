@@ -240,6 +240,8 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
           onPress={handleBackToToday}
           activeOpacity={0.8}
           accessibilityRole="button"
+          accessibilityLabel={`${t('Viewing')} ${formatDisplayDate(selectedDate, language)} · ${t('Back to today')}`}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <CalendarIcon size={14} color={theme.colors.secondary} />
           <Text style={styles.pastDateBannerText}>
@@ -309,6 +311,9 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                   onPress={() => openAddSheet(cat.key)}
                   disabled={isFuture}
                   activeOpacity={0.6}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('No meals logged yet.')} ${t('Add food')}`}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Text style={styles.emptyPromptText}>
                     {t('No meals logged yet.')}
@@ -328,6 +333,9 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                           setInspectingMeal(item);
                         }}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${item.name}, ${item.calories} kcal`}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <FoodThumbnail name={item.name} category={item.category} imageUrl={item.imageUrl} size="small" style={{ marginEnd: 12 }} />
                         <View style={styles.foodInfo}>

@@ -108,7 +108,9 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
               onPress={() => onSelectNutrient?.(key)}
               disabled={!onSelectNutrient}
               activeOpacity={0.75}
-              accessibilityRole={onSelectNutrient ? 'button' : undefined}
+              accessibilityRole={onSelectNutrient ? 'button' : 'none'}
+              accessibilityLabel={`${translate(language, item.label)}: ${item.current} / ${item.target} ${item.unit}`}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <View style={[styles.nutrientTopRow, isRtl && styles.rowRtl]}>
                 <Text style={styles.nutrientName}>
@@ -163,6 +165,12 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
         style={[styles.toggleBtn, isRtl && styles.rowRtl]}
         onPress={() => setExpanded(!expanded)}
         accessibilityRole="button"
+        accessibilityLabel={
+          expanded
+            ? translate(language, 'Hide micronutrient breakdown')
+            : translate(language, 'Show all 9 micronutrients')
+        }
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <Text style={styles.toggleBtnText}>
           {expanded

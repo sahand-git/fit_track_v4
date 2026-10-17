@@ -57,12 +57,37 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
           <View style={styles.header}>
             <View style={styles.headerIcon}><CalendarDays size={18} color={theme.colors.primary} /></View>
             <Text style={styles.title}>{t('Choose date')}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityLabel={t('Close')}><X size={20} color={theme.colors.textSecondary} /></TouchableOpacity>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('Close')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <X size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
           </View>
           <View style={styles.monthRow}>
-            <TouchableOpacity onPress={() => shiftMonth(-1)} style={styles.monthButton} accessibilityLabel={t('Previous month')}><ChevronLeft size={20} color={theme.colors.textSecondary} /></TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => shiftMonth(-1)}
+              style={styles.monthButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('Previous month')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <ChevronLeft size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
             <Text style={styles.monthLabel}>{monthLabel}</Text>
-            <TouchableOpacity onPress={() => canMoveForward && shiftMonth(1)} disabled={!canMoveForward} style={[styles.monthButton, !canMoveForward && styles.disabled]} accessibilityLabel={t('Next month')}><ChevronRight size={20} color={theme.colors.textSecondary} /></TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => canMoveForward && shiftMonth(1)}
+              disabled={!canMoveForward}
+              style={[styles.monthButton, !canMoveForward && styles.disabled]}
+              accessibilityRole="button"
+              accessibilityLabel={t('Next month')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <ChevronRight size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
           </View>
           <View style={styles.grid}>
             {weekdayLabels.map((day, index) => <Text key={`weekday_${index}`} style={styles.weekday}>{day}</Text>)}
@@ -89,7 +114,15 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
             })}
           </View>
           <View style={styles.legend}><View style={styles.logDot} /><Text style={styles.legendText}>{t('Day with activity')}</Text><View style={styles.legendSpacer} /><Text style={styles.legendText}>{t('Future dates are unavailable')}</Text></View>
-          <TouchableOpacity style={styles.todayButton} onPress={() => { onSelect(today); onClose(); }}><Text style={styles.todayButtonText}>{t('Today')}</Text></TouchableOpacity>
+          <TouchableOpacity
+            style={styles.todayButton}
+            onPress={() => { onSelect(today); onClose(); }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Today')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.todayButtonText}>{t('Today')}</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>

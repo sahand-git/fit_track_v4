@@ -229,6 +229,9 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
             setSubTab('weight');
           }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('Body Weight')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Scale size={14} color={subTab === 'weight' ? theme.colors.primary : theme.colors.textMuted} />
           <Text style={[styles.segmentText, subTab === 'weight' && styles.segmentTextActive]}>
@@ -243,6 +246,9 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
             setSubTab('nutrition');
           }}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('Weekly Nutrition')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Flame size={14} color={subTab === 'nutrition' ? theme.colors.primary : theme.colors.textMuted} />
           <Text style={[styles.segmentText, subTab === 'nutrition' && styles.segmentTextActive]}>
@@ -282,6 +288,8 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
                   setDaysRange(7);
                 }}
                 accessibilityRole="button"
+                accessibilityLabel={t('7 days')}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
                 <Text style={[styles.rangePillText, daysRange === 7 && styles.rangePillTextActive]}>
                   {t('7 days')}
@@ -294,6 +302,8 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
                   setDaysRange(30);
                 }}
                 accessibilityRole="button"
+                accessibilityLabel={t('30 days')}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
                 <Text style={[styles.rangePillText, daysRange === 30 && styles.rangePillTextActive]}>
                   {t('30 days')}
@@ -309,6 +319,8 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
                   setTrendCategory('all');
                 }}
                 accessibilityRole="button"
+                accessibilityLabel={t('All Trends')}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
                 <Text style={[styles.filterChipText, trendCategory === 'all' && styles.filterChipTextActive]}>
                   {t('All Trends')}
@@ -321,6 +333,8 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
                   setTrendCategory('weight');
                 }}
                 accessibilityRole="button"
+                accessibilityLabel={t('Weight Trend')}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
                 <Text style={[styles.filterChipText, trendCategory === 'weight' && styles.filterChipTextActive]}>
                   {t('Weight Trend')}
@@ -333,6 +347,8 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
                   setTrendCategory('calories');
                 }}
                 accessibilityRole="button"
+                accessibilityLabel={t('Calorie Trend')}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
                 <Text style={[styles.filterChipText, trendCategory === 'calories' && styles.filterChipTextActive]}>
                   {t('Calorie Trend')}
@@ -456,7 +472,9 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
                     <TouchableOpacity
                       style={styles.deleteBtn}
                       onPress={() => handleDeleteEntry(entry.id)}
+                      accessibilityRole="button"
                       accessibilityLabel={t('Delete entry')}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <Trash2 size={14} color={theme.colors.textMuted} />
                     </TouchableOpacity>
@@ -478,7 +496,12 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
             <View style={styles.modalCard}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>{t('Record Weigh-in')}</Text>
-                <TouchableOpacity onPress={() => setModalVisible(false)} accessibilityLabel={t('Close')}>
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Close')}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
                   <X size={20} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
               </View>
@@ -505,7 +528,13 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
                 />
               </View>
 
-              <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveWeight}>
+              <TouchableOpacity
+                style={styles.modalSaveBtn}
+                onPress={handleSaveWeight}
+                accessibilityRole="button"
+                accessibilityLabel={t('Save Weigh-in')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Check size={16} color={theme.colors.textInverted} />
                 <Text style={styles.modalSaveText}>{t('Save Weigh-in')}</Text>
               </TouchableOpacity>

@@ -196,7 +196,13 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('Close')}
+        />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.sheetContainer}
@@ -254,6 +260,9 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
                   ]}
                   onPress={() => setSelectedCategory(cat.id)}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={cat.label}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
                   <Text
                     style={[
@@ -283,6 +292,9 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
                     ]}
                     onPress={() => handleSelectPreset(preset)}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t(preset.name)}: ${t(preset.description)}`}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                   >
                     <View style={styles.presetInfo}>
                       <Text style={[styles.presetName, isSelected && styles.presetNameActive]}>
@@ -327,6 +339,9 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                       setDurationMinutes((prev) => Math.max(5, prev - 5));
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Decrease 5 minutes')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Text style={styles.stepperBtnText}>-5</Text>
                   </TouchableOpacity>
@@ -345,6 +360,9 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                       setDurationMinutes((prev) => prev + 5);
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Increase 5 minutes')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Text style={styles.stepperBtnText}>+5</Text>
                   </TouchableOpacity>
@@ -392,6 +410,9 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
                     style={styles.addSetBtn}
                     onPress={handleAddSet}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Add Set')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Plus size={14} color={theme.colors.primary} />
                     <Text style={styles.addSetBtnText}>{t('Add Set')}</Text>
@@ -424,6 +445,9 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
                       <TouchableOpacity
                         onPress={() => handleRemoveSet(idx)}
                         style={styles.removeSetBtn}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Remove set')}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <Trash2 size={16} color={theme.colors.danger} />
                       </TouchableOpacity>
@@ -442,6 +466,9 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
               onPress={handleSave}
               disabled={isFuture || durationMinutes <= 0}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={t(editingWorkout ? 'Update workout' : 'Save Workout')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.saveBtnText}>{t(editingWorkout ? 'Update workout' : 'Save Workout')}</Text>
             </TouchableOpacity>

@@ -98,6 +98,9 @@ export class ErrorBoundary extends Component<Props, State> {
                     style={styles.detailsToggle}
                     onPress={this.toggleDetails}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={this.state.showDetails ? t('Hide error details') : t('Show error details')}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <Text style={styles.detailsToggleText}>
                       {this.state.showDetails ? t('Hide error details') : t('Show error details')}

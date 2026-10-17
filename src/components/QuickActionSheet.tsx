@@ -85,7 +85,13 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('Close')}
+        />
         <View style={[styles.sheetCard, { direction: isRTL ? 'rtl' : 'ltr' }]}>
           {/* Handle bar */}
           <View style={styles.handleBar} />

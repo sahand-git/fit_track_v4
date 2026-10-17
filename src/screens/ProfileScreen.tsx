@@ -212,7 +212,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 language === option && styles.languageOptionActive,
               ]}
               accessibilityRole="button"
+              accessibilityLabel={languageNames[option]}
               accessibilityState={{ selected: language === option }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
               <Text
                 style={[
@@ -325,6 +327,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               style={[styles.genderBtn, gender === g && styles.genderBtnActive]}
               onPress={() => setGender(g)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={g === 'male' ? t('Male') : t('Female')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={[styles.genderBtnText, gender === g && styles.genderBtnTextActive]}>
                 {g === 'male' ? t('Male') : t('Female')}
@@ -343,6 +348,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             style={[styles.optionRow, activityLevel === act.key && styles.optionRowActive]}
             onPress={() => setActivityLevel(act.key)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${act.label}: ${act.desc}`}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
             <View style={{ flex: 1 }}>
               <Text style={styles.optionLabel}>{act.label}</Text>
@@ -362,6 +370,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             style={[styles.optionRow, goal === g.key && styles.optionRowActive]}
             onPress={() => setGoal(g.key)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${g.label}: ${g.desc}`}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
             <View style={{ flex: 1 }}>
               <Text style={styles.optionLabel}>{g.label}</Text>
@@ -383,6 +394,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           }}
           activeOpacity={0.7}
           accessibilityRole="button"
+          accessibilityLabel={t('Configure Reminders')}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
             <Bell size={20} color={theme.colors.primary} />
@@ -409,7 +422,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           }}
           activeOpacity={0.7}
           accessibilityRole="checkbox"
+          accessibilityLabel={t('Use adaptive activity budget')}
           accessibilityState={{ checked: includeWorkouts }}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
             <Flame size={20} color={theme.colors.warning} />
@@ -435,6 +450,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           }}
           activeOpacity={0.7}
           accessibilityRole="button"
+          accessibilityLabel={t('Backup & Restore')}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
             <Database size={20} color={theme.colors.primary} />
@@ -461,7 +478,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           }}
           activeOpacity={0.7}
           accessibilityRole="checkbox"
+          accessibilityLabel={t('Anonymous Crash Reporting')}
           accessibilityState={{ checked: enableCrashReporting }}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
             <ShieldCheck size={20} color={theme.colors.primary} />
@@ -546,7 +565,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       </View>
 
       {/* Save Button */}
-      <AnimatedPressable style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
+      <AnimatedPressable
+        style={styles.saveBtn}
+        onPress={handleSave}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={t('Save Targets')}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
         <Text style={styles.saveBtnText}>{t('Save Targets')}</Text>
       </AnimatedPressable>
 

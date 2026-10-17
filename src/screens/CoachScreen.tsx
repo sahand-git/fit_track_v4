@@ -282,6 +282,8 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
             onPress={() => setCurrentSubView('audit')}
             activeOpacity={0.8}
             accessibilityRole="button"
+            accessibilityLabel={t('Daily Review')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Award
               size={15}
@@ -302,6 +304,8 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
             onPress={() => setCurrentSubView('chat')}
             activeOpacity={0.8}
             accessibilityRole="button"
+            accessibilityLabel={t('Ask Nutritionist')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <MessageSquareText
               size={15}
@@ -358,6 +362,8 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                 disabled={isLoadingAudit}
                 activeOpacity={0.85}
                 accessibilityRole="button"
+                accessibilityLabel={report ? t('Update review for selected day') : t('Get Daily Review')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 {isLoadingAudit ? (
                   <>
@@ -526,6 +532,8 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                     }
                     disabled={busy}
                     accessibilityRole="button"
+                    accessibilityLabel={t('Get a daily review')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Sparkles size={15} color={theme.colors.primary} />
                     <Text style={styles.reviewText}>{t('Get a daily review')}</Text>

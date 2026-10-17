@@ -61,7 +61,13 @@ export const ScientificReferencesModal: React.FC<ScientificReferencesModalProps>
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('Close')}
+        />
         <View style={[styles.modalCard, { direction: isRTL ? 'rtl' : 'ltr' }]}>
           {/* Header */}
           <View style={styles.header}>
@@ -265,6 +271,9 @@ export const ScientificReferencesModal: React.FC<ScientificReferencesModalProps>
                   onOpenDisclaimer();
                 }}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={t('Medical Disclaimer')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <ShieldAlert size={16} color={theme.colors.danger} />
                 <Text style={styles.disclaimerLinkText}>{t('Medical Disclaimer')}</Text>

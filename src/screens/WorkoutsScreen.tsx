@@ -58,9 +58,26 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
           <Dumbbell size={24} color={theme.colors.primary} />
         </View>
         <View style={styles.dateCard}>
-          <TouchableOpacity onPress={() => onSelectDate(addDaysToDateString(date, -1))} style={styles.dateArrow} accessibilityLabel={t('Previous day')}><ChevronLeft size={20} color={theme.colors.primary} /></TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => onSelectDate(addDaysToDateString(date, -1))}
+            style={styles.dateArrow}
+            accessibilityRole="button"
+            accessibilityLabel={t('Previous day')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <ChevronLeft size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
           <Text style={styles.dateText}>{formatDisplayDate(date, language)}</Text>
-          <TouchableOpacity disabled={future} onPress={() => onSelectDate(addDaysToDateString(date, 1))} style={[styles.dateArrow, future && { opacity: 0.35 }]} accessibilityLabel={t('Next day')}><ChevronRight size={20} color={theme.colors.primary} /></TouchableOpacity>
+          <TouchableOpacity
+            disabled={future}
+            onPress={() => onSelectDate(addDaysToDateString(date, 1))}
+            style={[styles.dateArrow, future && { opacity: 0.35 }]}
+            accessibilityRole="button"
+            accessibilityLabel={t('Next day')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <ChevronRight size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
         </View>
         <View style={styles.summary}>
           <Summary label={t('Workouts')} value={String(visibleWorkouts.length)} />
@@ -71,7 +88,20 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
         </View>
         <View style={styles.search}><Search size={17} color={theme.colors.textMuted} /><TextInput value={query} onChangeText={setQuery} placeholder={t('Search workouts')} placeholderTextColor={theme.colors.textMuted} style={styles.searchInput} accessibilityLabel={t('Search workouts')} /></View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
-          {categories.map((item) => <TouchableOpacity key={item} onPress={() => setCategory(item)} style={[styles.filter, category === item && styles.filterActive]}><Text numberOfLines={1} style={[styles.filterText, category === item && styles.filterTextActive]}>{t(item === 'all' ? 'All' : item[0].toUpperCase() + item.slice(1))}</Text></TouchableOpacity>)}
+          {categories.map((item) => (
+            <TouchableOpacity
+              key={item}
+              onPress={() => setCategory(item)}
+              style={[styles.filter, category === item && styles.filterActive]}
+              accessibilityRole="button"
+              accessibilityLabel={t(item === 'all' ? 'All' : item[0].toUpperCase() + item.slice(1))}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Text numberOfLines={1} style={[styles.filterText, category === item && styles.filterTextActive]}>
+                {t(item === 'all' ? 'All' : item[0].toUpperCase() + item.slice(1))}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
         {visibleWorkouts.length === 0 ? (
           <View style={styles.empty}><Activity size={26} color={theme.colors.secondary} /><Text style={styles.emptyTitle}>{t('No workouts for this day')}</Text><Text style={styles.emptyText}>{t('Log exercise to build your activity history.')}</Text></View>
@@ -109,7 +139,19 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
           );
         })}
       </ScrollView>
-      {!future && <TouchableOpacity style={[styles.addButton, { bottom: addButtonBottom }]} onPress={() => { setEditing(null); setSheetVisible(true); }} activeOpacity={0.8} accessibilityRole="button"><Plus size={18} color={theme.colors.textInverted} /><Text style={styles.addButtonText}>{t('Add workout')}</Text></TouchableOpacity>}
+      {!future && (
+        <TouchableOpacity
+          style={[styles.addButton, { bottom: addButtonBottom }]}
+          onPress={() => { setEditing(null); setSheetVisible(true); }}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={t('Add workout')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Plus size={18} color={theme.colors.textInverted} />
+          <Text style={styles.addButtonText}>{t('Add workout')}</Text>
+        </TouchableOpacity>
+      )}
       {sheetVisible && <AddWorkoutSheet visible onClose={closeSheet} date={date} profile={profile} onSaveWorkout={onAddWorkout} editingWorkout={editing} onUpdateWorkout={onUpdateWorkout} />}
     </View>
   );

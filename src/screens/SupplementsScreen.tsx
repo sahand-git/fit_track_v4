@@ -648,6 +648,8 @@ export function SupplementsScreen({
             style={styles.actionStripBtn}
             onPress={handleLoadRoutine}
             accessibilityRole="button"
+            accessibilityLabel={t('Load routine')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <RotateCcw size={14} color={theme.colors.primary} />
             <Text style={styles.actionStripBtnText} numberOfLines={2}>{t('Load routine')}</Text>
@@ -657,6 +659,8 @@ export function SupplementsScreen({
             style={styles.actionStripBtn}
             onPress={handleSaveDayAsRoutine}
             accessibilityRole="button"
+            accessibilityLabel={t('Save day as routine')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <BookmarkCheck size={14} color={theme.colors.secondary} />
             <Text style={styles.actionStripBtnText} numberOfLines={2}>{t('Save day as routine')}</Text>
@@ -666,6 +670,8 @@ export function SupplementsScreen({
             style={[styles.actionStripBtn, styles.actionStripBtnPrimary]}
             onPress={() => openAddModal()}
             accessibilityRole="button"
+            accessibilityLabel={t('Add supplement')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Plus size={15} color={theme.colors.textInverted} strokeWidth={2.5} />
             <Text style={styles.actionStripBtnPrimaryText} numberOfLines={2}>{t('Add supplement')}</Text>
@@ -689,6 +695,9 @@ export function SupplementsScreen({
                 <TouchableOpacity
                   style={[styles.actionStripBtn, { paddingVertical: 10, paddingHorizontal: 14 }]}
                   onPress={handleLoadRoutine}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Load routine')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <RotateCcw size={15} color={theme.colors.primary} />
                   <Text style={styles.actionStripBtnText} numberOfLines={2}>{t('Load routine')}</Text>
@@ -697,6 +706,9 @@ export function SupplementsScreen({
               <TouchableOpacity
                 style={[styles.actionStripBtn, styles.actionStripBtnPrimary, { paddingVertical: 10, paddingHorizontal: 16 }]}
                 onPress={() => openAddModal()}
+                accessibilityRole="button"
+                accessibilityLabel={t('Browse catalog')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Plus size={16} color={theme.colors.textInverted} />
                 <Text style={styles.actionStripBtnPrimaryText} numberOfLines={2}>{t('Browse catalog')}</Text>
@@ -924,7 +936,12 @@ export function SupplementsScreen({
                       returnKeyType="search"
                     />
                     {catalogSearch.length > 0 && (
-                      <TouchableOpacity onPress={() => setCatalogSearch('')}>
+                      <TouchableOpacity
+                        onPress={() => setCatalogSearch('')}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Clear')}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
                         <X size={15} color={theme.colors.textMuted} />
                       </TouchableOpacity>
                     )}
@@ -957,6 +974,9 @@ export function SupplementsScreen({
                               isSelected && styles.catalogChipActive,
                             ]}
                             onPress={() => setSelectedCatalogCategory(catKey)}
+                            accessibilityRole="button"
+                            accessibilityLabel={labelText}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                           >
                             <Text
                               style={[
@@ -983,6 +1003,9 @@ export function SupplementsScreen({
                             styles.catalogItemPillSelected,
                         ]}
                         onPress={() => handleSelectCatalogItem(catItem)}
+                        accessibilityRole="button"
+                        accessibilityLabel={catItem.name}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                       >
                         <Text
                           style={[
@@ -1026,6 +1049,9 @@ export function SupplementsScreen({
                             formCategory === cat && styles.optionChipActive,
                           ]}
                           onPress={() => setFormCategory(cat)}
+                          accessibilityRole="button"
+                          accessibilityLabel={t(categoryLabels[cat])}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
                           <Text
                             style={[
@@ -1073,6 +1099,9 @@ export function SupplementsScreen({
                             formUnit === unit && styles.unitChipActive,
                           ]}
                           onPress={() => setFormUnit(unit)}
+                          accessibilityRole="button"
+                          accessibilityLabel={t(unit)}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
                           <Text
                             style={[
@@ -1112,6 +1141,9 @@ export function SupplementsScreen({
                           formTime === slot && styles.optionChipActive,
                         ]}
                         onPress={() => setFormTime(slot)}
+                        accessibilityRole="button"
+                        accessibilityLabel={t(timeLabels[slot])}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                       >
                         <Text
                           style={[
@@ -1136,6 +1168,9 @@ export function SupplementsScreen({
                         formSaveTarget === 'both' && styles.targetChoiceRowActive,
                       ]}
                       onPress={() => setFormSaveTarget('both')}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Both this day and routine')}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     >
                       <View style={styles.radioCircle}>
                         {formSaveTarget === 'both' && <View style={styles.radioDot} />}
@@ -1151,6 +1186,9 @@ export function SupplementsScreen({
                         formSaveTarget === 'day' && styles.targetChoiceRowActive,
                       ]}
                       onPress={() => setFormSaveTarget('day')}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('This day only')}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     >
                       <View style={styles.radioCircle}>
                         {formSaveTarget === 'day' && <View style={styles.radioDot} />}
@@ -1165,6 +1203,9 @@ export function SupplementsScreen({
                           formSaveTarget === 'routine' && styles.targetChoiceRowActive,
                         ]}
                         onPress={() => setFormSaveTarget('routine')}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Repeating routine only')}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                       >
                         <View style={styles.radioCircle}>
                           {formSaveTarget === 'routine' && <View style={styles.radioDot} />}
@@ -1186,6 +1227,8 @@ export function SupplementsScreen({
                   onPress={handleSaveModal}
                   disabled={!formName.trim() || isSavingSupplement}
                   accessibilityRole="button"
+                  accessibilityLabel={editingItem ? t('Update supplement') : t('Save Supplement')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Text style={styles.modalSaveBtnText}>
                     {editingItem ? t('Update supplement') : t('Save Supplement')}
@@ -1241,6 +1284,8 @@ export function SupplementsScreen({
                     onPress={handleConfirmDeleteDayOnly}
                     activeOpacity={0.8}
                     accessibilityRole="button"
+                    accessibilityLabel={t('Remove from this day')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Text style={styles.deleteModalBtnSecondaryText}>
                       {t('Remove from this day')}
@@ -1252,6 +1297,8 @@ export function SupplementsScreen({
                     onPress={handleConfirmDeleteRoutineToo}
                     activeOpacity={0.8}
                     accessibilityRole="button"
+                    accessibilityLabel={t('Remove from routine too')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Text style={styles.deleteModalBtnDangerText}>
                       {t('Remove from routine too')}
@@ -1264,6 +1311,8 @@ export function SupplementsScreen({
                   onPress={handleConfirmDeleteDayOnly}
                   activeOpacity={0.8}
                   accessibilityRole="button"
+                  accessibilityLabel={t('Delete')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Text style={styles.deleteModalBtnDangerText}>
                     {t('Delete')}
@@ -1276,6 +1325,8 @@ export function SupplementsScreen({
                 onPress={() => setItemToDelete(null)}
                 activeOpacity={0.8}
                 accessibilityRole="button"
+                accessibilityLabel={t('Cancel')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.deleteModalBtnCancelText}>{t('Cancel')}</Text>
               </TouchableOpacity>

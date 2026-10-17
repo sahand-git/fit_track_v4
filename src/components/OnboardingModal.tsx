@@ -108,7 +108,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
           <Text style={styles.languageLabel}>{t('Language')}</Text>
           <View style={styles.languageRow}>
             {(['en', 'ar', 'ckb'] as AppLanguage[]).map(option => (
-              <TouchableOpacity key={option} onPress={() => { setLanguage(option); onLanguageChange(option); }} style={[styles.languageChip, language === option && styles.languageChipActive]}>
+              <TouchableOpacity
+                key={option}
+                onPress={() => { setLanguage(option); onLanguageChange(option); }}
+                style={[styles.languageChip, language === option && styles.languageChipActive]}
+                accessibilityRole="button"
+                accessibilityLabel={languageNames[option]}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
                 <Text style={[styles.languageChipText, language === option && styles.languageChipTextActive]}>{languageNames[option]}</Text>
               </TouchableOpacity>
             ))}
@@ -142,6 +149,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                     key={g}
                     style={[styles.genderBtn, gender === g && styles.genderBtnActive]}
                     onPress={() => setGender(g)}
+                    accessibilityRole="button"
+                    accessibilityLabel={g === 'male' ? t('Male') : t('Female')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Text style={[styles.genderText, gender === g && styles.genderTextActive]}>
                       {g === 'male' ? t('Male') : t('Female')}
@@ -159,7 +169,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                   keyboardType="numeric"
                   value={weightKg}
                   onChangeText={setWeightKg}
-                  placeholder="75"
+                  placeholder="70"
                   placeholderTextColor={theme.colors.textMuted}
                 />
               </View>
@@ -170,7 +180,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                   keyboardType="numeric"
                   value={heightCm}
                   onChangeText={setHeightCm}
-                  placeholder="178"
+                  placeholder="175"
                   placeholderTextColor={theme.colors.textMuted}
                 />
               </View>
@@ -187,7 +197,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
               </View>
             </View>
 
-            <TouchableOpacity style={styles.nextBtn} onPress={() => setStep(2)}>
+            <TouchableOpacity
+              style={styles.nextBtn}
+              onPress={() => setStep(2)}
+              accessibilityRole="button"
+              accessibilityLabel={t('Continue')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Text style={styles.nextBtnText}>{t('Continue')}</Text>
               <ArrowRight size={16} color={theme.colors.textInverted} />
             </TouchableOpacity>
@@ -208,6 +224,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                 key={act.key}
                 style={[styles.cardOption, activityLevel === act.key && styles.cardOptionActive]}
                 onPress={() => setActivityLevel(act.key)}
+                accessibilityRole="button"
+                accessibilityLabel={`${t(act.label)}: ${t(act.desc)}`}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.optionTitle}>{t(act.label)}</Text>
@@ -223,6 +242,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                 key={g.key}
                 style={[styles.cardOption, goal === g.key && styles.cardOptionActive]}
                 onPress={() => setGoal(g.key)}
+                accessibilityRole="button"
+                accessibilityLabel={`${t(g.label)}: ${t(g.desc)}`}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.optionTitle}>{t(g.label)}</Text>
@@ -233,10 +255,22 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
             ))}
 
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.backBtn} onPress={() => setStep(1)}>
+              <TouchableOpacity
+                style={styles.backBtn}
+                onPress={() => setStep(1)}
+                accessibilityRole="button"
+                accessibilityLabel={t('Back')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Text style={styles.backBtnText}>{t('Back')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.nextBtn, { flex: 2 }]} onPress={() => setStep(3)}>
+              <TouchableOpacity
+                style={[styles.nextBtn, { flex: 2 }]}
+                onPress={() => setStep(3)}
+                accessibilityRole="button"
+                accessibilityLabel={t('Review Plan')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Text style={styles.nextBtnText}>{t('Review Plan')}</Text>
                 <ArrowRight size={16} color={theme.colors.textInverted} />
               </TouchableOpacity>
@@ -292,7 +326,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
               }}
               activeOpacity={0.7}
               accessibilityRole="checkbox"
+              accessibilityLabel={t('Anonymous Crash Reporting')}
               accessibilityState={{ checked: enableCrashReporting }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
               <View style={{ flex: 1 }}>
                 <Text style={styles.consentTitle}>{t('Anonymous Crash Reporting')}</Text>
@@ -304,10 +340,22 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
             </TouchableOpacity>
 
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.backBtn} onPress={() => setStep(2)}>
+              <TouchableOpacity
+                style={styles.backBtn}
+                onPress={() => setStep(2)}
+                accessibilityRole="button"
+                accessibilityLabel={t('Back')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Text style={styles.backBtnText}>{t('Back')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.nextBtn, { flex: 2 }]} onPress={() => setStep(4)}>
+              <TouchableOpacity
+                style={[styles.nextBtn, { flex: 2 }]}
+                onPress={() => setStep(4)}
+                accessibilityRole="button"
+                accessibilityLabel={t('Next: AI Setup (Optional)')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Text style={styles.nextBtnText}>{t('Next: AI Setup (Optional)')}</Text>
                 <ArrowRight size={16} color={theme.colors.textInverted} />
               </TouchableOpacity>
@@ -325,7 +373,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
               onComplete={handleFinish}
             />
             <View style={[styles.buttonRow, { marginTop: 8 }]}>
-              <TouchableOpacity style={styles.backBtn} onPress={() => setStep(3)}>
+              <TouchableOpacity
+                style={styles.backBtn}
+                onPress={() => setStep(3)}
+                accessibilityRole="button"
+                accessibilityLabel={t('Back')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Text style={styles.backBtnText}>{t('Back')}</Text>
               </TouchableOpacity>
             </View>

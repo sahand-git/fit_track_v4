@@ -187,7 +187,9 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                       setIsEditingGoal(false);
                     }}
                     accessibilityRole="tab"
+                    accessibilityLabel={tabMeta.label}
                     accessibilityState={{ selected: isActive }}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                   >
                     <Text
                       style={[
@@ -321,6 +323,8 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                         onPress={handleResetGoal}
                         disabled={isSavingGoal}
                         accessibilityRole="button"
+                        accessibilityLabel={t('Reset to default')}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <RotateCcw size={14} color={theme.colors.textSecondary} />
                         <Text style={styles.resetBtnText}>{t('Reset to default')}</Text>
@@ -332,6 +336,9 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                         style={styles.cancelBtn}
                         onPress={handleCancelEdit}
                         disabled={isSavingGoal}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Cancel')}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <Text style={styles.cancelBtnText}>{t('Cancel')}</Text>
                       </TouchableOpacity>
@@ -340,6 +347,9 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                         style={styles.saveGoalBtn}
                         onPress={handleCommitGoal}
                         disabled={isSavingGoal}
+                        accessibilityRole="button"
+                        accessibilityLabel={isSavingGoal ? t('Saving...') : t('Save')}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <Check size={14} color={theme.colors.textInverted} />
                         <Text style={styles.saveGoalBtnText}>
@@ -359,6 +369,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                       onPress={handleResetGoal}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       accessibilityRole="button"
+                      accessibilityLabel={t('Reset')}
                     >
                       <Text style={styles.resetLinkText}>{t('Reset')}</Text>
                     </TouchableOpacity>

@@ -125,7 +125,13 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
               <Text style={styles.foodName}>{item.name}</Text>
               {item.brand && <Text style={styles.brand}>{item.brand}</Text>}
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityLabel={t('Close')}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t('Close')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <X size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -168,11 +174,23 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
             <View style={[styles.stepperContainer, isRtl && styles.rowRtl]}>
               <Text style={styles.stepperLabel}>{t('Portion Multiplier')}</Text>
               <View style={styles.stepper}>
-                <TouchableOpacity style={styles.stepperBtn} onPress={handleMinus}>
+                <TouchableOpacity
+                  style={styles.stepperBtn}
+                  onPress={handleMinus}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Decrease servings')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
                   <Minus size={16} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.servingsText}>{servings} {t('servings')}</Text>
-                <TouchableOpacity style={styles.stepperBtn} onPress={handlePlus}>
+                <TouchableOpacity
+                  style={styles.stepperBtn}
+                  onPress={handlePlus}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Increase servings')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
                   <Plus size={16} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
               </View>
@@ -210,7 +228,13 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
           {/* Actions Bottom Bar */}
           <View style={[styles.footer, isRtl && styles.rowRtl]}>
             {isLogged && onDelete && (
-              <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} accessibilityLabel={t('Delete')}>
+              <TouchableOpacity
+                style={styles.deleteBtn}
+                onPress={onDelete}
+                accessibilityRole="button"
+                accessibilityLabel={t('Delete')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Trash2 size={18} color={theme.colors.danger} />
               </TouchableOpacity>
             )}
@@ -221,6 +245,9 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
                 if (onSave) onSave(servings);
                 onClose();
               }}
+              accessibilityRole="button"
+              accessibilityLabel={isLogged ? t('Update Portion') : t('Confirm')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Check size={16} color={theme.colors.textInverted} />
               <Text style={styles.saveBtnText}>

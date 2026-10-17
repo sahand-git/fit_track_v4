@@ -269,6 +269,8 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
                   onPress={handleSubmit}
                   disabled={submitting}
                   accessibilityRole="button"
+                  accessibilityLabel={t('Submit Request')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   {submitting ? (
                     <ActivityIndicator size="small" color={theme.colors.textInverted} />
@@ -286,6 +288,8 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
                     style={styles.fallbackBtn}
                     onPress={handleEmailFallback}
                     accessibilityRole="button"
+                    accessibilityLabel={t('Email Request')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Mail size={14} color={theme.colors.primary} />
                     <Text style={styles.fallbackBtnText}>{t('Email Request')}</Text>
@@ -295,6 +299,8 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
                     style={styles.fallbackBtn}
                     onPress={handleShareFallback}
                     accessibilityRole="button"
+                    accessibilityLabel={t('Share Request')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Share2 size={14} color={theme.colors.primary} />
                     <Text style={styles.fallbackBtnText}>{t('Share Request')}</Text>
