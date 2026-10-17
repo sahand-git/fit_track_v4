@@ -29,7 +29,7 @@ export function sanitizeGeminiError(message: string, apiKey?: string): string {
 }
 
 export async function executeGeminiRequest(
-  parts: Array<Record<string, unknown>>,
+  parts: Record<string, unknown>[],
   jsonResponse = false,
   apiKeyOverride?: string,
   customFetch: FetchFunction = fetch,

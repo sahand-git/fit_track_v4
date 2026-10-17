@@ -83,7 +83,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
       if (result) {
         setPendingBackup(result);
       }
-    } catch (err: any) {
+    } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       Alert.alert(
         t('Invalid Backup File'),

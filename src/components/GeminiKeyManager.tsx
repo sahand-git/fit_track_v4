@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { AppText as Text } from './AppText';
-import { Key, Check, Trash2, ExternalLink, AlertCircle, RefreshCw } from 'lucide-react-native';
+import { Key, Check, Trash2, ExternalLink, AlertCircle } from 'lucide-react-native';
 import { getStoredGeminiApiKey, setStoredGeminiApiKey, clearGeminiApiKey } from '../services/plateAnalysisService';
 import { testGeminiConnection, GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
 import { useLanguage } from '../i18n/I18nContext';

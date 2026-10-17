@@ -44,7 +44,7 @@ export const SkeletonLoader: React.FC<SkeletonProps> = ({
       -1,
       true
     );
-  }, []);
+  }, [opacity]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {

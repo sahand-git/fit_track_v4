@@ -187,7 +187,7 @@ assert(!('adminRole' in sanitized.profile!), 'unauthorized role excluded from pr
 let threwOnInvalidVersion = false;
 try {
   parseBackup(JSON.stringify({ ...sampleBackup, version: '3.0' }));
-} catch (e) {
+} catch {
   threwOnInvalidVersion = true;
 }
 assert(threwOnInvalidVersion, 'rejects wrong version string');
@@ -195,7 +195,7 @@ assert(threwOnInvalidVersion, 'rejects wrong version string');
 let threwOnMalformedJson = false;
 try {
   parseBackup('{ broken json:');
-} catch (e) {
+} catch {
   threwOnMalformedJson = true;
 }
 assert(threwOnMalformedJson, 'rejects syntax-invalid json');
@@ -203,7 +203,7 @@ assert(threwOnMalformedJson, 'rejects syntax-invalid json');
 let threwOnNonObject = false;
 try {
   parseBackup(JSON.stringify('a plain string'));
-} catch (e) {
+} catch {
   threwOnNonObject = true;
 }
 assert(threwOnNonObject, 'rejects primitive non-object json');

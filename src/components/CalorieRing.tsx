@@ -49,7 +49,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
         easing: Easing.out(Easing.cubic),
       });
     }
-  }, [calorieRatio]);
+  }, [calorieRatio, progress]);
 
   const animatedCircleProps = useAnimatedProps(() => {
     'worklet';

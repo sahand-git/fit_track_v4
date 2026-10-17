@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -51,7 +51,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(110, insets.bottom + 76);
-  const t = (key: string) => translate(language, key);
+  const t = useCallback((key: string) => translate(language, key), [language]);
 
   const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState<'weight' | 'nutrition'>('weight');

@@ -175,7 +175,7 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
     }, 450);
   };
 
-  const categories: Array<{ id: ExerciseCategory | 'all'; label: string }> = [
+  const categories: { id: ExerciseCategory | 'all'; label: string }[] = [
     { id: 'all', label: t('All') },
     { id: 'strength', label: t('Strength') },
     { id: 'cardio', label: t('Cardio') },

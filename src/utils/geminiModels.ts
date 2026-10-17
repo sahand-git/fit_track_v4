@@ -357,7 +357,7 @@ export async function verifyCandidate(
 ): Promise<'ok' | 'incompatible'> {
   const cleanKey = apiKey.trim();
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-  const post = async (parts: Array<Record<string, unknown>>): Promise<'ok' | 'incompatible'> => {
+  const post = async (parts: Record<string, unknown>[]): Promise<'ok' | 'incompatible'> => {
     const { response, bodyText } = await fetchWithTimeout(customFetch, endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey },

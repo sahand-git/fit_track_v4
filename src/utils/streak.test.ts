@@ -1,4 +1,10 @@
-import { calculateLoggingStreak, hasActivityOnDate, getPreviousDayString } from './streak';
+import {
+  calculateLoggingStreak,
+  hasActivityOnDate,
+  getPreviousDayString,
+  calculateStreakWithChunking,
+  calculateStreakByWalkback,
+} from './streak';
 import { DailyLog, WeightEntry, LoggedMeal } from '../types';
 
 function assert(condition: boolean, message: string): void {
@@ -55,7 +61,6 @@ assert(getPreviousDayString('2026-01-01') === '2025-12-31', 'Year boundary trans
 const today = '2026-10-13';
 const yesterday = '2026-10-12';
 const twoDaysAgo = '2026-10-11';
-const threeDaysAgo = '2026-10-10';
 
 const logsMapActiveToday: Record<string, DailyLog> = {
   [today]: { date: today, waterGlasses: 4, steps: 5000, meals: [dummyMeal] },
@@ -96,11 +101,6 @@ const weightsSeries: WeightEntry[] = [
 ];
 const streakWeights = calculateLoggingStreak(logsEmpty, weightsSeries, today);
 assert(streakWeights.currentStreak === 2, `Weight logs maintain streak of 2, got ${streakWeights.currentStreak}`);
-
-// -------------------------------------------------------------
-// CHUNKED STREAK REGRESSION TESTS (Issue 1)
-// -------------------------------------------------------------
-import { calculateStreakWithChunking } from './streak';
 
 async function runChunkedTests() {
   // Test A: A streak longer than 90 days (120 consecutive days of food logs)
@@ -228,11 +228,6 @@ async function runChunkedTests() {
   const resAlt = await calculateStreakWithChunking(mockFetchAlternating, alternatingWeights, '2026-10-13', 90);
   assert(resAlt.currentStreak === 100, `Alternating food and weights should maintain streak of 100, got ${resAlt.currentStreak}`);
 }
-
-// -------------------------------------------------------------
-// WALKBACK STREAK TESTS (Walk back date-by-date and stop at first inactive day)
-// -------------------------------------------------------------
-import { calculateStreakByWalkback } from './streak';
 
 async function runWalkbackTests() {
   const mockDailyStore: Record<string, DailyLog> = {};

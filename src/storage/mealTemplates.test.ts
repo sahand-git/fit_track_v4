@@ -1,16 +1,4 @@
 // Setup mock window.localStorage for AsyncStorage in Node
-const mockStore: Record<string, string> = {};
-(globalThis as any).window = {
-  localStorage: {
-    getItem: (k: string) => mockStore[k] ?? null,
-    setItem: (k: string, v: string) => { mockStore[k] = String(v); },
-    removeItem: (k: string) => { delete mockStore[k]; },
-    clear: () => { Object.keys(mockStore).forEach((k) => delete mockStore[k]); },
-    key: (i: number) => Object.keys(mockStore)[i] ?? null,
-    get length() { return Object.keys(mockStore).length; },
-  },
-};
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   loadMealTemplates,
@@ -25,6 +13,18 @@ import {
 } from './storage';
 import { computeBackupSummary } from '../utils/backupCore';
 import { LoggedMeal, DailyLog, MealTemplate, FitTrackBackup } from '../types';
+
+const mockStore: Record<string, string> = {};
+(globalThis as any).window = {
+  localStorage: {
+    getItem: (k: string) => mockStore[k] ?? null,
+    setItem: (k: string, v: string) => { mockStore[k] = String(v); },
+    removeItem: (k: string) => { delete mockStore[k]; },
+    clear: () => { Object.keys(mockStore).forEach((k) => delete mockStore[k]); },
+    key: (i: number) => Object.keys(mockStore)[i] ?? null,
+    get length() { return Object.keys(mockStore).length; },
+  },
+};
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

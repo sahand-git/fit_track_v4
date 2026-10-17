@@ -1,4 +1,14 @@
 // Setup mock window.localStorage for AsyncStorage in Node
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  copyYesterdayMeals,
+  copyYesterdayMealType,
+  getYesterdayMealsPreview,
+  loadDailyLog,
+  saveDailyLog,
+} from './storage';
+import { LoggedMeal } from '../types';
+
 const mockStore: Record<string, string> = {};
 (globalThis as any).window = {
   localStorage: {
@@ -10,16 +20,6 @@ const mockStore: Record<string, string> = {};
     get length() { return Object.keys(mockStore).length; },
   },
 };
-
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  copyYesterdayMeals,
-  copyYesterdayMealType,
-  getYesterdayMealsPreview,
-  loadDailyLog,
-  saveDailyLog,
-} from './storage';
-import { LoggedMeal } from '../types';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

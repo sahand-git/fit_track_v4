@@ -4,7 +4,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
@@ -46,7 +45,7 @@ export const SaveSuccessOverlay: React.FC<SaveSuccessOverlayProps> = ({
     }
 
     scale.value = withSpring(1, getSpringConfig('pop'));
-  }, [visible]);
+  }, [visible, scale]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {

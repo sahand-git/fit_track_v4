@@ -136,7 +136,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
     translateY.value = SCREEN_HEIGHT;
     translateY.value = withSpring(0, getSpringConfig('sheet'));
-  }, [visible]);
+  }, [visible, translateY]);
 
   const animatedSheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],

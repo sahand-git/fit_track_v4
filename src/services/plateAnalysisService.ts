@@ -3,12 +3,16 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { FoodItem } from '../types';
 
-const SECURE_GEMINI_API_KEY = 'fittrack_gemini_api_key';
-const LEGACY_GEMINI_API_KEY_STORAGE = '@fittrack_gemini_api_key';
-
 import { clearActiveModelCache } from '../utils/geminiModels';
 
-const REQUEST_TIMEOUT_MS = 25000;
+import {
+  executeGeminiRequest as coreExecuteGeminiRequest,
+  FetchFunction,
+  WaitFunction,
+} from '../utils/geminiCore';
+
+const SECURE_GEMINI_API_KEY = 'fittrack_gemini_api_key';
+const LEGACY_GEMINI_API_KEY_STORAGE = '@fittrack_gemini_api_key';
 
 async function canUseSecureStore(): Promise<boolean> {
   if (Platform.OS === 'web') return false;
@@ -93,14 +97,8 @@ export {
   testGeminiConnection,
 } from '../utils/geminiModels';
 
-import {
-  executeGeminiRequest as coreExecuteGeminiRequest,
-  FetchFunction,
-  WaitFunction,
-} from '../utils/geminiCore';
-
 export async function executeGeminiRequest(
-  parts: Array<Record<string, unknown>>,
+  parts: Record<string, unknown>[],
   jsonResponse = false,
   apiKeyOverride?: string,
   customFetch?: FetchFunction,
@@ -116,7 +114,7 @@ export async function executeGeminiRequest(
   );
 }
 
-async function requestGemini(parts: Array<Record<string, unknown>>, jsonResponse = false): Promise<string> {
+async function requestGemini(parts: Record<string, unknown>[], jsonResponse = false): Promise<string> {
   return executeGeminiRequest(parts, jsonResponse);
 }
 

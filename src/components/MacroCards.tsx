@@ -36,7 +36,7 @@ const AnimatedProgressBar: React.FC<{ pct: number; color: string }> = ({ pct, co
         easing: Easing.out(Easing.cubic),
       });
     }
-  }, [pct]);
+  }, [pct, width]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {

@@ -34,7 +34,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
         useNativeDriver: true,
       }).start();
     }
-  }, [checked]);
+  }, [checked, scale]);
 
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
