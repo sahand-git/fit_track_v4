@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { AppText as Text } from './AppText';
 import {
@@ -37,7 +38,7 @@ interface NutrientDetailModalProps {
   initialNutrientKey?: SupportedNutrientKey | string;
   meals: LoggedMeal[];
   supplements?: LoggedDailySupplement[];
-  profile: UserProfile;
+  profile?: UserProfile;
   onClose: () => void;
   onSaveGoal?: (nutrientKey: SupportedNutrientKey, newTarget: number) => Promise<void> | void;
   onResetGoal?: (nutrientKey: SupportedNutrientKey) => Promise<void> | void;
@@ -133,7 +134,11 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={[styles.backdrop, { direction: isRtl ? 'rtl' : 'ltr' }]}>
-        <View style={styles.sheet}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ width: '100%', justifyContent: 'flex-end' }}
+        >
+          <View style={styles.sheet}>
           {/* Header */}
           <View style={[styles.header, isRtl && styles.rowRtl]}>
             <View style={{ flex: 1 }}>
@@ -481,6 +486,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             )}
           </ScrollView>
         </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

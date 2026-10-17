@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   BackHandler,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
@@ -470,41 +471,46 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
       {/* LOG WEIGHT MODAL */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('Record Weigh-in')}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)} accessibilityLabel={t('Close')}>
-                <X size={20} color={theme.colors.textPrimary} />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ width: '100%', alignItems: 'center' }}
+          >
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{t('Record Weigh-in')}</Text>
+                <TouchableOpacity onPress={() => setModalVisible(false)} accessibilityLabel={t('Close')}>
+                  <X size={20} color={theme.colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalInputGroup}>
+                <Text style={styles.modalLabel}>{t('Weight (kg)')}</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  keyboardType="numeric"
+                  value={inputWeight}
+                  onChangeText={setInputWeight}
+                  autoFocus
+                />
+              </View>
+
+              <View style={styles.modalInputGroup}>
+                <Text style={styles.modalLabel}>{t('Note (optional)')}</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder={t('Note (optional)')}
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={inputNote}
+                  onChangeText={setInputNote}
+                />
+              </View>
+
+              <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveWeight}>
+                <Check size={16} color={theme.colors.textInverted} />
+                <Text style={styles.modalSaveText}>{t('Save Weigh-in')}</Text>
               </TouchableOpacity>
             </View>
-
-            <View style={styles.modalInputGroup}>
-              <Text style={styles.modalLabel}>{t('Weight (kg)')}</Text>
-              <TextInput
-                style={styles.modalInput}
-                keyboardType="numeric"
-                value={inputWeight}
-                onChangeText={setInputWeight}
-                autoFocus
-              />
-            </View>
-
-            <View style={styles.modalInputGroup}>
-              <Text style={styles.modalLabel}>{t('Note (optional)')}</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder={t('Note (optional)')}
-                placeholderTextColor={theme.colors.textMuted}
-                value={inputNote}
-                onChangeText={setInputNote}
-              />
-            </View>
-
-            <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveWeight}>
-              <Check size={16} color={theme.colors.textInverted} />
-              <Text style={styles.modalSaveText}>{t('Save Weigh-in')}</Text>
-            </TouchableOpacity>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
