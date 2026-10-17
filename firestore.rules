@@ -48,5 +48,33 @@ service cloud.firestore {
         allow delete: if isVerifiedOwner();
       }
     }
+
+    match /foodRequests/{requestId} {
+      function isVerifiedUser() {
+        return request.auth != null
+          && request.auth.token.email_verified == true;
+      }
+
+      function isValidFoodRequest() {
+        return (
+          request.resource.data.keys().hasOnly(['userId', 'foodName', 'brand', 'notes', 'barcode', 'createdAt', 'status'])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.foodName is string
+          && request.resource.data.foodName.size() >= 1
+          && request.resource.data.foodName.size() <= 200
+          && (!('brand' in request.resource.data) || (request.resource.data.brand is string && request.resource.data.brand.size() <= 200))
+          && (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 500))
+          && (!('barcode' in request.resource.data) || (request.resource.data.barcode is string && request.resource.data.barcode.size() <= 50))
+          && request.resource.data.createdAt is string
+          && request.resource.data.createdAt.size() <= 40
+          && (!('status' in request.resource.data) || request.resource.data.status in ['pending', 'reviewed', 'approved', 'rejected'])
+        );
+      }
+
+      allow get: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow list: if false;
+      allow create: if isVerifiedUser() && isValidFoodRequest();
+      allow update, delete: if false;
+    }
   }
 }

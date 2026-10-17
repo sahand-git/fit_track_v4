@@ -278,8 +278,80 @@ async function runRulesTestSuite() {
     await assertSucceeds(aliceDb.doc('fitnessBackups/alice').delete());
     console.log('✓ Test 10 passed: Verified owner delete succeeded.');
 
+    // ----------------------------------------------------
+    // 9. Food Requests Collection (Item 5)
+    // ----------------------------------------------------
+    console.log('Test 11: Verified user can create their own food request...');
+    const validRequest = {
+      userId: 'alice',
+      foodName: 'Iraqi Kleicha (كليجة عراقية)',
+      brand: 'Homemade Baghdad Tradition',
+      notes: 'Date and walnut spiced pastry, request standard serving size',
+      barcode: '123456789012',
+      createdAt: new Date().toISOString(),
+      status: 'pending',
+    };
+    await assertSucceeds(aliceDb.doc('foodRequests/req_alice_1').set(validRequest));
+    console.log('✓ Test 11 passed: Verified user food request creation succeeded.');
+
+    console.log('Test 12: Unauthenticated and unverified users cannot create food requests...');
+    await assertFails(unauthDb.doc('foodRequests/req_unauth').set(validRequest));
+    await assertFails(unverifiedDb.doc('foodRequests/req_unverified').set(validRequest));
+    console.log('✓ Test 12 passed: Unauthenticated and unverified food requests blocked.');
+
+    console.log('Test 13: User cannot create request under another user\'s ID...');
+    await assertFails(
+      aliceDb.doc('foodRequests/req_spoof').set({
+        ...validRequest,
+        userId: 'bob',
+      })
+    );
+    console.log('✓ Test 13 passed: Cross-user spoofing blocked.');
+
+    console.log('Test 14: Food requests exceeding size limits or malformed are rejected...');
+    // Empty foodName
+    await assertFails(
+      aliceDb.doc('foodRequests/req_bad_name').set({
+        ...validRequest,
+        foodName: '',
+      })
+    );
+    // Over 200 chars foodName
+    await assertFails(
+      aliceDb.doc('foodRequests/req_long_name').set({
+        ...validRequest,
+        foodName: 'A'.repeat(201),
+      })
+    );
+    // Over 500 chars notes
+    await assertFails(
+      aliceDb.doc('foodRequests/req_long_notes').set({
+        ...validRequest,
+        notes: 'N'.repeat(501),
+      })
+    );
+    // Disallowed extra field
+    await assertFails(
+      aliceDb.doc('foodRequests/req_extra_field').set({
+        ...validRequest,
+        maliciousPayload: true,
+      })
+    );
+    console.log('✓ Test 14 passed: Schema and size limit violations rejected.');
+
+    console.log('Test 15: Client updates, deletes, and listing are denied on foodRequests...');
+    await assertFails(aliceDb.doc('foodRequests/req_alice_1').update({ notes: 'Updated notes' }));
+    await assertFails(aliceDb.doc('foodRequests/req_alice_1').delete());
+    await assertFails(aliceDb.collection('foodRequests').get());
+    console.log('✓ Test 15 passed: Updates, deletes, and collection listing strictly denied.');
+
+    console.log('Test 16: Owner can read their own request; non-owner is denied...');
+    await assertSucceeds(aliceDb.doc('foodRequests/req_alice_1').get());
+    await assertFails(bobDb.doc('foodRequests/req_alice_1').get());
+    console.log('✓ Test 16 passed: Owner-only read access verified.');
+
     console.log('\n====================================================');
-    console.log('ALL 10 REAL FIRESTORE SECURITY RULES TESTS PASSED!');
+    console.log('ALL 16 REAL FIRESTORE SECURITY RULES TESTS PASSED!');
     console.log('====================================================\n');
   } finally {
     await testEnv.cleanup();

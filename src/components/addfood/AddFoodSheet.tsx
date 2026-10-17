@@ -55,6 +55,7 @@ import { GeminiKeyManager } from '../GeminiKeyManager';
 import { AiReview } from './AiReview';
 import { SaveSuccessOverlay } from '../SaveSuccessOverlay';
 import { FoodThumbnail } from '../FoodThumbnail';
+import { RequestFoodModal } from '../RequestFoodModal';
 import { useLanguage } from '../../i18n/I18nContext';
 import { translate } from '../../i18n/strings';
 import { normalizeSearch } from '../../utils/localeUtils';
@@ -178,6 +179,9 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   // Modals state
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
+  const [requestModalVisible, setRequestModalVisible] = useState(false);
+  const [requestModalInitialName, setRequestModalInitialName] = useState('');
+  const [requestModalInitialBarcode, setRequestModalInitialBarcode] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [templateSaving, setTemplateSaving] = useState(false);
@@ -1046,8 +1050,21 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
                   {barcodeError && (
                     <View style={styles.errorNotice}>
-                      <AlertTriangle size={15} color={theme.colors.danger} />
-                      <Text style={styles.errorNoticeText}>{barcodeError}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                        <AlertTriangle size={15} color={theme.colors.danger} />
+                        <Text style={styles.errorNoticeText}>{barcodeError}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.requestBarcodeBtn}
+                        onPress={() => {
+                          setRequestModalInitialName('');
+                          setRequestModalInitialBarcode(manualBarcode.trim());
+                          setRequestModalVisible(true);
+                        }}
+                        accessibilityRole="button"
+                      >
+                        <Text style={styles.requestBarcodeBtnText}>{t('Request a Food')}</Text>
+                      </TouchableOpacity>
                     </View>
                   )}
 
@@ -1552,70 +1569,104 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             ? t('No scanned foods in cache yet.')
                             : t('Could not find food for this barcode.')}
                         </Text>
+                        <TouchableOpacity
+                          style={styles.requestFoodPromptBtn}
+                          onPress={() => {
+                            setRequestModalInitialName(searchQuery.trim());
+                            setRequestModalInitialBarcode(manualBarcode.trim());
+                            setRequestModalVisible(true);
+                          }}
+                          accessibilityRole="button"
+                        >
+                          <Plus size={14} color={theme.colors.primary} />
+                          <Text style={styles.requestFoodPromptBtnText}>
+                            {t('Request a Food')}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
                     ) : (
-                      filteredFoods.map((item) => {
-                        const isFav = favoriteFoods.some(
-                          (f) => f.id === item.id || f.name.trim().toLowerCase() === item.name.trim().toLowerCase()
-                        );
-                        return (
-                          <TouchableOpacity
-                            key={item.id}
-                            style={[
-                              styles.foodListItem,
-                              selectedFood?.id === item.id && styles.foodListItemActive,
-                            ]}
-                            onPress={() => {
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                              setSelectedFood(item);
-                            }}
-                            activeOpacity={0.7}
-                          >
-                            <FoodThumbnail
-                              name={item.name}
-                              category={item.category}
-                              imageUrl={item.imageUrl}
-                              size="small"
-                              style={{ marginEnd: 12 }}
-                            />
-                            <View style={{ flex: 1 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                <Text style={styles.itemTitle}>{item.name}</Text>
-                                {item.recipeEstimate ? (
-                                  <View style={styles.recipeEstimateBadgeSmall}>
-                                    <Text style={styles.recipeEstimateBadgeSmallText}>{t('Recipe estimate')}</Text>
-                                  </View>
-                                ) : item.isEstimate ? (
-                                  <View style={styles.estimateBadgeSmall}>
-                                    <Text style={styles.estimateBadgeSmallText}>{t('Estimate')}</Text>
-                                  </View>
-                                ) : null}
+                      <>
+                        {filteredFoods.map((item) => {
+                          const isFav = favoriteFoods.some(
+                            (f) => f.id === item.id || f.name.trim().toLowerCase() === item.name.trim().toLowerCase()
+                          );
+                          return (
+                            <TouchableOpacity
+                              key={item.id}
+                              style={[
+                                styles.foodListItem,
+                                selectedFood?.id === item.id && styles.foodListItemActive,
+                              ]}
+                              onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                                setSelectedFood(item);
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <FoodThumbnail
+                                name={item.name}
+                                category={item.category}
+                                imageUrl={item.imageUrl}
+                                size="small"
+                                style={{ marginEnd: 12 }}
+                              />
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                  <Text style={styles.itemTitle}>{item.name}</Text>
+                                  {item.recipeEstimate ? (
+                                    <View style={styles.recipeEstimateBadgeSmall}>
+                                      <Text style={styles.recipeEstimateBadgeSmallText}>{t('Recipe estimate')}</Text>
+                                    </View>
+                                  ) : item.isEstimate ? (
+                                    <View style={styles.estimateBadgeSmall}>
+                                      <Text style={styles.estimateBadgeSmallText}>{t('Estimate')}</Text>
+                                    </View>
+                                  ) : null}
+                                </View>
+                                <Text style={styles.itemSub}>
+                                  {item.portionUnit
+                                    ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g) • P: ${item.protein}g C: ${item.carbs}g F: ${item.fat}g`
+                                    : `${item.servingSize} • P: ${item.protein}g C: ${item.carbs}g F: ${item.fat}g`}
+                                </Text>
                               </View>
-                              <Text style={styles.itemSub}>
-                                {item.portionUnit
-                                  ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g) • P: ${item.protein}g C: ${item.carbs}g F: ${item.fat}g`
-                                  : `${item.servingSize} • P: ${item.protein}g C: ${item.carbs}g F: ${item.fat}g`}
+                              <View style={styles.itemRightCol}>
+                                <Text style={styles.itemKcal}>{item.calories} kcal</Text>
+                                <TouchableOpacity
+                                  style={styles.favStarBtn}
+                                  onPress={() => handleToggleFavorite(item)}
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={isFav ? t('Remove from favorites') : t('Add to favorites')}
+                                >
+                                  <Star
+                                    size={16}
+                                    color={isFav ? '#D97706' : theme.colors.textMuted}
+                                    fill={isFav ? '#D97706' : 'none'}
+                                  />
+                                </TouchableOpacity>
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                        {searchQuery.trim().length > 0 && (
+                          <TouchableOpacity
+                            style={styles.searchFooterRequestBtn}
+                            onPress={() => {
+                              setRequestModalInitialName(searchQuery.trim());
+                              setRequestModalInitialBarcode('');
+                              setRequestModalVisible(true);
+                            }}
+                            accessibilityRole="button"
+                          >
+                            <Text style={styles.searchFooterRequestText}>
+                              {t("Can't find what you are looking for?")}{' '}
+                              <Text style={{ color: theme.colors.primary, fontWeight: '700' }}>
+                                {t('Request a food')}
                               </Text>
-                            </View>
-                            <View style={styles.itemRightCol}>
-                              <Text style={styles.itemKcal}>{item.calories} kcal</Text>
-                              <TouchableOpacity
-                                style={styles.favStarBtn}
-                                onPress={() => handleToggleFavorite(item)}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                accessibilityRole="button"
-                                accessibilityLabel={isFav ? t('Remove from favorites') : t('Add to favorites')}
-                              >
-                                <Star
-                                  size={16}
-                                  color={isFav ? '#D97706' : theme.colors.textMuted}
-                                  fill={isFav ? '#D97706' : 'none'}
-                                />
-                              </TouchableOpacity>
-                            </View>
+                            </Text>
                           </TouchableOpacity>
-                        );
-                      })
+                        )}
+                      </>
                     )}
                   </ScrollView>
                 </>
@@ -1961,6 +2012,14 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
         </KeyboardAvoidingView>
       </View>
     </Modal>
+
+    {/* Request a Food Community Modal */}
+    <RequestFoodModal
+      visible={requestModalVisible}
+      onClose={() => setRequestModalVisible(false)}
+      initialFoodName={requestModalInitialName}
+      initialBarcode={requestModalInitialBarcode}
+    />
   </>
   );
 };
@@ -2904,5 +2963,48 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     lineHeight: 17,
     marginBottom: 6,
+  },
+  requestBarcodeBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.danger,
+    marginStart: 8,
+  },
+  requestBarcodeBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.colors.danger,
+  },
+  requestFoodPromptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.primaryLight,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  requestFoodPromptBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  searchFooterRequestBtn: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    marginTop: 8,
+  },
+  searchFooterRequestText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
   },
 });
