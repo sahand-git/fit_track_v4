@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck } from 'lucide-react-native';
+import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
 import { GeminiKeyManager } from '../components/GeminiKeyManager';
@@ -21,6 +21,7 @@ import { ScientificReferencesModal } from '../components/ScientificReferencesMod
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { isNotificationSupported } from '../services/notificationService';
 import { setCrashReportingConsent } from '../services/crashReportingService';
+import { sendFeedback } from '../utils/feedback';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useLanguage } from '../i18n/I18nContext';
 import { languageNames, translate } from '../i18n/strings';
@@ -472,6 +473,28 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </View>
           </View>
           <AnimatedCheckbox checked={enableCrashReporting} size={20} />
+        </TouchableOpacity>
+
+        {/* In-app Send Feedback */}
+        <TouchableOpacity
+          style={styles.optionRow}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            sendFeedback(language).catch(() => {});
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('Send Feedback')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <MessageSquare size={20} color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Send Feedback')}</Text>
+              <Text style={styles.optionDesc}>
+                {t('Share suggestions or report bugs. App version and device model are attached; health data is never included.')}
+              </Text>
+            </View>
+          </View>
         </TouchableOpacity>
       </View>
 

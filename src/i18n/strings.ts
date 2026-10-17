@@ -941,6 +941,8 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Anonymous Crash Reporting': 'تقارير الأعطال مجهولة المصدر',
     'Help improve stability by sharing anonymized error stacks. Meals, foods, and keys are strictly excluded.': 'ساعد في تحسين الاستقرار بمشاركة تفاصيل الأخطاء المجهولة. الوجبات والأطعمة والمفاتيح مستبعدة تماماً.',
     'Privacy & Diagnostics': 'الخصوصية والتشخيص',
+    'Send Feedback': 'إرسال الملاحظات',
+    'Share suggestions or report bugs. App version and device model are attached; health data is never included.': 'شارك اقتراحاتك أو أبلغ عن أخطاء. يتم إرفاق إصدار التطبيق وطراز الجهاز فقط؛ ولا يتم تضمين أي بيانات صحية أبداً.',
   },
   ckb: {
     'Account': 'هەژمار',
@@ -1874,6 +1876,8 @@ const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Anonymous Crash Reporting': 'ڕاپۆرتی تێکچوونی بێناو',
     'Help improve stability by sharing anonymized error stacks. Meals, foods, and keys are strictly excluded.': 'یارمەتی بدە بۆ باشترکردنی سەقامگیری لە ڕێگەی هاوبەشکردنی هەڵە بێناوەکان. ژەمەکان، خواردنەکان و کلیلەکان بە تەواوی دوورخراونەتەوە.',
     'Privacy & Diagnostics': 'تایبەتمەندی و دەستنیشانکردنی کێشەکان',
+    'Send Feedback': 'ناردنی سەرنج و ڕەخنەکان',
+    'Share suggestions or report bugs. App version and device model are attached; health data is never included.': 'سەرنجەکانت هاوبەش بکە یان کێشەکان ڕابگەیەنە. تەنها وەشانی ئەپ و مۆدێلی ئامێر هاوپێچ دەکرێن؛ داتای تەندروستی هەرگیز ناخرێتە ناوی.',
   },
 };
 
