@@ -39,11 +39,16 @@ import {
   SupplementCategory,
   LoggedDailySupplement,
   LoggedMeal,
+  UserProfile,
 } from '../types';
 import { AppText as Text } from '../components/AppText';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
 import { RDAAnalysisCard } from '../components/RDAAnalysisCard';
+import { NutrientDetailModal } from '../components/NutrientDetailModal';
+import { SupportedNutrientKey } from '../utils/nutrientTotals';
+import { calculateTargets } from '../utils/calculator';
+import { saveUserProfile } from '../storage/storage';
 import { translate } from '../i18n/strings';
 import { useLanguage } from '../i18n/I18nContext';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
@@ -68,9 +73,11 @@ interface SupplementsScreenProps {
   dailySupplements?: LoggedDailySupplement[];
   checks?: SupplementCheck[];
   meals?: LoggedMeal[];
+  profile?: UserProfile;
   onUpdateDailySupplements: (items: LoggedDailySupplement[]) => Promise<void>;
   onUpdateRoutine: (items: SupplementRoutineItem[]) => Promise<void>;
   onToggleSupplement: (id: string, taken: boolean) => Promise<void>;
+  onUpdateProfile?: (profile: UserProfile) => Promise<void>;
   onBack?: () => void;
 }
 
@@ -97,9 +104,11 @@ export function SupplementsScreen({
   dailySupplements,
   checks = [],
   meals = [],
+  profile,
   onUpdateDailySupplements,
   onUpdateRoutine,
   onToggleSupplement,
+  onUpdateProfile,
   onBack,
 }: SupplementsScreenProps) {
   const language = useLanguage();
@@ -107,6 +116,56 @@ export function SupplementsScreen({
   const t = (value: string) => translate(language, value);
 
   const isFuture = selectedDate > getTodayDateString();
+  const [selectedNutrientForDetail, setSelectedNutrientForDetail] = useState<SupportedNutrientKey | string | null>(null);
+
+  const handleSaveNutrientGoal = async (nutrientKey: SupportedNutrientKey, newTarget: number) => {
+    if (!profile) return;
+    const updatedGoals = { ...(profile.customNutrientGoals || {}), [nutrientKey]: newTarget };
+    const updated: UserProfile = {
+      ...profile,
+      customNutrientGoals: updatedGoals,
+    };
+    if (nutrientKey === 'calories') updated.targetCalories = newTarget;
+    if (nutrientKey === 'protein') updated.targetProtein = newTarget;
+    if (nutrientKey === 'carbs') updated.targetCarbs = newTarget;
+    if (nutrientKey === 'fat') updated.targetFat = newTarget;
+
+    if (onUpdateProfile) {
+      await onUpdateProfile(updated);
+    } else {
+      await saveUserProfile(updated);
+    }
+  };
+
+  const handleResetNutrientGoal = async (nutrientKey: SupportedNutrientKey) => {
+    if (!profile) return;
+    const updatedGoals = { ...(profile.customNutrientGoals || {}) };
+    delete updatedGoals[nutrientKey];
+    const updated: UserProfile = {
+      ...profile,
+      customNutrientGoals: updatedGoals,
+    };
+    if (nutrientKey === 'calories' || nutrientKey === 'protein' || nutrientKey === 'carbs' || nutrientKey === 'fat') {
+      const defaultTargets = calculateTargets(
+        profile.gender,
+        profile.weightKg,
+        profile.heightCm,
+        profile.age,
+        profile.activityLevel,
+        profile.goal
+      );
+      if (nutrientKey === 'calories') updated.targetCalories = defaultTargets.targetCalories;
+      if (nutrientKey === 'protein') updated.targetProtein = defaultTargets.targetProtein;
+      if (nutrientKey === 'carbs') updated.targetCarbs = defaultTargets.targetCarbs;
+      if (nutrientKey === 'fat') updated.targetFat = defaultTargets.targetFat;
+    }
+
+    if (onUpdateProfile) {
+      await onUpdateProfile(updated);
+    } else {
+      await saveUserProfile(updated);
+    }
+  };
 
   // Resolved list of items for the selected day:
   // If the day already has specific daily items, use them.
@@ -800,7 +859,11 @@ export function SupplementsScreen({
       )}
 
       {/* Micronutrients & RDA Analysis */}
-      <RDAAnalysisCard meals={meals} supplements={activeItems} />
+      <RDAAnalysisCard
+        meals={meals}
+        supplements={activeItems}
+        onSelectNutrient={(key) => setSelectedNutrientForDetail(key)}
+      />
 
       {/* Educational Disclaimer */}
       <View style={styles.notice}>
@@ -1225,6 +1288,17 @@ export function SupplementsScreen({
         visible={reminderModalVisible}
         onClose={() => setReminderModalVisible(false)}
         routine={routine}
+      />
+
+      <NutrientDetailModal
+        visible={!!selectedNutrientForDetail}
+        initialNutrientKey={selectedNutrientForDetail || 'vitaminC'}
+        meals={meals}
+        supplements={activeItems}
+        profile={profile}
+        onClose={() => setSelectedNutrientForDetail(null)}
+        onSaveGoal={handleSaveNutrientGoal}
+        onResetGoal={handleResetNutrientGoal}
       />
     </View>
   );

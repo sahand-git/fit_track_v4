@@ -624,6 +624,8 @@ function FitTrackApp() {
               dailySupplements={log.dailySupplements}
               checks={log.supplements || []}
               meals={log.meals}
+              profile={profile}
+              onUpdateProfile={handleSaveProfile}
               onUpdateDailySupplements={handleUpdateDailySupplements}
               onUpdateRoutine={handleUpdateRoutine}
               onToggleSupplement={handleToggleSupplement}
