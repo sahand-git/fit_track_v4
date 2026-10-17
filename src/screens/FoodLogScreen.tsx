@@ -329,7 +329,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                         }}
                         activeOpacity={0.7}
                       >
-                        <FoodThumbnail name={item.name} category={item.category} size="small" style={{ marginEnd: 12 }} />
+                        <FoodThumbnail name={item.name} category={item.category} imageUrl={item.imageUrl} size="small" style={{ marginEnd: 12 }} />
                         <View style={styles.foodInfo}>
                           <Text style={styles.foodName}>{item.name}</Text>
                           <Text style={styles.foodPortion}>

@@ -72,7 +72,6 @@ import { translate } from './src/i18n/strings';
 import { theme } from './src/theme';
 import * as Haptics from 'expo-haptics';
 
-import { shouldUpdateVisibleDate } from './src/utils/dateSync';
 import { StepsScreen } from './src/screens/StepsScreen';
 import { WorkoutsScreen } from './src/screens/WorkoutsScreen';
 import { AccountScreen } from './src/screens/AccountScreen';
@@ -174,6 +173,7 @@ function FitTrackApp() {
         setLog(l);
         const initialRoutine = await loadSupplementRoutine();
         if (isCancelled) return;
+        setSupplementRoutine(initialRoutine);
         try {
           await refreshStreak();
         } catch (streakErr) {

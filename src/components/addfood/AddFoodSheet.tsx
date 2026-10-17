@@ -411,6 +411,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       selectedVariantId: activeVariant?.id,
       variantName: activeVariant?.name,
       recipeEstimate: selectedFood.recipeEstimate,
+      imageUrl: selectedFood.imageUrl,
       timestamp: new Date().toISOString(),
     };
 

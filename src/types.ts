@@ -165,6 +165,7 @@ export interface LoggedMeal {
   name: string;
   brand?: string;
   category?: string;
+  imageUrl?: string;
   mealType: MealType;
   servings: number;
   servingSize: string;
