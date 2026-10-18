@@ -68,6 +68,10 @@ async function runAuthErrorMappingTests() {
       { code: 'auth/popup-closed-by-user', expectedSub: 'cancelled' },
       { code: 'auth/account-exists-with-different-credential', expectedSub: 'original method' },
       { code: 'auth/operation-not-allowed', expectedSub: 'Firebase Console' },
+      { code: 'auth/expired-action-code', expectedSub: 'expired' },
+      { code: 'auth/invalid-action-code', expectedSub: 'invalid or already used' },
+      { code: 'auth/missing-email', expectedSub: 'valid email' },
+      { code: 'auth/timeout', expectedSub: 'internet connection' },
     ];
 
     for (const item of firebaseCases) {
@@ -77,7 +81,7 @@ async function runAuthErrorMappingTests() {
       assert(details.message.toLowerCase().includes(item.expectedSub.toLowerCase()), `Message for ${item.code} must include "${item.expectedSub}" (got: "${details.message}")`);
     }
 
-    console.log('✓ Test 2 passed: All 13 Firebase Auth codes mapped to clear user messages.');
+    console.log('✓ Test 2 passed: All 17 Firebase Auth codes mapped to clear user messages.');
   }
 
   // 3. Application custom auth states

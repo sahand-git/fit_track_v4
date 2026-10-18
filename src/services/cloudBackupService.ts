@@ -5,6 +5,7 @@ import { FitTrackBackup } from '../types';
 import { createBackupPayload, restoreBackup } from './backupService';
 import { validateBackup } from '../utils/backupCore';
 import { reauthenticateForAccountDeletion } from './authService';
+import { purgeAccountData } from '../storage/storage';
 import {
   CHUNK_SIZE,
   CHUNK_THRESHOLD,
@@ -187,6 +188,7 @@ export async function deleteAccountAndBackup(uid: string, password?: string): Pr
 
   try {
     await deleteUser(auth.currentUser);
+    await purgeAccountData(uid);
   } catch (error) {
     if (previous) {
       try {

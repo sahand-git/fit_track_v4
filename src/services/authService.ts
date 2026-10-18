@@ -36,7 +36,9 @@ const AUTH_ERROR_MAP: Record<string, string> = {
 
   // Firebase Auth codes
   'auth/invalid-email': 'Enter a valid email address.',
+  'auth/missing-email': 'Enter a valid email address.',
   'auth/email-already-in-use': 'An account already exists with this email.',
+  'auth/credential-already-in-use': 'An account already exists with this email.',
   'auth/weak-password': 'Use a password with at least six characters.',
   'auth/invalid-credential': 'Email or password is incorrect.',
   'auth/user-not-found': 'No account found with this email.',
@@ -44,10 +46,13 @@ const AUTH_ERROR_MAP: Record<string, string> = {
   'auth/user-disabled': 'This user account has been disabled.',
   'auth/too-many-requests': 'Too many attempts. Wait a little and try again.',
   'auth/network-request-failed': 'Check your internet connection and try again.',
+  'auth/timeout': 'Check your internet connection and try again.',
   'auth/requires-recent-login': 'Sign in again to confirm this sensitive action.',
   'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
   'auth/account-exists-with-different-credential': 'An account already exists with this email. Sign in using its original method.',
   'auth/operation-not-allowed': 'This sign-in provider is not enabled in Firebase Console.',
+  'auth/expired-action-code': 'This verification link has expired. Request a new one.',
+  'auth/invalid-action-code': 'This verification link is invalid or already used.',
 
   // Custom application auth states
   'EMAIL_NOT_VERIFIED': 'Email not verified yet. Cloud backup stays locked until verification.',
@@ -118,12 +123,33 @@ export function getAuthErrorDetails(error: unknown): AuthErrorDetails {
   ) {
     normalizedCode = 'MISSING_WEB_CLIENT_ID';
   } else if (
+    rawCode === 'auth/timeout' ||
+    rawCode === 'ETIMEDOUT' ||
+    /timeout|timed out/i.test(rawMessage)
+  ) {
+    normalizedCode = 'auth/timeout';
+  } else if (
     rawCode === '7' ||
     rawCode === 'NETWORK_ERROR' ||
     rawCode === 'auth/network-request-failed' ||
     /network|failed to connect|network-request-failed/i.test(rawMessage)
   ) {
     normalizedCode = rawCode === 'auth/network-request-failed' ? 'auth/network-request-failed' : 'NETWORK_ERROR';
+  } else if (
+    rawCode === 'auth/expired-action-code' ||
+    /expired.*action.*code|expired.*verification|verification.*expired/i.test(rawMessage)
+  ) {
+    normalizedCode = 'auth/expired-action-code';
+  } else if (
+    rawCode === 'auth/invalid-action-code' ||
+    /invalid.*action.*code/i.test(rawMessage)
+  ) {
+    normalizedCode = 'auth/invalid-action-code';
+  } else if (
+    rawCode === 'auth/missing-email' ||
+    /missing.*email/i.test(rawMessage)
+  ) {
+    normalizedCode = 'auth/missing-email';
   } else if (rawCode && AUTH_ERROR_MAP[rawCode]) {
     normalizedCode = rawCode;
   } else if (/email not verified/i.test(rawMessage)) {
@@ -186,13 +212,35 @@ export function watchAuthState(listener: AuthListener): () => void {
 }
 
 export async function registerWithEmail(email: string, password: string): Promise<AuthIdentity> {
-  const result = await createUserWithEmailAndPassword(requireAuth(), email.trim(), password);
+  const trimmed = email ? email.trim() : '';
+  if (!trimmed) {
+    const err = new Error('Enter a valid email address.');
+    (err as { code?: string }).code = 'auth/invalid-email';
+    throw err;
+  }
+  if (!password || password.length < 6) {
+    const err = new Error('Use a password with at least six characters.');
+    (err as { code?: string }).code = 'auth/weak-password';
+    throw err;
+  }
+  const result = await createUserWithEmailAndPassword(requireAuth(), trimmed, password);
   await sendEmailVerification(result.user);
   return result.user;
 }
 
 export async function loginWithEmail(email: string, password: string): Promise<AuthIdentity> {
-  const result = await signInWithEmailAndPassword(requireAuth(), email.trim(), password);
+  const trimmed = email ? email.trim() : '';
+  if (!trimmed) {
+    const err = new Error('Enter a valid email address.');
+    (err as { code?: string }).code = 'auth/invalid-email';
+    throw err;
+  }
+  if (!password) {
+    const err = new Error('Email or password is incorrect.');
+    (err as { code?: string }).code = 'auth/invalid-credential';
+    throw err;
+  }
+  const result = await signInWithEmailAndPassword(requireAuth(), trimmed, password);
   return result.user;
 }
 
@@ -210,7 +258,13 @@ export async function refreshVerificationStatus(): Promise<AuthIdentity | null> 
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
-  await sendPasswordResetEmail(requireAuth(), email.trim());
+  const trimmed = email ? email.trim() : '';
+  if (!trimmed) {
+    const err = new Error('Enter a valid email address.');
+    (err as { code?: string }).code = 'auth/invalid-email';
+    throw err;
+  }
+  await sendPasswordResetEmail(requireAuth(), trimmed);
 }
 
 export async function logout(): Promise<void> {

@@ -43,6 +43,23 @@ export function getScopedStorageKey(key: string): string {
   return accountNamespace ? `@fittrack_account_${accountNamespace}:${key}` : key;
 }
 
+/**
+ * Permanently removes all local storage keys scoped to the given account UID.
+ * Guest records are completely untouched.
+ */
+export async function purgeAccountData(uid: string): Promise<void> {
+  const sanitized = uid ? uid.replace(/[^a-zA-Z0-9_-]/g, '_') : '';
+  if (!sanitized) return;
+
+  const prefix = `@fittrack_account_${sanitized}:`;
+  const allKeys = await AsyncStorage.getAllKeys();
+  const accountKeys = allKeys.filter((k) => k.startsWith(prefix));
+
+  if (accountKeys.length > 0) {
+    await AsyncStorage.multiRemove(accountKeys);
+  }
+}
+
 function dailyLogPrefix(): string {
   return getScopedStorageKey(DAILY_LOG_PREFIX);
 }
