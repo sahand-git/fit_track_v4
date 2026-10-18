@@ -154,8 +154,9 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [showIngredients, setShowIngredients] = useState(false);
   const [prevFoodId, setPrevFoodId] = useState<string | null>(null);
 
-  if (selectedFood?.id !== prevFoodId) {
-    setPrevFoodId(selectedFood?.id ?? null);
+  const currentFoodId = selectedFood?.id ?? null;
+  if (currentFoodId !== prevFoodId) {
+    setPrevFoodId(currentFoodId);
     setSelectedVariantId(selectedFood?.variants?.[0]?.id ?? null);
     setShowIngredients(false);
   }
