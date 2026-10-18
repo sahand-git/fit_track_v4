@@ -85,12 +85,62 @@ jobs:
           if [ -n "$GOOGLE_ANDROID_SERVICES_JSON_BASE64" ]; then
             echo "$GOOGLE_ANDROID_SERVICES_JSON_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/google-services.json"
             echo "GOOGLE_ANDROID_SERVICES_FILE=$GITHUB_WORKSPACE/google-services.json" >> "$GITHUB_ENV"
-          else
-            echo "Firebase native service file is not configured; building guest-capable APK without Google sign-in."
           fi
           if [ -z "$EXPO_PUBLIC_FIREBASE_PROJECT_ID" ] || [ -z "$EXPO_PUBLIC_FIREBASE_API_KEY" ]; then
-            echo "Firebase web config is not configured; Firebase authentication will be unavailable in this APK."
+            echo "::warning::Firebase web config is not configured; Firebase authentication will be unavailable in this APK."
           fi
+
+      - name: Verify Firebase Android configuration (google-services.json)
+        shell: bash
+        run: |
+          node -e '
+            const fs = require("fs");
+            const filePath = process.env.GOOGLE_ANDROID_SERVICES_FILE;
+            if (!filePath || !fs.existsSync(filePath)) {
+              console.error("\n========================================================");
+              console.error("::error::Missing GOOGLE_ANDROID_SERVICES_JSON_BASE64 secret!");
+              console.error("To build a release APK with working Google and Firebase sign-in:");
+              console.error("1. Download google-services.json from Firebase Console (Project Settings -> General -> Your apps -> com.fittrack.expo).");
+              console.error("2. Base64-encode it: base64 -w 0 google-services.json (or [Convert]::ToBase64String([IO.File]::ReadAllBytes(\"google-services.json\")) in PowerShell).");
+              console.error("3. Add it as GOOGLE_ANDROID_SERVICES_JSON_BASE64 in GitHub repository secrets (Settings -> Secrets and variables -> Actions).");
+              console.error("See docs/google-services-setup.md for full step-by-step instructions.");
+              console.error("========================================================\n");
+              process.exit(1);
+            }
+
+            let json;
+            try {
+              json = JSON.parse(fs.readFileSync(filePath, "utf8"));
+            } catch (err) {
+              console.error("\n========================================================");
+              console.error("::error::google-services.json is not valid JSON!");
+              console.error("Ensure GOOGLE_ANDROID_SERVICES_JSON_BASE64 is valid base64-encoded UTF-8 JSON. Error: " + err.message);
+              console.error("========================================================\n");
+              process.exit(1);
+            }
+
+            if (!json.project_info || !json.project_info.project_id) {
+              console.error("\n========================================================");
+              console.error("::error::google-services.json is missing project_info.project_id!");
+              console.error("Ensure you downloaded the full google-services.json directly from Firebase Console.");
+              console.error("========================================================\n");
+              process.exit(1);
+            }
+
+            const clientPackages = (json.client || []).map(c => c.client_info && c.client_info.android_client_info && c.client_info.android_client_info.package_name).filter(Boolean);
+            if (!clientPackages.includes("com.fittrack.expo")) {
+              console.error("\n========================================================");
+              console.error("::error::google-services.json does not match package name com.fittrack.expo!");
+              console.error("Found package names: " + (clientPackages.join(", ") || "none"));
+              console.error("Register an Android app with package name com.fittrack.expo in Firebase Console and download the updated google-services.json.");
+              console.error("========================================================\n");
+              process.exit(1);
+            }
+
+            console.log("Firebase google-services.json verified successfully:");
+            console.log("  Project ID: " + json.project_info.project_id);
+            console.log("  Package: com.fittrack.expo");
+          '
 
       - name: Generate Android native project (Expo Prebuild)
         run: npx expo prebuild --platform android --clean
@@ -113,9 +163,22 @@ jobs:
             echo "FITTRACK_RELEASE_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> android/gradle.properties
             echo "PRODUCTION_SIGNING_CONFIGURED=true" >> $GITHUB_ENV
             echo "Release keystore configured successfully."
+            echo ""
+            echo "================================================================================"
+            echo "=== RELEASE KEYSTORE SIGNING CERTIFICATE FINGERPRINTS ==="
+            echo "Copy the SHA-1 below into Firebase Console -> Project Settings -> Your apps ->"
+            echo "Android (com.fittrack.expo) -> SHA certificate fingerprints."
+            echo "REQUIRED: Google Sign-In will fail with DEVELOPER_ERROR (status 10) without this SHA-1!"
+            echo "================================================================================"
+            keytool -list -v -keystore android/app/release.keystore -alias "$ANDROID_KEY_ALIAS" -storepass "$ANDROID_KEYSTORE_PASSWORD" | grep -E "SHA1:|SHA256:|Certificate fingerprints:" -A 3 || true
+            echo "================================================================================"
           else
             echo "::warning::ANDROID_KEYSTORE_BASE64 secret is not configured. Falling back to default debug signing."
             echo "PRODUCTION_SIGNING_CONFIGURED=false" >> $GITHUB_ENV
+            if [ -f "$HOME/.android/debug.keystore" ]; then
+              echo "=== DEBUG KEYSTORE FINGERPRINTS ==="
+              keytool -list -v -keystore "$HOME/.android/debug.keystore" -alias androiddebugkey -storepass android | grep -E "SHA1:|SHA256:" || true
+            fi
           fi
 
       - name: Build Standalone Release APK with Gradle
