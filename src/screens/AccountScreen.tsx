@@ -3,7 +3,7 @@ import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet,
 import { ArrowLeft, Cloud, ExternalLink, LogIn, LogOut, Mail, ShieldCheck, Trash2 } from 'lucide-react-native';
 import { AppText as Text } from '../components/AppText';
 import { AnimatedPressable } from '../components/AnimatedPressable';
-import { AuthIdentity, getAuthErrorMessage, loginWithEmail, loginWithGoogle, logout, refreshVerificationStatus, registerWithEmail, requestPasswordReset, resendVerification } from '../services/authService';
+import { AuthIdentity, formatAuthError, loginWithEmail, loginWithGoogle, logout, refreshVerificationStatus, registerWithEmail, requestPasswordReset, resendVerification } from '../services/authService';
 import { createCloudBackup, deleteAccountAndBackup, restoreCloudBackup } from '../services/cloudBackupService';
 import { firebaseConfigured } from '../services/firebaseApp';
 import { useLanguage } from '../i18n/I18nContext';
@@ -32,7 +32,7 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
   const perform = async (action: () => Promise<void>, success: string) => {
     setBusy(true); setError(''); setMessage('');
     try { await action(); setMessage(t(success)); }
-    catch (cause) { setError(t(getAuthErrorMessage(cause))); }
+    catch (cause) { setError(formatAuthError(cause, language)); }
     finally { setBusy(false); }
   };
 
