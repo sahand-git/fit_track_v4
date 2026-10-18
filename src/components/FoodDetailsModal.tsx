@@ -42,15 +42,21 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
   const isRtl = language === 'ar' || language === 'ckb';
   const t = (key: string) => translate(language, key);
   const [servings, setServings] = useState(1);
-  const [prevItem, setPrevItem] = useState(item);
+  const currentItemId = item?.id ?? null;
+  const currentVisible = Boolean(visible);
+  const [prevItemId, setPrevItemId] = useState<string | null>(currentItemId);
+  const [prevVisible, setPrevVisible] = useState(currentVisible);
 
-  if (item !== prevItem) {
-    setPrevItem(item);
+  if (currentItemId !== prevItemId || (currentVisible && !prevVisible)) {
+    setPrevItemId(currentItemId);
+    setPrevVisible(currentVisible);
     if (item && 'servings' in item) {
       setServings(item.servings || 1);
     } else {
       setServings(1);
     }
+  } else if (currentVisible !== prevVisible) {
+    setPrevVisible(currentVisible);
   }
 
   if (!item) return null;

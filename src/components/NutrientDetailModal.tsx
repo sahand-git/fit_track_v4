@@ -65,12 +65,19 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   });
 
   // Keep activeKey synced when modal opens with a new initialNutrientKey
-  const [prevInitialKey, setPrevInitialKey] = useState(initialNutrientKey);
-  if (initialNutrientKey !== prevInitialKey) {
-    setPrevInitialKey(initialNutrientKey);
-    if (ORDERED_NUTRIENT_KEYS.includes(initialNutrientKey as SupportedNutrientKey)) {
-      setActiveKey(initialNutrientKey as SupportedNutrientKey);
-    }
+  const currentInitialKey = initialNutrientKey ?? 'calories';
+  const currentVisible = Boolean(visible);
+  const [prevInitialKey, setPrevInitialKey] = useState(currentInitialKey);
+  const [prevVisible, setPrevVisible] = useState(currentVisible);
+  if (currentInitialKey !== prevInitialKey || (currentVisible && !prevVisible)) {
+    setPrevInitialKey(currentInitialKey);
+    setPrevVisible(currentVisible);
+    const targetKey = (ORDERED_NUTRIENT_KEYS.includes(currentInitialKey as SupportedNutrientKey)
+      ? currentInitialKey
+      : 'calories') as SupportedNutrientKey;
+    setActiveKey(targetKey);
+  } else if (currentVisible !== prevVisible) {
+    setPrevVisible(currentVisible);
   }
 
   // Goal editing state

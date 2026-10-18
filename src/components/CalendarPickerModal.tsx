@@ -27,13 +27,15 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
   }, [month]);
   const dates = useMemo(() => Array.from({ length: 42 }, (_, index) => addDaysToDateString(firstDate, index)), [firstDate]);
 
-  const [prevSelectedDate, setPrevSelectedDate] = useState(selectedDate);
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (selectedDate !== prevSelectedDate || (visible && !prevVisible)) {
-    setPrevSelectedDate(selectedDate);
-    setPrevVisible(visible);
-    if (visible) {
-      const selected = parseLocalDateString(selectedDate);
+  const currentDate = selectedDate ?? '';
+  const currentVisible = Boolean(visible);
+  const [prevSelectedDate, setPrevSelectedDate] = useState(currentDate);
+  const [prevVisible, setPrevVisible] = useState(currentVisible);
+  if (currentDate !== prevSelectedDate || currentVisible !== prevVisible) {
+    setPrevSelectedDate(currentDate);
+    setPrevVisible(currentVisible);
+    if (currentVisible && (currentDate !== prevSelectedDate || !prevVisible)) {
+      const selected = parseLocalDateString(currentDate);
       setMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
     }
   }

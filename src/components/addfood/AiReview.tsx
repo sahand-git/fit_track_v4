@@ -33,7 +33,10 @@ export const AiReview: React.FC<AiReviewProps> = ({
   const language = useLanguage();
   const t = (str: string) => translate(language, str);
 
-  const [prevResult, setPrevResult] = useState(result);
+  const currentResultKey = result
+    ? `${result.mealName}_${result.totalCalories}_${result.items.length}_${result.items.map((i) => `${i.name}:${i.grams}`).join('|')}`
+    : '';
+  const [prevResultKey, setPrevResultKey] = useState(currentResultKey);
   const [items, setItems] = useState<EditableItemState[]>(() =>
     result.items.map((it) => ({
       item: it,
@@ -42,8 +45,8 @@ export const AiReview: React.FC<AiReviewProps> = ({
     }))
   );
 
-  if (result !== prevResult) {
-    setPrevResult(result);
+  if (currentResultKey !== prevResultKey) {
+    setPrevResultKey(currentResultKey);
     setItems(
       result.items.map((it) => ({
         item: it,
