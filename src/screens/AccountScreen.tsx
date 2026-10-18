@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { ArrowLeft, Cloud, ExternalLink, LogIn, LogOut, Mail, ShieldCheck, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Check, ChevronDown, ChevronUp, Cloud, Copy, ExternalLink, LogIn, LogOut, Mail, ShieldCheck, Trash2, Wrench } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
 import { AppText as Text } from '../components/AppText';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { AuthIdentity, formatAuthError, loginWithEmail, loginWithGoogle, logout, refreshVerificationStatus, registerWithEmail, requestPasswordReset, resendVerification } from '../services/authService';
+import { AccountDiagnosticInfo, checkAccountSetup, formatAccountDiagnostics } from '../services/accountDiagnosticService';
 import { createCloudBackup, deleteAccountAndBackup, restoreCloudBackup } from '../services/cloudBackupService';
 import { firebaseConfigured } from '../services/firebaseApp';
 import { useLanguage } from '../i18n/I18nContext';
@@ -25,9 +27,40 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [verificationOverride, setVerificationOverride] = useState<{ uid: string; verified: boolean } | null>(null);
+  const [showSetupCheck, setShowSetupCheck] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<AccountDiagnosticInfo | null>(null);
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
+  const [copiedDiagnostics, setCopiedDiagnostics] = useState(false);
   const emailVerified = user && verificationOverride?.uid === user.uid
     ? verificationOverride.verified
     : !!user?.emailVerified;
+
+  const toggleSetupCheck = async () => {
+    const next = !showSetupCheck;
+    setShowSetupCheck(next);
+    if (next && !diagnostics) {
+      setDiagnosticsLoading(true);
+      try {
+        const info = await checkAccountSetup();
+        setDiagnostics(info);
+      } catch {
+        // Silently handle
+      } finally {
+        setDiagnosticsLoading(false);
+      }
+    }
+  };
+
+  const copyDiagnostics = async () => {
+    if (!diagnostics) return;
+    try {
+      await Clipboard.setStringAsync(formatAccountDiagnostics(diagnostics));
+      setCopiedDiagnostics(true);
+      setTimeout(() => setCopiedDiagnostics(false), 2000);
+    } catch {
+      // Ignore clipboard errors
+    }
+  };
 
   const perform = async (action: () => Promise<void>, success: string) => {
     setBusy(true); setError(''); setMessage('');
@@ -251,6 +284,92 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
       )}
 
       <View style={styles.card}>
+        <TouchableOpacity
+          style={styles.accordionHeader}
+          onPress={toggleSetupCheck}
+          accessibilityRole="button"
+          accessibilityLabel={t('Account setup check')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <View style={styles.rowAlign}>
+            <Wrench size={18} color={theme.colors.primary} />
+            <Text style={styles.cardTitle}>{t('Account setup check')}</Text>
+          </View>
+          {showSetupCheck ? <ChevronUp size={20} color={theme.colors.textMuted} /> : <ChevronDown size={20} color={theme.colors.textMuted} />}
+        </TouchableOpacity>
+
+        {showSetupCheck && (
+          <View style={styles.diagnosticContent}>
+            <Text style={styles.body}>{t('Diagnostic information for Firebase and Google Sign-in.')}</Text>
+
+            {diagnosticsLoading ? (
+              <Text style={styles.muted}>{t('Checking setup…')}</Text>
+            ) : diagnostics ? (
+              <View style={styles.diagnosticList}>
+                <View style={styles.diagnosticRow}>
+                  <Text style={styles.diagnosticLabel}>{t('App version')}</Text>
+                  <Text style={styles.diagnosticValue}>{diagnostics.appVersion}</Text>
+                </View>
+                <View style={styles.diagnosticRow}>
+                  <Text style={styles.diagnosticLabel}>{t('Package name')}</Text>
+                  <Text style={styles.diagnosticValue}>{diagnostics.packageName}</Text>
+                </View>
+                <View style={styles.diagnosticRow}>
+                  <Text style={styles.diagnosticLabel}>{t('Firebase configured')}</Text>
+                  <Text style={[styles.diagnosticValue, { color: diagnostics.firebaseConfigured ? theme.colors.success : theme.colors.danger }]}>
+                    {diagnostics.firebaseConfigured ? t('Configured') : t('Not configured')}
+                  </Text>
+                </View>
+                <View style={styles.diagnosticColumn}>
+                  <Text style={styles.diagnosticLabel}>{t('Missing Firebase variables')}</Text>
+                  {diagnostics.missingFirebaseEnvVars.length === 0 ? (
+                    <Text style={[styles.diagnosticValue, { color: theme.colors.success }]}>{t('None (all configured)')}</Text>
+                  ) : (
+                    <View style={styles.tagWrap}>
+                      {diagnostics.missingFirebaseEnvVars.map((v) => (
+                        <View key={v} style={styles.tagBadge}>
+                          <Text style={styles.tagText}>{v}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+                <View style={styles.diagnosticRow}>
+                  <Text style={styles.diagnosticLabel}>{t('Google Web Client ID')}</Text>
+                  <Text style={[styles.diagnosticValue, { color: diagnostics.webClientIdSet ? theme.colors.success : theme.colors.danger }]}>
+                    {diagnostics.webClientIdSet ? t('Configured') : t('Not configured')}
+                  </Text>
+                </View>
+                <View style={styles.diagnosticRow}>
+                  <Text style={styles.diagnosticLabel}>{t('Nitro Google module')}</Text>
+                  <Text style={[styles.diagnosticValue, { color: diagnostics.nitroGoogleModuleLoaded ? theme.colors.success : theme.colors.danger }]}>
+                    {diagnostics.nitroGoogleModuleLoaded ? t('Loaded') : t('Not loaded')}
+                  </Text>
+                </View>
+                <View style={styles.diagnosticRow}>
+                  <Text style={styles.diagnosticLabel}>{t('Google Play services')}</Text>
+                  <Text style={[styles.diagnosticValue, { color: diagnostics.playServicesStatus === 'available' ? theme.colors.success : theme.colors.textMuted }]}>
+                    {diagnostics.playServicesStatus === 'available' ? t('Available') : diagnostics.playServicesStatus === 'not_applicable' ? 'N/A' : t('Unavailable')}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.outlineBtn}
+                  onPress={copyDiagnostics}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Copy diagnostics')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  {copiedDiagnostics ? <Check size={16} color={theme.colors.success} /> : <Copy size={16} color={theme.colors.primary} />}
+                  <Text style={styles.outlineText}>{copiedDiagnostics ? t('Copied!') : t('Copy diagnostics')}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.card}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <ShieldCheck size={18} color={theme.colors.primary} />
           <Text style={styles.cardTitle}>{t('Privacy Policy')}</Text>
@@ -283,4 +402,15 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 }, back: { padding: 10, borderRadius: 24, backgroundColor: theme.colors.surface }, eyebrow: { fontSize: 11, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 1 }, title: { fontFamily: theme.fonts.serif, fontSize: 27, color: theme.colors.textPrimary },
   card: { padding: 18, gap: 12, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 18 }, notice: { alignItems: 'center', padding: 22, gap: 10, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 18 }, emailIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' }, noticeTitle: { textAlign: 'center', fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontWeight: '700', fontSize: 19 }, cardTitle: { fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontWeight: '700', fontSize: 20 }, body: { color: theme.colors.textSecondary, fontSize: 13, lineHeight: 19 }, small: { color: theme.colors.textMuted, fontSize: 11, lineHeight: 16, textAlign: 'center' }, muted: { color: theme.colors.textMuted, fontSize: 13, textAlign: 'center' },
   input: { width: '100%', borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, backgroundColor: theme.colors.background, paddingHorizontal: 13, paddingVertical: 12, color: theme.colors.textPrimary, fontSize: 14 }, primaryBtn: { minHeight: 48, backgroundColor: theme.colors.primary, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 14 }, primaryText: { color: theme.colors.textInverted, fontWeight: '700', fontSize: 14 }, outlineBtn: { minHeight: 45, borderWidth: 1, borderColor: theme.colors.borderStrong, borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: theme.colors.surface }, outlineText: { color: theme.colors.primary, fontWeight: '700', textAlign: 'center', fontSize: 13 }, disabled: { opacity: 0.5 }, switchMode: { paddingVertical: 6, alignItems: 'center' }, separator: { flexDirection: 'row', alignItems: 'center', gap: 12 }, rule: { flex: 1, height: 1, backgroundColor: theme.colors.border }, googleBtn: { minHeight: 48 }, success: { color: theme.colors.success, textAlign: 'center', fontWeight: '600' }, error: { color: theme.colors.danger, textAlign: 'center', fontSize: 13 }, deleteBtn: { minHeight: 48, borderWidth: 1, borderColor: theme.colors.dangerLight, backgroundColor: theme.colors.surface, borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }, deleteText: { color: theme.colors.danger, fontWeight: '700' },
+  accordionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
+  rowAlign: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  diagnosticContent: { gap: 12, marginTop: 4 },
+  diagnosticList: { gap: 8 },
+  diagnosticRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  diagnosticColumn: { gap: 4, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  diagnosticLabel: { fontSize: 13, color: theme.colors.textSecondary },
+  diagnosticValue: { fontSize: 13, fontWeight: '600', color: theme.colors.textPrimary },
+  tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  tagBadge: { backgroundColor: theme.colors.dangerLight, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  tagText: { fontSize: 11, color: theme.colors.danger },
 });
