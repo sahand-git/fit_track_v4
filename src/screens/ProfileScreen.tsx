@@ -10,17 +10,18 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare } from 'lucide-react-native';
+import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
 import { GeminiKeyManager } from '../components/GeminiKeyManager';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
 import { BackupModal } from '../components/BackupModal';
+import { CrashReportModal } from '../components/CrashReportModal';
 import { MedicalDisclaimerModal } from '../components/MedicalDisclaimerModal';
 import { ScientificReferencesModal } from '../components/ScientificReferencesModal';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { isNotificationSupported } from '../services/notificationService';
-import { setCrashReportingConsent } from '../services/crashReportingService';
+import { getLastStoredCrash, ScrubbedCrashReport } from '../services/crashReportingService';
 import { sendFeedback } from '../utils/feedback';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useLanguage } from '../i18n/I18nContext';
@@ -56,15 +57,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const [remindersModalVisible, setRemindersModalVisible] = useState(false);
   const [backupModalVisible, setBackupModalVisible] = useState(false);
+  const [crashModalVisible, setCrashModalVisible] = useState(false);
+  const [selectedCrash, setSelectedCrash] = useState<ScrubbedCrashReport | null>(null);
   const [disclaimerModalVisible, setDisclaimerModalVisible] = useState(false);
   const [referencesModalVisible, setReferencesModalVisible] = useState(false);
   const [includeWorkouts, setIncludeWorkouts] = useState(!!profile.includeWorkoutsInCalorieBudget);
-  const [enableCrashReporting, setEnableCrashReporting] = useState(!!profile.enableCrashReporting);
+  const enableCrashReporting = !!profile.enableCrashReporting;
 
   // Handle Android back button when sub-modals are open
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const onBackPress = () => {
+      if (crashModalVisible) {
+        setCrashModalVisible(false);
+        return true;
+      }
       if (disclaimerModalVisible) {
         setDisclaimerModalVisible(false);
         return true;
@@ -85,7 +92,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
-  }, [remindersModalVisible, backupModalVisible, disclaimerModalVisible, referencesModalVisible]);
+  }, [remindersModalVisible, backupModalVisible, disclaimerModalVisible, referencesModalVisible, crashModalVisible]);
   const [name, setName] = useState(profile.name);
   const [age, setAge] = useState(profile.age.toString());
   const [gender, setGender] = useState<Gender>(profile.gender);
@@ -135,7 +142,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       customNutrientGoals: updatedCustomGoals,
       ...liveTargets,
     };
-    setCrashReportingConsent(enableCrashReporting).catch(() => {});
     onSaveProfile(updated);
   };
 
@@ -463,36 +469,44 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </View>
           </View>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.optionRow}
+          onPress={async () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            const last = await getLastStoredCrash();
+            setSelectedCrash(last);
+            setCrashModalVisible(true);
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('View last crash report')}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <FileText size={20} color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('View last crash report')}</Text>
+              <Text style={styles.optionDesc}>
+                {t('Inspect scrubbed on-device diagnostic log from the most recent crash.')}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Privacy & Diagnostics Section */}
       <View style={styles.section}>
         <Text style={styles.sectionHeader}>{t('Privacy & Diagnostics')}</Text>
-        <TouchableOpacity
-          style={[styles.optionRow, enableCrashReporting && styles.optionRowActive]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            const nextVal = !enableCrashReporting;
-            setEnableCrashReporting(nextVal);
-            setCrashReportingConsent(nextVal).catch(() => {});
-          }}
-          activeOpacity={0.7}
-          accessibilityRole="checkbox"
-          accessibilityLabel={t('Anonymous Crash Reporting')}
-          accessibilityState={{ checked: enableCrashReporting }}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-            <ShieldCheck size={20} color={theme.colors.primary} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.optionLabel}>{t('Anonymous Crash Reporting')}</Text>
-              <Text style={styles.optionDesc}>
-                {t('Help improve stability by sharing anonymized error stacks. Meals, foods, and keys are strictly excluded.')}
-              </Text>
-            </View>
+        <View style={styles.privacyNoteCard}>
+          <ShieldCheck size={20} color={theme.colors.primary} style={{ marginTop: 2 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.privacyNoteTitle}>{t('Local On-Device Diagnostics')}</Text>
+            <Text style={styles.privacyNoteDesc}>
+              {t('FitTrack transmits zero crash or health telemetry to remote servers. All crash diagnostics are scrubbed and stored locally on your device only.')}
+            </Text>
           </View>
-          <AnimatedCheckbox checked={enableCrashReporting} size={20} />
-        </TouchableOpacity>
+        </View>
 
         {/* In-app Send Feedback */}
         <TouchableOpacity
@@ -586,6 +600,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         visible={backupModalVisible}
         onClose={() => setBackupModalVisible(false)}
         onRestoreComplete={onRestoreComplete || (() => {})}
+      />
+
+      <CrashReportModal
+        visible={crashModalVisible}
+        onClose={() => setCrashModalVisible(false)}
+        report={selectedCrash}
+        onClear={() => setSelectedCrash(null)}
       />
 
       <MedicalDisclaimerModal
@@ -858,5 +879,27 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: theme.colors.textInverted,
+  },
+  privacyNoteCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: theme.colors.surface,
+    padding: 14,
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: 8,
+  },
+  privacyNoteTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    marginBottom: 2,
+  },
+  privacyNoteDesc: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 17,
   },
 });

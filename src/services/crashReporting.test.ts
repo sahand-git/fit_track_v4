@@ -5,7 +5,8 @@ import {
   setCrashReportingConsent,
   recordCrash,
   clearStoredCrashes,
-  CRASH_LOGS_STORAGE_KEY,
+  getLastStoredCrash,
+  getStoredCrashes,
 } from './crashReportingService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { translations } from '../i18n/strings';
@@ -65,7 +66,7 @@ async function runCrashReportingTests() {
       customKey
     );
 
-    assert(report.appVersion === '1.0.0', 'App version must be 1.0.0');
+    assert(report.appVersion.length > 0, 'App version must be populated');
     assert(!report.errorMessage.includes(customKey), 'API key must not appear in errorMessage');
     assert(report.errorMessage.includes('[redacted-key]'), 'Expected redacted placeholder');
     assert(report.stack !== undefined && !report.stack.includes('C:\\Users'), 'Local path must not appear in stack');
@@ -74,52 +75,69 @@ async function runCrashReportingTests() {
     console.log('✓ Test 2 passed: sanitizeCrashReport creates clean, scrubbed telemetry payload.');
   }
 
-  // 3. Strict Consent Gating (Opt-in)
+  // 3. Unconditional On-Device Ring Buffer (last 5 crashes, zero external transmission)
   {
     await AsyncStorage.clear();
     await clearStoredCrashes();
 
-    // Default consent must be false
-    const defaultConsent = await getCrashReportingConsent();
-    assert(defaultConsent === false, 'Default consent must be false');
+    const initial = await getLastStoredCrash();
+    assert(initial === null, 'Initial crash report should be null');
 
-    // Recording crash while consent is false must return null and write nothing
-    const unconsented = await recordCrash(new Error('Sample crash while disabled'));
-    assert(unconsented === null, 'recordCrash must return null when consent is false');
-    const logsWhenDisabled = await AsyncStorage.getItem(CRASH_LOGS_STORAGE_KEY);
-    assert(logsWhenDisabled === null, 'No logs must be written when consent is false');
+    // Record crash 1
+    const rep1 = await recordCrash(new Error('Sample test crash 1'));
+    assert(rep1 !== null, 'recordCrash must return report');
+    const storedAfter1 = await getStoredCrashes();
+    assert(storedAfter1.length === 1, 'Expected 1 stored crash');
+    const last1 = await getLastStoredCrash();
+    assert(last1?.errorMessage.includes('Sample test crash 1') === true, 'Last stored crash must match rep1');
 
-    // Enable consent
+    // Record 5 more crashes (total 6) to verify ring buffer capped at 5
+    for (let i = 2; i <= 6; i++) {
+      await recordCrash(new Error(`Sample test crash ${i}`));
+    }
+
+    const storedAfter6 = await getStoredCrashes();
+    assert(storedAfter6.length === 5, 'Ring buffer must cap at MAX_STORED_CRASHES (5)');
+    const latest = await getLastStoredCrash();
+    assert(latest?.errorMessage.includes('Sample test crash 6') === true, 'Latest crash must be the most recent one');
+
+    // Clear crashes
+    await clearStoredCrashes();
+    const afterClear = await getStoredCrashes();
+    assert(afterClear.length === 0, 'Crashes should be cleared');
+    assert(await getLastStoredCrash() === null, 'Last crash should be null after clearing');
+
+    // Consent flag verification for backward compatibility
     await setCrashReportingConsent(true);
-    const updatedConsent = await getCrashReportingConsent();
-    assert(updatedConsent === true, 'Consent must update to true');
-
-    // Recording crash while consent is true must succeed
-    const consented = await recordCrash(new Error('Sample crash while enabled'));
-    assert(consented !== null, 'recordCrash must return report when consent is true');
-    if (!consented) throw new Error('Unreachable');
-    assert(consented.errorMessage.includes('Sample crash while enabled'), 'Error message preserved');
-
-    const logsWhenEnabled = await AsyncStorage.getItem(CRASH_LOGS_STORAGE_KEY);
-    assert(logsWhenEnabled !== null, 'Logs must be saved in storage');
-    if (!logsWhenEnabled) throw new Error('Unreachable');
-    const parsedLogs = JSON.parse(logsWhenEnabled);
-    assert(Array.isArray(parsedLogs) && parsedLogs.length === 1, 'Exactly 1 crash log should be stored');
-
-    // Disabling consent stops recording
+    assert((await getCrashReportingConsent()) === true, 'Consent getter/setter works');
     await setCrashReportingConsent(false);
-    const stopped = await recordCrash(new Error('Should not be recorded'));
-    assert(stopped === null, 'Subsequent crash must not be recorded after consent revocation');
+    assert((await getCrashReportingConsent()) === false, 'Consent reset works');
 
-    console.log('✓ Test 3 passed: Consent gating strictly controls telemetry capture and storage.');
+    console.log('✓ Test 3 passed: Unconditional on-device ring buffer stores up to 5 scrubbed crashes and clears cleanly.');
   }
 
-  // 4. Localization check for crash reporting strings
+  // 4. Localization check for crash reporting and diagnostics strings
   {
     const requiredStrings = [
-      'Anonymous Crash Reporting',
-      'Help improve stability by sharing anonymized error stacks. Meals, foods, and keys are strictly excluded.',
-      'Privacy & Diagnostics',
+      'Copy error details',
+      'View last crash report',
+      'Inspect scrubbed on-device diagnostic log from the most recent crash.',
+      'Last Crash Diagnostic',
+      'Stored on this device only; zero external telemetry.',
+      'No crash reports recorded',
+      'FitTrack has not recorded any crashes on this device.',
+      'Health metrics, meal logs, and API keys are strictly scrubbed before saving on-device.',
+      'App Version',
+      'Copy Report',
+      'Share Report',
+      'Clear History',
+      'Local On-Device Diagnostics',
+      'FitTrack transmits zero crash or health telemetry to remote servers. All crash diagnostics are scrubbed and stored locally on your device only.',
+      'Component Stack',
+      'Error Details',
+      'Timestamp',
+      'Platform',
+      'Copied!',
     ];
 
     for (const key of requiredStrings) {
@@ -127,7 +145,7 @@ async function runCrashReportingTests() {
       assert(Boolean((translations.ckb as Record<string, string>)[key]), `Missing Kurdish translation for: "${key}"`);
     }
 
-    console.log('✓ Test 4 passed: All crash reporting strings localized in Arabic and Kurdish.');
+    console.log('✓ Test 4 passed: All crash reporting and diagnostic strings localized in Arabic and Kurdish.');
   }
 
   console.log('====================================================');

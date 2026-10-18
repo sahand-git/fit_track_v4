@@ -63,17 +63,18 @@ FitTrack provides optional AI-assisted meal analysis and nutrition coaching powe
 
 ---
 
-## 6. Optional Anonymized Crash Reporting & Diagnostics
+## 6. Local-Only On-Device Crash Diagnostics (Zero Remote Telemetry)
 
-FitTrack includes an optional, privacy-first diagnostic reporting mechanism:
-- **Strict Opt-In Consent:** Crash reporting is disabled by default (`enableCrashReporting: false`). It is only activated if you explicitly opt in during onboarding or toggle it on in **Profile -> Data & Storage**.
-- **Deep Data Scrubbing:** Before any diagnostic report is created:
+FitTrack operates with a strict zero-telemetry architecture:
+- **Zero Remote Transmission:** FitTrack does **not** transmit crash reports, error logs, or performance telemetry to any remote server, cloud analytics provider, or third-party service (no Sentry, no Crashlytics, no Firebase Crashlytics).
+- **On-Device Diagnostic Logs:** To help users troubleshoot issues and share details with developers if they choose, FitTrack keeps a local ring buffer of up to 5 recent scrubbed crash reports in device sandbox storage (`AsyncStorage`).
+- **Deep Data Scrubbing:** Before any diagnostic report is saved on-device:
   - Personal biometrics (name, email, age, height, weight) are completely stripped.
   - All nutritional logs, meal names, custom recipes, calorie values, and macronutrients are scrubbed and replaced with `[health-data-scrubbed]`.
-  - All API keys (including Google AI Studio Gemini keys and AIza tokens) are redacted with `[redacted-token]`.
+  - All API keys (including Google AI Studio Gemini keys and AIza tokens) are redacted with `[redacted-token]` or `[redacted-key]`.
   - Local file system paths are generalized to `app://`.
-- **Diagnostic Scope:** Only technical stack traces, error class names, platform OS version, and application version are captured to resolve application crashes.
-- **Immediate Revocation:** You can toggle crash reporting off at any time in Profile settings. Disabling it immediately stops all diagnostic collection.
+- **Diagnostic Scope:** Only technical stack traces, error class names, platform OS version, and application version are recorded on-device to aid bug diagnosis.
+- **User Control:** Users can view the most recent crash report, copy it to the clipboard, share it manually, or permanently clear all stored diagnostic logs at any time in **Profile -> Data & Storage -> View last crash report**.
 
 ---
 

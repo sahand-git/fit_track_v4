@@ -82,16 +82,14 @@ This document provides exact, verified answers for the Google Play Console **Dat
 
 #### 1. Crash Logs & Diagnostics
 *(Application stack traces, unhandled exceptions, operating system version).*
-- **Collected?**: Yes (Optional, strictly opt-in consent).
+- **Collected?**: **No** (FitTrack transmits zero crash logs or performance telemetry to remote servers).
 - **Shared?**: **No** (0 third-party sharing).
-- **Ephemeral processing?**: No.
-- **Required or optional?**: **Optional** (Disabled by default; user must explicitly opt in during onboarding or in Profile settings).
+- **On-Device Storage Only**: Up to 5 scrubbed technical error reports are retained strictly on-device in sandboxed storage for user troubleshooting; zero remote transmission.
 - **Data Scrubbing**:
   - Personal biometric data (name, email, age, weight) is completely stripped.
   - All nutritional logs, food names, recipes, and calories are redacted (`[health-data-scrubbed]`).
   - All API keys and authentication tokens are redacted (`[redacted-token]`).
-- **Purposes**:
-  - [x] Analytics & App functionality (identifying app crashes and fixing bugs).
+- **User Control**: Users can view, copy, share, or clear all on-device crash logs inside Profile -> Data & Storage.
 
 ---
 

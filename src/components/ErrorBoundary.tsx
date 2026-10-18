@@ -7,12 +7,13 @@ import {
   SafeAreaView,
   Platform,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { AppText as Text } from './AppText';
-import { AlertTriangle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react-native';
 import { theme } from '../theme';
 import { I18nContext } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { recordCrash } from '../services/crashReportingService';
+import { recordCrash, scrubCrashText, getAppVersion } from '../services/crashReportingService';
 
 interface Props {
   children: ReactNode;
@@ -24,6 +25,7 @@ interface State {
   error: Error | null;
   errorInfo: ErrorInfo | null;
   showDetails: boolean;
+  copied: boolean;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -34,6 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
       error: null,
       errorInfo: null,
       showDetails: false,
+      copied: false,
     };
   }
 
@@ -44,7 +47,7 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('FitTrack ErrorBoundary caught error:', error, errorInfo);
     this.setState({ errorInfo });
-    // Record scrubbed crash diagnostic only if user gave explicit consent
+    // Record scrubbed crash diagnostic locally on device (never transmitted externally)
     recordCrash(error, errorInfo).catch(() => {});
   }
 
@@ -54,11 +57,43 @@ export class ErrorBoundary extends Component<Props, State> {
       error: null,
       errorInfo: null,
       showDetails: false,
+      copied: false,
     });
   };
 
   toggleDetails = () => {
     this.setState((prev) => ({ showDetails: !prev.showDetails }));
+  };
+
+  handleCopyDetails = async () => {
+    const errorName = scrubCrashText(this.state.error?.name || 'Error');
+    const errorMessage = scrubCrashText(this.state.error?.message || this.state.error?.toString() || 'Unknown error');
+    const rawStack = this.state.errorInfo?.componentStack || this.state.error?.stack || '';
+    const scrubbedStack = scrubCrashText(rawStack);
+    const stackLines = scrubbedStack
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .slice(0, 8)
+      .join('\n');
+
+    const appVer = getAppVersion();
+    const payload = [
+      `FitTrack Error Diagnostic (v${appVer})`,
+      `Error: ${errorName}`,
+      `Message: ${errorMessage}`,
+      stackLines ? `\nComponent Stack (first 8 lines):\n${stackLines}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    try {
+      await Clipboard.setStringAsync(payload);
+      this.setState({ copied: true });
+      setTimeout(() => this.setState({ copied: false }), 2000);
+    } catch (err) {
+      console.error('Failed to copy error details:', err);
+    }
   };
 
   render() {
@@ -71,6 +106,19 @@ export class ErrorBoundary extends Component<Props, State> {
         <I18nContext.Consumer>
           {(language) => {
             const t = (key: string) => translate(language, key);
+            const errorName = scrubCrashText(this.state.error?.name || 'Error');
+            const errorMessage = scrubCrashText(
+              this.state.error?.message || this.state.error?.toString() || t('Unknown error')
+            );
+            const rawStack = this.state.errorInfo?.componentStack || this.state.error?.stack || '';
+            const scrubbedStack = scrubCrashText(rawStack);
+            const stackLines = scrubbedStack
+              .split('\n')
+              .map((l) => l.trim())
+              .filter(Boolean)
+              .slice(0, 8)
+              .join('\n');
+
             return (
               <SafeAreaView style={styles.safeArea}>
                 <ScrollView contentContainerStyle={styles.container}>
@@ -115,15 +163,30 @@ export class ErrorBoundary extends Component<Props, State> {
                   {this.state.showDetails && (
                     <View style={styles.detailsBox}>
                       <Text style={styles.errorText}>
-                        {__DEV__
-                          ? (this.state.error?.toString() || t('Unknown error'))
-                          : t('An unexpected application error occurred. Details have been logged securely.')}
+                        {errorName}: {errorMessage}
                       </Text>
-                      {__DEV__ && this.state.errorInfo?.componentStack && (
+                      {stackLines ? (
                         <Text style={styles.stackText}>
-                          {this.state.errorInfo.componentStack.slice(0, 1000)}
+                          {stackLines}
                         </Text>
-                      )}
+                      ) : null}
+                      <TouchableOpacity
+                        style={styles.copyBtn}
+                        onPress={this.handleCopyDetails}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={this.state.copied ? t('Copied!') : t('Copy error details')}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      >
+                        {this.state.copied ? (
+                          <Check size={14} color={theme.colors.primary} />
+                        ) : (
+                          <Copy size={14} color={theme.colors.textMuted} />
+                        )}
+                        <Text style={styles.copyBtnText}>
+                          {this.state.copied ? t('Copied!') : t('Copy error details')}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   )}
                 </ScrollView>
@@ -212,7 +275,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     width: '100%',
-    maxHeight: 240,
+    maxHeight: 280,
   },
   errorText: {
     fontSize: 12,
@@ -224,5 +287,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.textMuted,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  copyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  copyBtnText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.textPrimary,
   },
 });

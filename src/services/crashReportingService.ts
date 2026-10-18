@@ -2,8 +2,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const CRASH_CONSENT_STORAGE_KEY = '@fittrack_crash_reporting_consent';
 export const CRASH_LOGS_STORAGE_KEY = '@fittrack_recent_crashes';
-const APP_VERSION = '1.0.0';
 const MAX_STORED_CRASHES = 5;
+
+export function getAppVersion(): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Constants = require('expo-constants');
+    return Constants?.default?.expoConfig?.version ?? Constants?.expoConfig?.version ?? '1.0.0';
+  } catch {
+    return '1.0.0';
+  }
+}
+
+export const APP_VERSION = getAppVersion();
 
 export interface RawCrashPayload {
   errorName?: string;
@@ -81,7 +92,7 @@ export function sanitizeCrashReport(
   return {
     id: `crash_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     timestamp: new Date().toISOString(),
-    appVersion: APP_VERSION,
+    appVersion: getAppVersion(),
     platform: payload.platform || 'android',
     errorName,
     errorMessage,
@@ -115,8 +126,9 @@ export async function setCrashReportingConsent(enabled: boolean): Promise<void> 
 }
 
 /**
- * Records a crash report only if the user has given explicit consent.
- * Never transmits or stores data when consent is disabled.
+ * Records a scrubbed crash report directly to local device storage.
+ * Always stores the last 5 scrubbed crashes locally (never transmitted anywhere).
+ * Remote reporting consent does not gate local storage.
  */
 export async function recordCrash(
   error: unknown,
@@ -124,11 +136,6 @@ export async function recordCrash(
   customApiKey?: string
 ): Promise<ScrubbedCrashReport | null> {
   try {
-    const isConsentGiven = await getCrashReportingConsent();
-    if (!isConsentGiven) {
-      return null;
-    }
-
     const rawError = error instanceof Error ? error : new Error(String(error || 'Unknown error'));
     const payload: RawCrashPayload = {
       errorName: rawError.name,
@@ -139,7 +146,7 @@ export async function recordCrash(
 
     const sanitized = sanitizeCrashReport(payload, customApiKey);
 
-    // Save to local ring buffer for inspection / diagnostics
+    // Save to local ring buffer for on-device diagnostics (never sent anywhere)
     const existingRaw = await AsyncStorage.getItem(CRASH_LOGS_STORAGE_KEY);
     const existing: ScrubbedCrashReport[] = existingRaw ? JSON.parse(existingRaw) : [];
     const updated = [sanitized, ...existing].slice(0, MAX_STORED_CRASHES);
@@ -150,6 +157,26 @@ export async function recordCrash(
     console.error('Error while recording sanitized crash:', err);
     return null;
   }
+}
+
+/**
+ * Retrieves up to 5 recently stored scrubbed crashes from local device storage.
+ */
+export async function getStoredCrashes(): Promise<ScrubbedCrashReport[]> {
+  try {
+    const raw = await AsyncStorage.getItem(CRASH_LOGS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Retrieves the most recent scrubbed crash report from local device storage.
+ */
+export async function getLastStoredCrash(): Promise<ScrubbedCrashReport | null> {
+  const crashes = await getStoredCrashes();
+  return crashes.length > 0 ? crashes[0] : null;
 }
 
 /**

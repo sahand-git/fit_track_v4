@@ -6,13 +6,23 @@
  * Strictly guarantees that no health metrics, meal logs, weights, or API keys are included.
  */
 
+function getFeedbackAppVersion(): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Constants = require('expo-constants');
+    return Constants?.default?.expoConfig?.version ?? Constants?.expoConfig?.version ?? '1.0.0';
+  } catch {
+    return '1.0.0';
+  }
+}
+
 /**
  * Clearly marked placeholder support email constant.
  * Replace with your team's support inbox prior to public production distribution.
  */
 export const FEEDBACK_SUPPORT_EMAIL = 'support-placeholder@fittrack.local';
 
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = getFeedbackAppVersion();
 
 export interface FeedbackDeviceMeta {
   appVersion?: string;
