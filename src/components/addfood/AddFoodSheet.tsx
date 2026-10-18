@@ -53,6 +53,7 @@ import {
 } from '../../services/plateAnalysisService';
 import { GeminiKeyManager } from '../GeminiKeyManager';
 import { AiReview } from './AiReview';
+import { shouldResetFoodSelection, resolveSelectedVariantId } from './addFoodSelectionGuard';
 import { SaveSuccessOverlay } from '../SaveSuccessOverlay';
 import { FoodThumbnail } from '../FoodThumbnail';
 import { RequestFoodModal } from '../RequestFoodModal';
@@ -155,9 +156,9 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [prevFoodId, setPrevFoodId] = useState<string | null>(null);
 
   const currentFoodId = selectedFood?.id ?? null;
-  if (currentFoodId !== prevFoodId) {
+  if (shouldResetFoodSelection(prevFoodId, selectedFood)) {
     setPrevFoodId(currentFoodId);
-    setSelectedVariantId(selectedFood?.variants?.[0]?.id ?? null);
+    setSelectedVariantId(resolveSelectedVariantId(selectedFood));
     setShowIngredients(false);
   }
 
