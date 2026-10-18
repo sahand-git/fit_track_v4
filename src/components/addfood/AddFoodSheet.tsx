@@ -53,6 +53,7 @@ import {
 } from '../../services/plateAnalysisService';
 import { GeminiKeyManager } from '../GeminiKeyManager';
 import { AiReview } from './AiReview';
+import { shouldResetFoodSelection, resolveSelectedVariantId } from './addFoodSelectionGuard';
 import { SaveSuccessOverlay } from '../SaveSuccessOverlay';
 import { FoodThumbnail } from '../FoodThumbnail';
 import { RequestFoodModal } from '../RequestFoodModal';
@@ -155,9 +156,9 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [prevFoodId, setPrevFoodId] = useState<string | null>(null);
 
   const currentFoodId = selectedFood?.id ?? null;
-  if (currentFoodId !== prevFoodId) {
+  if (shouldResetFoodSelection(prevFoodId, selectedFood)) {
     setPrevFoodId(currentFoodId);
-    setSelectedVariantId(selectedFood?.variants?.[0]?.id ?? null);
+    setSelectedVariantId(resolveSelectedVariantId(selectedFood));
     setShowIngredients(false);
   }
 
@@ -223,12 +224,14 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const isToday = date === getTodayDateString();
   const isFuture = date > getTodayDateString();
 
-  const [prevMealType, setPrevMealType] = useState<MealType | null | undefined>(mealType);
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (visible !== prevVisible || mealType !== prevMealType) {
-    setPrevVisible(visible);
-    setPrevMealType(mealType);
-    if (visible) {
+  const currentMealType = mealType ?? null;
+  const currentVisible = Boolean(visible);
+  const [prevMealType, setPrevMealType] = useState<MealType | null>(currentMealType);
+  const [prevVisible, setPrevVisible] = useState(currentVisible);
+  if (currentVisible !== prevVisible || currentMealType !== prevMealType) {
+    setPrevVisible(currentVisible);
+    setPrevMealType(currentMealType);
+    if (currentVisible) {
       setSelectedMeal(mealType || getDefaultMealType());
       if (initialTab) {
         setActiveTab(initialTab);
@@ -1796,6 +1799,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
               {photoResult && (
                 <AiReview
+                  key={`photo_${photoResult.mealName}_${photoResult.totalCalories}_${photoResult.items.length}`}
                   result={photoResult}
                   mealType={selectedMeal}
                   targetDate={date}
@@ -1871,6 +1875,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
               {describeResult && (
                 <AiReview
+                  key={`describe_${describeResult.mealName}_${describeResult.totalCalories}_${describeResult.items.length}`}
                   result={describeResult}
                   mealType={selectedMeal}
                   targetDate={date}

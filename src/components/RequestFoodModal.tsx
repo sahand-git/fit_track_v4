@@ -49,13 +49,14 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fallbackMode, setFallbackMode] = useState<'signed_out' | 'unverified' | 'rate_limited' | null>(null);
   const [rateLimitWait, setRateLimitWait] = useState<number>(0);
-  const [prevVisible, setPrevVisible] = useState(visible);
+  const currentVisible = Boolean(visible);
+  const [prevVisible, setPrevVisible] = useState(currentVisible);
 
-  if (visible !== prevVisible) {
-    setPrevVisible(visible);
-    if (visible) {
-      setFoodName(initialFoodName);
-      setBarcode(initialBarcode);
+  if (currentVisible !== prevVisible) {
+    setPrevVisible(currentVisible);
+    if (currentVisible) {
+      setFoodName(initialFoodName || '');
+      setBarcode(initialBarcode || '');
       setBrand('');
       setNotes('');
       setSubmitting(false);
