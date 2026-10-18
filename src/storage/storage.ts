@@ -144,6 +144,8 @@ export async function loadMedicalDisclaimerAccepted(): Promise<boolean> {
   try {
     const raw = await AsyncStorage.getItem(getScopedStorageKey(MEDICAL_DISCLAIMER_KEY));
     if (raw === 'true') return true;
+    const root = await AsyncStorage.getItem(MEDICAL_DISCLAIMER_KEY);
+    if (root === 'true') return true;
     const profile = await loadUserProfile();
     return !!profile.hasAcceptedMedicalDisclaimer;
   } catch (err) {
@@ -155,10 +157,9 @@ export async function loadMedicalDisclaimerAccepted(): Promise<boolean> {
 export async function saveMedicalDisclaimerAccepted(accepted: boolean): Promise<void> {
   return enqueueStorageOperation(getScopedStorageKey(MEDICAL_DISCLAIMER_KEY), async () => {
     try {
-      await AsyncStorage.setItem(
-        getScopedStorageKey(MEDICAL_DISCLAIMER_KEY),
-        accepted ? 'true' : 'false'
-      );
+      const val = accepted ? 'true' : 'false';
+      await AsyncStorage.setItem(getScopedStorageKey(MEDICAL_DISCLAIMER_KEY), val);
+      await AsyncStorage.setItem(MEDICAL_DISCLAIMER_KEY, val);
       const profile = await loadUserProfile();
       if (profile.hasAcceptedMedicalDisclaimer !== accepted) {
         await AsyncStorage.setItem(

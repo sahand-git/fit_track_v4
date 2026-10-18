@@ -157,7 +157,6 @@ function FitTrackApp() {
     let isCancelled = false;
     async function init() {
       setInitError(null);
-      setInitialLoaded(false);
       try {
         const p = await loadUserProfile();
         const disclaimerAccepted = await loadMedicalDisclaimerAccepted();
@@ -546,7 +545,7 @@ function FitTrackApp() {
     );
   }
 
-  if (!profile.hasAcceptedMedicalDisclaimer) {
+  if (!profile.hasAcceptedMedicalDisclaimer && tempScreen !== 'account') {
     return (
       <I18nProvider language={language}>
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -573,7 +572,7 @@ function FitTrackApp() {
     );
   }
 
-  if (!profile.isOnboarded) {
+  if (!profile.isOnboarded && tempScreen !== 'account') {
     return (
       <I18nProvider language={language}>
         <OnboardingModal onComplete={handleSaveProfile} onLanguageChange={setAppLanguage} />

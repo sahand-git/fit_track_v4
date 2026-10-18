@@ -226,10 +226,16 @@ export async function reauthenticateForAccountDeletion(password?: string): Promi
     await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
     return;
   }
+  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  if (!webClientId || webClientId.trim() === '') {
+    const err = new Error('Google Web Client ID is not configured.');
+    (err as { code?: string }).code = 'MISSING_WEB_CLIENT_ID';
+    throw err;
+  }
   const { GoogleOneTapSignIn, isSuccessResponse } = await import('react-native-nitro-google-signin');
-  GoogleOneTapSignIn.configure({ webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'autoDetect' });
+  GoogleOneTapSignIn.configure({ webClientId });
   const response = await GoogleOneTapSignIn.signIn();
-  if (!isSuccessResponse(response) || !response.data.idToken) throw new Error('Confirm your Google account again to delete this account.');
+  if (!response || !isSuccessResponse(response) || !response.data?.idToken) throw new Error('Confirm your Google account again to delete this account.');
   await reauthenticateWithCredential(user, GoogleAuthProvider.credential(response.data.idToken));
 }
 
@@ -266,10 +272,16 @@ export async function loginWithGoogle(): Promise<AuthIdentity> {
   let response: any;
   try {
     response = await GoogleOneTapSignIn.signIn();
-    if (response.type === 'noSavedCredentialFound') response = await GoogleOneTapSignIn.createAccount();
-    if (response.type === 'noSavedCredentialFound') response = await GoogleOneTapSignIn.presentExplicitSignIn();
+    if (response?.type === 'noSavedCredentialFound') response = await GoogleOneTapSignIn.createAccount();
+    if (response?.type === 'noSavedCredentialFound') response = await GoogleOneTapSignIn.presentExplicitSignIn();
   } catch (signErr) {
     throw signErr;
+  }
+
+  if (!response) {
+    const err = new Error('Google sign-in was cancelled.');
+    (err as { code?: string }).code = 'SIGN_IN_CANCELLED';
+    throw err;
   }
 
   if (response.type === 'cancelled') {

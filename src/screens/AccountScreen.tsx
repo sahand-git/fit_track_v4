@@ -62,11 +62,24 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
     }
   };
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const perform = async (action: () => Promise<void>, success: string) => {
     setBusy(true); setError(''); setMessage('');
-    try { await action(); setMessage(t(success)); }
-    catch (cause) { setError(formatAuthError(cause, language)); }
-    finally { setBusy(false); }
+    try {
+      await action();
+      if (mountedRef.current) setMessage(t(success));
+    } catch (cause) {
+      if (mountedRef.current) setError(formatAuthError(cause, language));
+    } finally {
+      if (mountedRef.current) setBusy(false);
+    }
   };
 
   const signIn = () => perform(async () => { if (mode === 'create') await registerWithEmail(email, password); else await loginWithEmail(email, password); }, mode === 'create' ? 'Account created. Check your email to verify it.' : 'Signed in successfully.');
