@@ -204,3 +204,22 @@ export async function deleteAccountAndBackup(uid: string, password?: string): Pr
     throw new Error(`Account deletion failed. Your cloud backup was preserved. Sign in again and retry. ${error instanceof Error ? error.message : ''}`);
   }
 }
+
+/**
+ * Checks whether an existing cloud backup is present in Firestore without throwing.
+ */
+export async function getCloudBackupMetadata(uid: string): Promise<{ exists: boolean; exportedAt?: string } | null> {
+  try {
+    if (!firebaseConfigured || !firestore) return null;
+    const snap = await getDoc(backupRef(uid));
+    if (!snap.exists()) return { exists: false };
+    const data = snap.data();
+    return {
+      exists: true,
+      exportedAt: data?.exportedAt || data?.backup?.exportedAt,
+    };
+  } catch (err) {
+    console.warn('Failed to inspect cloud backup metadata:', err);
+    return null;
+  }
+}

@@ -6,7 +6,8 @@ import { AppText as Text } from '../components/AppText';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { AuthIdentity, formatAuthError, loginWithEmail, loginWithGoogle, logout, refreshVerificationStatus, registerWithEmail, requestPasswordReset, resendVerification } from '../services/authService';
 import { AccountDiagnosticInfo, checkAccountSetup, formatAccountDiagnostics } from '../services/accountDiagnosticService';
-import { createCloudBackup, deleteAccountAndBackup, restoreCloudBackup } from '../services/cloudBackupService';
+import { createCloudBackup, deleteAccountAndBackup, getCloudBackupMetadata, restoreCloudBackup } from '../services/cloudBackupService';
+import { copyGuestDataToAccount, getGuestDataSummary, isAccountEmpty } from '../services/accountSyncService';
 import { firebaseConfigured } from '../services/firebaseApp';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -82,8 +83,94 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
     }
   };
 
-  const signIn = () => perform(async () => { if (mode === 'create') await registerWithEmail(email, password); else await loginWithEmail(email, password); }, mode === 'create' ? 'Account created. Check your email to verify it.' : 'Signed in successfully.');
-  const googleSignIn = () => perform(async () => { await loginWithGoogle(); }, 'Signed in successfully.');
+  const checkGuestDataOffer = async (uid: string) => {
+    try {
+      const empty = await isAccountEmpty(uid);
+      if (!empty) return;
+
+      const guestSummary = await getGuestDataSummary();
+      if (guestSummary.totalRecords > 0) {
+        const parts: string[] = [];
+        if (guestSummary.mealsCount > 0) parts.push(`${guestSummary.mealsCount} ${t('meals')}`);
+        if (guestSummary.workoutsCount > 0) parts.push(`${guestSummary.workoutsCount} ${t('workouts')}`);
+        if (guestSummary.weightsCount > 0) parts.push(`${guestSummary.weightsCount} ${t('weight records')}`);
+
+        const itemsStr = parts.join(', ');
+        Alert.alert(
+          t("Copy this device's data into your account?"),
+          `${t('Found')} ${itemsStr} ${t("recorded on this device. Would you like to copy them into your account? Your guest data will remain safe.")}`,
+          [
+            { text: t('Start fresh'), style: 'cancel' },
+            {
+              text: t('Copy to account'),
+              style: 'default',
+              onPress: () => perform(async () => {
+                await copyGuestDataToAccount(uid);
+                onRestoreComplete();
+              }, 'Device data copied to your account.'),
+            },
+          ]
+        );
+      }
+    } catch (copyCheckErr) {
+      console.warn('Could not check guest data for copy offer:', copyCheckErr);
+    }
+  };
+
+  const handlePostSignInDataFlow = async (uid: string) => {
+    try {
+      const backupMeta = await getCloudBackupMetadata(uid);
+      if (backupMeta?.exists) {
+        const dateStr = backupMeta.exportedAt ? new Date(backupMeta.exportedAt).toLocaleDateString() : '';
+        Alert.alert(
+          t('Restore cloud backup?'),
+          dateStr
+            ? `${t('A cloud backup from')} ${dateStr} ${t('is available in your account. Would you like to restore it now?')}`
+            : t('A cloud backup is available in your account. Would you like to restore it now?'),
+          [
+            {
+              text: t('Skip'),
+              style: 'cancel',
+              onPress: () => {
+                checkGuestDataOffer(uid);
+              },
+            },
+            {
+              text: t('Restore'),
+              style: 'default',
+              onPress: () => perform(async () => {
+                await restoreCloudBackup(uid);
+                onRestoreComplete();
+              }, 'Cloud backup restored'),
+            },
+          ]
+        );
+        return;
+      }
+    } catch (backupCheckErr) {
+      console.warn('Could not check cloud backup metadata:', backupCheckErr);
+    }
+
+    await checkGuestDataOffer(uid);
+  };
+
+  const signIn = () => perform(async () => {
+    if (mode === 'create') {
+      await registerWithEmail(email, password);
+    } else {
+      const loggedUser = await loginWithEmail(email, password);
+      if (loggedUser?.uid) {
+        setTimeout(() => handlePostSignInDataFlow(loggedUser.uid), 400);
+      }
+    }
+  }, mode === 'create' ? 'Account created. Check your email to verify it.' : 'Signed in successfully.');
+
+  const googleSignIn = () => perform(async () => {
+    const loggedUser = await loginWithGoogle();
+    if (loggedUser?.uid) {
+      setTimeout(() => handlePostSignInDataFlow(loggedUser.uid), 400);
+    }
+  }, 'Signed in successfully.');
   const openSetupGuide = async () => {
     try {
       await Linking.openURL(FIREBASE_SETUP_GUIDE_URL);
