@@ -105,7 +105,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
         setSuccessMessage(null);
         onRestoreComplete();
         onClose();
-      }, 700);
+      }, 950);
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       Alert.alert(

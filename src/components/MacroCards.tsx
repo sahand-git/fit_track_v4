@@ -147,8 +147,8 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           accessibilityRole="button"
           accessibilityLabel={t('Fiber')}
         >
-          <Text style={styles.secondaryLabel}>{t('Fiber')}:</Text>
-          <Text style={styles.secondaryValue}>
+          <Text style={styles.secondaryLabel} numberOfLines={1}>{t('Fiber')}:</Text>
+          <Text style={styles.secondaryValue} numberOfLines={1}>
             {typeof fiberConsumed === 'number' ? Math.round(fiberConsumed * 10) / 10 : 0}/{fiberTarget}g
           </Text>
           {fiberIsIncomplete && (
@@ -166,8 +166,8 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           accessibilityRole="button"
           accessibilityLabel={t('Sugar')}
         >
-          <Text style={styles.secondaryLabel}>{t('Sugar')}:</Text>
-          <Text style={styles.secondaryValue}>
+          <Text style={styles.secondaryLabel} numberOfLines={1}>{t('Sugar')}:</Text>
+          <Text style={styles.secondaryValue} numberOfLines={1}>
             {typeof sugarConsumed === 'number' ? Math.round(sugarConsumed * 10) / 10 : 0}/{sugarTarget}g
           </Text>
           {sugarIsIncomplete && (
@@ -186,7 +186,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           accessibilityLabel={t('Micronutrients & Daily Allowance (RDA)')}
         >
           <Sparkles size={12} color={theme.colors.primary} />
-          <Text style={styles.vitaminsBtnText}>{t('Vitamins')}</Text>
+          <Text style={styles.vitaminsBtnText} numberOfLines={1}>{t('Vitamins')}</Text>
           <ChevronRight size={12} color={theme.colors.textMuted} />
         </TouchableOpacity>
       </View>
@@ -258,11 +258,14 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.surfaceSubtle,
+    flexShrink: 1,
+    minWidth: 0,
   },
   secondaryLabel: {
     fontSize: 11,
     fontWeight: '600',
     color: theme.colors.textSecondary,
+    flexShrink: 1,
   },
   secondaryValue: {
     fontSize: 11,
@@ -283,7 +286,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: theme.radius.sm,
     backgroundColor: `${theme.colors.primary}12`,
-    marginLeft: 'auto',
+    marginStart: 'auto',
+    flexShrink: 0,
   },
   vitaminsBtnText: {
     fontSize: 11,

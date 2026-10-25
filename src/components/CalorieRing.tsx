@@ -105,7 +105,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
             value={remaining}
             style={[styles.remainingValue, isOver && { color: theme.colors.accent }]}
           />
-          <Text style={styles.remainingLabel}>
+          <Text style={styles.remainingLabel} numberOfLines={2}>
             {isOver ? t('kcal over budget') : t('kcal remaining')}
           </Text>
         </View>
@@ -172,6 +172,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
   ledgerRow: {
     flexDirection: 'row',

@@ -39,12 +39,15 @@ import {
   Trash2,
   Bookmark,
   Info,
+  Globe,
+  Zap,
 } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { LoggedMeal, MealType, FoodItem, MealTemplate } from '../../types';
 import { VERIFIED_FOOD_DATABASE, REGIONAL_FOODS } from '../../data/foodDatabase';
 import { lookupBarcodeWithFallbacks } from '../../services/barcodeService';
+import { searchOnlineFoodDatabase } from '../../services/onlineFoodSearchService';
 import {
   analyzeMealImage,
   estimateMealFromText,
@@ -70,6 +73,7 @@ import {
   loadCustomFoods,
   addCustomFood,
   loadBarcodeCache,
+  upsertBarcodeCacheItem,
   copyYesterdayMeals,
   copyYesterdayMealType,
   getYesterdayMealsPreview,
@@ -200,6 +204,20 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [yesterdayMealTypePreview, setYesterdayMealTypePreview] = useState<YesterdayMealsPreview>({ count: 0, calories: 0 });
   const [yesterdayAllPreview, setYesterdayAllPreview] = useState<YesterdayMealsPreview>({ count: 0, calories: 0 });
 
+  // Online Food Search state
+  const [onlineFoods, setOnlineFoods] = useState<FoodItem[]>([]);
+  const [isSearchingOnline, setIsSearchingOnline] = useState(false);
+  const [hasSearchedOnline, setHasSearchedOnline] = useState(false);
+
+  // Quick Add state
+  const [quickAddModalVisible, setQuickAddModalVisible] = useState(false);
+  const [quickAddName, setQuickAddName] = useState('');
+  const [quickAddCalories, setQuickAddCalories] = useState('');
+  const [quickAddProtein, setQuickAddProtein] = useState('');
+  const [quickAddCarbs, setQuickAddCarbs] = useState('');
+  const [quickAddFat, setQuickAddFat] = useState('');
+  const [quickAddError, setQuickAddError] = useState<string | null>(null);
+
   // Barcode state
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [isScanningBarcode, setIsScanningBarcode] = useState(false);
@@ -322,8 +340,12 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     setDescribeError(null);
     setCustomModalVisible(false);
     setTemplateModalVisible(false);
+    setQuickAddModalVisible(false);
     setCustomError(null);
     setTemplateError(null);
+    setQuickAddError(null);
+    setOnlineFoods([]);
+    setHasSearchedOnline(false);
     onClose();
   };
 
@@ -348,6 +370,72 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     } finally {
       setBarcodeLoading(false);
     }
+  };
+
+  const handleSearchOnline = async () => {
+    const clean = searchQuery.trim();
+    if (!clean || clean.length < 2 || isSearchingOnline) return;
+    setIsSearchingOnline(true);
+    setHasSearchedOnline(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    try {
+      const results = await searchOnlineFoodDatabase(clean);
+      setOnlineFoods(results);
+      if (results.length > 0) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
+    } catch {
+      setOnlineFoods([]);
+    } finally {
+      setIsSearchingOnline(false);
+    }
+  };
+
+  const handleQuickAddSave = () => {
+    if (isFuture) return;
+    const cal = parseInt(quickAddCalories, 10);
+    if (isNaN(cal) || cal <= 0) {
+      setQuickAddError(t('Please enter valid numbers for calories and macros.'));
+      return;
+    }
+
+    const p = parseFloat(quickAddProtein) || 0;
+    const c = parseFloat(quickAddCarbs) || 0;
+    const f = parseFloat(quickAddFat) || 0;
+    const mealName =
+      quickAddName.trim() ||
+      `${t('Quick Add')} (${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))})`;
+
+    const meal: LoggedMeal = {
+      id: createUniqueId('meal'),
+      foodId: `quick_add_${Date.now()}`,
+      name: mealName,
+      mealType: selectedMeal,
+      servings: 1,
+      servingSize: '1 serving',
+      servingGrams: 100,
+      calories: cal,
+      protein: Math.round(p * 10) / 10,
+      carbs: Math.round(c * 10) / 10,
+      fat: Math.round(f * 10) / 10,
+      source: 'custom',
+      timestamp: new Date().toISOString(),
+    };
+
+    onAddMeal(meal, date);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    setQuickAddModalVisible(false);
+    setQuickAddName('');
+    setQuickAddCalories('');
+    setQuickAddProtein('');
+    setQuickAddCarbs('');
+    setQuickAddFat('');
+    setQuickAddError(null);
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+      handleClose();
+    }, 950);
   };
 
   const handleStartLiveBarcodeScan = async () => {
@@ -423,11 +511,14 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     addRecentFood(selectedFood)
       .then((updated) => setRecentFoods(updated))
       .catch((err) => console.error('Failed to save recent food:', err));
+    if (selectedFood.source === 'open_food_facts' || selectedFood.barcode) {
+      upsertBarcodeCacheItem(selectedFood).catch(() => {});
+    }
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);
       handleClose();
-    }, 450);
+    }, 950);
   };
 
   const handleCustomizeSelectedFood = () => {
@@ -541,7 +632,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
         setTimeout(() => {
           setShowSuccess(false);
           handleClose();
-        }, 450);
+        }, 950);
       } else {
         Alert.alert(
           t("Copy yesterday's meals"),
@@ -598,7 +689,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
         setTimeout(() => {
           setShowSuccess(false);
           handleClose();
-        }, 450);
+        }, 950);
       } else {
         Alert.alert(
           getCopyMealTypeLabel(selectedMeal),
@@ -643,7 +734,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     setTimeout(() => {
       setShowSuccess(false);
       handleClose();
-    }, 450);
+    }, 950);
   };
 
   const handleDeleteTemplate = (template: MealTemplate) => {
@@ -777,7 +868,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     setTimeout(() => {
       setShowSuccess(false);
       handleClose();
-    }, 450);
+    }, 950);
   };
 
   // Filtered Food Search with Arabic/Sorani variant normalization (memoized)
@@ -1029,12 +1120,20 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         placeholder={t('Search foods...')}
                         placeholderTextColor={theme.colors.textMuted}
                         value={searchQuery}
-                        onChangeText={setSearchQuery}
+                        onChangeText={(txt) => {
+                          setSearchQuery(txt);
+                          setOnlineFoods([]);
+                          setHasSearchedOnline(false);
+                        }}
                         autoFocus={!selectedFood}
                       />
                       {searchQuery.length > 0 && (
                         <TouchableOpacity
-                          onPress={() => setSearchQuery('')}
+                          onPress={() => {
+                            setSearchQuery('');
+                            setOnlineFoods([]);
+                            setHasSearchedOnline(false);
+                          }}
                           accessibilityRole="button"
                           accessibilityLabel={t('Clear search')}
                         >
@@ -1445,6 +1544,26 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                       contentContainerStyle={styles.quickActionsRow}
                     >
                       <TouchableOpacity
+                        style={[styles.quickActionBtn, styles.quickAddActionBtn]}
+                        onPress={() => {
+                          setQuickAddName('');
+                          setQuickAddCalories('');
+                          setQuickAddProtein('');
+                          setQuickAddCarbs('');
+                          setQuickAddFat('');
+                          setQuickAddError(null);
+                          setQuickAddModalVisible(true);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Quick Add Calories')}
+                      >
+                        <Zap size={13} color={theme.colors.primary} />
+                        <Text style={[styles.quickActionBtnText, { fontWeight: '700' }]} numberOfLines={1}>
+                          {t('Quick Add')}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
                         style={styles.quickActionBtn}
                         onPress={handleCopyYesterdayMealType}
                         disabled={copyMealTypeLoading || isFuture}
@@ -1622,8 +1741,79 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             ? t('No custom foods yet.')
                             : foodFilter === 'scanned'
                             ? t('No scanned foods in cache yet.')
-                            : t('Could not find food for this barcode.')}
+                            : `${t('No foods found matching')} "${searchQuery}"`}
                         </Text>
+
+                        {searchQuery.trim().length >= 2 && !isSearchingOnline && !hasSearchedOnline && (
+                          <TouchableOpacity
+                            style={styles.globalSearchPromptBtn}
+                            onPress={handleSearchOnline}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('Search Global Database')}
+                          >
+                            <Globe size={15} color={theme.colors.primary} />
+                            <Text style={styles.globalSearchPromptBtnText}>
+                              {t('Search Global Database')} ("{searchQuery.trim()}")
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {isSearchingOnline && (
+                          <View style={styles.globalSearchLoadingBox}>
+                            <ActivityIndicator size="small" color={theme.colors.primary} />
+                            <Text style={styles.globalSearchLoadingText}>{t('Searching global database...')}</Text>
+                          </View>
+                        )}
+
+                        {hasSearchedOnline && onlineFoods.length > 0 && (
+                          <View style={{ width: '100%', marginTop: 8 }}>
+                            <View style={styles.onlineSectionHeader}>
+                              <Globe size={14} color={theme.colors.secondary} />
+                              <Text style={styles.onlineSectionTitle}>
+                                {t('Global Database Results')} ({onlineFoods.length})
+                              </Text>
+                            </View>
+                            {onlineFoods.map((item) => (
+                              <TouchableOpacity
+                                key={item.id}
+                                style={[
+                                  styles.foodListItem,
+                                  selectedFood?.id === item.id && styles.foodListItemActive,
+                                ]}
+                                onPress={() => {
+                                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                                  setSelectedFood(item);
+                                }}
+                                activeOpacity={0.7}
+                              >
+                                <FoodThumbnail
+                                  name={item.name}
+                                  category={item.category}
+                                  imageUrl={item.imageUrl}
+                                  size="small"
+                                  style={{ marginEnd: 12 }}
+                                />
+                                <View style={{ flex: 1 }}>
+                                  <Text style={styles.itemTitle}>{item.name}</Text>
+                                  <Text style={styles.itemSub}>
+                                    {item.brand ? `${item.brand} • ` : ''}
+                                    {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
+                                  </Text>
+                                </View>
+                                <View style={styles.itemRightCol}>
+                                  <Text style={styles.itemKcal}>{item.calories} kcal</Text>
+                                </View>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        )}
+
+                        {hasSearchedOnline && onlineFoods.length === 0 && (
+                          <View style={styles.onlineNoResultsBox}>
+                            <Text style={styles.onlineNoResultsText}>{t('No online foods found.')}</Text>
+                          </View>
+                        )}
+
                         <TouchableOpacity
                           style={styles.requestFoodPromptBtn}
                           onPress={() => {
@@ -1706,6 +1896,70 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             </TouchableOpacity>
                           );
                         })}
+                        {searchQuery.trim().length >= 2 && !isSearchingOnline && !hasSearchedOnline && (
+                          <TouchableOpacity
+                            style={styles.globalSearchPromptBtn}
+                            onPress={handleSearchOnline}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('Search Global Database')}
+                          >
+                            <Globe size={15} color={theme.colors.primary} />
+                            <Text style={styles.globalSearchPromptBtnText}>
+                              {t('Search Global Database')} ("{searchQuery.trim()}")
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {isSearchingOnline && (
+                          <View style={styles.globalSearchLoadingBox}>
+                            <ActivityIndicator size="small" color={theme.colors.primary} />
+                            <Text style={styles.globalSearchLoadingText}>{t('Searching global database...')}</Text>
+                          </View>
+                        )}
+
+                        {hasSearchedOnline && onlineFoods.length > 0 && (
+                          <View style={{ width: '100%', marginTop: 8 }}>
+                            <View style={styles.onlineSectionHeader}>
+                              <Globe size={14} color={theme.colors.secondary} />
+                              <Text style={styles.onlineSectionTitle}>
+                                {t('Global Database Results')} ({onlineFoods.length})
+                              </Text>
+                            </View>
+                            {onlineFoods.map((item) => (
+                              <TouchableOpacity
+                                key={item.id}
+                                style={[
+                                  styles.foodListItem,
+                                  selectedFood?.id === item.id && styles.foodListItemActive,
+                                ]}
+                                onPress={() => {
+                                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                                  setSelectedFood(item);
+                                }}
+                                activeOpacity={0.7}
+                              >
+                                <FoodThumbnail
+                                  name={item.name}
+                                  category={item.category}
+                                  imageUrl={item.imageUrl}
+                                  size="small"
+                                  style={{ marginEnd: 12 }}
+                                />
+                                <View style={{ flex: 1 }}>
+                                  <Text style={styles.itemTitle}>{item.name}</Text>
+                                  <Text style={styles.itemSub}>
+                                    {item.brand ? `${item.brand} • ` : ''}
+                                    {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
+                                  </Text>
+                                </View>
+                                <View style={styles.itemRightCol}>
+                                  <Text style={styles.itemKcal}>{item.calories} kcal</Text>
+                                </View>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        )}
+
                         {searchQuery.trim().length > 0 && (
                           <TouchableOpacity
                             style={styles.searchFooterRequestBtn}
@@ -2004,6 +2258,117 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
             >
               <Check size={16} color={theme.colors.textInverted} />
               <Text style={styles.saveCustomBtnText}>{t('Save custom food')}</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+
+    {/* Quick Add Calories Modal */}
+    <Modal
+      visible={quickAddModalVisible}
+      animationType="fade"
+      transparent
+      onRequestClose={() => setQuickAddModalVisible(false)}
+    >
+      <View style={[styles.customModalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ width: '100%', alignItems: 'center' }}
+        >
+          <View style={styles.customModalCard}>
+            <View style={styles.customModalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Zap size={18} color={theme.colors.primary} />
+                <Text style={styles.customModalTitle}>{t('Quick Add Calories')}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setQuickAddModalVisible(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={t('Close')}
+              >
+                <X size={20} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {quickAddError && (
+              <View style={styles.errorNotice}>
+                <AlertTriangle size={15} color={theme.colors.danger} />
+                <Text style={styles.errorNoticeText}>{quickAddError}</Text>
+              </View>
+            )}
+
+            <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled">
+              <View style={styles.customInputGroup}>
+                <Text style={styles.customInputLabel}>{t('Food name')} ({t('Optional')})</Text>
+                <TextInput
+                  style={styles.customTextInput}
+                  placeholder={`${t('Quick Add')} (${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))})`}
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={quickAddName}
+                  onChangeText={setQuickAddName}
+                />
+              </View>
+
+              <View style={styles.customInputGroup}>
+                <Text style={styles.customInputLabel}>{t('Calories')} *</Text>
+                <TextInput
+                  style={styles.customTextInput}
+                  placeholder="e.g. 450"
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={quickAddCalories}
+                  onChangeText={setQuickAddCalories}
+                  keyboardType="numeric"
+                  autoFocus
+                />
+              </View>
+
+              <View style={styles.macrosRowInputs}>
+                <View style={[styles.customInputGroup, { flex: 1 }]}>
+                  <Text style={styles.customInputLabel}>{t('Protein')} (g)</Text>
+                  <TextInput
+                    style={styles.customTextInput}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={quickAddProtein}
+                    onChangeText={setQuickAddProtein}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={[styles.customInputGroup, { flex: 1 }]}>
+                  <Text style={styles.customInputLabel}>{t('Carbs')} (g)</Text>
+                  <TextInput
+                    style={styles.customTextInput}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={quickAddCarbs}
+                    onChangeText={setQuickAddCarbs}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={[styles.customInputGroup, { flex: 1 }]}>
+                  <Text style={styles.customInputLabel}>{t('Fat')} (g)</Text>
+                  <TextInput
+                    style={styles.customTextInput}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={quickAddFat}
+                    onChangeText={setQuickAddFat}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.saveCustomBtn}
+              onPress={handleQuickAddSave}
+              accessibilityRole="button"
+              accessibilityLabel={t('Log Calories')}
+            >
+              <Check size={16} color={theme.colors.textInverted} />
+              <Text style={styles.saveCustomBtnText}>{t('Log Calories')}</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -3075,5 +3440,67 @@ const styles = StyleSheet.create({
   searchFooterRequestText: {
     fontSize: 12,
     color: theme.colors.textSecondary,
+  },
+  quickAddActionBtn: {
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primaryBorder,
+  },
+  globalSearchPromptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.primaryLight,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryBorder,
+    borderRadius: theme.radius.md,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginVertical: 10,
+    width: '100%',
+  },
+  globalSearchPromptBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  globalSearchLoadingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    width: '100%',
+  },
+  globalSearchLoadingText: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+  },
+  onlineSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  onlineSectionTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.colors.secondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  onlineNoResultsBox: {
+    padding: 14,
+    alignItems: 'center',
+    width: '100%',
+  },
+  onlineNoResultsText: {
+    fontSize: 13,
+    color: theme.colors.textMuted,
   },
 });

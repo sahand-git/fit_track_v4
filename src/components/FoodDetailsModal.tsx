@@ -149,7 +149,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
                 <Text style={styles.kcalValue}>{currentKcal}</Text>
                 <Text style={styles.kcalLabel}>{t('Total Calories (kcal)')}</Text>
               </View>
-              <Text style={styles.portionLabel}>
+              <Text style={styles.portionLabel} numberOfLines={2}>
                 {servings} × {item.servingSize} ({currentGrams}g)
               </Text>
             </View>
@@ -328,6 +328,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textSecondary,
     fontWeight: '500',
+    flexShrink: 1,
+    maxWidth: '55%',
   },
   macroRow: {
     flexDirection: 'row',

@@ -58,6 +58,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const t = (value: string) => translate(language, value);
+  const isRtl = language === 'ar' || language === 'ckb';
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const floatingBottom = dockBottom + 66;
@@ -326,6 +327,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                       <TouchableOpacity
                         style={[
                           styles.foodRow,
+                          isRtl && styles.rowRtl,
                           idx > 0 && styles.foodRowBorder,
                         ]}
                         onPress={() => {
@@ -348,7 +350,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                           </Text>
                         </View>
 
-                        <View style={styles.foodRight}>
+                        <View style={[styles.foodRight, isRtl && styles.foodRightRtl]}>
                           <Text style={styles.foodKcal}>{item.calories} kcal</Text>
                           <TouchableOpacity
                             style={styles.deleteBtn}
@@ -590,12 +592,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: theme.spacing.md,
   },
+  rowRtl: {
+    flexDirection: 'row-reverse',
+  },
   foodRowBorder: {
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
   foodInfo: {
     flex: 1,
+    marginEnd: 8,
   },
   foodName: {
     fontSize: 14,
@@ -615,6 +621,9 @@ const styles = StyleSheet.create({
   foodRight: {
     alignItems: 'flex-end',
     gap: 6,
+  },
+  foodRightRtl: {
+    alignItems: 'flex-start',
   },
   foodKcal: {
     fontSize: 14,

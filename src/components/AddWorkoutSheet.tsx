@@ -172,7 +172,7 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
     setTimeout(() => {
       setShowSuccess(false);
       onClose();
-    }, 450);
+    }, 950);
   };
 
   const categories: { id: ExerciseCategory | 'all'; label: string }[] = [
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
   presetInfo: {
     flex: 1,
     minWidth: 0,
-    marginRight: 8,
+    marginEnd: 8,
   },
   presetName: {
     fontSize: 14,
