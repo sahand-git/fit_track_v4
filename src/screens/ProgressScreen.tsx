@@ -262,13 +262,16 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
       ) : (
         <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
           {/* Header */}
-          <View style={[styles.headerRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-            <View>
+          <View style={[styles.headerRow, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+            <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
               <Text style={styles.headerSubtitle}>{t('Progress')}</Text>
               <Text style={styles.headerTitle}>{t('Progress & Trends')}</Text>
             </View>
             <TouchableOpacity
-              style={styles.addBtn}
+              style={[
+                styles.addBtn,
+                { flexDirection: isRTL ? 'row-reverse' : 'row' },
+              ]}
               onPress={() => setModalVisible(true)}
               accessibilityLabel={t('Log weight')}
               accessibilityRole="button"
@@ -591,9 +594,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    gap: 10,
   },
   headerSubtitle: {
     fontFamily: theme.fonts.sans,

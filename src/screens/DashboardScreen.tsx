@@ -314,30 +314,15 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </View>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <TouchableOpacity
-              style={styles.quickActionHeaderBtn}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                setQuickActionVisible(true);
-              }}
-              activeOpacity={0.8}
-              accessibilityLabel={t('Quick Add')}
-              accessibilityRole="button"
-            >
-              <Sparkles size={18} color="#D97706" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.profileBtn}
-              onPress={onOpenProfile}
-              activeOpacity={0.8}
-              accessibilityLabel={t('Profile & Goals')}
-              accessibilityRole="button"
-            >
-              <User size={18} color={theme.colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.profileBtn}
+            onPress={onOpenProfile}
+            activeOpacity={0.8}
+            accessibilityLabel={t('Profile & Goals')}
+            accessibilityRole="button"
+          >
+            <User size={18} color={theme.colors.textPrimary} />
+          </TouchableOpacity>
         </View>
 
         {/* Hero Calorie Budget Focus */}
@@ -925,17 +910,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
     paddingHorizontal: 2,
-  },
-  quickActionHeaderBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...theme.shadow.subtle,
   },
   profileBtn: {
     width: 38,
