@@ -170,7 +170,7 @@ async function runBarcodeCacheTests() {
   {
     const originalFetch = globalThis.fetch;
     let fetchCalled = 0;
-    const testCode = '5449000000997';
+    const testCode = '012345678905';
     const mockOffResponse = {
       status: 1,
       product: {

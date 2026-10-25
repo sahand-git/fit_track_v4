@@ -2044,7 +2044,7 @@ export const POPULAR_FOODS: FoodItem[] = [
     id: 'pop_pepsi_max_zero',
     name: 'Pepsi Max Zero Sugar (1 can)',
     brand: 'PepsiCo',
-    barcode: '4060800100067',
+    barcode: '4060800169457',
     servingSize: '1 can (330ml)',
     servingGrams: 330,
     calories: 1,

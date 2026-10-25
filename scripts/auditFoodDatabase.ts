@@ -14,10 +14,19 @@
  */
 
 import { VERIFIED_FOOD_DATABASE } from '../src/data/foodDatabase';
+import { isValidBarcode } from '../src/utils/barcodeUtils';
 
 declare const require: { main?: unknown };
 declare const module: unknown;
-declare const process: { env: Record<string, string | undefined>; argv: string[] };
+declare const process: { env: Record<string, string | undefined>; argv: string[]; exit?: (code?: number) => void };
+
+export interface BarcodeAuditError {
+  id: string;
+  name: string;
+  barcode: string;
+  type: 'invalid_format_or_checksum' | 'duplicate_barcode';
+  message: string;
+}
 
 export interface AuditDiscrepancy {
   id: string;
@@ -39,13 +48,40 @@ export function auditFoodDatabase(thresholdPercentage = 30): {
   totalAudited: number;
   discrepancies: AuditDiscrepancy[];
   categoryStats: Record<string, number>;
+  barcodeErrors: BarcodeAuditError[];
 } {
   const discrepancies: AuditDiscrepancy[] = [];
   const categoryStats: Record<string, number> = {};
+  const barcodeErrors: BarcodeAuditError[] = [];
+  const seenBarcodes = new Map<string, string>();
 
   for (const food of VERIFIED_FOOD_DATABASE) {
     const category = food.category ?? 'Uncategorized';
     categoryStats[category] = (categoryStats[category] || 0) + 1;
+
+    // Barcode integrity checks: valid GS1 format/checksum and uniqueness
+    if (food.barcode !== undefined && food.barcode !== null && String(food.barcode).trim() !== '') {
+      const code = String(food.barcode).trim();
+      if (!isValidBarcode(code)) {
+        barcodeErrors.push({
+          id: food.id,
+          name: food.name,
+          barcode: code,
+          type: 'invalid_format_or_checksum',
+          message: `Food "${food.name}" (${food.id}) has invalid barcode "${code}" (fails GS1 UPC-A/EAN-13/EAN-8 checksum/length).`,
+        });
+      } else if (seenBarcodes.has(code)) {
+        barcodeErrors.push({
+          id: food.id,
+          name: food.name,
+          barcode: code,
+          type: 'duplicate_barcode',
+          message: `Food "${food.name}" (${food.id}) has duplicate barcode "${code}" (already registered to "${seenBarcodes.get(code)}").`,
+        });
+      } else {
+        seenBarcodes.set(code, food.id);
+      }
+    }
 
     const atwaterKcal = Math.round((food.protein * 4 + food.carbs * 4 + food.fat * 9) * 10) / 10;
     const absDiff = Math.abs(food.calories - atwaterKcal);
@@ -85,6 +121,7 @@ export function auditFoodDatabase(thresholdPercentage = 30): {
     totalAudited: VERIFIED_FOOD_DATABASE.length,
     discrepancies,
     categoryStats,
+    barcodeErrors,
   };
 }
 
@@ -94,13 +131,25 @@ if (typeof require !== 'undefined' && require.main === module || !process.env.SU
   console.log('           FITTRACK VERIFIED FOOD DATABASE AUDIT REPORT                ');
   console.log('========================================================================');
 
-  const { totalAudited, discrepancies, categoryStats } = auditFoodDatabase(30);
+  const { totalAudited, discrepancies, categoryStats, barcodeErrors } = auditFoodDatabase(30);
 
   console.log(`\nAudited ${totalAudited} total food entries across ${Object.keys(categoryStats).length} categories.\n`);
 
   console.log('Category Distribution:');
   for (const [cat, count] of Object.entries(categoryStats).sort((a, b) => b[1] - a[1])) {
     console.log(`  • ${cat.padEnd(22)} : ${count} items`);
+  }
+
+  console.log('\n------------------------------------------------------------------------');
+  console.log(`Barcode Integrity Check:`);
+  console.log('------------------------------------------------------------------------');
+  if (barcodeErrors.length === 0) {
+    console.log('✓ All food barcodes passed GS1 check digit and uniqueness validation!');
+  } else {
+    console.error(`❌ Found ${barcodeErrors.length} barcode error(s):\n`);
+    for (const b of barcodeErrors) {
+      console.error(`[!] [${b.type}] ${b.message}`);
+    }
   }
 
   console.log('\n------------------------------------------------------------------------');
@@ -124,4 +173,12 @@ if (typeof require !== 'undefined' && require.main === module || !process.env.SU
   console.log('========================================================================');
   console.log('                 DATA QUALITY AUDIT COMPLETE                            ');
   console.log('========================================================================\n');
+
+  if (barcodeErrors.length > 0) {
+    if (typeof process !== 'undefined' && process.exit) {
+      process.exit(1);
+    } else {
+      throw new Error(`Audit failed: ${barcodeErrors.length} barcode error(s) detected.`);
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import { REGIONAL_FOODS, VERIFIED_FOOD_DATABASE } from './foodDatabase';
 import { getFoodSourceLabel } from '../utils/foodSource';
 import { PortionUnit } from '../types';
+import { isValidBarcode } from '../utils/barcodeUtils';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) {
@@ -221,6 +222,26 @@ function runFoodDatabaseTests() {
       );
     }
     console.log(`✓ Test 9 passed: All ${REGIONAL_FOODS.length} regional dishes reconciled: ingredient grams equal servingGrams and ingredient calories match food calories within ±5 kcal.`);
+  }
+
+  // Test 10: Barcode Integrity and Uniqueness across Entire Database
+  {
+    const seenBarcodes = new Map<string, string>();
+    for (const food of VERIFIED_FOOD_DATABASE) {
+      if (food.barcode !== undefined && food.barcode !== null && String(food.barcode).trim() !== '') {
+        const code = String(food.barcode).trim();
+        assert(
+          isValidBarcode(code),
+          `Invalid barcode "${code}" on food "${food.name}" (${food.id}) - must pass GS1 check digit validation`
+        );
+        assert(
+          !seenBarcodes.has(code),
+          `Duplicate barcode "${code}" found on "${food.name}" (${food.id}), already registered to "${seenBarcodes.get(code)}"`
+        );
+        seenBarcodes.set(code, food.id);
+      }
+    }
+    console.log(`✓ Test 10 passed: All ${seenBarcodes.size} food barcodes in VERIFIED_FOOD_DATABASE have valid GS1 check digits and unique assignments.`);
   }
 
   console.log('All Food Database & Regional Foods Tests Passed successfully!');

@@ -152,7 +152,10 @@ export const SaveSuccessOverlay: React.FC<SaveSuccessOverlayProps> = ({
     }
 
     // Re-seed confetti cannon trajectories for variety each popup
-    setParticles(generateParticles());
+    const nextParticles = generateParticles();
+    requestAnimationFrame(() => {
+      setParticles(nextParticles);
+    });
 
     cardScale.value = 0.6;
     cardScale.value = withSpring(1, getSpringConfig('pop'));

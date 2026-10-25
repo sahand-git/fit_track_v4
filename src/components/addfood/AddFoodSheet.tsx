@@ -1753,7 +1753,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           >
                             <Globe size={15} color={theme.colors.primary} />
                             <Text style={styles.globalSearchPromptBtnText}>
-                              {t('Search Global Database')} ("{searchQuery.trim()}")
+                              {`${t('Search Global Database')} ("${searchQuery.trim()}")`}
                             </Text>
                           </TouchableOpacity>
                         )}
@@ -1905,7 +1905,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           >
                             <Globe size={15} color={theme.colors.primary} />
                             <Text style={styles.globalSearchPromptBtnText}>
-                              {t('Search Global Database')} ("{searchQuery.trim()}")
+                              {`${t('Search Global Database')} ("${searchQuery.trim()}")`}
                             </Text>
                           </TouchableOpacity>
                         )}

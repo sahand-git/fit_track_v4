@@ -1,6 +1,7 @@
 import { FoodItem } from '../types';
 import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
 import { getBarcodeCacheItem, upsertBarcodeCacheItem } from '../storage/storage';
+import { isValidBarcode } from '../utils/barcodeUtils';
 
 const OFF_FIELDS = 'product_name,product_name_en,brands,nutriments,serving_size,serving_quantity,serving_quantity_unit';
 
@@ -69,17 +70,22 @@ export async function lookupBarcodeWithFallbacks(rawCode: string): Promise<FoodI
     throw new Error('Please enter a valid 8 to 14 digit barcode number.');
   }
 
-  // 1. First check local verified offline database
-  const localMatch = VERIFIED_FOOD_DATABASE.find(f => f.barcode === code || f.id === code);
+  // 1. First check local verified offline database (local barcode matching ignores invalid barcodes)
+  const isQueryValid = isValidBarcode(code);
+  const localMatch = isQueryValid
+    ? VERIFIED_FOOD_DATABASE.find(f => f.barcode && isValidBarcode(f.barcode) && f.barcode === code)
+    : undefined;
   if (localMatch) {
     return { ...localMatch, source: localMatch.source ?? 'verified_database' };
   }
 
   // 2. Check offline barcode cache on device
   try {
-    const cached = await getBarcodeCacheItem(code);
-    if (cached) {
-      return { ...cached, source: cached.source ?? 'open_food_facts' };
+    if (isQueryValid) {
+      const cached = await getBarcodeCacheItem(code);
+      if (cached && (!cached.barcode || isValidBarcode(cached.barcode))) {
+        return { ...cached, source: cached.source ?? 'open_food_facts' };
+      }
     }
   } catch (cacheErr) {
     console.warn('Barcode cache lookup error:', cacheErr);
