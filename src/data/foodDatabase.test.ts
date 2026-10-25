@@ -1,5 +1,5 @@
 import { REGIONAL_FOODS, VERIFIED_FOOD_DATABASE } from './foodDatabase';
-import { getFoodSourceLabel } from '../utils/foodSource';
+import { getFoodSourceLabel, getFoodSourceBadgeInfo } from '../utils/foodSource';
 import { PortionUnit } from '../types';
 import { isValidBarcode } from '../utils/barcodeUtils';
 
@@ -242,6 +242,39 @@ function runFoodDatabaseTests() {
       }
     }
     console.log(`✓ Test 10 passed: All ${seenBarcodes.size} food barcodes in VERIFIED_FOOD_DATABASE have valid GS1 check digits and unique assignments.`);
+  }
+
+  // Test 11: Phase 2 Honest Labelling, Brand Optionality, and Source Badges
+  {
+    const ALLOWED_REAL_BRANDS = new Set([
+      'The Coca-Cola Company',
+      'PepsiCo',
+      'Red Bull',
+      'Frito-Lay',
+      'Optimum Nutrition',
+      'KIND',
+      'Quest Nutrition',
+    ]);
+
+    for (const food of VERIFIED_FOOD_DATABASE) {
+      if (food.brand) {
+        assert(
+          ALLOWED_REAL_BRANDS.has(food.brand),
+          `Prohibited placeholder brand "${food.brand}" detected on food ${food.id} ("${food.name}"). Only real commercial brands are permitted.`
+        );
+      }
+      assert(
+        food.source !== undefined && food.source !== null,
+        `Food ${food.id} ("${food.name}") must have a defined source.`
+      );
+    }
+
+    // Verify badge helper
+    assert(getFoodSourceBadgeInfo('verified_database')?.label === 'Verified', 'Verified badge label');
+    assert(getFoodSourceBadgeInfo('generic_estimate')?.isEstimate === true, 'generic_estimate is flagged as estimate');
+    assert(getFoodSourceBadgeInfo('regional_culinary_estimate')?.isEstimate === true, 'regional_culinary_estimate is flagged as estimate');
+    assert(getFoodSourceBadgeInfo('ai_estimated')?.isEstimate === true, 'ai_estimated is flagged as estimate');
+    console.log('✓ Test 11 passed: Phase 2 honest labelling verified (0 placeholder brands, valid sources, and estimate badges).');
   }
 
   console.log('All Food Database & Regional Foods Tests Passed successfully!');

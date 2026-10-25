@@ -12,7 +12,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_chicken_breast",
     "name": "Grilled Chicken Breast (Skinless)",
-    "brand": "USDA Standard",
     "servingSize": "100g cooked",
     "servingGrams": 100,
     "calories": 165,
@@ -25,7 +24,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_eggs_large",
     "name": "Whole Large Egg",
-    "brand": "USDA Standard",
     "servingSize": "1 large egg (50g)",
     "servingGrams": 50,
     "calories": 72,
@@ -38,7 +36,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_egg_whites",
     "name": "Liquid Egg Whites",
-    "brand": "Organic Valley / USDA",
     "servingSize": "100g (~3 whites)",
     "servingGrams": 100,
     "calories": 52,
@@ -65,7 +62,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_greek_yogurt_0",
     "name": "Greek Yogurt 0% Fat Plain",
-    "brand": "Fage / Chobani",
     "barcode": "894700010328",
     "servingSize": "1 cup (170g)",
     "servingGrams": 170,
@@ -79,7 +75,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_salmon_fillet",
     "name": "Atlantic Salmon Fillet (Pan-seared)",
-    "brand": "Fresh Catch",
     "servingSize": "100g cooked",
     "servingGrams": 100,
     "calories": 206,
@@ -92,7 +87,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_lean_beef",
     "name": "Lean Ground Beef (93/7)",
-    "brand": "USDA Standard",
     "servingSize": "100g cooked",
     "servingGrams": 100,
     "calories": 172,
@@ -105,7 +99,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_canned_tuna",
     "name": "Canned Tuna in Water",
-    "brand": "StarKist",
     "servingSize": "1 can drained (120g)",
     "servingGrams": 120,
     "calories": 130,
@@ -118,7 +111,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_white_rice",
     "name": "Steamed White Basmati Rice",
-    "brand": "Standard Cooked",
     "servingSize": "1 cup cooked (158g)",
     "servingGrams": 158,
     "calories": 205,
@@ -131,7 +123,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_rolled_oats",
     "name": "Rolled Oats (Old Fashioned)",
-    "brand": "Quaker Oats",
     "servingSize": "1/2 cup dry (40g)",
     "servingGrams": 40,
     "calories": 150,
@@ -144,7 +135,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_sweet_potato",
     "name": "Baked Sweet Potato (Medium)",
-    "brand": "USDA Fresh",
     "servingSize": "1 medium (114g)",
     "servingGrams": 114,
     "calories": 103,
@@ -157,7 +147,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_pita_bread",
     "name": "Whole Wheat Pita Bread",
-    "brand": "Bakery Standard",
     "servingSize": "1 medium pocket (60g)",
     "servingGrams": 60,
     "calories": 170,
@@ -165,12 +154,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "carbs": 35,
     "fat": 1,
     "category": "Bakery",
-    "source": "verified_database"
+    "source": "generic_estimate"
   },
   {
     "id": "food_banana",
     "name": "Fresh Banana (Medium)",
-    "brand": "Chiquita / Dole",
     "servingSize": "1 medium (118g)",
     "servingGrams": 118,
     "calories": 105,
@@ -183,7 +171,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_apple",
     "name": "Red Delicious Apple",
-    "brand": "Fresh Produce",
     "servingSize": "1 medium (182g)",
     "servingGrams": 182,
     "calories": 95,
@@ -196,7 +183,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_peanut_butter",
     "name": "Natural Creamy Peanut Butter",
-    "brand": "Skippy / Jif",
     "servingSize": "2 tbsp (32g)",
     "servingGrams": 32,
     "calories": 190,
@@ -209,7 +195,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_olive_oil",
     "name": "Extra Virgin Olive Oil",
-    "brand": "Pompeian / Bertolli",
     "servingSize": "1 tablespoon (14ml)",
     "servingGrams": 14,
     "calories": 119,
@@ -222,7 +207,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_avocado",
     "name": "Fresh Hass Avocado",
-    "brand": "Produce",
     "servingSize": "1/2 medium (100g)",
     "servingGrams": 100,
     "calories": 160,
@@ -235,7 +219,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_naan_bread",
     "name": "Samoon / Kurdish Flatbread (نان)",
-    "brand": "Local Bakery",
     "servingSize": "1 piece (120g)",
     "servingGrams": 120,
     "calories": 290,
@@ -243,12 +226,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "carbs": 58,
     "fat": 2.2,
     "category": "Bakery",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_lentil_soup",
     "name": "Red Lentil Soup (Shorba / شۆربا)",
-    "brand": "Homemade",
     "servingSize": "1 bowl (250g)",
     "servingGrams": 250,
     "calories": 180,
@@ -256,12 +238,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "carbs": 30,
     "fat": 2.5,
     "category": "Soups",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_hummus",
     "name": "Traditional Hummus Tahini (حمص)",
-    "brand": "Authentic Kitchen",
     "servingSize": "2 tablespoons (30g)",
     "servingGrams": 30,
     "calories": 70,
@@ -269,12 +250,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "carbs": 4.8,
     "fat": 5,
     "category": "Dips",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_cottage_cheese",
     "name": "Low-Fat Cottage Cheese (2% Milkfat)",
-    "brand": "Good Culture",
     "servingSize": "113g (1/2 cup)",
     "servingGrams": 113,
     "calories": 90,
@@ -284,12 +264,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 350,
     "nutriScore": "A",
     "category": "Dairy",
-    "source": "verified_database"
+    "source": "generic_estimate"
   },
   {
     "id": "food_lean_beef_93",
     "name": "Lean Ground Beef 93/7 (Cooked)",
-    "brand": "USDA Choice",
     "servingSize": "100g",
     "servingGrams": 100,
     "calories": 172,
@@ -304,7 +283,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_tofu_firm",
     "name": "Organic Firm Tofu",
-    "brand": "Nasoya / House Foods",
     "servingSize": "100g (approx 1/4 block)",
     "servingGrams": 100,
     "calories": 83,
@@ -315,12 +293,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 10,
     "nutriScore": "A",
     "category": "Plant Protein",
-    "source": "verified_database"
+    "source": "generic_estimate"
   },
   {
     "id": "food_brown_rice",
     "name": "Whole Grain Brown Rice (Cooked)",
-    "brand": "Uncle Ben / Lundberg",
     "servingSize": "150g",
     "servingGrams": 150,
     "calories": 168,
@@ -336,7 +313,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_whole_wheat_bread",
     "name": "100% Whole Wheat Sliced Bread",
-    "brand": "Dave's Killer Bread / Nature's Own",
     "servingSize": "1 slice (38g)",
     "servingGrams": 38,
     "calories": 80,
@@ -348,12 +324,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 135,
     "nutriScore": "A",
     "category": "Bakery",
-    "source": "verified_database"
+    "source": "generic_estimate"
   },
   {
     "id": "food_blueberries",
     "name": "Fresh Blueberries",
-    "brand": "Driscoll's",
     "servingSize": "100g (approx 3/4 cup)",
     "servingGrams": 100,
     "calories": 57,
@@ -370,7 +345,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_almonds",
     "name": "Whole Raw Almonds",
-    "brand": "Blue Diamond",
     "barcode": "041570054000",
     "servingSize": "28g (approx 23 almonds)",
     "servingGrams": 28,
@@ -388,7 +362,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_broccoli",
     "name": "Steamed Broccoli Florets",
-    "brand": "USDA Standard",
     "servingSize": "100g (approx 1 cup)",
     "servingGrams": 100,
     "calories": 35,
@@ -405,7 +378,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_spinach",
     "name": "Fresh Baby Spinach",
-    "brand": "Organic Girl / Earthbound",
     "servingSize": "100g (approx 3 cups)",
     "servingGrams": 100,
     "calories": 23,
@@ -473,7 +445,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   {
     "id": "food_almond_milk_unsweetened",
     "name": "Unsweetened Vanilla Almond Milk",
-    "brand": "Silk / Almond Breeze",
     "servingSize": "1 cup (240ml)",
     "servingGrams": 240,
     "calories": 30,
@@ -485,12 +456,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 170,
     "nutriScore": "A",
     "category": "Dairy Alternative",
-    "source": "verified_database"
+    "source": "generic_estimate"
   },
   {
     "id": "food_kurdish_yaprax",
     "name": "Kurdish Yaprax (Dolma)",
-    "brand": "Kurdish Heritage Recipe",
     "servingSize": "1 plate (4 pieces / 250g)",
     "servingGrams": 250,
     "calories": 340,
@@ -501,12 +471,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 480,
     "nutriScore": "B",
     "category": "Meals",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kurdish_chicken_biryani",
     "name": "Kurdish Chicken Biryani",
-    "brand": "Traditional Spiced Rice",
     "servingSize": "1 plate (350g)",
     "servingGrams": 350,
     "calories": 520,
@@ -517,12 +486,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 560,
     "nutriScore": "B",
     "category": "Meals",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kebab_shish",
     "name": "Grilled Lamb & Beef Kebab Skewer",
-    "brand": "Erbil / Sulaymaniyah Style",
     "servingSize": "1 skewer (120g cooked)",
     "servingGrams": 120,
     "calories": 290,
@@ -533,12 +501,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 420,
     "nutriScore": "C",
     "category": "Meat",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_chicken_tikka_skewer",
     "name": "Grilled Chicken Tikka Skewer",
-    "brand": "Charcoal Grilled",
     "servingSize": "1 skewer (130g cooked)",
     "servingGrams": 130,
     "calories": 210,
@@ -549,12 +516,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 380,
     "nutriScore": "A",
     "category": "Meat",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kubba_sawar",
     "name": "Crispy Bulgur Kubba (Minced Meat Filled)",
-    "brand": "Traditional Homemade",
     "servingSize": "2 pieces (160g)",
     "servingGrams": 160,
     "calories": 360,
@@ -565,12 +531,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 440,
     "nutriScore": "B",
     "category": "Meals",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kubba_halab",
     "name": "Kubba Halab (Crispy Rice & Beef Croquette)",
-    "brand": "Traditional Homemade",
     "servingSize": "2 pieces (150g)",
     "servingGrams": 150,
     "calories": 330,
@@ -581,12 +546,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 410,
     "nutriScore": "B",
     "category": "Meals",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_tepsi_baytinjan",
     "name": "Tepsi Baytinjan (Eggplant & Tomato Casserole)",
-    "brand": "Kurdish Oven Baked",
     "servingSize": "1 portion (300g)",
     "servingGrams": 300,
     "calories": 310,
@@ -597,12 +561,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 520,
     "nutriScore": "A",
     "category": "Meals",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_shorba_nisk",
     "name": "Shorba Nisk (Red Lentil Soup with Cumin)",
-    "brand": "Traditional Soup",
     "servingSize": "1 bowl (300ml / 300g)",
     "servingGrams": 300,
     "calories": 195,
@@ -613,12 +576,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 460,
     "nutriScore": "A",
     "category": "Meals",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_samoon_bread",
     "name": "Kurdish Diamond Samoon Bread",
-    "brand": "Local Stone Oven Bakery",
     "servingSize": "1 piece (100g)",
     "servingGrams": 100,
     "calories": 265,
@@ -629,12 +591,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 390,
     "nutriScore": "B",
     "category": "Grains",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kurdish_mast",
     "name": "Traditional Kurdish Yogurt (Mast)",
-    "brand": "Local Farm Fresh",
     "servingSize": "1 cup (200g)",
     "servingGrams": 200,
     "calories": 140,
@@ -645,12 +606,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 105,
     "nutriScore": "A",
     "category": "Dairy",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kurdish_do",
     "name": "Kurdish Do (Chilled Savory Ayran)",
-    "brand": "Traditional Dairy Drink",
     "servingSize": "1 glass (250ml)",
     "servingGrams": 250,
     "calories": 75,
@@ -661,12 +621,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 280,
     "nutriScore": "A",
     "category": "Beverages",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_bamya_stew",
     "name": "Bamya Stew with Tender Beef",
-    "brand": "Traditional Slow Cooked",
     "servingSize": "1 bowl (300g)",
     "servingGrams": 300,
     "calories": 260,
@@ -677,12 +636,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 480,
     "nutriScore": "A",
     "category": "Meals",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_fasolia_stew",
     "name": "Fasolia White Bean & Beef Stew",
-    "brand": "Traditional Slow Cooked",
     "servingSize": "1 bowl (320g)",
     "servingGrams": 320,
     "calories": 310,
@@ -693,12 +651,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 490,
     "nutriScore": "A",
     "category": "Meals",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_qoozi_lamb",
     "name": "Qoozi Lamb Shank with Fragrant Rice",
-    "brand": "Kurdish Festive Dish",
     "servingSize": "1 plate (450g)",
     "servingGrams": 450,
     "calories": 690,
@@ -709,12 +666,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 620,
     "nutriScore": "B",
     "category": "Meals",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kleicha_pastry",
     "name": "Kleicha Cardamom Date Pastry",
-    "brand": "Traditional Holiday Pastry",
     "servingSize": "2 pieces (60g)",
     "servingGrams": 60,
     "calories": 220,
@@ -725,12 +681,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 75,
     "nutriScore": "C",
     "category": "Snacks",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_tahini_dibis",
     "name": "Tahini with Date Molasses (Rashi & Doshaw)",
-    "brand": "Traditional Breakfast Dip",
     "servingSize": "2 tbsp (40g)",
     "servingGrams": 40,
     "calories": 185,
@@ -741,12 +696,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 15,
     "nutriScore": "B",
     "category": "Snacks",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_hummus_tahini",
     "name": "Authentic Hummus Tahini Dip",
-    "brand": "Middle Eastern Classic",
     "servingSize": "3 tbsp (60g)",
     "servingGrams": 60,
     "calories": 135,
@@ -757,12 +711,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 210,
     "nutriScore": "A",
     "category": "Snacks",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_tabbouleh_salad",
     "name": "Fresh Parsley Tabbouleh Salad",
-    "brand": "Middle Eastern Classic",
     "servingSize": "1 bowl (150g)",
     "servingGrams": 150,
     "calories": 110,
@@ -773,6 +726,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 160,
     "nutriScore": "A",
     "category": "Vegetables",
-    "source": "verified_database"
+    "source": "regional_culinary_estimate"
   }
 ];

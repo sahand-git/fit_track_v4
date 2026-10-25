@@ -85,7 +85,7 @@ import {
   deleteMealTemplate,
   createTemplateFromMeals,
 } from '../../storage/storage';
-import { getFoodSourceLabel } from '../../utils/foodSource';
+import { FoodSourceBadge } from '../FoodSourceBadge';
 import { createUniqueId } from '../../utils/idUtils';
 import { theme } from '../../theme';
 import * as Haptics from 'expo-haptics';
@@ -1214,12 +1214,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                       <View style={styles.selectedFoodCard}>
                         <View style={styles.selectedHeaderRow}>
                           <View style={styles.selectedBadgesRow}>
-                            {getFoodSourceLabel(selectedFood.source, t) ? (
-                              <View style={styles.sourceBadge}>
-                                <Text style={styles.sourceBadgeText}>
-                                  {getFoodSourceLabel(selectedFood.source, t)}
-                                </Text>
-                              </View>
+                            {selectedFood.source ? (
+                              <FoodSourceBadge source={selectedFood.source} size="small" />
                             ) : null}
                             {selectedFood.recipeEstimate ? (
                               <View style={styles.recipeEstimateBadge}>
@@ -1794,7 +1790,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                   style={{ marginEnd: 12 }}
                                 />
                                 <View style={{ flex: 1 }}>
-                                  <Text style={styles.itemTitle}>{item.name}</Text>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                    <Text style={styles.itemTitle}>{item.name}</Text>
+                                    {item.source && <FoodSourceBadge source={item.source} size="small" />}
+                                  </View>
                                   <Text style={styles.itemSub}>
                                     {item.brand ? `${item.brand} • ` : ''}
                                     {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
@@ -1946,7 +1945,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                   style={{ marginEnd: 12 }}
                                 />
                                 <View style={{ flex: 1 }}>
-                                  <Text style={styles.itemTitle}>{item.name}</Text>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                    <Text style={styles.itemTitle}>{item.name}</Text>
+                                    {item.source && <FoodSourceBadge source={item.source} size="small" />}
+                                  </View>
                                   <Text style={styles.itemSub}>
                                     {item.brand ? `${item.brand} • ` : ''}
                                     {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g

@@ -129,7 +129,7 @@ export interface FoodItem {
   category?: string;
   barcode?: string;
   imageUrl?: string;
-  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate' | 'gemini';
+  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate' | 'generic_estimate' | 'gemini';
   fiber?: number;
   sugar?: number; // Canonical sugar content in grams
   sugars?: number; // Maintained for database schema compatibility
@@ -188,7 +188,7 @@ export interface LoggedMeal {
   magnesium?: number;
   zinc?: number;
   barcode?: string;
-  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate' | 'gemini';
+  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate' | 'generic_estimate' | 'gemini';
   timestamp: string; // ISO string
   isEstimate?: boolean;
   portionUnit?: PortionUnit;

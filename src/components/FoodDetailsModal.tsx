@@ -20,6 +20,7 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
+import { FoodSourceBadge } from './FoodSourceBadge';
 
 interface FoodDetailsModalProps {
   visible: boolean;
@@ -130,6 +131,11 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
             <View style={{ flex: 1 }}>
               <Text style={styles.foodName}>{item.name}</Text>
               {item.brand && <Text style={styles.brand}>{item.brand}</Text>}
+              {item.source && (
+                <View style={{ marginTop: 4 }}>
+                  <FoodSourceBadge source={item.source} size="small" />
+                </View>
+              )}
             </View>
             <TouchableOpacity
               onPress={onClose}

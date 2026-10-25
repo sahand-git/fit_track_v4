@@ -99,7 +99,7 @@ const mealShape = shape<LoggedMeal>({
   magnesium: optional(num),
   zinc: optional(num),
   barcode: optional(str),
-  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate')),
+  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate', 'generic_estimate', 'gemini')),
   timestamp: str,
   isEstimate: optional(bool),
   portionUnit: optional(portionUnitChoice),
@@ -260,7 +260,7 @@ const foodItemShape = shape<FoodItem>({
   category: optional(str),
   barcode: optional(str),
   imageUrl: optional(str),
-  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate')),
+  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate', 'generic_estimate', 'gemini')),
   fiber: optional(num),
   sugar: optional(num),
   sugars: optional(num),
@@ -295,7 +295,7 @@ const mealTemplateItemShape = shape<MealTemplateItem>({
   portionUnit: optional(portionUnitChoice),
   gramsPerUnit: optional(num),
   isEstimate: optional(bool),
-  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate')),
+  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate', 'generic_estimate', 'gemini')),
 });
 
 const mealTemplateShape = shape<MealTemplate>({

@@ -8,7 +8,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_masgouf',
     name: 'Masgouf Wood-Fired Carp (سمك مسكوف)',
-    brand: 'Iraqi Culinary Tradition',
     servingSize: '1 plate (250g)',
     servingGrams: 250,
     calories: 385,
@@ -74,7 +73,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_lamb_tashreeb',
     name: 'Lamb Tashreeb Broth & Samoon (تشريب لحم)',
-    brand: 'Iraqi Culinary Tradition',
     servingSize: '1 bowl (400g)',
     servingGrams: 400,
     calories: 690,
@@ -149,7 +147,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_chicken_tashreeb',
     name: 'Chicken Tashreeb Yellow Broth (تشريب دجاج أصفر)',
-    brand: 'Iraqi Culinary Tradition',
     servingSize: '1 bowl (380g)',
     servingGrams: 380,
     calories: 590,
@@ -224,7 +221,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_dolma_yaprax',
     name: 'Iraqi Dolma / Kurdish Yaprax (دولمة / یاپراخ)',
-    brand: 'Mesopotamian Heritage',
     servingSize: '5 pieces (150g)',
     servingGrams: 150,
     calories: 320,
@@ -317,7 +313,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_kubba_mosul',
     name: 'Kubba Mosul Flat Bulgur Disc (كبة موصلية)',
-    brand: 'Mosul Culinary Heritage',
     servingSize: '1 wedge piece (100g)',
     servingGrams: 100,
     calories: 270,
@@ -392,7 +387,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_kubba_hamudh',
     name: 'Kubba Hamudh Dumpling Stew (كبة حامض / شلغم)',
-    brand: 'Iraqi Culinary Tradition',
     servingSize: '1 bowl (350g)',
     servingGrams: 350,
     calories: 298,
@@ -467,7 +461,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_makhlama',
     name: 'Makhlama Minced Beef & Eggs (مخلمة لحم وبيض)',
-    brand: 'Iraqi Culinary Tradition',
     servingSize: '1 skillet plate (220g)',
     servingGrams: 220,
     calories: 415,
@@ -542,7 +535,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_tepsi_baytinjan',
     name: 'Tepsi Baytinjan Eggplant Casserole (تبسي بيتنجان)',
-    brand: 'Iraqi Culinary Tradition',
     servingSize: '1 plate (300g)',
     servingGrams: 300,
     calories: 337,
@@ -617,7 +609,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_iraqi_kebab',
     name: 'Iraqi Charcoal Lamb Kebab (كباب عراقي مشوي)',
-    brand: 'Iraqi Grill Heritage',
     servingSize: '1 skewer (90g)',
     servingGrams: 90,
     calories: 220,
@@ -674,7 +665,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_stone_samoon',
     name: 'Diamond Stone Samoon (صمون حجري)',
-    brand: 'Iraqi Hearth Bakery',
     servingSize: '1 samoon (90g)',
     servingGrams: 90,
     calories: 235,
@@ -722,7 +712,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_falafel_samoon',
     name: 'Iraqi Falafel Samoon with Amba (صمون فلافل وعمبة)',
-    brand: 'Iraqi Street Food',
     servingSize: '1 sandwich (220g)',
     servingGrams: 220,
     calories: 416,
@@ -797,7 +786,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_beef_shawarma_samoon',
     name: 'Iraqi Beef Gus / Shawarma Samoon (كص لحم بالصمون)',
-    brand: 'Iraqi Street Food',
     servingSize: '1 sandwich (230g)',
     servingGrams: 230,
     calories: 510,
@@ -872,7 +860,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_kahi_qaimar',
     name: 'Kahi with Buffalo Qaimar & Honey (كاهي وقيمر سدة)',
-    brand: 'Iraqi Breakfast Heritage',
     servingSize: '1 pastry & cream (150g)',
     servingGrams: 150,
     calories: 530,
@@ -938,7 +925,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_shorbat_adas',
     name: 'Shorbat Adas Red Lentil Soup (شوربة عدس)',
-    brand: 'Middle Eastern Comfort',
     servingSize: '1 bowl (300g)',
     servingGrams: 300,
     calories: 195,
@@ -1004,7 +990,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_jajeek',
     name: 'Jajeek Cucumber Mint Yogurt Dip (جاجيك بالخيار)',
-    brand: 'Mesopotamian Heritage',
     servingSize: '1 bowl (150g)',
     servingGrams: 150,
     calories: 95,
@@ -1070,7 +1055,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_kurdish_kelane',
     name: 'Kurdish Kelane Scallion Bread (کەلێنەی کوردی)',
-    brand: 'Kurdish Mountain Culinary',
     servingSize: '1 flatbread (130g)',
     servingGrams: 130,
     calories: 298,
@@ -1136,7 +1120,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_kurdish_shifta',
     name: 'Kurdish Shifta Meat Patties (شفتەی کوردی)',
-    brand: 'Kurdish Mountain Culinary',
     servingSize: '1 patty (60g)',
     servingGrams: 60,
     calories: 155,
@@ -1211,7 +1194,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_cardamom_tea',
     name: 'Iraqi Cardamom Black Tea (شاي عراقي بالهيل)',
-    brand: 'Chai Khana Tradition',
     servingSize: '1 istikan glass (120ml)',
     servingGrams: 120,
     calories: 35,
@@ -1268,7 +1250,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_shenina_ayran',
     name: 'Do / Shenina Salted Mint Ayran (شنينة / دۆ)',
-    brand: 'Erbil / Iraqi Dairy',
     servingSize: '1 glass (250ml)',
     servingGrams: 250,
     calories: 77,
@@ -1334,7 +1315,6 @@ export const REGIONAL_FOODS: FoodItem[] = [
   {
     id: 'regional_tahin_debs',
     name: 'Tahin & Debs Date Molasses Sesame Dip (طحينة ودبس)',
-    brand: 'Iraqi Date Palm Heritage',
     servingSize: '1 tablespoon (20g)',
     servingGrams: 20,
     calories: 90,
