@@ -28,6 +28,7 @@
 
 import { VERIFIED_FOOD_DATABASE } from '../src/data/foodDatabase';
 import { isValidBarcode } from '../src/utils/barcodeUtils';
+import { CANONICAL_FOOD_CATEGORIES } from '../src/utils/foodCategories';
 
 declare const require: { main?: unknown };
 declare const module: unknown;
@@ -44,7 +45,15 @@ export interface BarcodeAuditError {
 export interface QualityAuditError {
   id: string;
   name: string;
-  type: 'duplicate_id' | 'empty_category' | 'zero_calorie_non_drink' | 'placeholder_brand';
+  type:
+    | 'duplicate_id'
+    | 'duplicate_name'
+    | 'empty_category'
+    | 'invalid_category'
+    | 'zero_calorie_non_drink'
+    | 'placeholder_brand'
+    | 'drink_missing_unit'
+    | 'non_english_name';
   message: string;
 }
 
@@ -131,7 +140,10 @@ export function auditFoodDatabase(thresholdPercentage = 12): {
   const qualityErrors: QualityAuditError[] = [];
 
   const seenIds = new Set<string>();
+  const seenNames = new Map<string, string>();
   const seenBarcodes = new Map<string, string>();
+  const canonicalCategories = new Set<string>(CANONICAL_FOOD_CATEGORIES);
+  const ARABIC_SCRIPT_REGEX = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/;
 
   for (const food of VERIFIED_FOOD_DATABASE) {
     // 1. Duplicate ID check
@@ -146,7 +158,30 @@ export function auditFoodDatabase(thresholdPercentage = 12): {
       seenIds.add(food.id);
     }
 
-    // 2. Empty category check
+    // 2. Duplicate Name check
+    const normName = food.name.trim().toLowerCase();
+    if (seenNames.has(normName)) {
+      qualityErrors.push({
+        id: food.id,
+        name: food.name,
+        type: 'duplicate_name',
+        message: `Food "${food.name}" (${food.id}) has duplicate name already registered to "${seenNames.get(normName)}".`,
+      });
+    } else {
+      seenNames.set(normName, food.id);
+    }
+
+    // 3. Name cleanliness check (Arabic/Kurdish characters must live in nameAr/nameCkb)
+    if (ARABIC_SCRIPT_REGEX.test(food.name)) {
+      qualityErrors.push({
+        id: food.id,
+        name: food.name,
+        type: 'non_english_name',
+        message: `Food "${food.name}" (${food.id}) contains non-English characters in primary name field; move to nameAr/nameCkb.`,
+      });
+    }
+
+    // 4. Empty category check & canonical category check
     const rawCategory = food.category;
     if (!rawCategory || rawCategory.trim() === '') {
       qualityErrors.push({
@@ -158,18 +193,36 @@ export function auditFoodDatabase(thresholdPercentage = 12): {
     }
 
     const category = rawCategory?.trim() ?? 'Uncategorized';
+    if (!canonicalCategories.has(category)) {
+      qualityErrors.push({
+        id: food.id,
+        name: food.name,
+        type: 'invalid_category',
+        message: `Food "${food.name}" (${food.id}) has non-canonical category "${category}". Must be one of the 17 standard categories.`,
+      });
+    }
+
     categoryStats[category] = (categoryStats[category] || 0) + 1;
 
-    // 3. Zero-calorie non-drink check
+    // 5. Drinks unit check (must store ml separately via unit: 'ml')
+    if (category === 'Drinks' && food.unit !== 'ml') {
+      qualityErrors.push({
+        id: food.id,
+        name: food.name,
+        type: 'drink_missing_unit',
+        message: `Drink "${food.name}" (${food.id}) must specify unit: "ml" rather than coercing volume into grams.`,
+      });
+    }
+
+    // 6. Zero-calorie non-drink check
     if (food.calories === 0) {
-      const lowerCat = category.toLowerCase();
-      const isDrink = lowerCat === 'drinks' || lowerCat === 'beverages';
+      const isDrink = category === 'Drinks';
       if (!isDrink) {
         qualityErrors.push({
           id: food.id,
           name: food.name,
           type: 'zero_calorie_non_drink',
-          message: `Food "${food.name}" (${food.id}) has 0 kcal but is categorized as "${category}" instead of Drinks/Beverages.`,
+          message: `Food "${food.name}" (${food.id}) has 0 kcal but is categorized as "${category}" instead of Drinks.`,
         });
       }
     }

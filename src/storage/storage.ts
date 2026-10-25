@@ -20,6 +20,7 @@ import { getTodayDateString, addDaysToDateString } from '../utils/dateUtils';
 import { validateBackup } from '../utils/backupCore';
 import { calculateStreakByWalkback, getPreviousDayString } from '../utils/streak';
 import { normalizeSearch } from '../utils/localeUtils';
+import { resolveCanonicalFoodId, migrateLoggedMeal } from '../utils/foodMigration';
 
 const PROFILE_KEY = '@fittrack_profile';
 const DAILY_LOG_PREFIX = '@fittrack_log_';
@@ -219,7 +220,7 @@ function normalizeDailyLog(dateStr: string, value: Record<string, unknown>): Dai
     ...emptyDailyLog(dateStr),
     ...parsed,
     date: dateStr,
-    meals: Array.isArray(parsed.meals) ? parsed.meals : [],
+    meals: Array.isArray(parsed.meals) ? parsed.meals.map(migrateLoggedMeal) : [],
     waterGlasses: typeof parsed.waterGlasses === 'number' && !isNaN(parsed.waterGlasses) ? Math.max(0, parsed.waterGlasses) : 0,
     steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, parsed.steps) : 0,
     supplements: Array.isArray(parsed.supplements) ? parsed.supplements : [],
@@ -503,7 +504,10 @@ export async function loadRecentFoods(): Promise<FoodItem[]> {
   try {
     const raw = await AsyncStorage.getItem(getScopedStorageKey(RECENT_FOODS_KEY));
     if (!raw) return [];
-    return safeParseArray<FoodItem>(raw);
+    return safeParseArray<FoodItem>(raw).map((f) => ({
+      ...f,
+      id: resolveCanonicalFoodId(f.id),
+    }));
   } catch (err) {
     console.error('Error loading recent foods:', err);
     return [];
@@ -539,7 +543,10 @@ export async function loadFavoriteFoods(): Promise<FoodItem[]> {
   try {
     const raw = await AsyncStorage.getItem(getScopedStorageKey(FAVORITE_FOODS_KEY));
     if (!raw) return [];
-    return safeParseArray<FoodItem>(raw);
+    return safeParseArray<FoodItem>(raw).map((f) => ({
+      ...f,
+      id: resolveCanonicalFoodId(f.id),
+    }));
   } catch (err) {
     console.error('Error loading favorite foods:', err);
     return [];
@@ -682,11 +689,15 @@ export async function searchBarcodeCache(query: string): Promise<FoodItem[]> {
   const cache = await loadBarcodeCache();
   return cache.filter((f) => {
     const normName = normalizeSearch(f.name);
+    const normNameAr = f.nameAr ? normalizeSearch(f.nameAr) : '';
+    const normNameCkb = f.nameCkb ? normalizeSearch(f.nameCkb) : '';
     const normBrand = f.brand ? normalizeSearch(f.brand) : '';
     const normBarcode = f.barcode ? normalizeSearch(f.barcode) : '';
     const normCategory = f.category ? normalizeSearch(f.category) : '';
     return (
       normName.includes(normQuery) ||
+      normNameAr.includes(normQuery) ||
+      normNameCkb.includes(normQuery) ||
       normBrand.includes(normQuery) ||
       normBarcode.includes(normQuery) ||
       normCategory.includes(normQuery)
@@ -1093,7 +1104,7 @@ export async function getAllDailyLogs(): Promise<Record<string, DailyLog>> {
       result[dateStr] = {
         ...parsed,
         date: dateStr,
-        meals: Array.isArray(parsed.meals) ? parsed.meals : [],
+        meals: Array.isArray(parsed.meals) ? parsed.meals.map(migrateLoggedMeal) : [],
         waterGlasses: typeof parsed.waterGlasses === 'number' && !isNaN(parsed.waterGlasses) ? Math.max(0, parsed.waterGlasses) : 0,
         steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, parsed.steps) : 0,
         supplements: Array.isArray(parsed.supplements) ? parsed.supplements : [],
@@ -1132,7 +1143,7 @@ export async function getDailyLogsRange(endDate: string, days: number = 90): Pro
       result[dateStr] = {
         ...parsed,
         date: dateStr,
-        meals: Array.isArray(parsed.meals) ? parsed.meals : [],
+        meals: Array.isArray(parsed.meals) ? parsed.meals.map(migrateLoggedMeal) : [],
         waterGlasses: typeof parsed.waterGlasses === 'number' && !isNaN(parsed.waterGlasses) ? Math.max(0, parsed.waterGlasses) : 0,
         steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, parsed.steps) : 0,
         supplements: Array.isArray(parsed.supplements) ? parsed.supplements : [],

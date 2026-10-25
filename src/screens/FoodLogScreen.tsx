@@ -26,6 +26,7 @@ import { AnimatedFoodRow } from '../components/AnimatedFoodRow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { FoodThumbnail } from '../components/FoodThumbnail';
 import { FoodSourceBadge } from '../components/FoodSourceBadge';
+import { getLocalizedFoodName } from '../utils/foodLocalization';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -343,7 +344,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                         <FoodThumbnail name={item.name} category={item.category} imageUrl={item.imageUrl} size="small" style={{ marginEnd: 12 }} />
                         <View style={styles.foodInfo}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                            <Text style={styles.foodName}>{item.name}</Text>
+                            <Text style={styles.foodName}>{getLocalizedFoodName(item, language)}</Text>
                             {item.source && <FoodSourceBadge source={item.source} size="small" />}
                           </View>
                           <Text style={styles.foodPortion}>

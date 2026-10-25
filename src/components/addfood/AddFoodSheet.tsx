@@ -86,6 +86,7 @@ import {
   createTemplateFromMeals,
 } from '../../storage/storage';
 import { FoodSourceBadge } from '../FoodSourceBadge';
+import { getLocalizedFoodName } from '../../utils/foodLocalization';
 import { createUniqueId } from '../../utils/idUtils';
 import { theme } from '../../theme';
 import * as Haptics from 'expo-haptics';
@@ -895,12 +896,16 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
     return sourceList.filter((f) => {
       const normName = normalizeSearch(f.name);
+      const normNameAr = f.nameAr ? normalizeSearch(f.nameAr) : '';
+      const normNameCkb = f.nameCkb ? normalizeSearch(f.nameCkb) : '';
       const normCategory = f.category ? normalizeSearch(f.category) : '';
       const normBrand = f.brand ? normalizeSearch(f.brand) : '';
       const normBarcode = f.barcode ? normalizeSearch(f.barcode) : '';
       const localizedName = normalizeSearch(t(f.name));
       return (
         normName.includes(normalizedQuery) ||
+        normNameAr.includes(normalizedQuery) ||
+        normNameCkb.includes(normalizedQuery) ||
         normCategory.includes(normalizedQuery) ||
         normBrand.includes(normalizedQuery) ||
         normBarcode.includes(normalizedQuery) ||
@@ -1254,7 +1259,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             style={{ marginEnd: 12 }}
                           />
                           <View style={{ flex: 1 }}>
-                            <Text style={styles.selectedName}>{selectedFood.name}</Text>
+                            <Text style={styles.selectedName}>{getLocalizedFoodName(selectedFood, language)}</Text>
                             {selectedFood.brand ? (
                               <Text style={styles.selectedBrand}>{selectedFood.brand}</Text>
                             ) : null}
@@ -1791,7 +1796,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                 />
                                 <View style={{ flex: 1 }}>
                                   <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                                    <Text style={styles.itemTitle}>{item.name}</Text>
+                                    <Text style={styles.itemTitle}>{getLocalizedFoodName(item, language)}</Text>
                                     {item.source && <FoodSourceBadge source={item.source} size="small" />}
                                   </View>
                                   <Text style={styles.itemSub}>
@@ -1946,7 +1951,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                 />
                                 <View style={{ flex: 1 }}>
                                   <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                                    <Text style={styles.itemTitle}>{item.name}</Text>
+                                    <Text style={styles.itemTitle}>{getLocalizedFoodName(item, language)}</Text>
                                     {item.source && <FoodSourceBadge source={item.source} size="small" />}
                                   </View>
                                   <Text style={styles.itemSub}>

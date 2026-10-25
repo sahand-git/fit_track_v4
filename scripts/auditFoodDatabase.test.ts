@@ -13,9 +13,9 @@ const result = auditFoodDatabase(12);
 assert(result.barcodeErrors.length === 0, `Expected 0 barcode errors, got ${result.barcodeErrors.length}`);
 console.log('✓ Barcode integrity: 0 barcode errors.');
 
-// 2. Quality errors must be 0 (0 duplicate IDs, 0 empty categories, 0 zero-calorie non-drinks, 0 placeholder brands)
+// 2. Quality errors must be 0 (0 duplicate IDs, 0 empty categories, 0 zero-calorie non-drinks, 0 placeholder brands, 0 invalid categories, 0 drinks missing unit, 0 Arabic script in English name)
 assert(result.qualityErrors.length === 0, `Expected 0 quality errors, got ${result.qualityErrors.length}: ${JSON.stringify(result.qualityErrors)}`);
-console.log('✓ Quality checks: 0 duplicate IDs, 0 empty categories, 0 zero-calorie non-drinks, 0 placeholder brands.');
+console.log('✓ Quality checks: 0 duplicate IDs/names, 0 empty categories, 0 zero-calorie non-drinks, 0 placeholder brands, 17 canonical categories enforced, drinks unit ml verified, 0 Arabic script in English name.');
 
 // 3. Macro discrepancies > 12% must be 0 (outside reviewed exceptions)
 assert(result.discrepancies.length === 0, `Expected 0 macro discrepancies > 12%, got ${result.discrepancies.length}: ${JSON.stringify(result.discrepancies)}`);

@@ -18,7 +18,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 31,
     "carbs": 0,
     "fat": 3.6,
-    "category": "Protein",
+    "category": "Meat & Poultry",
     "source": "verified_database"
   },
   {
@@ -30,7 +30,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 6.3,
     "carbs": 0.4,
     "fat": 4.8,
-    "category": "Protein",
+    "category": "Eggs & Dairy",
     "source": "verified_database"
   },
   {
@@ -42,7 +42,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 11,
     "carbs": 0.7,
     "fat": 0.2,
-    "category": "Protein",
+    "category": "Eggs & Dairy",
     "source": "verified_database"
   },
   {
@@ -56,7 +56,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 24,
     "carbs": 3,
     "fat": 1,
-    "category": "Protein",
+    "category": "Supplements",
     "source": "verified_database"
   },
   {
@@ -69,7 +69,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 18,
     "carbs": 6,
     "fat": 0,
-    "category": "Dairy",
+    "category": "Eggs & Dairy",
     "source": "verified_database"
   },
   {
@@ -81,7 +81,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 22,
     "carbs": 0,
     "fat": 12,
-    "category": "Fish",
+    "category": "Fish & Seafood",
     "source": "verified_database"
   },
   {
@@ -93,7 +93,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 24,
     "carbs": 0,
     "fat": 8,
-    "category": "Meat",
+    "category": "Meat & Poultry",
     "source": "verified_database"
   },
   {
@@ -105,7 +105,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 28,
     "carbs": 0,
     "fat": 1,
-    "category": "Fish",
+    "category": "Fish & Seafood",
     "source": "verified_database"
   },
   {
@@ -117,7 +117,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 4.2,
     "carbs": 45,
     "fat": 0.4,
-    "category": "Grains",
+    "category": "Grains & Bread",
     "source": "verified_database"
   },
   {
@@ -129,7 +129,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 5,
     "carbs": 27,
     "fat": 2.5,
-    "category": "Grains",
+    "category": "Grains & Bread",
     "source": "verified_database"
   },
   {
@@ -153,7 +153,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 6,
     "carbs": 35,
     "fat": 1,
-    "category": "Bakery",
+    "category": "Grains & Bread",
     "source": "generic_estimate"
   },
   {
@@ -166,6 +166,38 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "carbs": 27,
     "fat": 0.3,
     "category": "Fruit",
+    "variants": [
+      {
+        "id": "var_banana_med",
+        "name": "Medium banana (118g)",
+        "calories": 105,
+        "protein": 1.3,
+        "carbs": 27,
+        "fat": 0.3,
+        "servingSize": "1 medium (118g)",
+        "servingGrams": 118
+      },
+      {
+        "id": "var_banana_small",
+        "name": "Small banana (100g)",
+        "calories": 89,
+        "protein": 1.1,
+        "carbs": 22.8,
+        "fat": 0.3,
+        "servingSize": "1 small (100g)",
+        "servingGrams": 100
+      },
+      {
+        "id": "var_banana_large",
+        "name": "Large banana (136g)",
+        "calories": 121,
+        "protein": 1.5,
+        "carbs": 31,
+        "fat": 0.4,
+        "servingSize": "1 large (136g)",
+        "servingGrams": 136
+      }
+    ],
     "source": "verified_database"
   },
   {
@@ -189,7 +221,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 8,
     "carbs": 7,
     "fat": 16,
-    "category": "Nuts",
+    "category": "Nuts & Seeds",
     "source": "verified_database"
   },
   {
@@ -201,7 +233,39 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "protein": 0,
     "carbs": 0,
     "fat": 13.5,
-    "category": "Oils",
+    "category": "Oils & Fats",
+    "variants": [
+      {
+        "id": "var_olive_oil_tbsp",
+        "name": "1 tablespoon (14g)",
+        "calories": 119,
+        "protein": 0,
+        "carbs": 0,
+        "fat": 13.5,
+        "servingSize": "1 tablespoon (14ml)",
+        "servingGrams": 14
+      },
+      {
+        "id": "var_olive_oil_tsp",
+        "name": "1 teaspoon (4.5g)",
+        "calories": 40,
+        "protein": 0,
+        "carbs": 0,
+        "fat": 4.5,
+        "servingSize": "1 teaspoon (4.5ml)",
+        "servingGrams": 4.5
+      },
+      {
+        "id": "var_olive_oil_100g",
+        "name": "100g portion",
+        "calories": 884,
+        "protein": 0,
+        "carbs": 0,
+        "fat": 100,
+        "servingSize": "100g",
+        "servingGrams": 100
+      }
+    ],
     "source": "verified_database"
   },
   {
@@ -214,42 +278,98 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "carbs": 8.5,
     "fat": 14.7,
     "category": "Fruit",
+    "variants": [
+      {
+        "id": "var_avocado_half",
+        "name": "Half avocado (75g)",
+        "calories": 120,
+        "protein": 1.5,
+        "carbs": 6.4,
+        "fat": 11,
+        "servingSize": "1/2 medium (75g)",
+        "servingGrams": 75
+      },
+      {
+        "id": "var_avocado_100g",
+        "name": "100g portion",
+        "calories": 160,
+        "protein": 2,
+        "carbs": 8.5,
+        "fat": 14.7,
+        "servingSize": "100g",
+        "servingGrams": 100
+      },
+      {
+        "id": "var_avocado_whole",
+        "name": "Whole avocado (150g)",
+        "calories": 240,
+        "protein": 3,
+        "carbs": 12.8,
+        "fat": 22,
+        "servingSize": "1 medium (150g)",
+        "servingGrams": 150
+      }
+    ],
     "source": "verified_database"
   },
   {
     "id": "food_naan_bread",
-    "name": "Samoon / Kurdish Flatbread (نان)",
+    "name": "Samoon / Kurdish Flatbread",
+    "nameAr": "صمون / خبز عراقي",
+    "nameCkb": "نان / سەمون",
     "servingSize": "1 piece (120g)",
     "servingGrams": 120,
     "calories": 290,
     "protein": 8.5,
     "carbs": 58,
     "fat": 2.2,
-    "category": "Bakery",
-    "source": "regional_culinary_estimate"
-  },
-  {
-    "id": "food_lentil_soup",
-    "name": "Red Lentil Soup (Shorba / شۆربا)",
-    "servingSize": "1 bowl (250g)",
-    "servingGrams": 250,
-    "calories": 180,
-    "protein": 10,
-    "carbs": 30,
-    "fat": 2.5,
-    "category": "Soups",
+    "category": "Grains & Bread",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_hummus",
-    "name": "Traditional Hummus Tahini (حمص)",
+    "name": "Traditional Hummus Tahini",
+    "nameAr": "حمص بطحينة",
+    "nameCkb": "حمس بە تەحین",
     "servingSize": "2 tablespoons (30g)",
     "servingGrams": 30,
     "calories": 70,
     "protein": 2.4,
     "carbs": 4.8,
     "fat": 5,
-    "category": "Dips",
+    "category": "Sauces & Dips",
+    "variants": [
+      {
+        "id": "var_hummus_2tbsp",
+        "name": "2 tablespoons (30g)",
+        "calories": 70,
+        "protein": 2.4,
+        "carbs": 4.5,
+        "fat": 4.8,
+        "servingSize": "2 tablespoons (30g)",
+        "servingGrams": 30
+      },
+      {
+        "id": "var_hummus_3tbsp",
+        "name": "3 tablespoons (60g)",
+        "calories": 135,
+        "protein": 4.5,
+        "carbs": 9,
+        "fat": 9.5,
+        "servingSize": "3 tbsp (60g)",
+        "servingGrams": 60
+      },
+      {
+        "id": "var_hummus_100g",
+        "name": "100g portion",
+        "calories": 177,
+        "protein": 4.9,
+        "carbs": 20.1,
+        "fat": 8.6,
+        "servingSize": "100g",
+        "servingGrams": 100
+      }
+    ],
     "source": "regional_culinary_estimate"
   },
   {
@@ -263,22 +383,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fat": 2.5,
     "sodium": 350,
     "nutriScore": "A",
-    "category": "Dairy",
+    "category": "Eggs & Dairy",
     "source": "generic_estimate"
-  },
-  {
-    "id": "food_lean_beef_93",
-    "name": "Lean Ground Beef 93/7 (Cooked)",
-    "servingSize": "100g",
-    "servingGrams": 100,
-    "calories": 172,
-    "protein": 26,
-    "carbs": 0,
-    "fat": 7,
-    "sodium": 70,
-    "nutriScore": "A",
-    "category": "Protein",
-    "source": "verified_database"
   },
   {
     "id": "food_tofu_firm",
@@ -292,7 +398,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 1,
     "sodium": 10,
     "nutriScore": "A",
-    "category": "Plant Protein",
+    "category": "Legumes",
     "source": "generic_estimate"
   },
   {
@@ -307,7 +413,39 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 2.7,
     "sodium": 5,
     "nutriScore": "A",
-    "category": "Grains",
+    "category": "Grains & Bread",
+    "variants": [
+      {
+        "id": "var_brown_rice_150g",
+        "name": "Standard serving (150g)",
+        "calories": 168,
+        "protein": 3.5,
+        "carbs": 35,
+        "fat": 1.2,
+        "servingSize": "150g",
+        "servingGrams": 150
+      },
+      {
+        "id": "var_brown_rice_1cup",
+        "name": "1 cup cooked (160g)",
+        "calories": 218,
+        "protein": 4.5,
+        "carbs": 45.8,
+        "fat": 1.6,
+        "servingSize": "1 cup cooked (160g)",
+        "servingGrams": 160
+      },
+      {
+        "id": "var_brown_rice_100g",
+        "name": "100g portion",
+        "calories": 112,
+        "protein": 2.3,
+        "carbs": 23.5,
+        "fat": 0.8,
+        "servingSize": "100g",
+        "servingGrams": 100
+      }
+    ],
     "source": "verified_database"
   },
   {
@@ -323,7 +461,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sugars": 2,
     "sodium": 135,
     "nutriScore": "A",
-    "category": "Bakery",
+    "category": "Grains & Bread",
     "source": "generic_estimate"
   },
   {
@@ -339,7 +477,29 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sugars": 10,
     "sodium": 1,
     "nutriScore": "A",
-    "category": "Fruits",
+    "category": "Fruit",
+    "variants": [
+      {
+        "id": "var_blueberries_100g",
+        "name": "100g portion",
+        "calories": 57,
+        "protein": 0.7,
+        "carbs": 14.5,
+        "fat": 0.3,
+        "servingSize": "100g (approx 3/4 cup)",
+        "servingGrams": 100
+      },
+      {
+        "id": "var_blueberries_1cup",
+        "name": "1 cup fresh (150g)",
+        "calories": 85,
+        "protein": 1.1,
+        "carbs": 21.5,
+        "fat": 0.5,
+        "servingSize": "1 cup (150g)",
+        "servingGrams": 150
+      }
+    ],
     "source": "verified_database"
   },
   {
@@ -356,7 +516,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sugars": 1.2,
     "sodium": 1,
     "nutriScore": "A",
-    "category": "Nuts",
+    "category": "Nuts & Seeds",
     "source": "verified_database"
   },
   {
@@ -423,23 +583,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sugars": 1,
     "sodium": 210,
     "nutriScore": "A",
-    "category": "Supplements",
-    "source": "verified_database"
-  },
-  {
-    "id": "food_coca_cola_zero",
-    "name": "Coca-Cola Zero Sugar",
-    "brand": "The Coca-Cola Company",
-    "barcode": "049000042566",
-    "servingSize": "1 can (355ml)",
-    "servingGrams": 355,
-    "calories": 0,
-    "protein": 0,
-    "carbs": 0,
-    "fat": 0,
-    "sodium": 40,
-    "nutriScore": "B",
-    "category": "Beverages",
+    "category": "Snacks",
     "source": "verified_database"
   },
   {
@@ -455,27 +599,15 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sugars": 0,
     "sodium": 170,
     "nutriScore": "A",
-    "category": "Dairy Alternative",
+    "category": "Drinks",
+    "unit": "ml",
     "source": "generic_estimate"
-  },
-  {
-    "id": "food_kurdish_yaprax",
-    "name": "Kurdish Yaprax (Dolma)",
-    "servingSize": "1 plate (4 pieces / 250g)",
-    "servingGrams": 250,
-    "calories": 340,
-    "protein": 9.5,
-    "carbs": 42,
-    "fat": 15,
-    "fiber": 4.5,
-    "sodium": 480,
-    "nutriScore": "B",
-    "category": "Meals",
-    "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kurdish_chicken_biryani",
     "name": "Kurdish Chicken Biryani",
+    "nameAr": "برياني دجاج كوردية",
+    "nameCkb": "بریانی مریشک",
     "servingSize": "1 plate (350g)",
     "servingGrams": 350,
     "calories": 520,
@@ -485,12 +617,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 3.8,
     "sodium": 560,
     "nutriScore": "B",
-    "category": "Meals",
+    "category": "Regional Dishes",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kebab_shish",
     "name": "Grilled Lamb & Beef Kebab Skewer",
+    "nameAr": "شيش كباب لحم مشوي",
+    "nameCkb": "شیش کەبابی گۆشت",
     "servingSize": "1 skewer (120g cooked)",
     "servingGrams": 120,
     "calories": 290,
@@ -500,12 +634,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 0.5,
     "sodium": 420,
     "nutriScore": "C",
-    "category": "Meat",
+    "category": "Regional Dishes",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_chicken_tikka_skewer",
     "name": "Grilled Chicken Tikka Skewer",
+    "nameAr": "شيش تكا دجاج",
+    "nameCkb": "شیش تیکەی مریشک",
     "servingSize": "1 skewer (130g cooked)",
     "servingGrams": 130,
     "calories": 210,
@@ -515,12 +651,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 0.5,
     "sodium": 380,
     "nutriScore": "A",
-    "category": "Meat",
+    "category": "Regional Dishes",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kubba_sawar",
     "name": "Crispy Bulgur Kubba (Minced Meat Filled)",
+    "nameAr": "كبة جريش محشوة",
+    "nameCkb": "کوبەی ساوار بە قیمە",
     "servingSize": "2 pieces (160g)",
     "servingGrams": 160,
     "calories": 360,
@@ -530,12 +668,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 4.2,
     "sodium": 440,
     "nutriScore": "B",
-    "category": "Meals",
+    "category": "Regional Dishes",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kubba_halab",
     "name": "Kubba Halab (Crispy Rice & Beef Croquette)",
+    "nameAr": "كبة حلب بالأرز",
+    "nameCkb": "کوبەی حەلەب بە برنج",
     "servingSize": "2 pieces (150g)",
     "servingGrams": 150,
     "calories": 330,
@@ -545,12 +685,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 2,
     "sodium": 410,
     "nutriScore": "B",
-    "category": "Meals",
+    "category": "Regional Dishes",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_tepsi_baytinjan",
     "name": "Tepsi Baytinjan (Eggplant & Tomato Casserole)",
+    "nameAr": "صينية تبسي باذنجان",
+    "nameCkb": "تەپسی باینجان لە فڕن",
     "servingSize": "1 portion (300g)",
     "servingGrams": 300,
     "calories": 310,
@@ -560,27 +702,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 6,
     "sodium": 520,
     "nutriScore": "A",
-    "category": "Meals",
-    "source": "regional_culinary_estimate"
-  },
-  {
-    "id": "food_shorba_nisk",
-    "name": "Shorba Nisk (Red Lentil Soup with Cumin)",
-    "servingSize": "1 bowl (300ml / 300g)",
-    "servingGrams": 300,
-    "calories": 195,
-    "protein": 11.5,
-    "carbs": 31,
-    "fat": 2.8,
-    "fiber": 6.5,
-    "sodium": 460,
-    "nutriScore": "A",
-    "category": "Meals",
+    "category": "Regional Dishes",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_samoon_bread",
     "name": "Kurdish Diamond Samoon Bread",
+    "nameAr": "صمون عراقي ماسي",
+    "nameCkb": "سەمونی ئەڵماسی",
     "servingSize": "1 piece (100g)",
     "servingGrams": 100,
     "calories": 265,
@@ -590,12 +719,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 2.4,
     "sodium": 390,
     "nutriScore": "B",
-    "category": "Grains",
+    "category": "Grains & Bread",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kurdish_mast",
     "name": "Traditional Kurdish Yogurt (Mast)",
+    "nameAr": "لبن كردي بلدي",
+    "nameCkb": "ماستی کوردی",
     "servingSize": "1 cup (200g)",
     "servingGrams": 200,
     "calories": 140,
@@ -605,12 +736,15 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 0,
     "sodium": 105,
     "nutriScore": "A",
-    "category": "Dairy",
+    "category": "Eggs & Dairy",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kurdish_do",
     "name": "Kurdish Do (Chilled Savory Ayran)",
+    "nameAr": "شنينة كوردية باردة",
+    "nameCkb": "دۆی ساردی کوردی",
+    "unit": "ml",
     "servingSize": "1 glass (250ml)",
     "servingGrams": 250,
     "calories": 75,
@@ -620,12 +754,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 0,
     "sodium": 280,
     "nutriScore": "A",
-    "category": "Beverages",
+    "category": "Drinks",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_bamya_stew",
     "name": "Bamya Stew with Tender Beef",
+    "nameAr": "مرق بامية باللحم",
+    "nameCkb": "شۆرباوەی بامێ بە گۆشت",
     "servingSize": "1 bowl (300g)",
     "servingGrams": 300,
     "calories": 260,
@@ -635,12 +771,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 5.2,
     "sodium": 480,
     "nutriScore": "A",
-    "category": "Meals",
+    "category": "Regional Dishes",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_fasolia_stew",
     "name": "Fasolia White Bean & Beef Stew",
+    "nameAr": "مرق فاصوليا بيضاء",
+    "nameCkb": "شۆرباوەی فاسۆلیا بە گۆشت",
     "servingSize": "1 bowl (320g)",
     "servingGrams": 320,
     "calories": 310,
@@ -650,12 +788,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 8,
     "sodium": 490,
     "nutriScore": "A",
-    "category": "Meals",
+    "category": "Regional Dishes",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_qoozi_lamb",
     "name": "Qoozi Lamb Shank with Fragrant Rice",
+    "nameAr": "قوزي لحم غنم مع رز",
+    "nameCkb": "قۆزی بەرخ بە برنج",
     "servingSize": "1 plate (450g)",
     "servingGrams": 450,
     "calories": 690,
@@ -665,12 +805,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 3.5,
     "sodium": 620,
     "nutriScore": "B",
-    "category": "Meals",
+    "category": "Regional Dishes",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_kleicha_pastry",
     "name": "Kleicha Cardamom Date Pastry",
+    "nameAr": "كليجة عراقية بالتمر",
+    "nameCkb": "کولیچەی خورما بە هێل",
     "servingSize": "2 pieces (60g)",
     "servingGrams": 60,
     "calories": 220,
@@ -680,12 +822,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 2.6,
     "sodium": 75,
     "nutriScore": "C",
-    "category": "Snacks",
+    "category": "Bakery & Sweets",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_tahini_dibis",
     "name": "Tahini with Date Molasses (Rashi & Doshaw)",
+    "nameAr": "راشي ودبس",
+    "nameCkb": "تەحین و دۆشاو (ڕاشی و دۆشاو)",
     "servingSize": "2 tbsp (40g)",
     "servingGrams": 40,
     "calories": 185,
@@ -695,27 +839,14 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "fiber": 1.8,
     "sodium": 15,
     "nutriScore": "B",
-    "category": "Snacks",
-    "source": "regional_culinary_estimate"
-  },
-  {
-    "id": "food_hummus_tahini",
-    "name": "Authentic Hummus Tahini Dip",
-    "servingSize": "3 tbsp (60g)",
-    "servingGrams": 60,
-    "calories": 135,
-    "protein": 5,
-    "carbs": 11,
-    "fat": 8.5,
-    "fiber": 3.5,
-    "sodium": 210,
-    "nutriScore": "A",
-    "category": "Snacks",
+    "category": "Sauces & Dips",
     "source": "regional_culinary_estimate"
   },
   {
     "id": "food_tabbouleh_salad",
     "name": "Fresh Parsley Tabbouleh Salad",
+    "nameAr": "تبولة لبنانية",
+    "nameCkb": "تەبوولە",
     "servingSize": "1 bowl (150g)",
     "servingGrams": 150,
     "calories": 110,

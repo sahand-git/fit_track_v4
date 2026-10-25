@@ -21,6 +21,7 @@ import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { FoodSourceBadge } from './FoodSourceBadge';
+import { getLocalizedFoodName } from '../utils/foodLocalization';
 
 interface FoodDetailsModalProps {
   visible: boolean;
@@ -129,7 +130,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
           {/* Header */}
           <View style={[styles.header, isRtl && styles.rowRtl]}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.foodName}>{item.name}</Text>
+              <Text style={styles.foodName}>{getLocalizedFoodName(item, language)}</Text>
               {item.brand && <Text style={styles.brand}>{item.brand}</Text>}
               {item.source && (
                 <View style={{ marginTop: 4 }}>

@@ -119,9 +119,12 @@ export interface FoodVariant {
 export interface FoodItem {
   id: string;
   name: string;
+  nameAr?: string;
+  nameCkb?: string;
   brand?: string;
   servingSize: string;
   servingGrams: number;
+  unit?: 'g' | 'ml';
   calories: number;
   protein: number;
   carbs: number;
@@ -164,6 +167,8 @@ export interface LoggedMeal {
   id: string;
   foodId: string;
   name: string;
+  nameAr?: string;
+  nameCkb?: string;
   brand?: string;
   category?: string;
   imageUrl?: string;
@@ -171,6 +176,7 @@ export interface LoggedMeal {
   servings: number;
   servingSize: string;
   servingGrams: number;
+  unit?: 'g' | 'ml';
   calories: number;
   protein: number;
   carbs: number;

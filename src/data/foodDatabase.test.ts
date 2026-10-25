@@ -2,6 +2,7 @@ import { REGIONAL_FOODS, VERIFIED_FOOD_DATABASE } from './foodDatabase';
 import { getFoodSourceLabel, getFoodSourceBadgeInfo } from '../utils/foodSource';
 import { PortionUnit } from '../types';
 import { isValidBarcode } from '../utils/barcodeUtils';
+import { CANONICAL_FOOD_CATEGORIES } from '../utils/foodCategories';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) {
@@ -141,40 +142,9 @@ function runFoodDatabaseTests() {
     console.log('✓ Test 6 passed: Recipe ingredients, USDA citations, and preparation variants verified across all regional dishes.');
   }
 
-  // Test 7: Category Validity for Every Food in Database
+  // Test 7: Category Validity for Every Food in Database (Phase 3: 17 Canonical Categories)
   {
-    const recognizedCategories = new Set([
-      'Meat',
-      'Fish',
-      'Fish & Seafood',
-      'Drinks',
-      'Beverages',
-      'Eggs & Dairy',
-      'Dairy',
-      'Dairy Alternative',
-      'Grains & Bread',
-      'Grains',
-      'Bakery',
-      'Fruit',
-      'Fruits',
-      'Vegetables',
-      'Beans & Lentils',
-      'Plant Protein',
-      'Nuts & Seeds',
-      'Nuts',
-      'Snacks & Protein',
-      'Snacks',
-      'Protein',
-      'Supplements',
-      'Prepared Meals',
-      'Meals',
-      'Breakfast',
-      'Soups',
-      'Oils',
-      'Pantry',
-      'Dips',
-      'Other',
-    ]);
+    const recognizedCategories = new Set(CANONICAL_FOOD_CATEGORIES);
 
     for (const food of VERIFIED_FOOD_DATABASE) {
       assert(typeof food.category === 'string', `Food ${food.id} category must be a string`);
@@ -183,11 +153,11 @@ function runFoodDatabaseTests() {
       assert(trimmedCategory.length > 0, `Food ${food.id} has empty category`);
       assert(trimmedCategory === category, `Food ${food.id} category has leading/trailing whitespace`);
       assert(
-        recognizedCategories.has(category),
+        recognizedCategories.has(category as any),
         `Food ${food.id} has unrecognized category: "${category}"`
       );
     }
-    console.log(`✓ Test 7 passed: All ${VERIFIED_FOOD_DATABASE.length} foods verified to have valid, recognized categories.`);
+    console.log(`✓ Test 7 passed: All ${VERIFIED_FOOD_DATABASE.length} foods verified to belong to one of the 17 canonical categories.`);
   }
 
   // Test 8: Serving Size and Grams Validity for Every Food
@@ -275,6 +245,18 @@ function runFoodDatabaseTests() {
     assert(getFoodSourceBadgeInfo('regional_culinary_estimate')?.isEstimate === true, 'regional_culinary_estimate is flagged as estimate');
     assert(getFoodSourceBadgeInfo('ai_estimated')?.isEstimate === true, 'ai_estimated is flagged as estimate');
     console.log('✓ Test 11 passed: Phase 2 honest labelling verified (0 placeholder brands, valid sources, and estimate badges).');
+  }
+
+  // Test 12: Phase 3 Multilingual Separation and Drinks Unit
+  {
+    const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    for (const food of VERIFIED_FOOD_DATABASE) {
+      assert(!arabicRegex.test(food.name), `Food ${food.id} name "${food.name}" contains Arabic/Kurdish script. English name must not contain Arabic characters.`);
+      if (food.category === 'Drinks') {
+        assert(food.unit === 'ml', `Food ${food.id} ("${food.name}") in Drinks category must specify unit: 'ml'`);
+      }
+    }
+    console.log('✓ Test 12 passed: Phase 3 multilingual script separation and drinks unit "ml" verified.');
   }
 
   console.log('All Food Database & Regional Foods Tests Passed successfully!');
