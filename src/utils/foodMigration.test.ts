@@ -10,6 +10,7 @@ console.log('Starting Food ID Migration Map Unit Tests...');
 assert(Object.keys(FOOD_ID_MIGRATIONS).length >= 10, 'Migrations map is populated with at least 10 legacy food mappings');
 
 // 1. Verify exact duplicate mappings
+assert(resolveCanonicalFoodId('food_pita_bread') === 'usda_sr28_18042', 'Pita bread resolves to canonical USDA SR28');
 assert(resolveCanonicalFoodId('pop_banana_medium') === 'food_banana', 'Banana resolves to canonical');
 assert(resolveCanonicalFoodId('pop_olive_oil_extra_virgin') === 'food_olive_oil', 'Olive oil resolves to canonical');
 assert(resolveCanonicalFoodId('food_lean_beef_93') === 'food_lean_beef', 'Lean beef 93 resolves to canonical');

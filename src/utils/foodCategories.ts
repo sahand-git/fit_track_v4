@@ -152,7 +152,7 @@ export function foodCategory(food: { name: string; category?: string }): Canonic
     category === 'fast food & meals' ||
     category === 'fast food' ||
     category === 'pizza' ||
-    /french fries|onion rings|chicken nuggets|nugget|burger|cheeseburger|hot dog|burrito|taco|quesadilla|nachos|pizza/.test(name)
+    /french fries|onion rings|chicken nuggets|nugget|burger|cheeseburger|hot dog|burrito|taco|quesadilla|nachos|pizza|spring roll/.test(name)
   ) {
     return 'Fast Food & Meals';
   }

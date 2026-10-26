@@ -26,6 +26,7 @@ function runTests() {
 
   // 3. Fast Food & Meals (fries, onion rings, nuggets, pizza, burgers)
   assert(foodCategory({ name: 'French Fries' }) === 'Fast Food & Meals', 'French fries are Fast Food & Meals, not Vegetables');
+  assert(foodCategory({ name: 'Crispy Vegetable Spring Rolls' }) === 'Fast Food & Meals', 'Spring rolls are Fast Food & Meals, not Vegetables');
   assert(foodCategory({ name: 'Crispy Onion Rings' }) === 'Fast Food & Meals', 'Onion rings are Fast Food & Meals, not Vegetables');
   assert(foodCategory({ name: 'Chicken Nuggets' }) === 'Fast Food & Meals', 'Nuggets are Fast Food & Meals');
   assert(foodCategory({ name: 'Pepperoni Pizza' }) === 'Fast Food & Meals', 'Pizza is Fast Food & Meals');

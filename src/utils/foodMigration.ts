@@ -6,6 +6,9 @@
  */
 
 export const FOOD_ID_MIGRATIONS: Record<string, string> = {
+  // Pita bread duplicate -> USDA SR28 canonical entry
+  food_pita_bread: 'usda_sr28_18042',
+
   // Banana duplicate
   pop_banana_medium: 'food_banana',
 

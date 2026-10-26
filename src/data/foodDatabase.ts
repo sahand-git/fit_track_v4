@@ -236,23 +236,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "source": "verified_database"
   },
   {
-    "id": "food_pita_bread",
-    "nameAr": "خبز بيتا قمح كامل أسمر",
-    "nameCkb": "نانی پیتا گەنمی تەواو (نانی ئاسایی)",
-    "name": "Whole Wheat Pita Bread",
-    "servingSize": "1 medium pocket (60g)",
-    "servingGrams": 60,
-    "calories": 170,
-    "protein": 6,
-    "carbs": 35,
-    "fat": 1,
-    "calcium": 40,
-    "iron": 1.4,
-    "potassium": 120,
-    "category": "Grains & Bread",
-    "source": "generic_estimate"
-  },
-  {
     "id": "food_banana",
     "nameAr": "موز طازج (حجم متوسط)",
     "nameCkb": "مۆزی فرێش (قەبارەی ناوەند)",

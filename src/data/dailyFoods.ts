@@ -5,6 +5,9 @@ import { FoodItem } from '../types';
 export const DAILY_FOODS: FoodItem[] = [
   {
     "id": "usda_sr28_17224",
+    "calcium": 16,
+    "iron": 1.55,
+    "potassium": 222,
     "nameAr": "لحم غنم مفروم (نيء)",
     "nameCkb": "گۆشتی بەرخی وردکراو (خاو)",
     "sourceRef": "USDA SR28 17224",
@@ -23,6 +26,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_17225",
+    "calcium": 21,
+    "iron": 1.88,
+    "potassium": 310,
     "nameAr": "لحم غنم مفروم (مطبوخ مشوي)",
     "nameCkb": "گۆشتی بەرخی وردکراو (برژاو)",
     "sourceRef": "USDA SR28 17225",
@@ -41,6 +47,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_23567",
+    "calcium": 18,
+    "iron": 1.99,
+    "potassium": 289,
     "nameAr": "لحم بقري مفروم ٨٥٪ خالي من الدهن (نيء)",
     "nameCkb": "گۆشتی مانگای قیمەکراو ٨٥٪ کەم چەوری (خاو)",
     "sourceRef": "USDA SR28 23567",
@@ -59,6 +68,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_23568",
+    "calcium": 24,
+    "iron": 2.37,
+    "potassium": 337,
     "nameAr": "برغر لحم بقري ٨٥٪ مشوي",
     "nameCkb": "بەرگەری گۆشتی مانگا ٨٥٪ برژاو",
     "sourceRef": "USDA SR28 23568",
@@ -77,6 +89,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_13451",
+    "calcium": 28,
+    "iron": 2.16,
+    "potassium": 380,
     "nameAr": "ستيك لحم بقري سيرلوين مشوي",
     "nameCkb": "ستیکی سێرلۆینی گۆشتی مانگای برژاو",
     "sourceRef": "USDA SR28 13451",
@@ -95,6 +110,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_17012",
+    "calcium": 11,
+    "iron": 2.05,
+    "potassium": 338,
     "nameAr": "فخذ خروف محمر بالفرن",
     "nameCkb": "ڕانی بەرخی برژاو لە فڕن",
     "sourceRef": "USDA SR28 17012",
@@ -113,6 +131,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_05098",
+    "calcium": 11,
+    "iron": 1.26,
+    "potassium": 248,
     "nameAr": "فخذ دجاج بدون جلد محمر بالفرن",
     "nameCkb": "ڕانی مریشکی بێ پێست لە فڕن",
     "sourceRef": "USDA SR28 05098",
@@ -131,6 +152,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_15262",
+    "calcium": 14,
+    "iron": 0.69,
+    "potassium": 380,
     "nameAr": "سمك بلطي مطبوخ بالحرارة الجافة",
     "nameCkb": "ماسی تەلاپیا کوڵاو بە گەرمی وشک",
     "sourceRef": "USDA SR28 15262",
@@ -149,6 +173,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_15192",
+    "calcium": 16,
+    "iron": 0.49,
+    "potassium": 439,
     "nameAr": "سمك قد الباسيفيك مطبوخ",
     "nameCkb": "ماسی کۆدی هێمن کوڵاو",
     "sourceRef": "USDA SR28 15192",
@@ -167,6 +194,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_15151",
+    "calcium": 70,
+    "iron": 0.51,
+    "potassium": 259,
     "nameAr": "روبيان مسلوق ومطبوخ",
     "nameCkb": "ڕۆبیانی کوڵاو",
     "sourceRef": "USDA SR28 15151",
@@ -185,6 +215,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01129",
+    "calcium": 50,
+    "iron": 1.19,
+    "potassium": 126,
     "nameAr": "بيضة مسلوقة جيداً",
     "nameCkb": "هێلکەی تەواو کوڵاو",
     "sourceRef": "USDA SR28 01129",
@@ -203,6 +236,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01128",
+    "calcium": 57,
+    "iron": 1.75,
+    "potassium": 138,
     "nameAr": "بيضة مقلية بالزيت",
     "nameCkb": "هێلکەی سوورکراوە بە زەیت",
     "sourceRef": "USDA SR28 01128",
@@ -221,6 +257,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01131",
+    "calcium": 53,
+    "iron": 1.77,
+    "potassium": 138,
     "nameAr": "بيضة بوشيه مسلوقة بالماء",
     "nameCkb": "هێلکەی ئاوپژێن (پۆچد)",
     "sourceRef": "USDA SR28 01131",
@@ -239,6 +278,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16070",
+    "calcium": 19,
+    "iron": 3.33,
+    "potassium": 369,
     "nameAr": "عدس بني مسلوق بدون ملح",
     "nameCkb": "نیسکی قاوەیی کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 16070",
@@ -257,6 +299,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16057",
+    "calcium": 49,
+    "iron": 2.89,
+    "potassium": 291,
     "nameAr": "حمص مسلوق بدون ملح",
     "nameCkb": "نۆکی کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 16057",
@@ -275,6 +320,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16033",
+    "calcium": 28,
+    "iron": 2.94,
+    "potassium": 403,
     "nameAr": "فاصولياء حمراء مسلوقة بدون ملح",
     "nameCkb": "فاسۆڵیای سووری کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 16033",
@@ -293,6 +341,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16053",
+    "calcium": 36,
+    "iron": 1.5,
+    "potassium": 268,
     "nameAr": "فول عريض (باقلاء) مسلوق بدون ملح",
     "nameCkb": "پاقلەی کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 16053",
@@ -311,6 +362,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20013",
+    "calcium": 10,
+    "iron": 0.96,
+    "potassium": 68,
     "nameAr": "برغل مطبوخ ومفلفل",
     "nameCkb": "سەوەر (بڕوێش)ی کوڵاو",
     "sourceRef": "USDA SR28 20013",
@@ -329,6 +383,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20012",
+    "calcium": 35,
+    "iron": 2.46,
+    "potassium": 410,
     "nameAr": "برغل خشن (جاف غير مطبوخ)",
     "nameCkb": "سەوەر (بڕوێش)ی وشک نەکۆڵاو",
     "sourceRef": "USDA SR28 20012",
@@ -347,6 +404,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20045",
+    "calcium": 10,
+    "iron": 1.2,
+    "potassium": 35,
     "nameAr": "أرز أبيض طويل الحبة مطبوخ",
     "nameCkb": "برنجی سپی دەنک درێژی کوڵاو",
     "sourceRef": "USDA SR28 20045",
@@ -365,6 +425,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20044",
+    "calcium": 28,
+    "iron": 4.31,
+    "potassium": 115,
     "nameAr": "أرز أبيض طويل الحبة (جاف)",
     "nameCkb": "برنجی سپی دەنک درێژی وشک",
     "sourceRef": "USDA SR28 20044",
@@ -383,6 +446,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20029",
+    "calcium": 8,
+    "iron": 0.38,
+    "potassium": 58,
     "nameAr": "كسكسي مطبوخ على البخار",
     "nameCkb": "کوسکوسی هەڵمی کوڵاو",
     "sourceRef": "USDA SR28 20029",
@@ -401,6 +467,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11367",
+    "calcium": 8,
+    "iron": 0.31,
+    "potassium": 379,
     "nameAr": "بطاطا مقشرة مسلوقة بدون ملح",
     "nameCkb": "پەتاتەی پاککراوی کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 11367",
@@ -419,6 +488,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_18041",
+    "calcium": 86,
+    "iron": 2.65,
+    "potassium": 120,
     "nameAr": "خبز بيتا أبيض (خبز عربي)",
     "nameCkb": "نانی پیتا سپی (نانی عەرەبی)",
     "sourceRef": "USDA SR28 18041",
@@ -437,6 +509,31 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_18042",
+    "variants": [
+      {
+        "id": "var_pita_whole_pocket_60g",
+        "name": "1 medium pocket (60g)",
+        "calories": 157,
+        "protein": 5.9,
+        "carbs": 33.5,
+        "fat": 1.0,
+        "servingSize": "1 medium pocket (60g)",
+        "servingGrams": 60
+      },
+      {
+        "id": "var_pita_whole_100g",
+        "name": "100g portion",
+        "calories": 262,
+        "protein": 9.8,
+        "carbs": 55.9,
+        "fat": 1.7,
+        "servingSize": "100g portion",
+        "servingGrams": 100
+      }
+    ],
+    "calcium": 26,
+    "iron": 2.47,
+    "potassium": 215,
     "nameAr": "خبز بيتا قمح كامل (خبز أسمر)",
     "nameCkb": "نانی پیتا گەنمی تەواو (نانی تیری)",
     "sourceRef": "USDA SR28 18042",
@@ -455,6 +552,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01116",
+    "calcium": 121,
+    "iron": 0.05,
+    "potassium": 155,
     "nameAr": "زبادي طبيعي كامل الدسم",
     "nameCkb": "ماستی سروشتی تەواو چەوری",
     "sourceRef": "USDA SR28 01116",
@@ -473,6 +573,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01117",
+    "calcium": 183,
+    "iron": 0.08,
+    "potassium": 234,
     "nameAr": "زبادي طبيعي قليل الدسم",
     "nameCkb": "ماستی سروشتی کەم چەوری",
     "sourceRef": "USDA SR28 01117",
@@ -491,6 +594,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01077",
+    "calcium": 113,
+    "iron": 0.03,
+    "potassium": 132,
     "nameAr": "حليب كامل الدسم ٣.٢٥٪",
     "nameCkb": "شیری تەواو چەوری ٣.٢٥٪",
     "sourceRef": "USDA SR28 01077",
@@ -509,6 +615,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01019",
+    "calcium": 493,
+    "iron": 0.65,
+    "potassium": 62,
     "nameAr": "جبنة فيتا يونانية أصلية",
     "nameCkb": "پەنیری فێتای یۆنانی",
     "sourceRef": "USDA SR28 01019",
@@ -527,6 +636,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01009",
+    "calcium": 721,
+    "iron": 0.68,
+    "potassium": 98,
     "nameAr": "جبنة شيدر صفراء معتقة",
     "nameCkb": "پەنیری چێداری زەرد",
     "sourceRef": "USDA SR28 01009",
@@ -545,6 +657,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01001",
+    "calcium": 24,
+    "iron": 0.02,
+    "potassium": 24,
     "nameAr": "زبدة حيوانية مملحة",
     "nameCkb": "کەرەی ئاژەڵی خوێین",
     "sourceRef": "USDA SR28 01001",
@@ -563,6 +678,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11205",
+    "calcium": 16,
+    "iron": 0.28,
+    "potassium": 147,
     "nameAr": "خيار طازج بقشره",
     "nameCkb": "خەیاری فرێش بە توێکڵەوە",
     "sourceRef": "USDA SR28 11205",
@@ -581,6 +699,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11529",
+    "calcium": 10,
+    "iron": 0.27,
+    "potassium": 237,
     "nameAr": "طماطم حمراء طازجة (نيئة)",
     "nameCkb": "تەماتەی سووری فرێش",
     "sourceRef": "USDA SR28 11529",
@@ -599,6 +720,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11282",
+    "calcium": 23,
+    "iron": 0.21,
+    "potassium": 146,
     "nameAr": "بصل طازج (نيء)",
     "nameCkb": "پیازی فرێش (خاو)",
     "sourceRef": "USDA SR28 11282",
@@ -617,6 +741,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11124",
+    "calcium": 33,
+    "iron": 0.3,
+    "potassium": 320,
     "nameAr": "جزر طازج (نيء)",
     "nameCkb": "گێزەری فرێش (خاو)",
     "sourceRef": "USDA SR28 11124",
@@ -635,6 +762,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11251",
+    "calcium": 33,
+    "iron": 0.97,
+    "potassium": 247,
     "nameAr": "خس روماني طازج",
     "nameCkb": "خاسی ڕۆمانی فرێش",
     "sourceRef": "USDA SR28 11251",
@@ -653,6 +783,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11210",
+    "calcium": 6,
+    "iron": 0.25,
+    "potassium": 119,
     "nameAr": "باذنجان مسلوق بدون ملح",
     "nameCkb": "باینجانی کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 11210",
@@ -671,6 +804,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11279",
+    "calcium": 77,
+    "iron": 0.47,
+    "potassium": 135,
     "nameAr": "باميا مسلوقة بدون ملح",
     "nameCkb": "بامیەی کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 11279",
@@ -689,6 +825,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16137",
+    "calcium": 38,
+    "iron": 2.44,
+    "potassium": 228,
     "nameAr": "حمص بطحينة محضر منزلياً",
     "nameCkb": "حومسی ماڵەوە بە تەحین",
     "sourceRef": "USDA SR28 16137",
@@ -707,6 +846,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16138",
+    "calcium": 54,
+    "iron": 3.42,
+    "potassium": 585,
     "nameAr": "فلافل مقلية محضرة منزلياً",
     "nameCkb": "فەلافلی سوورکراوەی ماڵەوە",
     "sourceRef": "USDA SR28 16138",
@@ -723,6 +865,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09087",
+    "calcium": 39,
+    "iron": 1.02,
+    "potassium": 656,
     "nameAr": "تمر دقلة نور طبيعي",
     "nameCkb": "خورمای دەجلە نوور",
     "sourceRef": "USDA SR28 09087",
@@ -741,6 +886,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09421",
+    "calcium": 64,
+    "iron": 0.9,
+    "potassium": 696,
     "nameAr": "تمر مجدول فاخر",
     "nameCkb": "خورمای مەجول شاهانە",
     "sourceRef": "USDA SR28 09421",
@@ -781,6 +929,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09200",
+    "calcium": 40,
+    "iron": 0.1,
+    "potassium": 181,
     "nameAr": "برتقال طازج (نيء)",
     "nameCkb": "پرتەقاڵی فرێش",
     "sourceRef": "USDA SR28 09200",
@@ -799,6 +950,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09326",
+    "calcium": 7,
+    "iron": 0.24,
+    "potassium": 112,
     "nameAr": "بطيخ أحمر (رقي) طازج",
     "nameCkb": "شوتی فرێش",
     "sourceRef": "USDA SR28 09326",
@@ -817,6 +971,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09132",
+    "calcium": 10,
+    "iron": 0.36,
+    "potassium": 191,
     "nameAr": "عنب أحمر أو أخضر طازج",
     "nameCkb": "تریی سوور یان سەوزی فرێش",
     "sourceRef": "USDA SR28 09132",
@@ -835,6 +992,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_12155",
+    "calcium": 98,
+    "iron": 2.91,
+    "potassium": 441,
     "nameAr": "جوز عين الجمل نيء",
     "nameCkb": "گوێزی سروشتی خاو",
     "sourceRef": "USDA SR28 12155",
@@ -853,6 +1013,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_19335",
+    "calcium": 1,
+    "iron": 0.05,
+    "potassium": 2,
     "nameAr": "سكر مائدة أبيض نقي",
     "nameCkb": "شەکری سپی وردکراو",
     "sourceRef": "USDA SR28 19335",
@@ -871,6 +1034,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_14185",
+    "calcium": 1,
+    "iron": 0.02,
+    "potassium": 12,
     "nameAr": "شاي أولونغ مخمر بدون سكر",
     "nameCkb": "چای ئۆلۆنگی تاڵ بێ شەکر",
     "sourceRef": "USDA SR28 14185",
@@ -890,6 +1056,9 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_14180",
+    "calcium": 2,
+    "iron": 0.01,
+    "potassium": 49,
     "nameAr": "قهوة سوداء مخمرة بدون سكر",
     "nameCkb": "قاوەی ڕەشی دەمکراو بێ شەکر",
     "sourceRef": "USDA SR28 14180",
