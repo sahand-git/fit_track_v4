@@ -276,6 +276,9 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: Platform.OS === 'ios' ? 32 : 20,
     maxHeight: '80%',
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 480 : undefined,
+    alignSelf: 'center',
     ...theme.shadow.floating,
   },
   handleBar: {

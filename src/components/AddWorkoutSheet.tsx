@@ -494,6 +494,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: theme.radius.lg,
     maxHeight: '90%',
     paddingTop: 10,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 480 : undefined,
+    alignSelf: 'center',
     ...theme.shadow.floating,
   },
   dragPill: {

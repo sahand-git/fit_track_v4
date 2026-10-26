@@ -54,6 +54,7 @@ import {
 import { getDefaultProfile } from './src/utils/calculator';
 import { OnboardingModal } from './src/components/OnboardingModal';
 import { getTodayDateString } from './src/utils/dateUtils';
+import { WEB_APP_MAX_WIDTH } from './src/utils/dashboardLayout';
 import { TodaySkeleton } from './src/components/SkeletonLoader';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { FoodLogScreen } from './src/screens/FoodLogScreen';
@@ -94,6 +95,57 @@ export default function App() {
 const ThemedStatusBar: React.FC = () => {
   const { isDark } = useTheme();
   return <StatusBar style={isDark ? 'light' : 'dark'} />;
+};
+
+const ThemedAppLayout: React.FC<{
+  children: React.ReactNode;
+  direction?: 'ltr' | 'rtl';
+  paddingTop?: number;
+}> = ({ children, direction = 'ltr', paddingTop = 0 }) => {
+  const { theme: activeTheme, isDark } = useTheme();
+
+  if (Platform.OS === 'web') {
+    return (
+      <View
+        style={[
+          styles.webOuter,
+          {
+            backgroundColor: isDark ? activeTheme.colors.background : activeTheme.colors.surfaceSubtle,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.container,
+            styles.webColumn,
+            {
+              direction,
+              paddingTop,
+              backgroundColor: activeTheme.colors.background,
+              borderColor: activeTheme.colors.border,
+            },
+          ]}
+        >
+          {children}
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.container,
+        {
+          direction,
+          paddingTop,
+          backgroundColor: activeTheme.colors.background,
+        },
+      ]}
+    >
+      {children}
+    </View>
+  );
 };
 
 function FitTrackApp() {
@@ -541,26 +593,32 @@ function FitTrackApp() {
   if (!profile.hasAcceptedMedicalDisclaimer && tempScreen !== 'account') {
     return (
       <I18nProvider language={language}>
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-          <MedicalDisclaimerModal
-            visible={true}
-            onAccept={async () => {
-              try {
-                await saveMedicalDisclaimerAccepted(true);
-              } catch (e) {
-                console.error('Failed to save medical disclaimer acceptance:', e);
-              }
-              setProfile((prev) => ({ ...prev, hasAcceptedMedicalDisclaimer: true }));
-            }}
-            isFirstRun={true}
-            onOpenReferences={() => setReferencesModalVisible(true)}
-          />
-          <ScientificReferencesModal
-            visible={referencesModalVisible}
-            onClose={() => setReferencesModalVisible(false)}
-            onOpenDisclaimer={() => setReferencesModalVisible(false)}
-          />
-        </View>
+        <ThemeProvider themeMode={profile.themeMode}>
+          <ThemedAppLayout
+            direction={language === 'en' ? 'ltr' : 'rtl'}
+            paddingTop={Math.max(insets.top, Platform.OS === 'android' ? 24 : 0)}
+          >
+            <ThemedStatusBar />
+            <MedicalDisclaimerModal
+              visible={true}
+              onAccept={async () => {
+                try {
+                  await saveMedicalDisclaimerAccepted(true);
+                } catch (e) {
+                  console.error('Failed to save medical disclaimer acceptance:', e);
+                }
+                setProfile((prev) => ({ ...prev, hasAcceptedMedicalDisclaimer: true }));
+              }}
+              isFirstRun={true}
+              onOpenReferences={() => setReferencesModalVisible(true)}
+            />
+            <ScientificReferencesModal
+              visible={referencesModalVisible}
+              onClose={() => setReferencesModalVisible(false)}
+              onOpenDisclaimer={() => setReferencesModalVisible(false)}
+            />
+          </ThemedAppLayout>
+        </ThemeProvider>
       </I18nProvider>
     );
   }
@@ -568,7 +626,15 @@ function FitTrackApp() {
   if (!profile.isOnboarded && tempScreen !== 'account') {
     return (
       <I18nProvider language={language}>
-        <OnboardingModal onComplete={handleSaveProfile} onLanguageChange={setAppLanguage} />
+        <ThemeProvider themeMode={profile.themeMode}>
+          <ThemedAppLayout
+            direction={language === 'en' ? 'ltr' : 'rtl'}
+            paddingTop={Math.max(insets.top, Platform.OS === 'android' ? 24 : 0)}
+          >
+            <ThemedStatusBar />
+            <OnboardingModal onComplete={handleSaveProfile} onLanguageChange={setAppLanguage} />
+          </ThemedAppLayout>
+        </ThemeProvider>
       </I18nProvider>
     );
   }
@@ -579,14 +645,9 @@ function FitTrackApp() {
   return (
     <I18nProvider language={language}>
       <ThemeProvider themeMode={profile.themeMode}>
-        <View
-          style={[
-            styles.container,
-            {
-              direction: language === 'en' ? 'ltr' : 'rtl',
-              paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0),
-            },
-          ]}
+        <ThemedAppLayout
+          direction={language === 'en' ? 'ltr' : 'rtl'}
+          paddingTop={Math.max(insets.top, Platform.OS === 'android' ? 24 : 0)}
         >
           <ThemedStatusBar />
 
@@ -829,16 +890,40 @@ function FitTrackApp() {
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </ThemedAppLayout>
       </ThemeProvider>
     </I18nProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  webOuter: {
+    flex: 1,
+    width: '100%',
+    minHeight: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webColumn: {
+    width: '100%',
+    maxWidth: WEB_APP_MAX_WIDTH,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    marginHorizontal: 'auto',
+    ...Platform.select({
+      web: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      default: {},
+    }),
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    position: 'relative',
   },
   main: {
     flex: 1,

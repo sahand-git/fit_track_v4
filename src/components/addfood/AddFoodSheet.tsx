@@ -2004,6 +2004,9 @@ const styles = StyleSheet.create({
     height: '92%',
     padding: theme.spacing.md,
     gap: 12,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 480 : undefined,
+    alignSelf: 'center',
     ...theme.shadow.floating,
   },
   header: {
