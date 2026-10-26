@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   macroTitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginBottom: 4,
   },
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   notAvailText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     fontStyle: 'italic',
   },

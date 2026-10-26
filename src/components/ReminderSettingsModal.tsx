@@ -424,7 +424,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderLeft}>
-                  <Droplet size={18} color="#0EA5E9" />
+                  <Droplet size={18} color={theme.colors.sky} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.sectionTitle}>{t('Water reminders')}</Text>
                     <Text style={styles.sectionSub}>
@@ -435,7 +435,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                 <Switch
                   value={settings.water.enabled}
                   onValueChange={handleToggleWaterMaster}
-                  trackColor={{ false: theme.colors.border, true: '#0EA5E9' }}
+                  trackColor={{ false: theme.colors.border, true: theme.colors.sky }}
                   thumbColor={theme.colors.surface}
                 />
               </View>
@@ -572,7 +572,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderLeft}>
-                  <Utensils size={18} color="#F59E0B" />
+                  <Utensils size={18} color={theme.colors.nutrientVitaminA} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.sectionTitle}>{t('Meal reminders')}</Text>
                     <Text style={styles.sectionSub}>
@@ -620,7 +620,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                       <Switch
                         value={mSetting.enabled}
                         onValueChange={(val) => handleToggleMeal(mKey, val)}
-                        trackColor={{ false: theme.colors.border, true: '#F59E0B' }}
+                        trackColor={{ false: theme.colors.border, true: theme.colors.nutrientVitaminA }}
                         thumbColor={theme.colors.surface}
                       />
                     </View>
@@ -696,7 +696,7 @@ const styles = StyleSheet.create({
   },
   disclaimerText: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     lineHeight: 16,
   },
@@ -727,21 +727,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.amberLight,
     borderRadius: theme.radius.md,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: theme.colors.amberBorder,
   },
   permWarningTitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#92400E',
+    color: theme.colors.amberDark,
   },
   permWarningAction: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#B45309',
+    color: theme.colors.amberText,
     marginTop: 2,
     textDecorationLine: 'underline',
   },
@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   sectionSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 1,
   },
@@ -808,12 +808,12 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   slotItemNames: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
   },
   slotEmptyNote: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   timeStepperWrap: {
@@ -863,7 +863,7 @@ const styles = StyleSheet.create({
   },
   settingItemSubLabel: {
     fontFamily: theme.fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -890,16 +890,16 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceSubtle,
   },
   chipBtnActive: {
-    borderColor: '#0EA5E9',
-    backgroundColor: '#E0F2FE',
+    borderColor: theme.colors.sky,
+    backgroundColor: theme.colors.skyLight,
   },
   chipBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },
   chipBtnTextActive: {
-    color: '#0369A1',
+    color: theme.colors.skyDark,
     fontWeight: '700',
   },
   timeWindowText: {

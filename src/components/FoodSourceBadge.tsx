@@ -5,6 +5,7 @@ import { FoodItem } from '../types';
 import { getFoodSourceBadgeInfo, FoodSourceBadgeType } from '../utils/foodSource';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
+import { theme } from '../theme';
 
 interface FoodSourceBadgeProps {
   source?: FoodItem['source'] | string;
@@ -18,32 +19,32 @@ const TYPE_STYLES: Record<FoodSourceBadgeType, ViewStyle> = {
     borderColor: 'rgba(30, 58, 47, 0.2)',
   },
   estimate: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: theme.colors.orangeLight,
     borderColor: 'rgba(200, 90, 50, 0.35)',
     borderStyle: 'dashed',
   },
   off: {
-    backgroundColor: '#F1F5F9',
-    borderColor: '#CBD5E1',
+    backgroundColor: theme.colors.grayLight,
+    borderColor: theme.colors.grayBorder,
   },
   custom: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#E5E7EB',
+    backgroundColor: theme.colors.graySubtle,
+    borderColor: theme.colors.grayOutline,
   },
 };
 
 const TYPE_TEXT_STYLES: Record<FoodSourceBadgeType, TextStyle> = {
   verified: {
-    color: '#1E3A2F', // Forest Green
+    color: theme.colors.primary,
   },
   estimate: {
-    color: '#C85A32', // Terracotta
+    color: theme.colors.terracottaBadge,
   },
   off: {
-    color: '#475569',
+    color: theme.colors.slateDark,
   },
   custom: {
-    color: '#4B5563',
+    color: theme.colors.slateBody,
   },
 };
 
@@ -103,8 +104,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   smallText: {
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 12,
+    lineHeight: 15,
   },
   mediumText: {
     fontSize: 12,
@@ -112,11 +113,11 @@ const styles = StyleSheet.create({
   },
   // Distinct "estimate" look for generic_estimate, regional_culinary_estimate, and ai_estimated
   estimateBadge: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: theme.colors.orangeLight,
     borderColor: 'rgba(200, 90, 50, 0.35)',
     borderStyle: 'dashed',
   },
   estimateText: {
-    color: '#C85A32', // terracotta
+    color: theme.colors.terracottaBadge,
   },
 });

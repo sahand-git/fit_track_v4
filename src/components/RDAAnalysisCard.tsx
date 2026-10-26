@@ -10,6 +10,7 @@ import { LoggedMeal, LoggedDailySupplement } from '../types';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import {
   ChevronDown,
   ChevronUp,
@@ -30,7 +31,7 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
   onSelectNutrient,
 }) => {
   const language = useLanguage();
-  const isRtl = language === 'ar' || language === 'ckb';
+  const isRtl = useIsRTL();
   const [expanded, setExpanded] = useState(false);
 
   const analysis = calculateMicronutrientIntake(meals, supplements);
@@ -81,7 +82,7 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
       {activeDeficiencies.length > 0 && (
         <View style={styles.alertBanner}>
           <View style={[styles.alertHeader, isRtl && styles.rowRtl]}>
-            <AlertTriangle size={15} color="#D97706" style={{ marginTop: 1 }} />
+            <AlertTriangle size={15} color={theme.colors.amber} style={{ marginTop: 1 }} />
             <Text style={styles.alertTitle}>
               {translate(language, 'Deficiency risks detected (<50% RDA):')}
             </Text>
@@ -108,10 +109,10 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
           const pctWidth = Math.min(100, item.percent);
           const barColor =
             item.percent >= 80
-              ? '#10B981' // emerald
+              ? theme.colors.emerald
               : item.percent >= 50
-              ? '#F59E0B' // amber
-              : '#EF4444'; // red
+              ? theme.colors.amber
+              : theme.colors.crimson;
 
           return (
             <TouchableOpacity
@@ -164,10 +165,10 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
                     {
                       color:
                         item.percent >= 80
-                          ? '#059669'
+                          ? theme.colors.emeraldDark
                           : item.percent >= 50
-                          ? '#D97706'
-                          : '#DC2626',
+                          ? theme.colors.amber
+                          : theme.colors.crimsonDark,
                     },
                   ]}
                 >
@@ -287,8 +288,8 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   alertBanner: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FDE68A',
+    backgroundColor: theme.colors.creamMuted,
+    borderColor: theme.colors.amberBorder,
     borderWidth: 1,
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
   alertTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#92400E',
+    color: theme.colors.amberDark,
   },
   deficiencyList: {
     gap: 4,
@@ -315,11 +316,11 @@ const styles = StyleSheet.create({
   deficiencyNutrient: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#B45309',
+    color: theme.colors.amberText,
   },
   deficiencySources: {
     fontSize: 12,
-    color: '#78350F',
+    color: theme.colors.amberDeep,
     flex: 1,
   },
   grid: {
@@ -346,7 +347,7 @@ const styles = StyleSheet.create({
   incompleteAsterisk: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#D97706',
+    color: theme.colors.amber,
   },
   nutrientName: {
     fontSize: 12,
@@ -402,7 +403,7 @@ const styles = StyleSheet.create({
   },
   incompleteNoticeText: {
     fontSize: 12,
-    color: '#92400E',
+    color: theme.colors.amberDark,
     fontStyle: 'italic',
   },
   footnoteRow: {

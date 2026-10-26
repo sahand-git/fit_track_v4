@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   statSub: {
     fontFamily: theme.fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 4,
   },
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   targetLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   barChartContainer: {
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.textPrimary,
   },
   dayLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 6,
   },
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   detailStatusText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textSecondary,
   },
   insightsSection: {

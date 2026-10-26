@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   statSubLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   stepperContainer: {

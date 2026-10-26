@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   },
   noteText: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     lineHeight: 15,
   },

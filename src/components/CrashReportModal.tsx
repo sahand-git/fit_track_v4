@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   stackText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     lineHeight: 16,

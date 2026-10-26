@@ -269,7 +269,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
           <View style={styles.successBox}>
             <View style={[styles.feedbackRow, isRTL && styles.rowRTL]}>
               <View style={styles.successIconCircle}>
-                <Check size={16} color="#1E3A2F" />
+                <Check size={16} color={theme.colors.primary} />
               </View>
               <View style={{ flex: 1, marginStart: 10 }}>
                 <Text style={[styles.successTitle, isRTL && styles.textRTL]}>
@@ -545,10 +545,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   successBox: {
-    backgroundColor: '#EBF5F0',
+    backgroundColor: theme.colors.forestWash,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: '#B8DFCB',
+    borderColor: theme.colors.forestBorder,
     padding: theme.spacing.md,
     marginBottom: 16,
   },
@@ -560,26 +560,26 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#B8DFCB',
+    backgroundColor: theme.colors.forestBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
   successTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1E3A2F',
+    color: theme.colors.primary,
     marginBottom: 2,
   },
   modelBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#285C4D',
+    color: theme.colors.forestDeep,
   },
   errorBox: {
-    backgroundColor: '#FDEDED',
+    backgroundColor: theme.colors.dangerBannerBg,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: '#F8B4B4',
+    borderColor: theme.colors.dangerOutline,
     padding: theme.spacing.md,
     marginBottom: 16,
   },
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F8B4B4',
+    backgroundColor: theme.colors.dangerOutline,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   providerDetail: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     lineHeight: 15,
   },
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F8B4B4',
+    borderTopColor: theme.colors.dangerOutline,
   },
   errorStudioText: {
     fontSize: 12,

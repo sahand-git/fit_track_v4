@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   stackText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },

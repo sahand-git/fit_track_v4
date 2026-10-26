@@ -553,11 +553,11 @@ export function SupplementsScreen({
       case 'morning':
         return <Sunrise size={18} color={theme.colors.accent} />;
       case 'afternoon':
-        return <Sun size={18} color="#D97706" />;
+        return <Sun size={18} color={theme.colors.amber} />;
       case 'evening':
-        return <Sunset size={18} color="#C2410C" />;
+        return <Sunset size={18} color={theme.colors.orangeDeep} />;
       case 'bedtime':
-        return <Moon size={18} color="#4338CA" />;
+        return <Moon size={18} color={theme.colors.indigoDark} />;
     }
   };
 
@@ -739,6 +739,7 @@ export function SupplementsScreen({
                   <TouchableOpacity
                     onPress={() => openAddModal(slot)}
                     style={styles.slotQuickAdd}
+                    hitSlop={{ top: 9, bottom: 9, left: 9, right: 9 }}
                     accessibilityLabel={`${t('Add supplement')} · ${t(timeLabels[slot])}`}
                     accessibilityRole="button"
                   >
@@ -808,6 +809,7 @@ export function SupplementsScreen({
                                 <TouchableOpacity
                                   onPress={() => handleAdjustQuantity(item, -1)}
                                   style={styles.stepperBtn}
+                                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                                   accessibilityLabel={t('Decrease quantity')}
                                   accessibilityRole="button"
                                 >
@@ -821,6 +823,7 @@ export function SupplementsScreen({
                                 <TouchableOpacity
                                   onPress={() => handleAdjustQuantity(item, 1)}
                                   style={styles.stepperBtn}
+                                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                                   accessibilityLabel={t('Increase quantity')}
                                   accessibilityRole="button"
                                 >
@@ -846,6 +849,7 @@ export function SupplementsScreen({
                           <TouchableOpacity
                             onPress={() => openEditModal(item)}
                             style={styles.actionBtn}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                             accessibilityLabel={t('Edit')}
                             accessibilityRole="button"
                           >
@@ -854,6 +858,7 @@ export function SupplementsScreen({
                           <TouchableOpacity
                             onPress={() => handleDeleteItem(item)}
                             style={styles.actionBtn}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                             accessibilityLabel={t('Delete')}
                             accessibilityRole="button"
                           >
@@ -1380,7 +1385,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     borderWidth: 1,
     borderColor: theme.colors.primary,
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -1405,7 +1410,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.xl,
     padding: 22,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 16,
@@ -1581,7 +1586,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   metricLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -1691,7 +1696,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   slotCountBadge: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.secondary,
     backgroundColor: theme.colors.surface,
@@ -1758,7 +1763,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   categoryPillText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
@@ -1798,7 +1803,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   itemNoteText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   rowActions: {
@@ -1913,7 +1918,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   catalogChipText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },
@@ -1968,7 +1973,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   fieldHelper: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 3,
   },
@@ -1990,7 +1995,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   unitChipText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },

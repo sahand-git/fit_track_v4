@@ -153,7 +153,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
       return { bg: theme.colors.primaryLight, text: theme.colors.primary };
     }
     if (confidence === 'low') {
-      return { bg: '#FDECEC', text: theme.colors.danger };
+      return { bg: theme.colors.crimsonLight, text: theme.colors.danger };
     }
     return { bg: theme.colors.accentLight, text: theme.colors.accent };
   };
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.accent,
   },
@@ -354,8 +354,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   disclaimerText: {
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 16,
     color: theme.colors.textMuted,
   },
   itemsList: {
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   itemPortionSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 1,
   },
@@ -403,12 +403,12 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
   },
   confBadgeText: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
   macroSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textSecondary,
   },
   adjustRow: {
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   unitText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginRight: 2,
   },
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryLight,
   },
   singleLogBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.textInverted,
   },

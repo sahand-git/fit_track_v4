@@ -441,10 +441,10 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
 
                 {/* Tomorrow Action Plan */}
                 {report.actionableTomorrowFixes && report.actionableTomorrowFixes.length > 0 && (
-                  <View style={[styles.reportCard, { backgroundColor: '#F0FDF4' }]}>
+                  <View style={[styles.reportCard, { backgroundColor: theme.colors.greenLight }]}>
                     <View style={styles.cardHeaderRow}>
-                      <CheckCircle2 size={18} color="#16A34A" />
-                      <Text style={[styles.cardSectionTitle, { color: '#166534' }]}>
+                      <CheckCircle2 size={18} color={theme.colors.green} />
+                      <Text style={[styles.cardSectionTitle, { color: theme.colors.greenDark }]}>
                         {t('Action Plan for Tomorrow')}
                       </Text>
                     </View>
@@ -452,7 +452,7 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                       {report.actionableTomorrowFixes.map((fix, idx) => (
                         <View key={idx} style={styles.numberedItemRow}>
                           <Text style={styles.itemNumber}>#{idx + 1}</Text>
-                          <Text style={[styles.listItemText, { color: '#14532D' }]}>{fix}</Text>
+                          <Text style={[styles.listItemText, { color: theme.colors.greenDeep }]}>{fix}</Text>
                         </View>
                       ))}
                     </View>
@@ -461,14 +461,14 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
 
                 {/* Custom Meal Idea */}
                 {report.customMealSuggestion && (
-                  <View style={[styles.reportCard, { backgroundColor: '#FFFBEB' }]}>
+                  <View style={[styles.reportCard, { backgroundColor: theme.colors.creamMuted }]}>
                     <View style={styles.cardHeaderRow}>
-                      <Utensils size={18} color="#D97706" />
-                      <Text style={[styles.cardSectionTitle, { color: '#B45309' }]}>
+                      <Utensils size={18} color={theme.colors.amber} />
+                      <Text style={[styles.cardSectionTitle, { color: theme.colors.amberText }]}>
                         {t('Meal idea for selected day')}
                       </Text>
                     </View>
-                    <Text style={[styles.cardBodyText, { color: '#78350F' }]}>
+                    <Text style={[styles.cardBodyText, { color: theme.colors.amberDeep }]}>
                       {report.customMealSuggestion}
                     </Text>
                   </View>
@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
   },
   disclaimerText: {
     color: theme.colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     textAlign: 'center',
   },
   keyNotice: {
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
   },
   keyNoticeText: {
     color: theme.colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     textAlign: 'center',
   },
 
@@ -755,9 +755,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: theme.colors.redLight,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: theme.colors.redBorder,
     borderRadius: theme.radius.md,
     padding: 10,
   },
@@ -790,7 +790,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   gradeLabel: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
     color: 'rgba(255, 255, 255, 0.7)',
@@ -799,7 +799,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.serif,
     fontSize: 24,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: theme.colors.white,
     marginTop: -2,
   },
   gradeDetails: {
@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.serif,
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.colors.white,
     lineHeight: 19,
   },
   gradeCaloric: {
@@ -818,7 +818,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.85)',
   },
   gradeTimestamp: {
-    fontSize: 10,
+    fontSize: 12,
     color: 'rgba(255, 255, 255, 0.6)',
     marginTop: 2,
   },
@@ -881,7 +881,7 @@ const styles = StyleSheet.create({
   itemNumber: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#16A34A',
+    color: theme.colors.green,
     minWidth: 20,
   },
   listItemText: {

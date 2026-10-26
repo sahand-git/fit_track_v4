@@ -35,11 +35,11 @@ interface ParticleData {
 }
 
 const PARTICLE_COLORS = [
-  '#1E3A2F', // Forest green
-  '#C1664C', // Terracotta
-  '#7A9283', // Muted sage
-  '#D4AF37', // Warm gold
-  '#3B6B78', // Slate cyan
+  theme.colors.primary,   // Forest green
+  theme.colors.accent,    // Terracotta
+  theme.colors.secondary, // Muted sage
+  theme.colors.gold,      // Warm gold
+  theme.colors.water,     // Slate cyan
 ];
 
 interface GoalCelebrationProps {
@@ -182,7 +182,7 @@ export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
           <View style={styles.textContainer}>
             <View style={styles.titleRow}>
               <Text style={styles.title}>{t('Daily Goal Reached!')}</Text>
-              <Sparkles size={14} color="#D4AF37" />
+              <Sparkles size={14} color={theme.colors.gold} />
             </View>
             <Text style={styles.message}>
               {t('You hit your calorie target for today.')}

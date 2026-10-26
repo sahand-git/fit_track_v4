@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   languageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   languageChip: { paddingHorizontal: 11, paddingVertical: 8, borderRadius: theme.radius.full, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
   languageChipActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryLight },
-  languageChipText: { color: theme.colors.textSecondary, fontSize: 11, fontWeight: '600' },
+  languageChipText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: '600' },
   languageChipTextActive: { color: theme.colors.primary },
   stepContainer: {
     gap: 12,
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   macroSplitLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },

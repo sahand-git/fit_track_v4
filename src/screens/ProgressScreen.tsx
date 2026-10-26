@@ -363,7 +363,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
           {/* Streak Card */}
           <View style={[styles.streakCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <View style={styles.streakFlameCircle}>
-              <Flame size={20} color="#D97706" />
+              <Flame size={20} color={theme.colors.amber} />
             </View>
             <View style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
               <View style={[styles.inlineRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
   },
   deltaSub: {
     fontFamily: theme.fonts.sans,
-    fontSize: 10,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   bmiStrip: {
@@ -762,7 +762,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   filterChipText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },
@@ -785,11 +785,11 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.amberLight,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: theme.colors.amberBorder,
   },
   streakCount: {
     fontSize: 20,

@@ -1034,6 +1034,12 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'No online foods found.': 'لم يتم العثور على أطعمة عبر الإنترنت.',
     'Optional': 'اختياري',
     'Log Calories': 'تسجيل السعرات',
+    'Appearance': 'المظهر',
+    'Theme': 'السمة',
+    'System': 'النظام',
+    'Light': 'فاتح',
+    'Dark': 'داكن',
+    'Matches device system appearance settings.': 'يطابق إعدادات مظهر الجهاز.',
   },
   ckb: {
     'Account': 'هەژمار',
@@ -2060,6 +2066,12 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'No online foods found.': 'هیچ خۆراکێک لە ئۆنلاین نەدۆزرایەوە.',
     'Optional': 'ئارەزوومەندانە',
     'Log Calories': 'تۆمارکردنی کالۆری',
+    'Appearance': 'شێوازی ڕووکار',
+    'Theme': 'ڕووکار',
+    'System': 'سیستەم',
+    'Light': 'ڕۆشن',
+    'Dark': 'تاریک',
+    'Matches device system appearance settings.': 'لەگەڵ ڕێکخستنەکانی سیستەمی ئامێرەکە دەگونجێت.',
   },
 };
 

@@ -117,9 +117,9 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
             ]}
           >
             {isLoss ? (
-              <TrendingDown size={14} color="#059669" />
+              <TrendingDown size={14} color={theme.colors.emeraldDark} />
             ) : isGain ? (
-              <TrendingUp size={14} color="#D97706" />
+              <TrendingUp size={14} color={theme.colors.amber} />
             ) : (
               <Minus size={14} color={theme.colors.textMuted} />
             )}
@@ -164,14 +164,14 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
                 y1={targetY}
                 x2={width - paddingX}
                 y2={targetY}
-                stroke="#D97706"
+                stroke={theme.colors.amber}
                 strokeDasharray="4 4"
                 strokeWidth={1.5}
               />
               <SvgText
                 x={isRTL ? width - paddingX - 4 : paddingX + 4}
                 y={Math.max(12, targetY - 4)}
-                fill="#D97706"
+                fill={theme.colors.amber}
                 fontSize={9}
                 fontWeight="600"
                 textAnchor={isRTL ? 'end' : 'start'}
@@ -278,10 +278,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   deltaLoss: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: theme.colors.emeraldLight,
   },
   deltaGain: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.amberLight,
   },
   deltaNeutral: {
     backgroundColor: theme.colors.surfaceSubtle,
@@ -291,10 +291,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   deltaLossText: {
-    color: '#059669',
+    color: theme.colors.emeraldDark,
   },
   deltaGainText: {
-    color: '#D97706',
+    color: theme.colors.amber,
   },
   deltaNeutralText: {
     color: theme.colors.textMuted,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   inspectorNote: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     flexShrink: 1,
   },
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hintText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   emptyContainer: {

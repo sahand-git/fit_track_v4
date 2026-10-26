@@ -745,7 +745,7 @@ const styles = StyleSheet.create({
   stepsCount: { color: theme.colors.textSecondary, fontSize: 13, fontWeight: '600' },
   stepsTrack: { height: 6, overflow: 'hidden', borderRadius: 4, backgroundColor: theme.colors.surfaceSubtle },
   stepsFill: { height: '100%', backgroundColor: theme.colors.secondary, borderRadius: 4 },
-  stepsHint: { color: theme.colors.textMuted, fontSize: 11 },
+  stepsHint: { color: theme.colors.textMuted, fontSize: 12 },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -756,17 +756,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FDF2EE',
+    backgroundColor: theme.colors.terracottaLightWash,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: '#F5C6B9',
+    borderColor: theme.colors.terracottaWashBorder,
   },
   streakText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#D95338',
+    color: theme.colors.terracottaDark,
   },
   burnBanner: {
     flexDirection: 'row',
@@ -1025,7 +1025,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceSubtle,
   },
   manageBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.primary,
   },
@@ -1051,7 +1051,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   routineItemDose: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 1,
   },

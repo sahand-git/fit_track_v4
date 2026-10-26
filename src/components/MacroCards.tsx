@@ -11,6 +11,7 @@ import { AnimatedCount } from './AnimatedCount';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import { isReducedMotion } from '../utils/motion';
 import { Activity, ChevronRight } from 'lucide-react-native';
 
@@ -81,7 +82,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
   onSelectNutrient,
 }) => {
   const language = useLanguage();
-  const isRtl = language === 'ar' || language === 'ckb';
+  const isRtl = useIsRTL();
   const t = (key: string) => translate(language, key);
 
   const macros = [
@@ -144,6 +145,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           style={[styles.secondaryPill, isRtl && styles.rowRtl]}
           onPress={() => onSelectNutrient?.('fiber')}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
           accessibilityLabel={t('Fiber')}
         >
@@ -163,6 +165,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           style={[styles.secondaryPill, isRtl && styles.rowRtl]}
           onPress={() => onSelectNutrient?.('sugar')}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
           accessibilityLabel={t('Sugar')}
         >
@@ -182,6 +185,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           style={[styles.vitaminsBtn, isRtl && styles.rowRtl]}
           onPress={() => onSelectNutrient?.('vitaminC')}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
           accessibilityLabel={t('Micronutrients & Daily Allowance (RDA)')}
         >
@@ -262,20 +266,20 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   secondaryLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
     flexShrink: 1,
   },
   secondaryValue: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   incompleteAsterisk: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#D97706',
+    color: theme.colors.amber,
     marginLeft: 1,
   },
   vitaminsBtn: {
@@ -290,7 +294,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   vitaminsBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.primary,
   },

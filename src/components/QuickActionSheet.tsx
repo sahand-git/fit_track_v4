@@ -113,6 +113,7 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
             <TouchableOpacity
               onPress={onClose}
               style={styles.closeBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityRole="button"
               accessibilityLabel={t('Close')}
             >
@@ -134,8 +135,8 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
               accessibilityRole="button"
               accessibilityLabel={t('Scan Barcode')}
             >
-              <View style={[styles.iconBox, { backgroundColor: '#FFF7ED' }]}>
-                <Barcode size={22} color="#EA580C" />
+              <View style={[styles.iconBox, { backgroundColor: theme.colors.orangeLight }]}>
+                <Barcode size={22} color={theme.colors.orange} />
               </View>
               <Text style={styles.actionTitle}>{t('Scan Barcode')}</Text>
               <Text style={styles.actionSubtitle}>{t('UPC / EAN')}</Text>
@@ -149,8 +150,8 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
               accessibilityRole="button"
               accessibilityLabel={t('AI Plate Scanner')}
             >
-              <View style={[styles.iconBox, { backgroundColor: '#F0FDF4' }]}>
-                <Camera size={22} color="#16A34A" />
+              <View style={[styles.iconBox, { backgroundColor: theme.colors.greenLight }]}>
+                <Camera size={22} color={theme.colors.green} />
               </View>
               <Text style={styles.actionTitle}>{t('AI Plate Scanner')}</Text>
               <Text style={styles.actionSubtitle}>{t('Gemini Vision')}</Text>
@@ -164,8 +165,8 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
               accessibilityRole="button"
               accessibilityLabel={t('Search Food')}
             >
-              <View style={[styles.iconBox, { backgroundColor: '#EFF6FF' }]}>
-                <Search size={22} color="#2563EB" />
+              <View style={[styles.iconBox, { backgroundColor: theme.colors.blueLight }]}>
+                <Search size={22} color={theme.colors.blue} />
               </View>
               <Text style={styles.actionTitle}>{t('Search Food')}</Text>
               <Text style={styles.actionSubtitle}>{t('Database')}</Text>
@@ -179,8 +180,8 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
               accessibilityRole="button"
               accessibilityLabel={t('Quick Add Water')}
             >
-              <View style={[styles.iconBox, { backgroundColor: '#ECFEFF' }]}>
-                <Droplet size={22} color="#0891B2" fill="#0891B2" />
+              <View style={[styles.iconBox, { backgroundColor: theme.colors.cyanLight }]}>
+                <Droplet size={22} color={theme.colors.cyan} fill={theme.colors.cyan} />
               </View>
               <Text style={styles.actionTitle}>{t('Quick Add Water')}</Text>
               <Text style={styles.actionSubtitle}>{t('+250 ml (1 glass)')}</Text>
@@ -194,8 +195,8 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
               accessibilityRole="button"
               accessibilityLabel={t('Log Workout')}
             >
-              <View style={[styles.iconBox, { backgroundColor: '#FFF1F2' }]}>
-                <Dumbbell size={22} color="#E11D48" />
+              <View style={[styles.iconBox, { backgroundColor: theme.colors.roseLight }]}>
+                <Dumbbell size={22} color={theme.colors.rose} />
               </View>
               <Text style={styles.actionTitle}>{t('Log Workout')}</Text>
               <Text style={styles.actionSubtitle}>{t('Cardio & Strength')}</Text>
@@ -209,8 +210,8 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
               accessibilityRole="button"
               accessibilityLabel={t('Step Tracker')}
             >
-              <View style={[styles.iconBox, { backgroundColor: '#FEF3C7' }]}>
-                <Footprints size={22} color="#D97706" />
+              <View style={[styles.iconBox, { backgroundColor: theme.colors.amberLight }]}>
+                <Footprints size={22} color={theme.colors.amber} />
               </View>
               <Text style={styles.actionTitle}>{t('Step Tracker')}</Text>
               <Text style={styles.actionSubtitle}>{t('Pedometer & Activity')}</Text>
@@ -225,8 +226,8 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel={t('Daily Routine')}
               >
-                <View style={[styles.iconBox, { backgroundColor: '#F5F3FF' }]}>
-                  <Pill size={22} color="#7C3AED" />
+                <View style={[styles.iconBox, { backgroundColor: theme.colors.purpleLight }]}>
+                  <Pill size={22} color={theme.colors.purple} />
                 </View>
                 <Text style={styles.actionTitle}>{t('Daily Routine')}</Text>
                 <Text style={styles.actionSubtitle}>{t('Vitamins & Supplements')}</Text>
@@ -242,8 +243,8 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel={t('Log Weight')}
               >
-                <View style={[styles.iconBox, { backgroundColor: '#F1F5F9' }]}>
-                  <Scale size={22} color="#475569" />
+                <View style={[styles.iconBox, { backgroundColor: theme.colors.grayLight }]}>
+                  <Scale size={22} color={theme.colors.slateDark} />
                 </View>
                 <Text style={styles.actionTitle}>{t('Log Weight')}</Text>
                 <Text style={styles.actionSubtitle}>{t('Progress & History')}</Text>
@@ -311,17 +312,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.amberLight,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: theme.colors.amberBorder,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#B45309',
+    color: theme.colors.amberText,
   },
   subtitle: {
     fontSize: 12,
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   actionSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     textAlign: 'center',
     lineHeight: 14,

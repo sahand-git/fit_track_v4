@@ -4,6 +4,7 @@ import {
   ORDERED_MICRONUTRIENT_KEYS,
   resolveSupplementNutrientContribution,
 } from './micronutrients';
+import { theme } from '../theme';
 
 export type SupportedNutrientKey =
   | 'calories'
@@ -96,7 +97,7 @@ export function getNutrientMetadata(
         key: 'calories',
         label: 'Calories',
         unit: 'kcal',
-        color: '#D97706',
+        color: theme.colors.amber,
         defaultTarget: profile?.targetCalories ?? 2000,
         description: 'Daily energy intake budget for your body and activity level.',
         foodSources: 'All foods and beverages provide dietary energy.',
@@ -106,7 +107,7 @@ export function getNutrientMetadata(
         key: 'protein',
         label: 'Protein',
         unit: 'g',
-        color: '#2563EB',
+        color: theme.colors.blue,
         defaultTarget: profile?.targetProtein ?? 150,
         description: 'Crucial for muscle synthesis, recovery, and immune defenses.',
         foodSources: 'Chicken, meat, fish, eggs, lentils, tofu, Greek yogurt.',
@@ -116,7 +117,7 @@ export function getNutrientMetadata(
         key: 'carbs',
         label: 'Carbs',
         unit: 'g',
-        color: '#F59E0B',
+        color: theme.colors.nutrientVitaminA,
         defaultTarget: profile?.targetCarbs ?? 200,
         description: 'Primary energy source for brain function and muscle glycogen.',
         foodSources: 'Rice, oats, potatoes, whole grains, fruits, vegetables.',
@@ -126,7 +127,7 @@ export function getNutrientMetadata(
         key: 'fat',
         label: 'Fat',
         unit: 'g',
-        color: '#EF4444',
+        color: theme.colors.crimson,
         defaultTarget: profile?.targetFat ?? 65,
         description: 'Essential for hormone production and fat-soluble vitamin absorption.',
         foodSources: 'Olive oil, avocados, nuts, seeds, fatty fish, eggs.',
@@ -136,7 +137,7 @@ export function getNutrientMetadata(
         key: 'fiber',
         label: 'Fiber',
         unit: 'g',
-        color: '#10B981',
+        color: theme.colors.emerald,
         defaultTarget: 28, // Standard FDA / Dietary Guidelines for 2,000 kcal
         description: 'Promotes gut microbiome health, satiety, and digestive regularity.',
         foodSources: 'Oats, chia seeds, lentils, beans, berries, apples, broccoli.',
@@ -146,7 +147,7 @@ export function getNutrientMetadata(
         key: 'sugar',
         label: 'Sugar',
         unit: 'g',
-        color: '#EC4899',
+        color: theme.colors.nutrientSugar,
         defaultTarget: 50, // Dietary reference upper limit
         description: 'Simple carbohydrates. Monitoring aids insulin sensitivity and steady energy.',
         foodSources: 'Fruits, dairy, honey, dried fruit, natural sweeteners.',
@@ -156,7 +157,7 @@ export function getNutrientMetadata(
         key: 'sodium',
         label: 'Sodium',
         unit: 'mg',
-        color: '#6B7280',
+        color: theme.colors.nutrientSodium,
         defaultTarget: 2300, // Dietary Guidelines recommendation
         description: 'Electrolyte regulating fluid balance, nerve signals, and muscle contraction.',
         foodSources: 'Table salt, olives, cured meats, cheeses, savory broths.',
@@ -179,7 +180,7 @@ export function getNutrientMetadata(
         key,
         label: key,
         unit: 'g',
-        color: '#10B981',
+        color: theme.colors.emerald,
         defaultTarget: 100,
         description: '',
       };

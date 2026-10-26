@@ -91,6 +91,7 @@ export const ScientificReferencesModal: React.FC<ScientificReferencesModalProps>
             <TouchableOpacity
               onPress={onClose}
               style={styles.closeBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityRole="button"
               accessibilityLabel={t('Close')}
             >
@@ -369,12 +370,12 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primaryBorder,
   },
   evidenceBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.primary,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -435,31 +436,31 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   referenceItemDesc: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     lineHeight: 16,
     marginTop: 2,
   },
   formulaBox: {
-    backgroundColor: '#0F172A',
+    backgroundColor: theme.colors.slateNavy,
     borderRadius: theme.radius.md,
     padding: 12,
     gap: 6,
   },
   formulaTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#E2E8F0',
+    color: theme.colors.slateBorder,
   },
   formulaCode: {
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 11,
-    color: '#34D399',
+    fontSize: 12,
+    color: theme.colors.greenMint,
     lineHeight: 16,
   },
   formulaExplanation: {
-    fontSize: 10,
-    color: '#94A3B8',
+    fontSize: 12,
+    color: theme.colors.slateMuted,
     lineHeight: 14,
     marginTop: 2,
   },

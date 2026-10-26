@@ -198,7 +198,7 @@ export const MedicalDisclaimerModal: React.FC<MedicalDisclaimerModalProps> = ({
               accessibilityRole="button"
               accessibilityLabel={t('I Understand & Agree')}
             >
-              <Check size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Check size={18} color={theme.colors.white} style={{ marginRight: 6 }} />
               <Text style={styles.primaryBtnText}>
                 {isFirstRun ? t('I Understand & Agree') : t('I Understand')}
               </Text>
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -368,6 +368,6 @@ const styles = StyleSheet.create({
   primaryBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.colors.white,
   },
 });

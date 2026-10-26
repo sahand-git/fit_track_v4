@@ -323,6 +323,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                   <TouchableOpacity
                     style={styles.addFoodBtn}
                     onPress={() => openAddSheet(cat.key)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     accessibilityLabel={`${t('Add food to')} ${cat.label}`}
                     accessibilityRole="button"
                   >
@@ -544,7 +545,7 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontFamily: theme.fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -654,7 +655,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   foodMacros: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textSecondary,
     marginTop: 2,
   },

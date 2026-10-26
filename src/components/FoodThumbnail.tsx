@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
-    borderColor: '#E5E0D5',
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

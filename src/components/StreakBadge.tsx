@@ -47,7 +47,7 @@ export const StreakBadge: React.FC<StreakBadgeProps> = ({ streak, style }) => {
       style={[styles.badge, style, animatedStyle]}
       accessibilityLabel={`${streak} ${t('day streak')}`}
     >
-      <Flame size={14} color="#D45D3B" />
+      <Flame size={14} color={theme.colors.terracottaWarm} />
       <Text style={styles.text}>
         {streak} {t('days')}
       </Text>
@@ -59,18 +59,18 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FDF3EE',
+    backgroundColor: theme.colors.terracottaWarmLight,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: theme.radius.full,
     gap: 4,
     borderWidth: 1,
-    borderColor: '#F8DFD4',
+    borderColor: theme.colors.terracottaWarmBorder,
   },
   text: {
     fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '600',
-    color: '#D45D3B',
+    color: theme.colors.terracottaWarm,
   },
 });

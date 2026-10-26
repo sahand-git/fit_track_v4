@@ -7,6 +7,7 @@ import { testGeminiConnection, GeminiError, getDefaultMessageForKind } from '../
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 import { AiSetupWizard } from './AiSetupWizardModal';
 
@@ -18,7 +19,7 @@ interface GeminiKeyManagerProps {
 export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged, compact = false }) => {
   const language = useLanguage();
   const t = (str: string) => translate(language, str);
-  const isRTL = language !== 'en';
+  const isRTL = useIsRTL();
 
   const [key, setKey] = useState('');
   const [hasSavedKey, setHasSavedKey] = useState(false);
@@ -261,7 +262,7 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
         <View style={styles.successBox}>
           <View style={[styles.feedbackHeaderRow, isRTL && styles.rowRTL]}>
             <View style={styles.successIconCircle}>
-              <Check size={14} color="#1E3A2F" />
+              <Check size={14} color={theme.colors.primary} />
             </View>
             <View style={styles.feedbackTitleCol}>
               <Text style={[styles.successTitle, isRTL && styles.textRTL]}>{t('Connection successful')}</Text>
@@ -393,7 +394,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 1,
   },
@@ -441,13 +442,13 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   actionBtnSmallText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },
   actionBtnDanger: {
-    backgroundColor: '#FDECEC',
-    borderColor: '#FACDCD',
+    backgroundColor: theme.colors.crimsonLight,
+    borderColor: theme.colors.crimsonBorder,
   },
   inputContainer: {
     gap: 8,
@@ -517,15 +518,15 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   statusToast: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.primary,
     fontWeight: '600',
     textAlign: 'center',
   },
   successBox: {
-    backgroundColor: '#EEF6F2',
+    backgroundColor: theme.colors.forestKeyLight,
     borderWidth: 1,
-    borderColor: '#C7E4D4',
+    borderColor: theme.colors.forestKeyBorder,
     borderRadius: theme.radius.md,
     padding: 10,
     gap: 4,
@@ -540,7 +541,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#D1EBDC',
+    backgroundColor: theme.colors.forestKeyPill,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
@@ -551,18 +552,18 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1E3A2F',
+    color: theme.colors.primary,
   },
   activeModelText: {
-    fontSize: 11,
-    color: '#2C5A48',
+    fontSize: 12,
+    color: theme.colors.forestKeyText,
     marginTop: 2,
     fontWeight: '500',
   },
   errorBox: {
-    backgroundColor: '#FDF3F2',
+    backgroundColor: theme.colors.dangerLightWash,
     borderWidth: 1,
-    borderColor: '#FACBC8',
+    borderColor: theme.colors.dangerWashBorder,
     borderRadius: theme.radius.md,
     padding: 10,
     gap: 8,
@@ -572,7 +573,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#FDE2E0',
+    backgroundColor: theme.colors.dangerSoftLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
@@ -583,27 +584,27 @@ const styles = StyleSheet.create({
     color: theme.colors.danger,
   },
   errorBody: {
-    fontSize: 11,
-    color: '#7A221F',
+    fontSize: 12,
+    color: theme.colors.dangerMuted,
     marginTop: 2,
     lineHeight: 16,
   },
   providerDetailText: {
-    fontSize: 10,
-    color: '#9C3A36',
+    fontSize: 12,
+    color: theme.colors.dangerDeep,
     marginTop: 3,
     fontStyle: 'italic',
   },
   hintContainer: {
     borderTopWidth: 1,
-    borderTopColor: '#F5D3D1',
+    borderTopColor: theme.colors.dangerSubtleBorder,
     paddingTop: 6,
     gap: 4,
   },
   hintText: {
-    fontSize: 10,
+    fontSize: 12,
     color: theme.colors.textMuted,
-    lineHeight: 14,
+    lineHeight: 16,
   },
   studioLinkBtn: {
     flexDirection: 'row',
@@ -613,7 +614,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   studioLinkText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.primary,
     textDecorationLine: 'underline',

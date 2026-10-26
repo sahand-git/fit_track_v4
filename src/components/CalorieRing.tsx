@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   },
   ledgerLbl: {
     fontFamily: theme.fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
     color: theme.colors.textMuted,
     marginTop: 2,

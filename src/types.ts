@@ -68,6 +68,7 @@ export interface UserProfile {
   hasAcceptedMedicalDisclaimer?: boolean;
   customNutrientGoals?: Partial<Record<string, number>>;
   enableCrashReporting?: boolean;
+  themeMode?: 'system' | 'light' | 'dark';
 }
 
 export type ExerciseCategory = 'strength' | 'cardio' | 'hiit' | 'sports' | 'flexibility';

@@ -215,7 +215,7 @@ export const ProgressSkeleton: React.FC = () => {
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#EBE5D8',
+    backgroundColor: theme.colors.parchmentSkeleton,
   },
   cardContainer: {
     backgroundColor: theme.colors.surface,

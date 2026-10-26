@@ -1225,12 +1225,12 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             ) : null}
                             {selectedFood.recipeEstimate ? (
                               <View style={styles.recipeEstimateBadge}>
-                                <Sparkles size={11} color="#C2410C" />
+                                <Sparkles size={11} color={theme.colors.orangeDeep} />
                                 <Text style={styles.recipeEstimateBadgeText}>{t('Recipe estimate')}</Text>
                               </View>
                             ) : selectedFood.isEstimate ? (
                               <View style={styles.estimateBadge}>
-                                <Info size={11} color="#92400E" />
+                                <Info size={11} color={theme.colors.amberDark} />
                                 <Text style={styles.estimateBadgeText}>{t('Culinary Estimate')}</Text>
                               </View>
                             ) : null}
@@ -1669,7 +1669,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         <View style={styles.emptyStateBox}>
                           <Bookmark size={28} color={theme.colors.textMuted} style={{ marginBottom: 8 }} />
                           <Text style={styles.emptyStateText}>{t('No meal templates saved yet.')}</Text>
-                          <Text style={[styles.emptyStateText, { fontSize: 11, marginTop: 4, color: theme.colors.textMuted }]}>
+                          <Text style={[styles.emptyStateText, { fontSize: 12, marginTop: 4, color: theme.colors.textMuted }]}>
                             {t('Log your favorite dishes once, then tap "Save as template" to log them in 1 tap anytime.')}
                           </Text>
                         </View>
@@ -1893,8 +1893,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                 >
                                   <Star
                                     size={16}
-                                    color={isFav ? '#D97706' : theme.colors.textMuted}
-                                    fill={isFav ? '#D97706' : 'none'}
+                                    color={isFav ? theme.colors.amber : theme.colors.textMuted}
+                                    fill={isFav ? theme.colors.amber : 'none'}
                                   />
                                 </TouchableOpacity>
                               </View>
@@ -2488,7 +2488,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   headerContext: {
-    fontSize: 11,
+    fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     color: theme.colors.secondary,
@@ -2661,11 +2661,11 @@ const styles = StyleSheet.create({
     width: 240,
     height: 140,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: theme.colors.white,
     borderRadius: 12,
   },
   reticleText: {
-    color: '#FFFFFF',
+    color: theme.colors.white,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -2676,7 +2676,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
   },
   cancelScanText: {
-    color: '#FFFFFF',
+    color: theme.colors.white,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -2684,7 +2684,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FDECEC',
+    backgroundColor: theme.colors.crimsonLight,
     padding: 10,
     borderRadius: theme.radius.md,
     marginTop: 6,
@@ -2719,13 +2719,13 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
   },
   selectedPortion: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
   selectedMacrosPreview: {
     fontFamily: theme.fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.primary,
     marginTop: 4,
@@ -2802,7 +2802,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primaryBorder,
   },
   sourceBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.primary,
   },
@@ -2818,7 +2818,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   barcodeBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textMuted,
   },
@@ -2849,7 +2849,7 @@ const styles = StyleSheet.create({
   },
   listHeaderTitle: {
     fontFamily: theme.fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
@@ -2879,7 +2879,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   itemSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -3066,7 +3066,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   quickActionBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.primary,
   },
@@ -3103,7 +3103,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
@@ -3125,7 +3125,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   customInputLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
     marginBottom: 4,
@@ -3166,27 +3166,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: theme.radius.full,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.amberLight,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: theme.colors.amberBorder,
   },
   estimateBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#92400E',
+    color: theme.colors.amberDark,
   },
   estimateBadgeSmall: {
     paddingHorizontal: 6,
     paddingVertical: 1.5,
     borderRadius: theme.radius.full,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.amberLight,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: theme.colors.amberBorder,
   },
   estimateBadgeSmallText: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#92400E',
+    color: theme.colors.amberDark,
   },
   recipeEstimateBadge: {
     flexDirection: 'row',
@@ -3195,27 +3195,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: theme.radius.full,
-    backgroundColor: '#FFEDD5',
+    backgroundColor: theme.colors.orangeWarmLight,
     borderWidth: 1,
-    borderColor: '#FDBA74',
+    borderColor: theme.colors.orangeBorder,
   },
   recipeEstimateBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#C2410C',
+    color: theme.colors.orangeDeep,
   },
   recipeEstimateBadgeSmall: {
     paddingHorizontal: 6,
     paddingVertical: 1.5,
     borderRadius: theme.radius.full,
-    backgroundColor: '#FFEDD5',
+    backgroundColor: theme.colors.orangeWarmLight,
     borderWidth: 1,
-    borderColor: '#FDBA74',
+    borderColor: theme.colors.orangeBorder,
   },
   recipeEstimateBadgeSmallText: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#C2410C',
+    color: theme.colors.orangeDeep,
   },
   variantSection: {
     marginTop: 10,
@@ -3270,7 +3270,7 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   ingredientsToggleAction: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.primary,
     fontWeight: '600',
   },
@@ -3295,17 +3295,17 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   ingredientSource: {
-    fontSize: 10,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 1,
   },
   ingredientGrams: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   ingredientKcal: {
-    fontSize: 10,
+    fontSize: 12,
     color: theme.colors.textSecondary,
   },
   customizeRecipeBtn: {
@@ -3318,7 +3318,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
   },
   customizeRecipeBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.primary,
   },
@@ -3342,7 +3342,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   templateMealType: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -3366,7 +3366,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   templateMacrosText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },
@@ -3416,7 +3416,7 @@ const styles = StyleSheet.create({
     marginStart: 8,
   },
   requestBarcodeBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.danger,
   },
@@ -3496,7 +3496,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   onlineSectionTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.secondary,
     textTransform: 'uppercase',

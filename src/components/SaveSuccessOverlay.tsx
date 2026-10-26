@@ -36,14 +36,14 @@ interface ConfettiPiece {
 }
 
 const LUXURY_CONFETTI_COLORS = [
-  '#D4AF37', // Imperial Gold
-  '#F5E6C8', // Champagne Pearl
-  '#1E3A2F', // Forest Emerald
-  '#2D6A4F', // Lush Jade
-  '#C1664C', // Terracotta Sienna
-  '#3B6B78', // Slate Cyan
-  '#E8B86D', // Warm Amber
-  '#FFFFFF', // Diamond White
+  theme.colors.gold,         // Imperial Gold
+  theme.colors.goldLight,    // Champagne Pearl
+  theme.colors.primary,      // Forest Emerald
+  theme.colors.forestAlt,    // Lush Jade
+  theme.colors.accent,       // Terracotta Sienna
+  theme.colors.water,        // Slate Cyan
+  theme.colors.goldDark,     // Warm Amber
+  theme.colors.white,        // Diamond White
 ];
 
 const CONFETTI_COUNT = 32;
@@ -205,11 +205,11 @@ export const SaveSuccessOverlay: React.FC<SaveSuccessOverlayProps> = ({
           <Animated.View style={[styles.haloRing, animatedRingStyle]} />
           <View style={styles.goldBezel}>
             <View style={styles.innerDisc}>
-              <Check size={32} color="#FFFFFF" strokeWidth={3.5} />
+              <Check size={32} color={theme.colors.white} strokeWidth={3.5} />
             </View>
           </View>
           <View style={styles.sparkleBadge}>
-            <Sparkles size={14} color="#D4AF37" strokeWidth={2.4} />
+            <Sparkles size={14} color={theme.colors.gold} strokeWidth={2.4} />
           </View>
         </View>
 
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(212, 175, 55, 0.45)', // Imperial Gold subtle hairline
     ...theme.shadow.floating,
-    shadowColor: '#1E3A2F',
+    shadowColor: theme.colors.shadow,
     shadowOpacity: 0.18,
     shadowRadius: 24,
     elevation: 12,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: '#D4AF37',
+    backgroundColor: theme.colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 2.5,
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 32,
-    backgroundColor: theme.colors.primary, // Rich Forest Green #1E3A2F
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -31,6 +31,7 @@ import {
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 
 interface NutrientDetailModalProps {
@@ -55,7 +56,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   onResetGoal,
 }) => {
   const language = useLanguage();
-  const isRtl = language === 'ar' || language === 'ckb';
+  const isRtl = useIsRTL();
   const t = (key: string) => translate(language, key);
 
   const [activeKey, setActiveKey] = useState<SupportedNutrientKey>(() => {
@@ -163,6 +164,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             <TouchableOpacity
               onPress={onClose}
               style={styles.closeBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityLabel={t('Close')}
               accessibilityRole="button"
             >
@@ -269,7 +271,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
               {/* Incomplete Data Marker Warning (Item 3 requirement) */}
               {progress.isIncomplete && (
                 <View style={[styles.incompleteBanner, isRtl && styles.rowRtl]}>
-                  <AlertCircle size={15} color="#D97706" style={{ marginTop: 1 }} />
+                  <AlertCircle size={15} color={theme.colors.amber} style={{ marginTop: 1 }} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.incompleteTitle}>
                       * {t('Incomplete data')} ({progress.missingCount}{' '}
@@ -604,7 +606,7 @@ const styles = StyleSheet.create({
   tabIncompleteStar: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#D97706',
+    color: theme.colors.amber,
     marginLeft: 1,
   },
   content: {
@@ -644,7 +646,7 @@ const styles = StyleSheet.create({
   asteriskIndicator: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#D97706',
+    color: theme.colors.amber,
     marginLeft: 2,
   },
   currentLabel: {
@@ -663,7 +665,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   statusSubText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textMuted,
     marginTop: 1,
@@ -682,20 +684,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.amberLight,
     padding: 10,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: theme.colors.amberBorder,
   },
   incompleteTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#92400E',
+    color: theme.colors.amberDark,
   },
   incompleteText: {
-    fontSize: 11,
-    color: '#B45309',
+    fontSize: 12,
+    color: theme.colors.amberText,
     marginTop: 2,
   },
   goalCard: {
@@ -717,7 +719,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   goalSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 1,
   },
@@ -880,15 +882,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rankFirst: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.amberLight,
   },
   rankText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.textMuted,
   },
   rankFirstText: {
-    color: '#B45309',
+    color: theme.colors.amberText,
   },
   contributorNameRow: {
     flexDirection: 'row',
@@ -911,12 +913,12 @@ const styles = StyleSheet.create({
     backgroundColor: `${theme.colors.primary}15`,
   },
   suppTagText: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.primary,
   },
   contributorSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 1,
   },
@@ -929,7 +931,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   contributorPct: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   contribTrack: {
@@ -975,7 +977,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   notAvailText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     fontStyle: 'italic',
   },

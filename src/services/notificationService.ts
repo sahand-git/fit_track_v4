@@ -4,6 +4,7 @@ import { ReminderSettings, SupplementRoutineItem, AppLanguage, SupplementTime, M
 import { translate } from '../i18n/strings';
 import { loadReminderSettings } from '../storage/storage';
 import { getEnabledSupplementReminderSlots } from '../utils/supplementRoutine';
+import { theme } from '../theme';
 
 let isHandlerConfigured = false;
 
@@ -32,19 +33,19 @@ export async function initNotificationService(): Promise<void> {
         name: 'Vitamins & Supplements',
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#10B981',
+        lightColor: theme.colors.emerald,
       });
       await Notifications.setNotificationChannelAsync('fittrack-water', {
         name: 'Hydration',
         importance: Notifications.AndroidImportance.DEFAULT,
         vibrationPattern: [0, 200, 200],
-        lightColor: '#0EA5E9',
+        lightColor: theme.colors.sky,
       });
       await Notifications.setNotificationChannelAsync('fittrack-meals', {
         name: 'Meal Logging',
         importance: Notifications.AndroidImportance.DEFAULT,
         vibrationPattern: [0, 200, 200],
-        lightColor: '#F59E0B',
+        lightColor: theme.colors.amber,
       });
     } catch (err) {
       console.warn('Failed to configure Android notification channels:', err);

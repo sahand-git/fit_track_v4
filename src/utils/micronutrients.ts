@@ -4,6 +4,7 @@ import {
   MicronutrientKey,
   CatalogSupplementItem,
 } from '../data/supplementCatalog';
+import { theme } from '../theme';
 
 export interface RDAMetadata {
   key: MicronutrientKey;
@@ -20,7 +21,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Vitamin A',
     target: 900,
     unit: 'mcg',
-    color: '#F59E0B',
+    color: theme.colors.nutrientVitaminA,
     foodSources: 'Carrots, sweet potatoes, spinach, liver, eggs',
   },
   vitaminC: {
@@ -28,7 +29,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Vitamin C',
     target: 90,
     unit: 'mg',
-    color: '#F97316',
+    color: theme.colors.nutrientVitaminC,
     foodSources: 'Citrus, strawberries, bell peppers, broccoli',
   },
   vitaminD: {
@@ -36,7 +37,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Vitamin D',
     target: 20,
     unit: 'mcg',
-    color: '#EAB308',
+    color: theme.colors.nutrientVitaminD,
     foodSources: 'Sunlight, fatty fish, fortified dairy, eggs',
   },
   vitaminB12: {
@@ -44,7 +45,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Vitamin B12',
     target: 2.4,
     unit: 'mcg',
-    color: '#F43F5E',
+    color: theme.colors.nutrientVitaminB12,
     foodSources: 'Meat, fish, poultry, eggs, dairy, fortified yeast',
   },
   calcium: {
@@ -52,7 +53,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Calcium',
     target: 1000,
     unit: 'mg',
-    color: '#0EA5E9',
+    color: theme.colors.nutrientCalcium,
     foodSources: 'Dairy, fortified plant milk, tofu, chia seeds, leafy greens',
   },
   iron: {
@@ -60,7 +61,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Iron',
     target: 18,
     unit: 'mg',
-    color: '#EF4444',
+    color: theme.colors.nutrientIron,
     foodSources: 'Red meat, lentils, beans, spinach, pumpkin seeds',
   },
   potassium: {
@@ -68,7 +69,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Potassium',
     target: 3400,
     unit: 'mg',
-    color: '#10B981',
+    color: theme.colors.nutrientPotassium,
     foodSources: 'Bananas, potatoes, spinach, avocados, yogurt',
   },
   magnesium: {
@@ -76,7 +77,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Magnesium',
     target: 400,
     unit: 'mg',
-    color: '#6366F1',
+    color: theme.colors.nutrientMagnesium,
     foodSources: 'Pumpkin seeds, almonds, spinach, black beans, dark chocolate',
   },
   zinc: {
@@ -84,7 +85,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Zinc',
     target: 11,
     unit: 'mg',
-    color: '#14B8A6',
+    color: theme.colors.nutrientZinc,
     foodSources: 'Oysters, beef, pumpkin seeds, lentils, chickpeas',
   },
 };

@@ -87,11 +87,11 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
     if (d.calories === 0) {
       fillColor = theme.colors.border;
     } else if (isPartial) {
-      fillColor = '#D1D5DB';
+      fillColor = theme.colors.grayMutedBorder;
     } else if (isOnTarget) {
-      fillColor = '#059669';
+      fillColor = theme.colors.emeraldDark;
     } else if (isOver) {
-      fillColor = '#D97706';
+      fillColor = theme.colors.amber;
     }
 
     return {
@@ -127,7 +127,7 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
 
         {metrics.coveredDaysCount > 0 && (
           <View style={[styles.adherenceBadge, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-            <CheckCircle2 size={13} color="#059669" />
+            <CheckCircle2 size={13} color={theme.colors.emeraldDark} />
             <Text style={styles.adherenceText}>
               {`${metrics.adherenceRate}% ${t('on target')}`}
             </Text>
@@ -144,14 +144,14 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
             y1={targetY}
             x2={width - paddingX}
             y2={targetY}
-            stroke="#D97706"
+            stroke={theme.colors.amber}
             strokeDasharray="4 4"
             strokeWidth={1.5}
           />
           <SvgText
             x={isRTL ? width - paddingX - 4 : paddingX + 4}
             y={Math.max(12, targetY - 4)}
-            fill="#D97706"
+            fill={theme.colors.amber}
             fontSize={9}
             fontWeight="600"
             textAnchor={isRTL ? 'end' : 'start'}
@@ -268,16 +268,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: theme.colors.emeraldLight,
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: theme.colors.emeraldBorder,
   },
   adherenceText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#059669',
+    color: theme.colors.emeraldDark,
   },
   svgWrapper: {
     marginVertical: 4,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   inspectorPct: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   hintRow: {
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hintText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   emptyContainer: {
