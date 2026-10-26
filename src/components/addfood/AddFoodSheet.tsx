@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Dimensions,
 } from 'react-native';
@@ -26,26 +25,20 @@ import {
   X,
   Search,
   Barcode as BarcodeIcon,
-  Camera as CameraIcon,
   Sparkles,
   Plus,
-  Minus,
   Check,
-  AlertTriangle,
-  Image as ImageIcon,
   Star,
   Copy,
   Utensils,
   Trash2,
   Bookmark,
-  Info,
   Globe,
   Zap,
 } from 'lucide-react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { LoggedMeal, MealType, FoodItem, MealTemplate } from '../../types';
-import { VERIFIED_FOOD_DATABASE, REGIONAL_FOODS } from '../../data/foodDatabase';
 import { lookupBarcodeWithFallbacks } from '../../services/barcodeService';
 import { searchOnlineFoodDatabase } from '../../services/onlineFoodSearchService';
 import {
@@ -54,18 +47,23 @@ import {
   getStoredGeminiApiKey,
   PlateAnalysisResult,
 } from '../../services/plateAnalysisService';
-import { GeminiKeyManager } from '../GeminiKeyManager';
-import { AiReview } from './AiReview';
 import { shouldResetFoodSelection, resolveSelectedVariantId } from './addFoodSelectionGuard';
 import { SaveSuccessOverlay } from '../SaveSuccessOverlay';
 import { FoodThumbnail } from '../FoodThumbnail';
 import { RequestFoodModal } from '../RequestFoodModal';
 import { useLanguage } from '../../i18n/I18nContext';
 import { translate } from '../../i18n/strings';
-import { normalizeSearch } from '../../utils/localeUtils';
 import { formatDisplayDate, getTodayDateString } from '../../utils/dateUtils';
 import { formatKcal } from '../../utils/formatKcal';
 import { getPreviousDayString } from '../../utils/streak';
+import { AddFoodPortionPicker } from './AddFoodPortionPicker';
+import { AddFoodBarcodeScanner } from './AddFoodBarcodeScanner';
+import { AddFoodAiPhotoSection } from './AddFoodAiPhotoSection';
+import { AddFoodAiDescribeSection } from './AddFoodAiDescribeSection';
+import { AddFoodCustomModal } from './AddFoodCustomModal';
+import { AddFoodQuickAddModal } from './AddFoodQuickAddModal';
+import { AddFoodTemplateModal } from './AddFoodTemplateModal';
+import { useFoodSearch, FoodFilter } from './useFoodSearch';
 import {
   loadRecentFoods,
   addRecentFood,
@@ -174,7 +172,6 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   }, [selectedFood, selectedVariantId]);
 
   // Filter & Collections state
-  type FoodFilter = 'all' | 'recent' | 'frequent' | 'favorites' | 'templates' | 'regional' | 'custom' | 'scanned';
   const [foodFilter, setFoodFilter] = useState<FoodFilter>('all');
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
   const [frequentFoods, setFrequentFoods] = useState<FoodItem[]>([]);
@@ -874,46 +871,17 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   };
 
   // Filtered Food Search with Arabic/Sorani variant normalization (memoized)
-  const filteredFoods = useMemo(() => {
-    let sourceList: FoodItem[] = [];
-    if (foodFilter === 'recent') {
-      sourceList = recentFoods;
-    } else if (foodFilter === 'frequent') {
-      sourceList = frequentFoods;
-    } else if (foodFilter === 'favorites') {
-      sourceList = favoriteFoods;
-    } else if (foodFilter === 'custom') {
-      sourceList = customFoods;
-    } else if (foodFilter === 'regional') {
-      sourceList = REGIONAL_FOODS;
-    } else if (foodFilter === 'scanned') {
-      sourceList = barcodeCache;
-    } else {
-      sourceList = [...customFoods, ...barcodeCache, ...VERIFIED_FOOD_DATABASE];
-    }
-
-    const normalizedQuery = normalizeSearch(searchQuery);
-    if (!normalizedQuery) return sourceList;
-
-    return sourceList.filter((f) => {
-      const normName = normalizeSearch(f.name);
-      const normNameAr = f.nameAr ? normalizeSearch(f.nameAr) : '';
-      const normNameCkb = f.nameCkb ? normalizeSearch(f.nameCkb) : '';
-      const normCategory = f.category ? normalizeSearch(f.category) : '';
-      const normBrand = f.brand ? normalizeSearch(f.brand) : '';
-      const normBarcode = f.barcode ? normalizeSearch(f.barcode) : '';
-      const localizedName = normalizeSearch(t(f.name));
-      return (
-        normName.includes(normalizedQuery) ||
-        normNameAr.includes(normalizedQuery) ||
-        normNameCkb.includes(normalizedQuery) ||
-        normCategory.includes(normalizedQuery) ||
-        normBrand.includes(normalizedQuery) ||
-        normBarcode.includes(normalizedQuery) ||
-        localizedName.includes(normalizedQuery)
-      );
-    });
-  }, [foodFilter, recentFoods, frequentFoods, favoriteFoods, customFoods, barcodeCache, searchQuery, t]);
+  const filteredFoods = useFoodSearch({
+    searchQuery,
+    foodFilter,
+    recentFoods,
+    frequentFoods,
+    favoriteFoods,
+    customFoods,
+    barcodeCache,
+    language,
+    t,
+  });
 
   const mealCategories: { key: MealType; label: string }[] = useMemo(
     () => [
@@ -1072,49 +1040,17 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
           {activeTab === 'search' && (
             <View style={{ flex: 1 }}>
               {isScanningBarcode ? (
-                <View style={styles.cameraFrame}>
-                  {Platform.OS === 'web' ? (
-                    <View style={styles.cameraWebFallback}>
-                      <AlertTriangle size={28} color={theme.colors.accent} />
-                      <Text style={styles.fallbackTitle}>{t('Web Browser Camera')}</Text>
-                      <Text style={styles.fallbackDesc}>
-                        {t('Live video barcode scanning requires native mobile camera hardware. Use manual barcode entry below to look up any product immediately.')}
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.actionBtnPrimary}
-                        onPress={() => setIsScanningBarcode(false)}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('Enter digits')}
-                      >
-                        <Text style={styles.actionBtnPrimaryText}>{t('Enter digits')}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <CameraView
-                      style={StyleSheet.absoluteFill}
-                      facing="back"
-                      barcodeScannerSettings={{
-                        barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e'],
-                      }}
-                      onBarcodeScanned={({ data }) => {
-                        handlePerformBarcodeLookup(data);
-                      }}
-                    >
-                      <View style={styles.reticleOverlay}>
-                        <View style={styles.reticle} />
-                        <Text style={styles.reticleText}>{t('Scan barcode')}</Text>
-                        <TouchableOpacity
-                          style={styles.cancelScanBtn}
-                          onPress={() => setIsScanningBarcode(false)}
-                          accessibilityRole="button"
-                          accessibilityLabel={t('Close')}
-                        >
-                          <Text style={styles.cancelScanText}>{t('Close')}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </CameraView>
-                  )}
-                </View>
+                <AddFoodBarcodeScanner
+                  isScanningBarcode={true}
+                  onBarcodeScanned={handlePerformBarcodeLookup}
+                  onCloseScanner={() => setIsScanningBarcode(false)}
+                  manualBarcode={manualBarcode}
+                  onManualBarcodeChange={setManualBarcode}
+                  onPerformBarcodeLookup={handlePerformBarcodeLookup}
+                  barcodeLoading={barcodeLoading}
+                  barcodeError={barcodeError}
+                  t={t}
+                />
               ) : (
                 <>
                   {/* Search Bar + Barcode Scanner Trigger */}
@@ -1159,250 +1095,40 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                   </View>
 
                   {/* Manual Barcode Input Fallback Drawer */}
-                  <View style={styles.manualBarcodeRow}>
-                    <TextInput
-                      style={styles.manualBarcodeInput}
-                      placeholder={t('Enter Barcode (UPC / EAN)')}
-                      placeholderTextColor={theme.colors.textMuted}
-                      value={manualBarcode}
-                      onChangeText={setManualBarcode}
-                      keyboardType="numeric"
-                      onSubmitEditing={() => handlePerformBarcodeLookup(manualBarcode)}
-                    />
-                    <TouchableOpacity
-                      style={styles.manualBarcodeSubmitBtn}
-                      onPress={() => handlePerformBarcodeLookup(manualBarcode)}
-                      disabled={barcodeLoading || !manualBarcode.trim()}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Search')}
-                    >
-                      {barcodeLoading ? (
-                        <ActivityIndicator size="small" color={theme.colors.textInverted} />
-                      ) : (
-                        <Text style={styles.manualBarcodeSubmitText}>{t('Search')}</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-
-                  {barcodeError && (
-                    <View style={styles.errorNotice}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                        <AlertTriangle size={15} color={theme.colors.danger} />
-                        <Text style={styles.errorNoticeText}>{barcodeError}</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.requestBarcodeBtn}
-                        onPress={() => {
-                          setRequestModalInitialName('');
-                          setRequestModalInitialBarcode(manualBarcode.trim());
-                          setRequestModalVisible(true);
-                        }}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('Request a Food')}
-                      >
-                        <Text style={styles.requestBarcodeBtnText}>{t('Request a Food')}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                  <AddFoodBarcodeScanner
+                    isScanningBarcode={false}
+                    onBarcodeScanned={handlePerformBarcodeLookup}
+                    onCloseScanner={() => setIsScanningBarcode(false)}
+                    manualBarcode={manualBarcode}
+                    onManualBarcodeChange={setManualBarcode}
+                    onPerformBarcodeLookup={handlePerformBarcodeLookup}
+                    barcodeLoading={barcodeLoading}
+                    barcodeError={barcodeError}
+                    onRequestFoodWithBarcode={() => {
+                      setRequestModalInitialName('');
+                      setRequestModalInitialBarcode(manualBarcode.trim());
+                      setRequestModalVisible(true);
+                    }}
+                    t={t}
+                  />
 
                   {/* Selected Food Confirmation Box */}
-                  {selectedFood && (() => {
-                    const activeCalories = activeVariant ? activeVariant.calories : selectedFood.calories;
-                    const activeProtein = activeVariant ? activeVariant.protein : selectedFood.protein;
-                    const activeCarbs = activeVariant ? activeVariant.carbs : selectedFood.carbs;
-                    const activeFat = activeVariant ? activeVariant.fat : selectedFood.fat;
-                    const effectiveGramsPerUnit = activeVariant?.servingGrams ?? (selectedFood.gramsPerUnit ?? selectedFood.servingGrams);
-                    const totalGrams = Math.round(effectiveGramsPerUnit * servingsCount);
-                    const baseServingGrams = activeVariant?.servingGrams ?? (selectedFood.servingGrams > 0 ? selectedFood.servingGrams : 100);
-                    const scaleRatio = totalGrams / baseServingGrams;
-
-                    return (
-                      <View style={styles.selectedFoodCard}>
-                        <View style={styles.selectedHeaderRow}>
-                          <View style={styles.selectedBadgesRow}>
-                            {selectedFood.source ? (
-                              <FoodSourceBadge source={selectedFood.source} size="small" />
-                            ) : null}
-                            {selectedFood.recipeEstimate ? (
-                              <View style={styles.recipeEstimateBadge}>
-                                <Sparkles size={11} color={theme.colors.orangeDeep} />
-                                <Text style={styles.recipeEstimateBadgeText}>{t('Recipe estimate')}</Text>
-                              </View>
-                            ) : selectedFood.isEstimate ? (
-                              <View style={styles.estimateBadge}>
-                                <Info size={11} color={theme.colors.amberDark} />
-                                <Text style={styles.estimateBadgeText}>{t('Culinary Estimate')}</Text>
-                              </View>
-                            ) : null}
-                            {selectedFood.barcode ? (
-                              <View style={styles.barcodeBadge}>
-                                <BarcodeIcon size={11} color={theme.colors.textMuted} />
-                                <Text style={styles.barcodeBadgeText}>{selectedFood.barcode}</Text>
-                              </View>
-                            ) : null}
-                          </View>
-                          <TouchableOpacity
-                            onPress={() => setSelectedFood(null)}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            accessibilityLabel={t('Cancel')}
-                            accessibilityRole="button"
-                          >
-                            <X size={16} color={theme.colors.textMuted} />
-                          </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.selectedTop}>
-                          <FoodThumbnail
-                            name={selectedFood.name}
-                            category={selectedFood.category}
-                            imageUrl={selectedFood.imageUrl}
-                            size="medium"
-                            style={{ marginEnd: 12 }}
-                          />
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.selectedName}>{getLocalizedFoodName(selectedFood, language)}</Text>
-                            {selectedFood.brand ? (
-                              <Text style={styles.selectedBrand}>{selectedFood.brand}</Text>
-                            ) : null}
-                            <Text style={styles.selectedPortion}>
-                              {selectedFood.portionUnit
-                                ? `${servingsCount} ${t(selectedFood.portionUnit)} (${totalGrams}g)`
-                                : `${activeVariant?.servingSize ?? selectedFood.servingSize} (${totalGrams}g)`}
-                            </Text>
-                            <Text style={styles.selectedMacrosPreview}>
-                              {`P: ${(activeProtein * scaleRatio).toFixed(1)}g • C: ${(activeCarbs * scaleRatio).toFixed(1)}g • F: ${(activeFat * scaleRatio).toFixed(1)}g`}
-                            </Text>
-                          </View>
-                          <Text style={styles.selectedKcal}>
-                            {formatKcal(activeCalories * scaleRatio, t)}
-                          </Text>
-                        </View>
-
-                        {/* Variants Selector */}
-                        {selectedFood.variants && selectedFood.variants.length > 0 ? (
-                          <View style={styles.variantSection}>
-                            <Text style={styles.variantSectionTitle}>{t('Preparation / Variant:')}</Text>
-                            <ScrollView
-                              horizontal
-                              showsHorizontalScrollIndicator={false}
-                              contentContainerStyle={styles.variantChipsRow}
-                            >
-                              {selectedFood.variants.map((v) => {
-                                const isSelected = activeVariant?.id === v.id;
-                                return (
-                                  <TouchableOpacity
-                                    key={v.id}
-                                    style={[styles.variantChip, isSelected && styles.variantChipActive]}
-                                    onPress={() => setSelectedVariantId(v.id)}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={v.name}
-                                  >
-                                    <Text style={[styles.variantChipText, isSelected && styles.variantChipTextActive]}>
-                                      {v.name}
-                                    </Text>
-                                  </TouchableOpacity>
-                                );
-                              })}
-                            </ScrollView>
-                          </View>
-                        ) : null}
-
-                        {/* Recipe Ingredients Breakdown */}
-                        {selectedFood.ingredients && selectedFood.ingredients.length > 0 ? (
-                          <View style={styles.ingredientsSection}>
-                            <TouchableOpacity
-                              style={styles.ingredientsToggleBtn}
-                              onPress={() => setShowIngredients((prev) => !prev)}
-                              accessibilityRole="button"
-                              accessibilityLabel={t('Recipe ingredients & USDA sources')}
-                            >
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <Utensils size={14} color={theme.colors.primary} />
-                                <Text style={styles.ingredientsToggleText}>
-                                  {t('Recipe ingredients & USDA sources')} ({selectedFood.ingredients.length})
-                                </Text>
-                              </View>
-                              <Text style={styles.ingredientsToggleAction}>
-                                {showIngredients ? t('Hide ingredients') : t('Show ingredients')}
-                              </Text>
-                            </TouchableOpacity>
-
-                            {showIngredients ? (
-                              <View style={styles.ingredientsListCard}>
-                                {selectedFood.ingredients.map((ing, idx) => (
-                                  <View key={idx} style={styles.ingredientRow}>
-                                    <View style={{ flex: 1 }}>
-                                      <Text style={styles.ingredientName}>{ing.name}</Text>
-                                      <Text style={styles.ingredientSource}>{t('Source:')} {ing.source}</Text>
-                                    </View>
-                                    <View style={{ alignItems: 'flex-end', marginStart: 8 }}>
-                                      <Text style={styles.ingredientGrams}>{ing.grams}g</Text>
-                                      {ing.calories !== undefined ? (
-                                        <Text style={styles.ingredientKcal}>{formatKcal(ing.calories, t)}</Text>
-                                      ) : null}
-                                    </View>
-                                  </View>
-                                ))}
-                                <TouchableOpacity
-                                  style={styles.customizeRecipeBtn}
-                                  onPress={handleCustomizeSelectedFood}
-                                  accessibilityRole="button"
-                                  accessibilityLabel={t('Customize recipe')}
-                                >
-                                  <Text style={styles.customizeRecipeBtnText}>{t('Customize recipe')}</Text>
-                                </TouchableOpacity>
-                              </View>
-                            ) : null}
-                          </View>
-                        ) : null}
-
-                        <View style={styles.stepperRow}>
-                          <Text style={styles.stepperLabel}>
-                            {selectedFood.portionUnit ? `${t('Portions')} (${t(selectedFood.portionUnit)}):` : t('Servings:')}
-                          </Text>
-                          <View style={styles.stepper}>
-                            <TouchableOpacity
-                              style={styles.stepBtn}
-                              onPress={() => setServingsCount((c) => Math.max(0.5, c - 0.5))}
-                              accessibilityRole="button"
-                              accessibilityLabel={t('Decrease')}
-                            >
-                              <Minus size={13} color={theme.colors.textPrimary} />
-                            </TouchableOpacity>
-                            <Text style={styles.stepVal}>{servingsCount}</Text>
-                            <TouchableOpacity
-                              style={styles.stepBtn}
-                              onPress={() => setServingsCount((c) => c + 0.5)}
-                              accessibilityRole="button"
-                              accessibilityLabel={t('Increase')}
-                            >
-                              <Plus size={13} color={theme.colors.textPrimary} />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-
-                        <View style={styles.selectedActionButtonsRow}>
-                          <TouchableOpacity
-                            style={styles.cancelSelectedBtn}
-                            onPress={() => setSelectedFood(null)}
-                            accessibilityRole="button"
-                            accessibilityLabel={t('Cancel')}
-                          >
-                            <Text style={styles.cancelSelectedBtnText}>{t('Cancel')}</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.confirmAddBtn, { flex: 1, marginTop: 0 }]}
-                            onPress={handleSaveSelectedFood}
-                            accessibilityRole="button"
-                            accessibilityLabel={t('Log to Diary')}
-                          >
-                            <Check size={16} color={theme.colors.textInverted} />
-                            <Text style={styles.confirmAddBtnText}>{t('Log to Diary')}</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    );
-                  })()}
+                  {selectedFood && (
+                    <AddFoodPortionPicker
+                      food={selectedFood}
+                      servingsCount={servingsCount}
+                      onServingsChange={setServingsCount}
+                      activeVariant={activeVariant ?? undefined}
+                      onSelectVariant={setSelectedVariantId}
+                      showIngredients={showIngredients}
+                      onToggleIngredients={() => setShowIngredients((prev) => !prev)}
+                      onCustomizeRecipe={handleCustomizeSelectedFood}
+                      onCancel={() => setSelectedFood(null)}
+                      onConfirm={handleSaveSelectedFood}
+                      language={language}
+                      t={t}
+                    />
+                  )}
 
                   {/* Filter Chips & Quick Actions Row */}
                   <View style={styles.filterActionsContainer}>
@@ -1997,155 +1723,41 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
           {/* TAB 2: AI MEAL PHOTO */}
           {activeTab === 'photo' && (
-            <ScrollView
-              contentContainerStyle={[
-                styles.tabContentScroll,
-                { paddingBottom: Math.max(48, insets.bottom + 36) },
-              ]}
-              keyboardShouldPersistTaps="handled"
-            >
-              {!hasApiKey && (
-                <GeminiKeyManager onKeyChanged={checkApiKey} />
-              )}
-
-              <View style={styles.photoActionsCard}>
-                <Text style={styles.photoCardTitle}>{t('Analyze meal photo')}</Text>
-                <Text style={styles.photoCardSub}>
-                  {t('Estimate nutrition from a photo of home-cooked plates or restaurant dishes.')}
-                </Text>
-
-                <View style={styles.photoBtnRow}>
-                  <TouchableOpacity
-                    style={styles.photoPickBtn}
-                    onPress={() => handlePickPhoto(true)}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Take plate photo')}
-                  >
-                    <CameraIcon size={16} color={theme.colors.textInverted} />
-                    <Text style={styles.photoPickBtnText}>{t('Take plate photo')}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.photoPickBtnSecondary}
-                    onPress={() => handlePickPhoto(false)}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('From gallery')}
-                  >
-                    <ImageIcon size={16} color={theme.colors.textPrimary} />
-                    <Text style={styles.photoPickBtnSecondaryText}>{t('From gallery')}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {photoUri && (
-                <Image source={{ uri: photoUri }} style={styles.platePreviewImage} />
-              )}
-
-              {photoLoading && (
-                <View style={styles.loadingBox}>
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
-                  <Text style={styles.loadingText}>
-                    {t('Analyzing meal components and portions...')}
-                  </Text>
-                </View>
-              )}
-
-              {photoError && (
-                <View style={styles.errorNotice}>
-                  <AlertTriangle size={16} color={theme.colors.danger} />
-                  <Text style={styles.errorNoticeText}>{photoError}</Text>
-                </View>
-              )}
-
-              {photoResult && (
-                <AiReview
-                  key={`photo_${photoResult.mealName}_${photoResult.totalCalories}_${photoResult.items.length}`}
-                  result={photoResult}
-                  mealType={selectedMeal}
-                  targetDate={date}
-                  onLogItem={handleLogAiItem}
-                  onLogAll={handleLogAllAiItems}
-                />
-              )}
-            </ScrollView>
+            <AddFoodAiPhotoSection
+              hasApiKey={hasApiKey}
+              onKeyChanged={checkApiKey}
+              onPickPhoto={handlePickPhoto}
+              photoUri={photoUri}
+              photoLoading={photoLoading}
+              photoError={photoError}
+              photoResult={photoResult}
+              selectedMeal={selectedMeal}
+              targetDate={date}
+              onLogAiItem={handleLogAiItem}
+              onLogAllAiItems={handleLogAllAiItems}
+              bottomInset={insets.bottom}
+              t={t}
+            />
           )}
 
           {/* TAB 3: AI DESCRIBE */}
           {activeTab === 'describe' && (
-            <ScrollView
-              contentContainerStyle={[
-                styles.tabContentScroll,
-                { paddingBottom: Math.max(48, insets.bottom + 36) },
-              ]}
-              keyboardShouldPersistTaps="handled"
-            >
-              {!hasApiKey && (
-                <GeminiKeyManager onKeyChanged={checkApiKey} />
-              )}
-
-              <View style={styles.describeCard}>
-                <View style={styles.describeHeaderRow}>
-                  <Sparkles size={16} color={theme.colors.accent} />
-                  <Text style={styles.describeTitle}>{t('Describe what you ate')}</Text>
-                </View>
-
-                <Text style={styles.describeSub}>
-                  {t('Get an estimate, review portions, then log')}
-                </Text>
-
-                <TextInput
-                  style={styles.describeInput}
-                  value={describeText}
-                  onChangeText={setDescribeText}
-                  placeholder={t('Describe what you ate')}
-                  placeholderTextColor={theme.colors.textMuted}
-                  multiline
-                  numberOfLines={3}
-                  maxLength={500}
-                  editable={!describeLoading}
-                />
-
-                <TouchableOpacity
-                  style={[
-                    styles.actionBtnPrimary,
-                    (!describeText.trim() || describeLoading) && styles.actionBtnDisabled,
-                  ]}
-                  onPress={handleEstimateDescribe}
-                  disabled={!describeText.trim() || describeLoading}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('Estimate nutrition')}
-                >
-                  {describeLoading ? (
-                    <ActivityIndicator size="small" color={theme.colors.textInverted} />
-                  ) : (
-                    <>
-                      <Sparkles size={15} color={theme.colors.textInverted} />
-                      <Text style={styles.actionBtnPrimaryText}>{t('Estimate nutrition')}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              {describeError && (
-                <View style={styles.errorNotice}>
-                  <AlertTriangle size={16} color={theme.colors.danger} />
-                  <Text style={styles.errorNoticeText}>{describeError}</Text>
-                </View>
-              )}
-
-              {describeResult && (
-                <AiReview
-                  key={`describe_${describeResult.mealName}_${describeResult.totalCalories}_${describeResult.items.length}`}
-                  result={describeResult}
-                  mealType={selectedMeal}
-                  targetDate={date}
-                  onLogItem={handleLogAiItem}
-                  onLogAll={handleLogAllAiItems}
-                />
-              )}
-            </ScrollView>
+            <AddFoodAiDescribeSection
+              hasApiKey={hasApiKey}
+              onKeyChanged={checkApiKey}
+              describeText={describeText}
+              onDescribeTextChange={setDescribeText}
+              describeLoading={describeLoading}
+              describeError={describeError}
+              onEstimateDescribe={handleEstimateDescribe}
+              describeResult={describeResult}
+              selectedMeal={selectedMeal}
+              targetDate={date}
+              onLogAiItem={handleLogAiItem}
+              onLogAllAiItems={handleLogAllAiItems}
+              bottomInset={insets.bottom}
+              t={t}
+            />
           )}
         </Animated.View>
       </KeyboardAvoidingView>
@@ -2153,307 +1765,62 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   </Modal>
 
     {/* Custom Food Creation Modal */}
-    <Modal
+    <AddFoodCustomModal
       visible={customModalVisible}
-      animationType="fade"
-      transparent
-      onRequestClose={() => setCustomModalVisible(false)}
-    >
-      <View style={[styles.customModalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ width: '100%', alignItems: 'center' }}
-        >
-          <View style={styles.customModalCard}>
-            <View style={styles.customModalHeader}>
-              <Text style={styles.customModalTitle}>{t('Create custom food')}</Text>
-              <TouchableOpacity
-                onPress={() => setCustomModalVisible(false)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel={t('Close')}
-              >
-                <X size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            {customError && (
-              <View style={styles.errorNotice}>
-                <AlertTriangle size={15} color={theme.colors.danger} />
-                <Text style={styles.errorNoticeText}>{customError}</Text>
-              </View>
-            )}
-
-            <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled">
-              <View style={styles.customInputGroup}>
-                <Text style={styles.customInputLabel}>{t('Food name')}</Text>
-                <TextInput
-                  style={styles.customTextInput}
-                  placeholder={t('Food name')}
-                  placeholderTextColor={theme.colors.textMuted}
-                  value={customName}
-                  onChangeText={setCustomName}
-                />
-              </View>
-
-              <View style={styles.customInputGroup}>
-                <Text style={styles.customInputLabel}>{t('Serving description (e.g. 1 bowl, 100g)')}</Text>
-                <TextInput
-                  style={styles.customTextInput}
-                  placeholder={t('Serving description (e.g. 1 bowl, 100g)')}
-                  placeholderTextColor={theme.colors.textMuted}
-                  value={customServing}
-                  onChangeText={setCustomServing}
-                />
-              </View>
-
-              <View style={styles.customInputGroup}>
-                <Text style={styles.customInputLabel}>{t('Calories (kcal)')}</Text>
-                <TextInput
-                  style={styles.customTextInput}
-                  placeholder="250"
-                  placeholderTextColor={theme.colors.textMuted}
-                  value={customCalories}
-                  onChangeText={setCustomCalories}
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View style={styles.macrosRowInputs}>
-                <View style={[styles.customInputGroup, { flex: 1 }]}>
-                  <Text style={styles.customInputLabel}>{t('Protein (g)')}</Text>
-                  <TextInput
-                    style={styles.customTextInput}
-                    placeholder="0"
-                    placeholderTextColor={theme.colors.textMuted}
-                    value={customProtein}
-                    onChangeText={setCustomProtein}
-                    keyboardType="numeric"
-                  />
-                </View>
-
-                <View style={[styles.customInputGroup, { flex: 1 }]}>
-                  <Text style={styles.customInputLabel}>{t('Carbs (g)')}</Text>
-                  <TextInput
-                    style={styles.customTextInput}
-                    placeholder="0"
-                    placeholderTextColor={theme.colors.textMuted}
-                    value={customCarbs}
-                    onChangeText={setCustomCarbs}
-                    keyboardType="numeric"
-                  />
-                </View>
-
-                <View style={[styles.customInputGroup, { flex: 1 }]}>
-                  <Text style={styles.customInputLabel}>{t('Fat (g)')}</Text>
-                  <TextInput
-                    style={styles.customTextInput}
-                    placeholder="0"
-                    placeholderTextColor={theme.colors.textMuted}
-                    value={customFat}
-                    onChangeText={setCustomFat}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.saveCustomBtn}
-              onPress={handleSaveCustomFood}
-              accessibilityRole="button"
-              accessibilityLabel={t('Save custom food')}
-            >
-              <Check size={16} color={theme.colors.textInverted} />
-              <Text style={styles.saveCustomBtnText}>{t('Save custom food')}</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+      onClose={() => setCustomModalVisible(false)}
+      customName={customName}
+      setCustomName={setCustomName}
+      customServing={customServing}
+      setCustomServing={setCustomServing}
+      customCalories={customCalories}
+      setCustomCalories={setCustomCalories}
+      customProtein={customProtein}
+      setCustomProtein={setCustomProtein}
+      customCarbs={customCarbs}
+      setCustomCarbs={setCustomCarbs}
+      customFat={customFat}
+      setCustomFat={setCustomFat}
+      customError={customError}
+      onSave={handleSaveCustomFood}
+      language={language}
+      t={t}
+    />
 
     {/* Quick Add Calories Modal */}
-    <Modal
+    <AddFoodQuickAddModal
       visible={quickAddModalVisible}
-      animationType="fade"
-      transparent
-      onRequestClose={() => setQuickAddModalVisible(false)}
-    >
-      <View style={[styles.customModalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ width: '100%', alignItems: 'center' }}
-        >
-          <View style={styles.customModalCard}>
-            <View style={styles.customModalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Zap size={18} color={theme.colors.primary} />
-                <Text style={styles.customModalTitle}>{t('Quick Add Calories')}</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setQuickAddModalVisible(false)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel={t('Close')}
-              >
-                <X size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            {quickAddError && (
-              <View style={styles.errorNotice}>
-                <AlertTriangle size={15} color={theme.colors.danger} />
-                <Text style={styles.errorNoticeText}>{quickAddError}</Text>
-              </View>
-            )}
-
-            <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled">
-              <View style={styles.customInputGroup}>
-                <Text style={styles.customInputLabel}>{t('Food name')} ({t('Optional')})</Text>
-                <TextInput
-                  style={styles.customTextInput}
-                  placeholder={`${t('Quick Add')} (${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))})`}
-                  placeholderTextColor={theme.colors.textMuted}
-                  value={quickAddName}
-                  onChangeText={setQuickAddName}
-                />
-              </View>
-
-              <View style={styles.customInputGroup}>
-                <Text style={styles.customInputLabel}>{t('Calories')} *</Text>
-                <TextInput
-                  style={styles.customTextInput}
-                  placeholder="e.g. 450"
-                  placeholderTextColor={theme.colors.textMuted}
-                  value={quickAddCalories}
-                  onChangeText={setQuickAddCalories}
-                  keyboardType="numeric"
-                  autoFocus
-                />
-              </View>
-
-              <View style={styles.macrosRowInputs}>
-                <View style={[styles.customInputGroup, { flex: 1 }]}>
-                  <Text style={styles.customInputLabel}>{t('Protein')} (g)</Text>
-                  <TextInput
-                    style={styles.customTextInput}
-                    placeholder="0"
-                    placeholderTextColor={theme.colors.textMuted}
-                    value={quickAddProtein}
-                    onChangeText={setQuickAddProtein}
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={[styles.customInputGroup, { flex: 1 }]}>
-                  <Text style={styles.customInputLabel}>{t('Carbs')} (g)</Text>
-                  <TextInput
-                    style={styles.customTextInput}
-                    placeholder="0"
-                    placeholderTextColor={theme.colors.textMuted}
-                    value={quickAddCarbs}
-                    onChangeText={setQuickAddCarbs}
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={[styles.customInputGroup, { flex: 1 }]}>
-                  <Text style={styles.customInputLabel}>{t('Fat')} (g)</Text>
-                  <TextInput
-                    style={styles.customTextInput}
-                    placeholder="0"
-                    placeholderTextColor={theme.colors.textMuted}
-                    value={quickAddFat}
-                    onChangeText={setQuickAddFat}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.saveCustomBtn}
-              onPress={handleQuickAddSave}
-              accessibilityRole="button"
-              accessibilityLabel={t('Log Calories')}
-            >
-              <Check size={16} color={theme.colors.textInverted} />
-              <Text style={styles.saveCustomBtnText}>{t('Log Calories')}</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+      onClose={() => setQuickAddModalVisible(false)}
+      selectedMeal={selectedMeal}
+      quickAddName={quickAddName}
+      setQuickAddName={setQuickAddName}
+      quickAddCalories={quickAddCalories}
+      setQuickAddCalories={setQuickAddCalories}
+      quickAddProtein={quickAddProtein}
+      setQuickAddProtein={setQuickAddProtein}
+      quickAddCarbs={quickAddCarbs}
+      setQuickAddCarbs={setQuickAddCarbs}
+      quickAddFat={quickAddFat}
+      setQuickAddFat={setQuickAddFat}
+      quickAddError={quickAddError}
+      onSave={handleQuickAddSave}
+      language={language}
+      t={t}
+    />
 
     {/* Meal Template Creation Modal */}
-    <Modal
+    <AddFoodTemplateModal
       visible={templateModalVisible}
-      animationType="fade"
-      transparent
-      onRequestClose={() => setTemplateModalVisible(false)}
-    >
-      <View style={[styles.customModalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ width: '100%', alignItems: 'center' }}
-        >
-          <View style={styles.customModalCard}>
-            <View style={styles.customModalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Bookmark size={17} color={theme.colors.primary} />
-                <Text style={styles.customModalTitle}>{t('Save as template')}</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setTemplateModalVisible(false)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel={t('Close')}
-              >
-                <X size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            {templateError && (
-              <View style={styles.errorNotice}>
-                <AlertTriangle size={15} color={theme.colors.danger} />
-                <Text style={styles.errorNoticeText}>{templateError}</Text>
-              </View>
-            )}
-
-            <Text style={styles.templateModalDescription}>
-              {`${t('Save current')} ${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))} (${currentDayMeals.filter((m) => m.mealType === selectedMeal).length} ${t('items')}) ${t('as a reusable template to log again in one tap.')}`}
-            </Text>
-
-            <View style={styles.customInputGroup}>
-              <Text style={styles.customInputLabel}>{t('Template name')}</Text>
-              <TextInput
-                style={styles.customTextInput}
-                placeholder={t('e.g. My Usual Breakfast, Friday BBQ')}
-                placeholderTextColor={theme.colors.textMuted}
-                value={templateName}
-                onChangeText={setTemplateName}
-                autoFocus
-              />
-            </View>
-
-            <TouchableOpacity
-              style={styles.saveCustomBtn}
-              onPress={handleCreateTemplateFromCurrentMeals}
-              disabled={templateSaving}
-              accessibilityRole="button"
-              accessibilityLabel={t('Save template')}
-            >
-              {templateSaving ? (
-                <ActivityIndicator size="small" color={theme.colors.textInverted} />
-              ) : (
-                <>
-                  <Check size={16} color={theme.colors.textInverted} />
-                  <Text style={styles.saveCustomBtnText}>{t('Save template')}</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+      onClose={() => setTemplateModalVisible(false)}
+      selectedMeal={selectedMeal}
+      currentDayMeals={currentDayMeals}
+      templateName={templateName}
+      setTemplateName={setTemplateName}
+      templateError={templateError}
+      templateSaving={templateSaving}
+      onSave={handleCreateTemplateFromCurrentMeals}
+      language={language}
+      t={t}
+    />
 
     {/* Request a Food Community Modal */}
     <RequestFoodModal
@@ -2597,252 +1964,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  manualBarcodeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  manualBarcodeInput: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    fontSize: 12,
-    color: theme.colors.textPrimary,
-  },
-  manualBarcodeSubmitBtn: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 14,
-    borderRadius: theme.radius.md,
-    justifyContent: 'center',
-  },
-  manualBarcodeSubmitText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.textInverted,
-  },
-  cameraFrame: {
-    flex: 1,
-    borderRadius: theme.radius.lg,
-    overflow: 'hidden',
-    marginTop: 8,
-  },
-  cameraWebFallback: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  fallbackTitle: {
-    fontFamily: theme.fonts.serif,
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  fallbackDesc: {
-    fontSize: 13,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  reticleOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-  },
-  reticle: {
-    width: 240,
-    height: 140,
-    borderWidth: 2,
-    borderColor: theme.colors.white,
-    borderRadius: 12,
-  },
-  reticleText: {
-    color: theme.colors.white,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  cancelScanBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: theme.radius.full,
-  },
-  cancelScanText: {
-    color: theme.colors.white,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  errorNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.crimsonLight,
-    padding: 10,
-    borderRadius: theme.radius.md,
-    marginTop: 6,
-  },
-  errorNoticeText: {
-    flex: 1,
-    fontSize: 12,
-    color: theme.colors.danger,
-    lineHeight: 16,
-  },
-  selectedFoodCard: {
-    backgroundColor: theme.colors.primaryLight,
-    borderWidth: 1,
-    borderColor: theme.colors.primaryBorder,
-    borderRadius: theme.radius.lg,
-    padding: 12,
-    marginTop: 8,
-    gap: 8,
-  },
-  selectedTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  selectedName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  selectedBrand: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-  },
-  selectedPortion: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  selectedMacrosPreview: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.primary,
-    marginTop: 4,
-  },
-  selectedKcal: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.primary,
-  },
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 4,
-  },
-  stepperLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  stepBtn: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepVal: {
-    paddingHorizontal: 10,
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  confirmAddBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 10,
-    borderRadius: theme.radius.md,
-    marginTop: 4,
-  },
-  confirmAddBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.colors.textInverted,
-  },
-  selectedHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 2,
-  },
-  selectedBadgesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  sourceBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.primaryBorder,
-  },
-  sourceBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.primary,
-  },
-  barcodeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  barcodeBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
-  },
-  selectedActionButtonsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-  },
-  cancelSelectedBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelSelectedBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-  },
   listHeaderRow: {
     paddingVertical: 6,
     paddingHorizontal: 4,
@@ -2887,135 +2008,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: theme.colors.textPrimary,
-  },
-  tabContentScroll: {
-    paddingBottom: 24,
-    gap: 12,
-  },
-  photoActionsCard: {
-    backgroundColor: theme.colors.surface,
-    padding: 14,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: 8,
-  },
-  photoCardTitle: {
-    fontFamily: theme.fonts.serif,
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  photoCardSub: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    lineHeight: 17,
-  },
-  photoBtnRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  photoPickBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.accent,
-    paddingVertical: 10,
-    borderRadius: theme.radius.md,
-  },
-  photoPickBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.colors.textInverted,
-  },
-  photoPickBtnSecondary: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingVertical: 10,
-    borderRadius: theme.radius.md,
-  },
-  photoPickBtnSecondaryText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  platePreviewImage: {
-    width: '100%',
-    height: 180,
-    borderRadius: theme.radius.md,
-  },
-  loadingBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 16,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-  },
-  loadingText: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-  },
-  describeCard: {
-    backgroundColor: theme.colors.surface,
-    padding: 14,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: 8,
-  },
-  describeHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  describeTitle: {
-    fontFamily: theme.fonts.serif,
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  describeSub: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-  },
-  describeInput: {
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    padding: 10,
-    fontSize: 13,
-    color: theme.colors.textPrimary,
-    minHeight: 70,
-    textAlignVertical: 'top',
-  },
-  actionBtnPrimary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 10,
-    borderRadius: theme.radius.md,
-  },
-  actionBtnDisabled: {
-    opacity: 0.5,
-  },
-  actionBtnPrimaryText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.colors.textInverted,
   },
   filterActionsContainer: {
     paddingHorizontal: 16,
@@ -3088,77 +2080,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     textAlign: 'center',
   },
-  customModalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  customModalCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    gap: 10,
-  },
-  customModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  customModalTitle: {
-    fontFamily: theme.fonts.serif,
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  customInputGroup: {
-    marginBottom: 8,
-  },
-  customInputLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-    marginBottom: 4,
-  },
-  customTextInput: {
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    fontSize: 13,
-    color: theme.colors.textPrimary,
-  },
-  macrosRowInputs: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  saveCustomBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 11,
-    borderRadius: theme.radius.md,
-    marginTop: 4,
-  },
-  saveCustomBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.colors.textInverted,
-  },
   estimateBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3169,11 +2090,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.amberLight,
     borderWidth: 1,
     borderColor: theme.colors.amberBorder,
-  },
-  estimateBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.amberDark,
   },
   estimateBadgeSmall: {
     paddingHorizontal: 6,
@@ -3199,11 +2115,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.orangeBorder,
   },
-  recipeEstimateBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.orangeDeep,
-  },
   recipeEstimateBadgeSmall: {
     paddingHorizontal: 6,
     paddingVertical: 1.5,
@@ -3216,111 +2127,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: theme.colors.orangeDeep,
-  },
-  variantSection: {
-    marginTop: 10,
-    gap: 6,
-  },
-  variantSectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.textSecondary,
-  },
-  variantChipsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingVertical: 2,
-  },
-  variantChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  variantChipActive: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
-  variantChipText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
-  },
-  variantChipTextActive: {
-    color: theme.colors.primary,
-    fontWeight: '700',
-  },
-  ingredientsSection: {
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingTop: 8,
-  },
-  ingredientsToggleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  ingredientsToggleText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.primary,
-  },
-  ingredientsToggleAction: {
-    fontSize: 12,
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
-  ingredientsListCard: {
-    marginTop: 6,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: theme.radius.md,
-    padding: 8,
-    gap: 6,
-  },
-  ingredientRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    paddingBottom: 4,
-  },
-  ingredientName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  ingredientSource: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    marginTop: 1,
-  },
-  ingredientGrams: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  ingredientKcal: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  customizeRecipeBtn: {
-    marginTop: 4,
-    paddingVertical: 6,
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    borderRadius: theme.radius.sm,
-  },
-  customizeRecipeBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.primary,
   },
   templateCard: {
     backgroundColor: theme.colors.surface,
@@ -3399,26 +2205,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: theme.colors.textInverted,
-  },
-  templateModalDescription: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    lineHeight: 17,
-    marginBottom: 6,
-  },
-  requestBarcodeBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.danger,
-    marginStart: 8,
-  },
-  requestBarcodeBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.danger,
   },
   requestFoodPromptBtn: {
     flexDirection: 'row',

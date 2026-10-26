@@ -2,31 +2,19 @@ import React, { useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
-  Modal,
   Alert,
   Platform,
   BackHandler,
-  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CheckCircle2,
   Pill,
   Plus,
-  Minus,
-  Trash2,
-  Sunrise,
-  Sun,
-  Sunset,
-  Moon,
   BookmarkCheck,
   RotateCcw,
-  Search,
-  X,
-  Edit3,
   Calendar,
   AlertCircle,
   Bell,
@@ -42,10 +30,12 @@ import {
 } from '../types';
 import { AppText as Text } from '../components/AppText';
 import { DirectionalIcon } from '../components/DirectionalIcon';
-import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
 import { RDAAnalysisCard } from '../components/RDAAnalysisCard';
 import { NutrientDetailModal } from '../components/NutrientDetailModal';
+import { SupplementTimeSection } from '../components/supplements/SupplementTimeSection';
+import { SupplementModal } from '../components/supplements/SupplementModal';
+import { SupplementDeleteModal } from '../components/supplements/SupplementDeleteModal';
 import { SupportedNutrientKey } from '../utils/nutrientTotals';
 import { calculateTargets } from '../utils/calculator';
 import { saveUserProfile } from '../storage/storage';
@@ -54,17 +44,10 @@ import { useLanguage } from '../i18n/I18nContext';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import {
   COMMON_SUPPLEMENT_CATALOG,
-  COMMON_UNITS,
   CatalogSupplementItem,
 } from '../data/supplementCatalog';
 import { theme } from '../theme';
 import { buildRoutineFromDay, mergeRoutineIntoDay } from '../utils/supplementRoutine';
-import Animated from 'react-native-reanimated';
-import {
-  getListLayoutTransition,
-  getItemEnterAnimation,
-  getItemExitAnimation,
-} from '../utils/reanimatedMotion';
 import * as Haptics from 'expo-haptics';
 
 interface SupplementsScreenProps {
@@ -82,19 +65,6 @@ interface SupplementsScreenProps {
 }
 
 const timeOptions: SupplementTime[] = ['morning', 'afternoon', 'evening', 'bedtime'];
-const timeLabels: Record<SupplementTime, string> = {
-  morning: 'Morning',
-  afternoon: 'Afternoon',
-  evening: 'Evening',
-  bedtime: 'Bedtime',
-};
-
-const categoryLabels: Record<SupplementCategory, string> = {
-  vitamin: 'Vitamin',
-  mineral: 'Mineral',
-  supplement: 'Supplement',
-  other: 'Other',
-};
 
 type SaveTarget = 'day' | 'routine' | 'both';
 
@@ -548,19 +518,6 @@ export function SupplementsScreen({
 
   const bottomPadding = Math.max(112, insets.bottom + 76);
 
-  const getTimeIcon = (slot: SupplementTime) => {
-    switch (slot) {
-      case 'morning':
-        return <Sunrise size={18} color={theme.colors.accent} />;
-      case 'afternoon':
-        return <Sun size={18} color={theme.colors.amber} />;
-      case 'evening':
-        return <Sunset size={18} color={theme.colors.orangeDeep} />;
-      case 'bedtime':
-        return <Moon size={18} color={theme.colors.indigoDark} />;
-    }
-  };
-
   return (
     <View style={styles.container}>
       <ScrollView
@@ -719,158 +676,19 @@ export function SupplementsScreen({
       ) : (
         timeOptions.map((slot) => {
           const slotItems = activeItems.filter((item) => item.time === slot);
-          const slotTakenCount = slotItems.filter((i) => i.taken).length;
-
           return (
-            <View key={slot} style={styles.slotCard}>
-              {/* Slot Header */}
-              <View style={styles.slotHeader}>
-                <View style={styles.slotHeaderLeft}>
-                  {getTimeIcon(slot)}
-                  <Text style={styles.slotTitle}>{t(timeLabels[slot])}</Text>
-                  {slotItems.length > 0 && (
-                    <Text style={styles.slotCountBadge}>
-                      {slotTakenCount}/{slotItems.length}
-                    </Text>
-                  )}
-                </View>
-
-                {!isFuture && (
-                  <TouchableOpacity
-                    onPress={() => openAddModal(slot)}
-                    style={styles.slotQuickAdd}
-                    hitSlop={{ top: 9, bottom: 9, left: 9, right: 9 }}
-                    accessibilityLabel={`${t('Add supplement')} · ${t(timeLabels[slot])}`}
-                    accessibilityRole="button"
-                  >
-                    <Plus size={14} color={theme.colors.primary} />
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {/* Slot Items */}
-              {slotItems.length === 0 ? (
-                <View style={styles.slotEmptyRow}>
-                  <Text style={styles.slotEmptyText}>
-                    {t('No supplements scheduled for this time.')}
-                  </Text>
-                </View>
-              ) : (
-                slotItems.map((item, idx) => {
-                  const hasNumericAmount =
-                    item.amount !== undefined && item.amount > 0 && Boolean(item.unit);
-                  const isLast = idx === slotItems.length - 1;
-
-                  return (
-                    <Animated.View
-                      key={item.id}
-                      entering={getItemEnterAnimation()}
-                      exiting={getItemExitAnimation()}
-                      layout={getListLayoutTransition()}
-                      style={[styles.itemRow, !isLast && styles.itemRowBorder]}
-                    >
-                      {/* Checkbox */}
-                      <TouchableOpacity
-                        onPress={() => onToggleSupplement(item.id, !item.taken)}
-                        disabled={isFuture}
-                        style={[styles.checkbox, isFuture && styles.disabled]}
-                        accessibilityLabel={t(item.taken ? 'Taken' : 'Mark as taken')}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: item.taken, disabled: isFuture }}
-                      >
-                        <AnimatedCheckbox checked={item.taken} size={22} />
-                      </TouchableOpacity>
-
-                      {/* Item Content */}
-                      <View style={styles.itemContent}>
-                        <View style={styles.itemTopRow}>
-                          <Text
-                            style={[
-                              styles.itemName,
-                              item.taken && styles.itemNameTaken,
-                            ]}
-                          >
-                            {item.name}
-                          </Text>
-                          {item.category && (
-                            <View style={styles.categoryPill}>
-                              <Text style={styles.categoryPillText}>
-                                {t(categoryLabels[item.category] || item.category)}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-
-                        {/* Amount & Unit Controls */}
-                        <View style={styles.itemBottomRow}>
-                          {hasNumericAmount ? (
-                            <View style={styles.stepperWrap}>
-                              {!isFuture && (
-                                <TouchableOpacity
-                                  onPress={() => handleAdjustQuantity(item, -1)}
-                                  style={styles.stepperBtn}
-                                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                                  accessibilityLabel={t('Decrease quantity')}
-                                  accessibilityRole="button"
-                                >
-                                  <Minus size={12} color={theme.colors.textSecondary} />
-                                </TouchableOpacity>
-                              )}
-                              <Text style={styles.stepperValText}>
-                                {item.amount} {t(item.unit || '')}
-                              </Text>
-                              {!isFuture && (
-                                <TouchableOpacity
-                                  onPress={() => handleAdjustQuantity(item, 1)}
-                                  style={styles.stepperBtn}
-                                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                                  accessibilityLabel={t('Increase quantity')}
-                                  accessibilityRole="button"
-                                >
-                                  <Plus size={12} color={theme.colors.textSecondary} />
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          ) : (
-                            <Text style={styles.legacyDoseText}>
-                              {item.dose || ''}
-                            </Text>
-                          )}
-
-                          {item.note ? (
-                            <Text style={styles.itemNoteText}>• {item.note}</Text>
-                          ) : null}
-                        </View>
-                      </View>
-
-                      {/* Row Actions */}
-                      {!isFuture && (
-                        <View style={styles.rowActions}>
-                          <TouchableOpacity
-                            onPress={() => openEditModal(item)}
-                            style={styles.actionBtn}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            accessibilityLabel={t('Edit')}
-                            accessibilityRole="button"
-                          >
-                            <Edit3 size={15} color={theme.colors.textMuted} />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={() => handleDeleteItem(item)}
-                            style={styles.actionBtn}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            accessibilityLabel={t('Delete')}
-                            accessibilityRole="button"
-                          >
-                            <Trash2 size={15} color={theme.colors.danger} />
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    </Animated.View>
-                  );
-                })
-              )}
-            </View>
+            <SupplementTimeSection
+              key={slot}
+              slot={slot}
+              slotItems={slotItems}
+              isFuture={isFuture}
+              onOpenAddModal={openAddModal}
+              onToggleItem={onToggleSupplement}
+              onAdjustQuantity={handleAdjustQuantity}
+              onOpenEditModal={openEditModal}
+              onDeleteItem={handleDeleteItem}
+              t={t}
+            />
           );
         })
       )}
@@ -892,359 +710,36 @@ export function SupplementsScreen({
     </ScrollView>
 
       {/* Add / Edit Supplement Modal */}
-      <Modal
+      <SupplementModal
         visible={modalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={[styles.modalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={{ width: '100%', justifyContent: 'flex-end' }}
-          >
-            <View style={[styles.modalCard, { paddingBottom: Math.max(theme.spacing.lg, insets.bottom + 12) }]}>
-            {/* Modal Header */}
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {editingItem ? t('Edit supplement') : t('Add supplement')}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setModalVisible(false)}
-                style={styles.modalCloseBtn}
-                accessibilityLabel={t('Close')}
-                accessibilityRole="button"
-              >
-                <X size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
-            >
-              {/* Catalog Search & Browse (Shown when adding a new item) */}
-              {!editingItem && (
-                <View style={styles.catalogBrowseSection}>
-                  <Text style={styles.fieldSectionLabel}>{t('Browse catalog')}</Text>
-
-                  {/* Search Bar */}
-                  <View style={styles.catalogSearchBar}>
-                    <Search size={16} color={theme.colors.textMuted} />
-                    <TextInput
-                      style={styles.catalogSearchInput}
-                      placeholder={t('Search vitamins, minerals, supplements...')}
-                      placeholderTextColor={theme.colors.textMuted}
-                      value={catalogSearch}
-                      onChangeText={setCatalogSearch}
-                      returnKeyType="search"
-                    />
-                    {catalogSearch.length > 0 && (
-                      <TouchableOpacity
-                        onPress={() => setCatalogSearch('')}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('Clear')}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <X size={15} color={theme.colors.textMuted} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  {/* Category Filter Chips */}
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.catalogChipsScroll}
-                  >
-                    {(['all', 'vitamin', 'mineral', 'supplement', 'other'] as const).map(
-                      (catKey) => {
-                        const isSelected = selectedCatalogCategory === catKey;
-                        const labelText =
-                          catKey === 'all'
-                            ? t('All')
-                            : catKey === 'vitamin'
-                            ? t('Vitamins')
-                            : catKey === 'mineral'
-                            ? t('Minerals')
-                            : catKey === 'supplement'
-                            ? t('Supplements')
-                            : t('Other');
-                        return (
-                          <TouchableOpacity
-                            key={catKey}
-                            style={[
-                              styles.catalogChip,
-                              isSelected && styles.catalogChipActive,
-                            ]}
-                            onPress={() => setSelectedCatalogCategory(catKey)}
-                            accessibilityRole="button"
-                            accessibilityLabel={labelText}
-                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                          >
-                            <Text
-                              style={[
-                                styles.catalogChipText,
-                                isSelected && styles.catalogChipTextActive,
-                              ]}
-                            >
-                              {labelText}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      }
-                    )}
-                  </ScrollView>
-
-                  {/* Catalog Suggestions Pills */}
-                  <View style={styles.catalogSuggestionsGrid}>
-                    {filteredCatalog.slice(0, 10).map((catItem) => (
-                      <TouchableOpacity
-                        key={catItem.id}
-                        style={[
-                          styles.catalogItemPill,
-                          formName.toLowerCase() === catItem.name.toLowerCase() &&
-                            styles.catalogItemPillSelected,
-                        ]}
-                        onPress={() => handleSelectCatalogItem(catItem)}
-                        accessibilityRole="button"
-                        accessibilityLabel={catItem.name}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      >
-                        <Text
-                          style={[
-                            styles.catalogItemPillText,
-                            formName.toLowerCase() === catItem.name.toLowerCase() &&
-                              styles.catalogItemPillTextSelected,
-                          ]}
-                        >
-                          {catItem.icon ? `${catItem.icon} ` : ''}{catItem.name}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* Form Input Fields */}
-              <View style={styles.formContainer}>
-                {/* Supplement Name */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>{t('Supplement name')}</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formName}
-                    onChangeText={setFormName}
-                    placeholder={t('Supplement name')}
-                    placeholderTextColor={theme.colors.textMuted}
-                  />
-                </View>
-
-                {/* Category Selector */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>{t('Category')}</Text>
-                  <View style={styles.pillsRow}>
-                    {(['vitamin', 'mineral', 'supplement', 'other'] as SupplementCategory[]).map(
-                      (cat) => (
-                        <TouchableOpacity
-                          key={cat}
-                          style={[
-                            styles.optionChip,
-                            formCategory === cat && styles.optionChipActive,
-                          ]}
-                          onPress={() => setFormCategory(cat)}
-                          accessibilityRole="button"
-                          accessibilityLabel={t(categoryLabels[cat])}
-                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        >
-                          <Text
-                            style={[
-                              styles.optionChipText,
-                              formCategory === cat && styles.optionChipTextActive,
-                            ]}
-                          >
-                            {t(categoryLabels[cat])}
-                          </Text>
-                        </TouchableOpacity>
-                      )
-                    )}
-                  </View>
-                </View>
-
-                {/* Amount and Unit Row */}
-                <View style={styles.amountUnitRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.inputLabel}>{t('Amount')}</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={formAmount}
-                      onChangeText={setFormAmount}
-                      keyboardType="numeric"
-                      placeholder={t('e.g. 500')}
-                      placeholderTextColor={theme.colors.textMuted}
-                    />
-                    <Text style={styles.fieldHelper}>
-                      {t('Enter amount printed on label')}
-                    </Text>
-                  </View>
-
-                  <View style={{ flex: 1.2 }}>
-                    <Text style={styles.inputLabel}>{t('Unit')}</Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ gap: 6, paddingTop: 2 }}
-                    >
-                      {COMMON_UNITS.map((unit) => (
-                        <TouchableOpacity
-                          key={unit}
-                          style={[
-                            styles.unitChip,
-                            formUnit === unit && styles.unitChipActive,
-                          ]}
-                          onPress={() => setFormUnit(unit)}
-                          accessibilityRole="button"
-                          accessibilityLabel={t(unit)}
-                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        >
-                          <Text
-                            style={[
-                              styles.unitChipText,
-                              formUnit === unit && styles.unitChipTextActive,
-                            ]}
-                          >
-                            {t(unit)}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                </View>
-
-                {/* Optional Note */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>{t('Note (optional)')}</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formNote}
-                    onChangeText={setFormNote}
-                    placeholder={t('e.g. with food')}
-                    placeholderTextColor={theme.colors.textMuted}
-                  />
-                </View>
-
-                {/* Time of Day */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>{t('Time of day')}</Text>
-                  <View style={styles.pillsRow}>
-                    {timeOptions.map((slot) => (
-                      <TouchableOpacity
-                        key={slot}
-                        style={[
-                          styles.optionChip,
-                          formTime === slot && styles.optionChipActive,
-                        ]}
-                        onPress={() => setFormTime(slot)}
-                        accessibilityRole="button"
-                        accessibilityLabel={t(timeLabels[slot])}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      >
-                        <Text
-                          style={[
-                            styles.optionChipText,
-                            formTime === slot && styles.optionChipTextActive,
-                          ]}
-                        >
-                          {t(timeLabels[slot])}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* Where to save */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>{t('Where to save')}</Text>
-                  <View style={{ gap: 6 }}>
-                    <TouchableOpacity
-                      style={[
-                        styles.targetChoiceRow,
-                        formSaveTarget === 'both' && styles.targetChoiceRowActive,
-                      ]}
-                      onPress={() => setFormSaveTarget('both')}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Both this day and routine')}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    >
-                      <View style={styles.radioCircle}>
-                        {formSaveTarget === 'both' && <View style={styles.radioDot} />}
-                      </View>
-                      <Text style={styles.targetChoiceText}>
-                        {t('Both this day and routine')}
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.targetChoiceRow,
-                        formSaveTarget === 'day' && styles.targetChoiceRowActive,
-                      ]}
-                      onPress={() => setFormSaveTarget('day')}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('This day only')}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    >
-                      <View style={styles.radioCircle}>
-                        {formSaveTarget === 'day' && <View style={styles.radioDot} />}
-                      </View>
-                      <Text style={styles.targetChoiceText}>{t('This day only')}</Text>
-                    </TouchableOpacity>
-
-                    {!editingItem && (
-                      <TouchableOpacity
-                        style={[
-                          styles.targetChoiceRow,
-                          formSaveTarget === 'routine' && styles.targetChoiceRowActive,
-                        ]}
-                        onPress={() => setFormSaveTarget('routine')}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('Repeating routine only')}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      >
-                        <View style={styles.radioCircle}>
-                          {formSaveTarget === 'routine' && <View style={styles.radioDot} />}
-                        </View>
-                        <Text style={styles.targetChoiceText}>
-                          {t('Repeating routine only')}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-
-                {/* Save Button */}
-                <TouchableOpacity
-                  style={[
-                    styles.modalSaveBtn,
-                    (!formName.trim() || isSavingSupplement) && styles.modalSaveBtnDisabled,
-                  ]}
-                  onPress={handleSaveModal}
-                  disabled={!formName.trim() || isSavingSupplement}
-                  accessibilityRole="button"
-                  accessibilityLabel={editingItem ? t('Update supplement') : t('Save Supplement')}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.modalSaveBtnText}>
-                    {editingItem ? t('Update supplement') : t('Save Supplement')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+        onClose={() => setModalVisible(false)}
+        editingItem={editingItem}
+        catalogSearch={catalogSearch}
+        setCatalogSearch={setCatalogSearch}
+        selectedCatalogCategory={selectedCatalogCategory}
+        setSelectedCatalogCategory={setSelectedCatalogCategory}
+        filteredCatalog={filteredCatalog}
+        onSelectCatalogItem={handleSelectCatalogItem}
+        formName={formName}
+        setFormName={setFormName}
+        formCategory={formCategory}
+        setFormCategory={setFormCategory}
+        formAmount={formAmount}
+        setFormAmount={setFormAmount}
+        formUnit={formUnit}
+        setFormUnit={setFormUnit}
+        formNote={formNote}
+        setFormNote={setFormNote}
+        formTime={formTime}
+        setFormTime={setFormTime}
+        formSaveTarget={formSaveTarget}
+        setFormSaveTarget={setFormSaveTarget}
+        isSaving={isSavingSupplement}
+        onSave={handleSaveModal}
+        bottomInset={insets.bottom}
+        language={language}
+        t={t}
+      />
 
       {/* Floating in-app Toast Notification */}
       {toastMessage && (
@@ -1262,83 +757,15 @@ export function SupplementsScreen({
       )}
 
       {/* Cross-platform Delete Confirmation Modal */}
-      <Modal
-        visible={Boolean(itemToDelete)}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setItemToDelete(null)}
-      >
-        <View style={[styles.deleteModalBackdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-          <View style={styles.deleteModalCard}>
-            <View style={styles.deleteModalIconBox}>
-              <Trash2 size={24} color={theme.colors.danger} />
-            </View>
-
-            <Text style={styles.deleteModalTitle}>{t('Delete supplement')}</Text>
-
-            <Text style={styles.deleteModalMsg}>
-              {t('Are you sure you want to delete this supplement?')}
-              {itemToDelete ? `\n"${itemToDelete.name}"` : ''}
-            </Text>
-
-            <View style={styles.deleteModalBtnGroup}>
-              {isItemInRoutine(itemToDelete) ? (
-                <>
-                  <TouchableOpacity
-                    style={[styles.deleteModalBtn, styles.deleteModalBtnSecondary]}
-                    onPress={handleConfirmDeleteDayOnly}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Remove from this day')}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Text style={styles.deleteModalBtnSecondaryText}>
-                      {t('Remove from this day')}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.deleteModalBtn, styles.deleteModalBtnDanger]}
-                    onPress={handleConfirmDeleteRoutineToo}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Remove from routine too')}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Text style={styles.deleteModalBtnDangerText}>
-                      {t('Remove from routine too')}
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, styles.deleteModalBtnDanger]}
-                  onPress={handleConfirmDeleteDayOnly}
-                  activeOpacity={0.8}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('Delete')}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.deleteModalBtnDangerText}>
-                    {t('Delete')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={[styles.deleteModalBtn, styles.deleteModalBtnCancel]}
-                onPress={() => setItemToDelete(null)}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel={t('Cancel')}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={styles.deleteModalBtnCancelText}>{t('Cancel')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <SupplementDeleteModal
+        item={itemToDelete}
+        isInRoutine={isItemInRoutine(itemToDelete)}
+        onDeleteDayOnly={handleConfirmDeleteDayOnly}
+        onDeleteRoutineToo={handleConfirmDeleteRoutineToo}
+        onCancel={() => setItemToDelete(null)}
+        language={language}
+        t={t}
+      />
 
       <ReminderSettingsModal
         visible={reminderModalVisible}
@@ -1395,86 +822,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.textPrimary,
-  },
-  deleteModalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  deleteModalCard: {
-    width: '100%',
-    maxWidth: 380,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.xl,
-    padding: 22,
-    alignItems: 'center',
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  deleteModalIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  deleteModalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  deleteModalMsg: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 20,
-  },
-  deleteModalBtnGroup: {
-    width: '100%',
-    gap: 10,
-  },
-  deleteModalBtn: {
-    width: '100%',
-    paddingVertical: 12,
-    borderRadius: theme.radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteModalBtnSecondary: {
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  deleteModalBtnSecondaryText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  deleteModalBtnDanger: {
-    backgroundColor: theme.colors.danger,
-  },
-  deleteModalBtnDangerText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.colors.textInverted,
-  },
-  deleteModalBtnCancel: {
-    backgroundColor: 'transparent',
-  },
-  deleteModalBtnCancelText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
   },
   content: {
     padding: theme.spacing.md,
@@ -1666,154 +1013,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
   },
-  slotCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.xl,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: 'hidden',
-    ...theme.shadow.subtle,
-  },
-  slotHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surfaceSubtle,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  slotHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  slotTitle: {
-    fontFamily: theme.fonts.serif,
-    fontSize: 15,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  slotCountBadge: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.secondary,
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: theme.radius.full,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  slotQuickAdd: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  slotEmptyRow: {
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-  },
-  slotEmptyText: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    fontStyle: 'italic',
-  },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 12,
-  },
-  itemRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  checkbox: {
-    padding: 2,
-  },
-  itemContent: {
-    flex: 1,
-    gap: 3,
-  },
-  itemTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  itemName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  itemNameTaken: {
-    color: theme.colors.textMuted,
-    textDecorationLine: 'line-through',
-  },
-  categoryPill: {
-    backgroundColor: theme.colors.surfaceSubtle,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  categoryPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
-    textTransform: 'uppercase',
-  },
-  itemBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepperWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-    gap: 6,
-  },
-  stepperBtn: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperValText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  legacyDoseText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
-  },
-  itemNoteText: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-  },
-  rowActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  actionBtn: {
-    padding: 5,
-  },
   notice: {
     flexDirection: 'row',
     gap: 8,
@@ -1830,251 +1029,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-  disabled: {
-    opacity: 0.55,
-  },
 
   // Modal styles
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: theme.colors.backdrop,
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    backgroundColor: theme.colors.background,
-    borderTopLeftRadius: theme.radius.xl,
-    borderTopRightRadius: theme.radius.xl,
-    padding: theme.spacing.md,
-    maxHeight: '90%',
-    ...theme.shadow.floating,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    marginBottom: 10,
-  },
-  modalTitle: {
-    fontFamily: theme.fonts.serif,
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  modalCloseBtn: {
-    padding: 6,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceSubtle,
-  },
-  catalogBrowseSection: {
-    backgroundColor: theme.colors.surface,
-    padding: 12,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 14,
-    gap: 10,
-  },
-  fieldSectionLabel: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  catalogSearchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  catalogSearchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: theme.colors.textPrimary,
-    padding: 0,
-  },
-  catalogChipsScroll: {
-    gap: 6,
-  },
-  catalogChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: theme.radius.full,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-  },
-  catalogChipActive: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
-  catalogChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-  },
-  catalogChipTextActive: {
-    color: theme.colors.primary,
-  },
-  catalogSuggestionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  catalogItemPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  catalogItemPillSelected: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
-  catalogItemPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  catalogItemPillTextSelected: {
-    color: theme.colors.primary,
-  },
-  formContainer: {
-    gap: 12,
-    paddingBottom: 20,
-  },
-  inputGroup: {
-    gap: 5,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-  },
-  textInput: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-  },
-  fieldHelper: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    marginTop: 3,
-  },
-  amountUnitRow: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
-  },
-  unitChip: {
-    paddingHorizontal: 9,
-    paddingVertical: 8,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  unitChipActive: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
-  unitChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-  },
-  unitChipTextActive: {
-    color: theme.colors.primary,
-  },
-  pillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  optionChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: theme.radius.full,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  optionChipActive: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
-  optionChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-  },
-  optionChipTextActive: {
-    color: theme.colors.primary,
-  },
-  targetChoiceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: theme.colors.surface,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  targetChoiceRowActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primaryLight,
-  },
-  radioCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1.5,
-    borderColor: theme.colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: theme.colors.primary,
-  },
-  targetChoiceText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  modalSaveBtn: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
-    borderRadius: theme.radius.md,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  modalSaveBtnDisabled: {
-    opacity: 0.5,
-  },
-  modalSaveBtnText: {
-    color: theme.colors.textInverted,
-    fontSize: 14,
-    fontWeight: '700',
-  },
 });
