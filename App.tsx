@@ -70,6 +70,7 @@ import { persistRoutineThenCommit } from './src/utils/supplementRoutine';
 import { I18nProvider } from './src/i18n/I18nContext';
 import { translate } from './src/i18n/strings';
 import { theme } from './src/theme';
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import * as Haptics from 'expo-haptics';
 
 import { StepsScreen } from './src/screens/StepsScreen';
@@ -89,6 +90,11 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
+const ThemedStatusBar: React.FC = () => {
+  const { isDark } = useTheme();
+  return <StatusBar style={isDark ? 'light' : 'dark'} />;
+};
 
 function FitTrackApp() {
   const insets = useSafeAreaInsets();
@@ -514,18 +520,20 @@ function FitTrackApp() {
   if (!initialLoaded) {
     return (
       <I18nProvider language={language}>
-        <View
-          style={[
-            styles.container,
-            {
-              direction: language === 'en' ? 'ltr' : 'rtl',
-              paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0),
-            },
-          ]}
-        >
-          <StatusBar style="dark" />
-          <TodaySkeleton />
-        </View>
+        <ThemeProvider themeMode={profile.themeMode}>
+          <View
+            style={[
+              styles.container,
+              {
+                direction: language === 'en' ? 'ltr' : 'rtl',
+                paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0),
+              },
+            ]}
+          >
+            <ThemedStatusBar />
+            <TodaySkeleton />
+          </View>
+        </ThemeProvider>
       </I18nProvider>
     );
   }
@@ -570,16 +578,17 @@ function FitTrackApp() {
 
   return (
     <I18nProvider language={language}>
-      <View
-        style={[
-          styles.container,
-          {
-            direction: language === 'en' ? 'ltr' : 'rtl',
-            paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0),
-          },
-        ]}
-      >
-        <StatusBar style="dark" />
+      <ThemeProvider themeMode={profile.themeMode}>
+        <View
+          style={[
+            styles.container,
+            {
+              direction: language === 'en' ? 'ltr' : 'rtl',
+              paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0),
+            },
+          ]}
+        >
+          <ThemedStatusBar />
 
         {/* Main Screen Body */}
         <ScreenTransitionView
@@ -821,6 +830,7 @@ function FitTrackApp() {
           </View>
         </View>
       </View>
+      </ThemeProvider>
     </I18nProvider>
   );
 }

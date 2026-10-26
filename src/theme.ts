@@ -463,7 +463,7 @@ export const darkTheme = {
 export type ThemeType = typeof theme;
 export type ThemeMode = 'system' | 'light' | 'dark';
 
-export function getTheme(mode: ThemeMode = 'light', systemScheme?: 'light' | 'dark' | null): ThemeType {
+export function getTheme(mode: ThemeMode = 'light', systemScheme?: 'light' | 'dark' | string | null): ThemeType {
   if (mode === 'dark') return darkTheme;
   if (mode === 'light') return theme;
   return systemScheme === 'dark' ? darkTheme : theme;

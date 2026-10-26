@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText, Moon } from 'lucide-react-native';
+import { Check, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText } from 'lucide-react-native';
 import { DirectionalIcon } from '../components/DirectionalIcon';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
@@ -240,53 +240,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </Text>
       </View>
 
-      {/* Theme Appearance Selector */}
-      <View style={styles.languageCard}>
-        <View style={styles.languageHeader}>
-          <Moon size={18} color={theme.colors.secondary} />
-          <Text style={styles.languageTitle}>{t('Theme')}</Text>
-        </View>
-        <View style={styles.languageOptions}>
-          {(['system', 'light', 'dark'] as const).map((mode) => {
-            const currentMode = profile.themeMode || 'system';
-            const isSelected = currentMode === mode;
-            const modeLabels: Record<string, string> = {
-              system: t('System'),
-              light: t('Light'),
-              dark: t('Dark'),
-            };
-            return (
-              <TouchableOpacity
-                key={mode}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  onSaveProfile({ ...profile, themeMode: mode });
-                }}
-                style={[
-                  styles.languageOption,
-                  isSelected && styles.languageOptionActive,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={modeLabels[mode]}
-                accessibilityState={{ selected: isSelected }}
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              >
-                <Text
-                  style={[
-                    styles.languageOptionText,
-                    isSelected && styles.languageOptionTextActive,
-                  ]}
-                >
-                  {modeLabels[mode]}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <Text style={styles.restartNote}>
-          {t('Matches device system appearance settings.')}
-        </Text>
-      </View>
+      {/*
+        TODO (Step 1b): Theme appearance selector is hidden until dynamic theme-aware styling
+        (createStyles(theme)) rollout is complete screen-by-screen across the app.
+        ThemeProvider, useTheme(), and getTheme() are fully wired and ready.
+      */}
 
       {/* Shared Gemini API Key Manager */}
       <GeminiKeyManager />
