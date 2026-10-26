@@ -114,6 +114,9 @@ export interface MicronutrientIntake {
   isDeficient: boolean;
   color: string;
   foodSources: string;
+  hasData: boolean;
+  isIncomplete: boolean;
+  missingCount: number;
 }
 
 export interface MicronutrientAnalysis {
@@ -245,6 +248,30 @@ export function calculateMicronutrientIntake(
     zinc: 0,
   };
 
+  const hasFoodData: Record<MicronutrientKey, boolean> = {
+    vitaminA: false,
+    vitaminC: false,
+    vitaminD: false,
+    vitaminB12: false,
+    calcium: false,
+    iron: false,
+    potassium: false,
+    magnesium: false,
+    zinc: false,
+  };
+
+  const missingCounts: Record<MicronutrientKey, number> = {
+    vitaminA: 0,
+    vitaminC: 0,
+    vitaminD: 0,
+    vitaminB12: 0,
+    calcium: 0,
+    iron: 0,
+    potassium: 0,
+    magnesium: 0,
+    zinc: 0,
+  };
+
   const supplementTotals: Record<MicronutrientKey, number> = {
     vitaminA: 0,
     vitaminC: 0,
@@ -257,17 +284,29 @@ export function calculateMicronutrientIntake(
     zinc: 0,
   };
 
+  const hasSuppData: Record<MicronutrientKey, boolean> = {
+    vitaminA: false,
+    vitaminC: false,
+    vitaminD: false,
+    vitaminB12: false,
+    calcium: false,
+    iron: false,
+    potassium: false,
+    magnesium: false,
+    zinc: false,
+  };
+
   // 1. Aggregate meals
   for (const meal of meals) {
-    if (meal.vitaminA && meal.vitaminA > 0) foodTotals.vitaminA += meal.vitaminA;
-    if (meal.vitaminC && meal.vitaminC > 0) foodTotals.vitaminC += meal.vitaminC;
-    if (meal.vitaminD && meal.vitaminD > 0) foodTotals.vitaminD += meal.vitaminD;
-    if (meal.vitaminB12 && meal.vitaminB12 > 0) foodTotals.vitaminB12 += meal.vitaminB12;
-    if (meal.calcium && meal.calcium > 0) foodTotals.calcium += meal.calcium;
-    if (meal.iron && meal.iron > 0) foodTotals.iron += meal.iron;
-    if (meal.potassium && meal.potassium > 0) foodTotals.potassium += meal.potassium;
-    if (meal.magnesium && meal.magnesium > 0) foodTotals.magnesium += meal.magnesium;
-    if (meal.zinc && meal.zinc > 0) foodTotals.zinc += meal.zinc;
+    for (const key of ORDERED_MICRONUTRIENT_KEYS) {
+      const val = meal[key];
+      if (val !== undefined && val !== null && !isNaN(val)) {
+        hasFoodData[key] = true;
+        if (val > 0) foodTotals[key] += val;
+      } else {
+        missingCounts[key] += 1;
+      }
+    }
   }
 
   // 2. Aggregate supplements (only taken supplements count)
@@ -276,6 +315,7 @@ export function calculateMicronutrientIntake(
       const contrib = resolveSupplementNutrientContribution(s);
       if (contrib) {
         supplementTotals[contrib.nutrientKey] += contrib.amountInCanonicalUnit;
+        hasSuppData[contrib.nutrientKey] = true;
       }
     }
   }
@@ -306,6 +346,10 @@ export function calculateMicronutrientIntake(
     }
     totalPctSum += Math.min(100, percent);
 
+    const hasData = hasFoodData[key] || hasSuppData[key];
+    const isIncomplete = meals.length > 0 && missingCounts[key] > 0;
+    const missingCount = missingCounts[key];
+
     const intake: MicronutrientIntake = {
       key,
       label: meta.label,
@@ -319,6 +363,9 @@ export function calculateMicronutrientIntake(
       isDeficient,
       color: meta.color,
       foodSources: meta.foodSources,
+      hasData,
+      isIncomplete,
+      missingCount,
     };
 
     nutrients[key] = intake;

@@ -36,6 +36,21 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
   const analysis = calculateMicronutrientIntake(meals, supplements);
   const { nutrients, deficiencies, targetsMetCount } = analysis;
 
+  const hasLogged = meals.length > 0 || supplements.length > 0;
+  // If user has logged meals/supplements, hide any nutrient that has no data instead of showing zeros
+  const availableKeys = React.useMemo(() => {
+    if (!hasLogged) return ORDERED_MICRONUTRIENT_KEYS;
+    const withData = ORDERED_MICRONUTRIENT_KEYS.filter((k) => nutrients[k]?.hasData);
+    return withData.length > 0 ? withData : ORDERED_MICRONUTRIENT_KEYS;
+  }, [hasLogged, nutrients]);
+
+  const activeDeficiencies = React.useMemo(() => {
+    return deficiencies.filter((d) => (!hasLogged ? true : d.hasData));
+  }, [hasLogged, deficiencies]);
+
+  const displayedKeys = expanded ? availableKeys : availableKeys.slice(0, 3);
+  const hasAnyIncomplete = displayedKeys.some((k) => nutrients[k]?.isIncomplete);
+
   return (
     <View style={styles.card}>
       {/* Header */}
@@ -63,7 +78,7 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
       </View>
 
       {/* Deficiency Alerts Banner (if any) */}
-      {deficiencies.length > 0 && (
+      {activeDeficiencies.length > 0 && (
         <View style={styles.alertBanner}>
           <View style={[styles.alertHeader, isRtl && styles.rowRtl]}>
             <AlertTriangle size={15} color="#D97706" style={{ marginTop: 1 }} />
@@ -72,7 +87,7 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
             </Text>
           </View>
           <View style={styles.deficiencyList}>
-            {deficiencies.slice(0, 4).map((d) => (
+            {activeDeficiencies.slice(0, 4).map((d) => (
               <View key={d.key} style={[styles.deficiencyItem, isRtl && styles.rowRtl]}>
                 <Text style={styles.deficiencyNutrient}>
                   • {translate(language, d.label)} ({d.percent}%):
@@ -88,10 +103,7 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
 
       {/* Primary Highlights (Top 3 or when expanded) */}
       <View style={styles.grid}>
-        {(expanded
-          ? ORDERED_MICRONUTRIENT_KEYS
-          : ORDERED_MICRONUTRIENT_KEYS.slice(0, 3)
-        ).map((key) => {
+        {displayedKeys.map((key) => {
           const item = nutrients[key];
           const pctWidth = Math.min(100, item.percent);
           const barColor =
@@ -113,9 +125,16 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <View style={[styles.nutrientTopRow, isRtl && styles.rowRtl]}>
-                <Text style={styles.nutrientName}>
-                  {translate(language, item.label)}
-                </Text>
+                <View style={[styles.nameGroup, isRtl && styles.rowRtl]}>
+                  <Text style={styles.nutrientName}>
+                    {translate(language, item.label)}
+                  </Text>
+                  {item.isIncomplete && (
+                    <Text style={styles.incompleteAsterisk} accessibilityLabel={translate(language, 'Incomplete data')}>
+                      *
+                    </Text>
+                  )}
+                </View>
                 <Text style={styles.nutrientValues}>
                   {item.current} / {item.target} {item.unit}
                 </Text>
@@ -184,6 +203,15 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
         )}
       </TouchableOpacity>
 
+      {/* Incomplete Data Footnote if applicable */}
+      {hasAnyIncomplete && (
+        <View style={[styles.incompleteRow, isRtl && styles.rowRtl]}>
+          <Text style={styles.incompleteNoticeText}>
+            * {translate(language, 'Incomplete data')}: {translate(language, 'Some logged foods do not have data for this nutrient.')}
+          </Text>
+        </View>
+      )}
+
       {/* Footnote */}
       <View style={[styles.footnoteRow, isRtl && styles.rowRtl]}>
         <Info size={12} color={theme.colors.textMuted} style={{ marginTop: 1 }} />
@@ -241,7 +269,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   cardSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textSecondary,
     marginTop: 1,
   },
@@ -254,7 +282,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   scoreBadgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.primary,
   },
@@ -285,12 +313,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   deficiencyNutrient: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#B45309',
   },
   deficiencySources: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#78350F',
     flex: 1,
   },
@@ -310,13 +338,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
+  nameGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  incompleteAsterisk: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#D97706',
+  },
   nutrientName: {
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textPrimary,
   },
   nutrientValues: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     color: theme.colors.textSecondary,
   },
@@ -337,11 +375,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   breakdownText: {
-    fontSize: 10,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   pctBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
@@ -358,6 +396,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.primary,
   },
+  incompleteRow: {
+    marginTop: 6,
+    paddingTop: 6,
+  },
+  incompleteNoticeText: {
+    fontSize: 12,
+    color: '#92400E',
+    fontStyle: 'italic',
+  },
   footnoteRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -368,9 +415,9 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.border,
   },
   footnoteText: {
-    fontSize: 10,
+    fontSize: 12,
     color: theme.colors.textMuted,
     flex: 1,
-    lineHeight: 14,
+    lineHeight: 16,
   },
 });
