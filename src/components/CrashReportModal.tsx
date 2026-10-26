@@ -24,6 +24,7 @@ import {
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import {
   ScrubbedCrashReport,
   clearStoredCrashes,
@@ -45,7 +46,7 @@ export const CrashReportModal: React.FC<CrashReportModalProps> = ({
 }) => {
   const language = useLanguage();
   const t = (str: string) => translate(language, str);
-  const isRTL = language === 'ar' || language === 'ckb';
+  const isRTL = useIsRTL();
 
   const [copied, setCopied] = useState(false);
   const [cleared, setCleared] = useState(false);

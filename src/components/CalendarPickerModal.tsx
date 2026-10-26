@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react-native';
+import { CalendarDays, X } from 'lucide-react-native';
+import { DirectionalIcon } from './DirectionalIcon';
 import { AppText as Text } from './AppText';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -77,7 +78,7 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
               accessibilityLabel={t('Previous month')}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <ChevronLeft size={20} color={theme.colors.textSecondary} />
+              <DirectionalIcon name="ChevronLeft" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
             <Text style={styles.monthLabel}>{monthLabel}</Text>
             <TouchableOpacity
@@ -88,7 +89,7 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
               accessibilityLabel={t('Next month')}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <ChevronRight size={20} color={theme.colors.textSecondary} />
+              <DirectionalIcon name="ChevronRight" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
           <View style={styles.grid}>

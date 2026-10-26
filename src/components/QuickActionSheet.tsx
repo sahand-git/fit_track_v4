@@ -25,6 +25,7 @@ import { MealType } from '../types';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 
 export interface QuickActionSheetProps {
@@ -54,7 +55,7 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
 }) => {
   const language = useLanguage();
   const t = (str: string) => translate(language, str);
-  const isRTL = language === 'ar' || language === 'ckb';
+  const isRTL = useIsRTL();
 
   useEffect(() => {
     if (Platform.OS !== 'android' || !visible) return;

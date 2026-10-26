@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { Activity, ArrowLeft, Footprints, HeartPulse, Minus, Plus, RefreshCw, Target } from 'lucide-react-native';
+import { Activity, Footprints, HeartPulse, Minus, Plus, RefreshCw, Target } from 'lucide-react-native';
+import { DirectionalIcon } from '../components/DirectionalIcon';
 import { AppText as Text } from '../components/AppText';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -92,7 +93,7 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel={t('Back')} style={styles.back}>
-          <ArrowLeft size={20} color={theme.colors.textPrimary} />
+          <DirectionalIcon name="ArrowLeft" size={20} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.eyebrow}>{formatDisplayDate(date, language)}</Text>

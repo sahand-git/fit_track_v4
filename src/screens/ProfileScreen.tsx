@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText, Moon } from 'lucide-react-native';
+import { Check, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText, Moon } from 'lucide-react-native';
+import { DirectionalIcon } from '../components/DirectionalIcon';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
 import { formatKcal } from '../utils/formatKcal';
@@ -173,7 +174,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           accessibilityLabel={t('Back')}
           accessibilityRole="button"
         >
-          <ArrowLeft size={18} color={theme.colors.textPrimary} />
+          <DirectionalIcon name="ArrowLeft" size={18} color={theme.colors.textPrimary} />
           <Text style={styles.backText}>{t('Back')}</Text>
         </TouchableOpacity>
       )}

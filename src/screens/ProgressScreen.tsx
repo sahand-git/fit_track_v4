@@ -39,6 +39,7 @@ import {
   WeightTrendPoint,
 } from '../utils/trends';
 import { theme } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 import { ProgressSkeleton } from '../components/SkeletonLoader';
 
@@ -105,7 +106,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
     return () => sub.remove();
   }, [modalVisible]);
 
-  const isRTL = language === 'ar' || language === 'ckb';
+  const isRTL = useIsRTL();
 
   const dateList = useMemo(() => {
     return generateDateWindow(getTodayDateString(), daysRange);

@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Activity, ArrowLeft, ChevronLeft, ChevronRight, Dumbbell, Plus, Search, Trash2 } from 'lucide-react-native';
+import { Activity, Dumbbell, Plus, Search, Trash2 } from 'lucide-react-native';
+import { DirectionalIcon } from '../components/DirectionalIcon';
 import Animated from 'react-native-reanimated';
 import { AppText as Text } from '../components/AppText';
 import { AddWorkoutSheet } from '../components/AddWorkoutSheet';
@@ -54,7 +55,7 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.back} accessibilityLabel={t('Back')} accessibilityRole="button"><ArrowLeft size={19} color={theme.colors.textPrimary} /></TouchableOpacity>
+          <TouchableOpacity onPress={onBack} style={styles.back} accessibilityLabel={t('Back')} accessibilityRole="button"><DirectionalIcon name="ArrowLeft" size={19} color={theme.colors.textPrimary} /></TouchableOpacity>
           <View style={{ flex: 1 }}><Text style={styles.eyebrow}>{t('Activity history')}</Text><Text style={styles.title}>{t('Workouts')}</Text></View>
           <Dumbbell size={24} color={theme.colors.primary} />
         </View>
@@ -66,7 +67,7 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
             accessibilityLabel={t('Previous day')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <ChevronLeft size={20} color={theme.colors.primary} />
+            <DirectionalIcon name="ChevronLeft" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
           <Text style={styles.dateText}>{formatDisplayDate(date, language)}</Text>
           <TouchableOpacity
@@ -77,7 +78,7 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
             accessibilityLabel={t('Next day')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <ChevronRight size={20} color={theme.colors.primary} />
+            <DirectionalIcon name="ChevronRight" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
         </View>
         <View style={styles.summary}>

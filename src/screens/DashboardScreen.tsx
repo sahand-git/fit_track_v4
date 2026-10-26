@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
   Plus,
-  ChevronRight,
   Utensils,
   Coffee,
   Moon,
@@ -43,6 +42,8 @@ import {
 } from '../utils/reanimatedMotion';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
+import { DirectionalIcon } from '../components/DirectionalIcon';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -111,7 +112,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const [heroWidth, setHeroWidth] = useState(0);
   const [selectedNutrientForDetail, setSelectedNutrientForDetail] = useState<SupportedNutrientKey | string | null>(null);
 
-  const isRtl = language === 'ar' || language === 'ckb';
+  const isRtl = useIsRTL();
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const dockClearance = dockBottom + 72;
   const scrollBottomPadding = Math.max(140, dockClearance + 24);
@@ -405,7 +406,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               accessibilityLabel={t('View diary')}
             >
               <Text style={styles.seeAllText}>{t('View diary')}</Text>
-              <ChevronRight size={14} color={theme.colors.primary} />
+              <DirectionalIcon name="ChevronRight" size={14} color={theme.colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -469,7 +470,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               <View style={styles.stepsTrack}><View style={[styles.stepsFill, { width: `${Math.min(100, ((log.steps || 0) / (profile.stepGoal || 8000)) * 100)}%` }]} /></View>
               <Text style={styles.stepsHint}>{t('Tap to view activity details')}</Text>
             </View>
-            <ChevronRight size={17} color={theme.colors.textMuted} />
+            <DirectionalIcon name="ChevronRight" size={17} color={theme.colors.textMuted} />
           </TouchableOpacity>
         </Animated.View>
 
@@ -491,7 +492,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 </View>
                 <Text style={styles.slimRoutineText}>{t('Track vitamins & supplements')}</Text>
               </View>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
+              <DirectionalIcon name="ChevronRight" size={16} color={theme.colors.textMuted} />
             </TouchableOpacity>
           ) : (
             /* Checklists with small Manage link if items exist */

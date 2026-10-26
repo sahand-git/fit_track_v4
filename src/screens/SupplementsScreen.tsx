@@ -18,7 +18,6 @@ import {
   Plus,
   Minus,
   Trash2,
-  ArrowLeft,
   Sunrise,
   Sun,
   Sunset,
@@ -42,6 +41,7 @@ import {
   UserProfile,
 } from '../types';
 import { AppText as Text } from '../components/AppText';
+import { DirectionalIcon } from '../components/DirectionalIcon';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
 import { RDAAnalysisCard } from '../components/RDAAnalysisCard';
@@ -577,7 +577,7 @@ export function SupplementsScreen({
             accessibilityLabel={t('Back')}
             accessibilityRole="button"
           >
-            <ArrowLeft size={20} color={theme.colors.textPrimary} />
+            <DirectionalIcon name="ArrowLeft" size={20} color={theme.colors.textPrimary} />
           </TouchableOpacity>
         )}
         <View style={styles.iconBox}>

@@ -19,6 +19,7 @@ import { formattedNutrientValue } from '../utils/nutrientTotals';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 import { FoodSourceBadge } from './FoodSourceBadge';
 import { getLocalizedFoodName } from '../utils/foodLocalization';
@@ -41,7 +42,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
   onDelete,
 }) => {
   const language = useLanguage();
-  const isRtl = language === 'ar' || language === 'ckb';
+  const isRtl = useIsRTL();
   const t = (key: string) => translate(language, key);
   const [servings, setServings] = useState(1);
   const currentItemId = item?.id ?? null;

@@ -13,7 +13,8 @@ import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
 import { isReducedMotion } from '../utils/motion';
-import { Activity, ChevronRight } from 'lucide-react-native';
+import { Activity } from 'lucide-react-native';
+import { DirectionalIcon } from './DirectionalIcon';
 
 interface MacroCardsProps {
   calorieTarget: number;
@@ -191,7 +192,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
         >
           <Activity size={12} color={theme.colors.primary} />
           <Text style={styles.vitaminsBtnText} numberOfLines={1}>{t('Vitamins')}</Text>
-          <ChevronRight size={12} color={theme.colors.textMuted} />
+          <DirectionalIcon name="ChevronRight" size={12} color={theme.colors.textMuted} />
         </TouchableOpacity>
       </View>
     </View>

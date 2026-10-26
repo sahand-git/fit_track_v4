@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { ArrowLeft, Check, ChevronDown, ChevronUp, Cloud, Copy, ExternalLink, LogIn, LogOut, Mail, ShieldCheck, Trash2, Wrench } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronUp, Cloud, Copy, ExternalLink, LogIn, LogOut, Mail, ShieldCheck, Trash2, Wrench } from 'lucide-react-native';
+import { DirectionalIcon } from '../components/DirectionalIcon';
 import * as Clipboard from 'expo-clipboard';
 import { AppText as Text } from '../components/AppText';
 import { AnimatedPressable } from '../components/AnimatedPressable';
@@ -220,7 +221,7 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
     >
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.back} accessibilityLabel={t('Back')} accessibilityRole="button"><ArrowLeft size={19} color={theme.colors.textPrimary} /></TouchableOpacity>
+        <TouchableOpacity onPress={onBack} style={styles.back} accessibilityLabel={t('Back')} accessibilityRole="button"><DirectionalIcon name="ArrowLeft" size={19} color={theme.colors.textPrimary} /></TouchableOpacity>
         <View style={{ flex: 1 }}><Text style={styles.eyebrow}>{t('Account')}</Text><Text style={styles.title}>{t('Sign in & backup')}</Text></View>
         <ShieldCheck size={24} color={theme.colors.primary} />
       </View>

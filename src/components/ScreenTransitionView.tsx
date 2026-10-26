@@ -5,7 +5,7 @@ import Animated, {
   FadeInRight,
   Easing,
 } from 'react-native-reanimated';
-import { useLanguage } from '../i18n/I18nContext';
+import { useIsRTL } from '../hooks/useIsRTL';
 import { isReducedMotion } from '../utils/motion';
 
 interface ScreenTransitionViewProps {
@@ -26,8 +26,7 @@ export const ScreenTransitionView: React.FC<ScreenTransitionViewProps> = ({
   style,
   transitionKey,
 }) => {
-  const language = useLanguage();
-  const isRTL = language === 'ar' || language === 'ckb';
+  const isRTL = useIsRTL();
 
   const enteringAnimation = isReducedMotion()
     ? undefined

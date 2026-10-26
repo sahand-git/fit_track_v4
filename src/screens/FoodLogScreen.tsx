@@ -11,8 +11,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
-  ChevronLeft,
-  ChevronRight,
   Plus,
   Trash2,
   CalendarDays,
@@ -35,6 +33,8 @@ import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../u
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
+import { DirectionalIcon } from '../components/DirectionalIcon';
 import * as Haptics from 'expo-haptics';
 import { MealsSkeleton } from '../components/SkeletonLoader';
 import { formatKcal } from '../utils/formatKcal';
@@ -65,7 +65,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const t = (value: string) => translate(language, value);
-  const isRtl = language === 'ar' || language === 'ckb';
+  const isRtl = useIsRTL();
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const floatingBottom = dockBottom + 66;
@@ -232,7 +232,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
           accessibilityLabel={t('Previous day')}
           accessibilityRole="button"
         >
-          <ChevronLeft size={20} color={theme.colors.textSecondary} />
+          <DirectionalIcon name="ChevronLeft" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -252,7 +252,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
           accessibilityLabel={t('Next day')}
           accessibilityRole="button"
         >
-          <ChevronRight size={20} color={theme.colors.textSecondary} />
+          <DirectionalIcon name="ChevronRight" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
 

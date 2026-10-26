@@ -27,6 +27,7 @@ import { setStoredGeminiApiKey, getStoredGeminiApiKey } from '../services/plateA
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 
 export interface AiSetupWizardProps {
@@ -48,7 +49,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
 }) => {
   const language = useLanguage();
   const t = (str: string) => translate(language, str);
-  const isRTL = language !== 'en';
+  const isRTL = useIsRTL();
 
   const [inputKey, setInputKey] = useState('');
   const [showKey, setShowKey] = useState(false);
