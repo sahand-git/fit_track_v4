@@ -37,7 +37,8 @@ import { GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
 import { formatDisplayDate } from '../utils/dateUtils';
 import { formatKcal } from '../utils/formatKcal';
 import { SkeletonCoachBubble } from '../components/SkeletonLoader';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { isReducedMotion } from '../utils/motion';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 
@@ -57,6 +58,8 @@ const COACH_HISTORY_KEY = '@fittrack_coach_history';
 export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [currentSubView, setCurrentSubView] = useState<'audit' | 'chat'>('audit');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -599,7 +602,8 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
