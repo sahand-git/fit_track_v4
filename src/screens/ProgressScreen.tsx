@@ -38,7 +38,8 @@ import {
   CalorieTrendPoint,
   WeightTrendPoint,
 } from '../utils/trends';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 import { ProgressSkeleton } from '../components/SkeletonLoader';
@@ -52,6 +53,8 @@ interface ProgressScreenProps {
 export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoading, onUpdateWeight }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const bottomPadding = Math.max(110, insets.bottom + 76);
   const t = useCallback((key: string) => translate(language, key), [language]);
 
@@ -550,7 +553,8 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

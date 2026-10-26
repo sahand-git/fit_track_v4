@@ -19,7 +19,8 @@ import { getPastDates, parseLocalDateString, formatDisplayDate } from '../utils/
 import { formatKcal } from '../utils/formatKcal';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
 
 interface InsightsScreenProps {
@@ -29,6 +30,8 @@ interface InsightsScreenProps {
 export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const bottomPadding = Math.max(110, insets.bottom + 76);
   const t = useCallback((key: string) => translate(language, key), [language]);
 
@@ -247,7 +250,8 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

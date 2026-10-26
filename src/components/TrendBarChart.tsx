@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Svg, { Rect, Line, Text as SvgText } from 'react-native-svg';
 import { AppText as Text } from './AppText';
 import { Utensils, CheckCircle2 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import {
@@ -31,6 +32,8 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
   emptyMessage,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (k: string) => translate(language, k);
 
   const [inspectedIndex, setInspectedIndex] = useState<number | null>(null);
@@ -231,7 +234,8 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
