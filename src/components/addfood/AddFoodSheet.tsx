@@ -1580,46 +1580,59 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                 {t('Powered by Open Food Facts (ODbL)')}
                               </Text>
                             </View>
-                            {onlineFoods.map((item) => (
-                              <TouchableOpacity
-                                key={item.id}
-                                style={[
-                                  styles.foodListItem,
-                                  selectedFood?.id === item.id && styles.foodListItemActive,
-                                ]}
-                                onPress={() => {
-                                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                                  setSelectedFood(item);
-                                }}
-                                activeOpacity={0.7}
-                              >
-                                <FoodThumbnail
-                                  name={item.name}
-                                  category={item.category}
-                                  imageUrl={item.imageUrl}
-                                  size="small"
-                                  style={{ marginEnd: 12 }}
-                                />
-                                <View style={{ flex: 1 }}>
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                                    <Text style={styles.itemTitle}>{getLocalizedFoodName(item, language)}</Text>
-                                    {item.source && <FoodSourceBadge source={item.source} size="small" />}
-                                    {item.isIncomplete && (
-                                      <View style={styles.incompleteItemBadge}>
-                                        <Text style={styles.incompleteItemBadgeText}>{t('Incomplete Data')}</Text>
-                                      </View>
-                                    )}
+                            {onlineFoods.map((item) => {
+                              const onlineDisplayName = getLocalizedFoodName(item, language);
+                              const onlineServing = item.portionUnit
+                                ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g)`
+                                : item.servingSize;
+                              const onlineKcal = formatKcal(item.calories, t);
+                              const onlineMacros = `${t('Protein')} ${item.protein}g, ${t('Carbs')} ${item.carbs}g, ${t('Fat')} ${item.fat}g`;
+                              const onlineA11yLabel = `${onlineDisplayName}, ${item.brand ? `${item.brand}, ` : ''}${onlineServing}, ${onlineKcal}, ${onlineMacros}`;
+
+                              return (
+                                <TouchableOpacity
+                                  key={item.id}
+                                  style={[
+                                    styles.foodListItem,
+                                    styles.foodListItemSimple,
+                                    selectedFood?.id === item.id && styles.foodListItemActive,
+                                  ]}
+                                  onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                                    setSelectedFood(item);
+                                  }}
+                                  activeOpacity={0.7}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={onlineA11yLabel}
+                                >
+                                  <FoodThumbnail
+                                    name={item.name}
+                                    category={item.category}
+                                    imageUrl={item.imageUrl}
+                                    size="small"
+                                    style={{ marginEnd: 12 }}
+                                  />
+                                  <View style={{ flex: 1 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                      <Text style={styles.itemTitle}>{onlineDisplayName}</Text>
+                                      {item.source && <FoodSourceBadge source={item.source} size="small" />}
+                                      {item.isIncomplete && (
+                                        <View style={styles.incompleteItemBadge}>
+                                          <Text style={styles.incompleteItemBadgeText}>{t('Incomplete Data')}</Text>
+                                        </View>
+                                      )}
+                                    </View>
+                                    <Text style={styles.itemSub}>
+                                      {item.brand ? `${item.brand} • ` : ''}
+                                      {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
+                                    </Text>
                                   </View>
-                                  <Text style={styles.itemSub}>
-                                    {item.brand ? `${item.brand} • ` : ''}
-                                    {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
-                                  </Text>
-                                </View>
-                                <View style={styles.itemRightCol}>
-                                  <Text style={styles.itemKcal}>{formatKcal(item.calories, t)}</Text>
-                                </View>
-                              </TouchableOpacity>
-                            ))}
+                                  <View style={styles.itemRightCol}>
+                                    <Text style={styles.itemKcal}>{formatKcal(item.calories, t)}</Text>
+                                  </View>
+                                </TouchableOpacity>
+                              );
+                            })}
                           </View>
                         )}
 
@@ -1651,64 +1664,76 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           const isFav = favoriteFoods.some(
                             (f) => f.id === item.id || f.name.trim().toLowerCase() === item.name.trim().toLowerCase()
                           );
+                          const displayName = getLocalizedFoodName(item, language);
+                          const servingStr = item.portionUnit
+                            ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g)`
+                            : item.servingSize;
+                          const kcalStr = formatKcal(item.calories, t);
+                          const macrosStr = `${t('Protein')} ${item.protein}g, ${t('Carbs')} ${item.carbs}g, ${t('Fat')} ${item.fat}g`;
+                          const foodAccessibilityLabel = `${displayName}, ${item.brand ? `${item.brand}, ` : ''}${servingStr}, ${kcalStr}, ${macrosStr}`;
+
                           return (
-                            <TouchableOpacity
+                            <View
                               key={item.id}
                               style={[
                                 styles.foodListItem,
                                 selectedFood?.id === item.id && styles.foodListItemActive,
                               ]}
-                              onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                                setSelectedFood(item);
-                              }}
-                              activeOpacity={0.7}
-                              accessibilityRole="button"
-                              accessibilityLabel={item.name}
                             >
-                              <FoodThumbnail
-                                name={item.name}
-                                category={item.category}
-                                imageUrl={item.imageUrl}
-                                size="small"
-                                style={{ marginEnd: 12 }}
-                              />
-                              <View style={{ flex: 1 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                  <Text style={styles.itemTitle}>{item.name}</Text>
-                                  {item.recipeEstimate ? (
-                                    <View style={styles.recipeEstimateBadgeSmall}>
-                                      <Text style={styles.recipeEstimateBadgeSmallText}>{t('Recipe estimate')}</Text>
-                                    </View>
-                                  ) : item.isEstimate ? (
-                                    <View style={styles.estimateBadgeSmall}>
-                                      <Text style={styles.estimateBadgeSmallText}>{t('Estimate')}</Text>
-                                    </View>
-                                  ) : null}
+                              <TouchableOpacity
+                                style={styles.foodListItemMain}
+                                onPress={() => {
+                                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                                  setSelectedFood(item);
+                                }}
+                                activeOpacity={0.7}
+                                accessibilityRole="button"
+                                accessibilityLabel={foodAccessibilityLabel}
+                              >
+                                <FoodThumbnail
+                                  name={displayName}
+                                  category={item.category}
+                                  imageUrl={item.imageUrl}
+                                  size="small"
+                                  style={{ marginEnd: 12 }}
+                                />
+                                <View style={{ flex: 1 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                    <Text style={styles.itemTitle}>{displayName}</Text>
+                                    {item.recipeEstimate ? (
+                                      <View style={styles.recipeEstimateBadgeSmall}>
+                                        <Text style={styles.recipeEstimateBadgeSmallText}>{t('Recipe estimate')}</Text>
+                                      </View>
+                                    ) : item.isEstimate ? (
+                                      <View style={styles.estimateBadgeSmall}>
+                                        <Text style={styles.estimateBadgeSmallText}>{t('Estimate')}</Text>
+                                      </View>
+                                    ) : null}
+                                  </View>
+                                  <Text style={styles.itemSub}>
+                                    {item.portionUnit
+                                      ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g) • P: ${item.protein}g C: ${item.carbs}g F: ${item.fat}g`
+                                      : `${item.servingSize} • P: ${item.protein}g C: ${item.carbs}g F: ${item.fat}g`}
+                                  </Text>
                                 </View>
-                                <Text style={styles.itemSub}>
-                                  {item.portionUnit
-                                    ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g) • P: ${item.protein}g C: ${item.carbs}g F: ${item.fat}g`
-                                    : `${item.servingSize} • P: ${item.protein}g C: ${item.carbs}g F: ${item.fat}g`}
-                                </Text>
-                              </View>
-                              <View style={styles.itemRightCol}>
-                                <Text style={styles.itemKcal}>{formatKcal(item.calories, t)}</Text>
-                                <TouchableOpacity
-                                  style={styles.favStarBtn}
-                                  onPress={() => handleToggleFavorite(item)}
-                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                  accessibilityRole="button"
-                                  accessibilityLabel={isFav ? t('Remove from favorites') : t('Add to favorites')}
-                                >
-                                  <Star
-                                    size={16}
-                                    color={isFav ? theme.colors.amber : theme.colors.textMuted}
-                                    fill={isFav ? theme.colors.amber : 'none'}
-                                  />
-                                </TouchableOpacity>
-                              </View>
-                            </TouchableOpacity>
+                                <View style={styles.itemRightCol}>
+                                  <Text style={styles.itemKcal}>{formatKcal(item.calories, t)}</Text>
+                                </View>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={styles.favStarBtn}
+                                onPress={() => handleToggleFavorite(item)}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                accessibilityRole="button"
+                                accessibilityLabel={isFav ? `${t('Remove from favorites')}: ${displayName}` : `${t('Add to favorites')}: ${displayName}`}
+                              >
+                                <Star
+                                  size={16}
+                                  color={isFav ? theme.colors.amber : theme.colors.textMuted}
+                                  fill={isFav ? theme.colors.amber : 'none'}
+                                />
+                              </TouchableOpacity>
+                            </View>
                           );
                         })}
                         {searchQuery.trim().length >= 2 && !isSearchingOnline && !hasSearchedOnline && (
@@ -1769,46 +1794,59 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                 {t('Powered by Open Food Facts (ODbL)')}
                               </Text>
                             </View>
-                            {onlineFoods.map((item) => (
-                              <TouchableOpacity
-                                key={item.id}
-                                style={[
-                                  styles.foodListItem,
-                                  selectedFood?.id === item.id && styles.foodListItemActive,
-                                ]}
-                                onPress={() => {
-                                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                                  setSelectedFood(item);
-                                }}
-                                activeOpacity={0.7}
-                              >
-                                <FoodThumbnail
-                                  name={item.name}
-                                  category={item.category}
-                                  imageUrl={item.imageUrl}
-                                  size="small"
-                                  style={{ marginEnd: 12 }}
-                                />
-                                <View style={{ flex: 1 }}>
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                                    <Text style={styles.itemTitle}>{getLocalizedFoodName(item, language)}</Text>
-                                    {item.source && <FoodSourceBadge source={item.source} size="small" />}
-                                    {item.isIncomplete && (
-                                      <View style={styles.incompleteItemBadge}>
-                                        <Text style={styles.incompleteItemBadgeText}>{t('Incomplete Data')}</Text>
-                                      </View>
-                                    )}
+                            {onlineFoods.map((item) => {
+                              const onlineDisplayName = getLocalizedFoodName(item, language);
+                              const onlineServing = item.portionUnit
+                                ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g)`
+                                : item.servingSize;
+                              const onlineKcal = formatKcal(item.calories, t);
+                              const onlineMacros = `${t('Protein')} ${item.protein}g, ${t('Carbs')} ${item.carbs}g, ${t('Fat')} ${item.fat}g`;
+                              const onlineA11yLabel = `${onlineDisplayName}, ${item.brand ? `${item.brand}, ` : ''}${onlineServing}, ${onlineKcal}, ${onlineMacros}`;
+
+                              return (
+                                <TouchableOpacity
+                                  key={item.id}
+                                  style={[
+                                    styles.foodListItem,
+                                    styles.foodListItemSimple,
+                                    selectedFood?.id === item.id && styles.foodListItemActive,
+                                  ]}
+                                  onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                                    setSelectedFood(item);
+                                  }}
+                                  activeOpacity={0.7}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={onlineA11yLabel}
+                                >
+                                  <FoodThumbnail
+                                    name={item.name}
+                                    category={item.category}
+                                    imageUrl={item.imageUrl}
+                                    size="small"
+                                    style={{ marginEnd: 12 }}
+                                  />
+                                  <View style={{ flex: 1 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                      <Text style={styles.itemTitle}>{onlineDisplayName}</Text>
+                                      {item.source && <FoodSourceBadge source={item.source} size="small" />}
+                                      {item.isIncomplete && (
+                                        <View style={styles.incompleteItemBadge}>
+                                          <Text style={styles.incompleteItemBadgeText}>{t('Incomplete Data')}</Text>
+                                        </View>
+                                      )}
+                                    </View>
+                                    <Text style={styles.itemSub}>
+                                      {item.brand ? `${item.brand} • ` : ''}
+                                      {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
+                                    </Text>
                                   </View>
-                                  <Text style={styles.itemSub}>
-                                    {item.brand ? `${item.brand} • ` : ''}
-                                    {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
-                                  </Text>
-                                </View>
-                                <View style={styles.itemRightCol}>
-                                  <Text style={styles.itemKcal}>{formatKcal(item.calories, t)}</Text>
-                                </View>
-                              </TouchableOpacity>
-                            ))}
+                                  <View style={styles.itemRightCol}>
+                                    <Text style={styles.itemKcal}>{formatKcal(item.calories, t)}</Text>
+                                  </View>
+                                </TouchableOpacity>
+                              );
+                            })}
                           </View>
                         )}
 
@@ -2109,14 +2147,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
-    padding: 12,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    overflow: 'hidden',
+  },
+  foodListItemSimple: {
+    padding: 12,
   },
   foodListItemActive: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primaryLight,
+  },
+  foodListItemMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingStart: 12,
+    paddingEnd: 8,
   },
   itemTitle: {
     fontSize: 13,
@@ -2189,10 +2238,15 @@ const styles = StyleSheet.create({
   itemRightCol: {
     alignItems: 'flex-end',
     justifyContent: 'center',
-    gap: 6,
+    marginStart: 8,
   },
   favStarBtn: {
-    padding: 2,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyStateBox: {
     padding: 32,
