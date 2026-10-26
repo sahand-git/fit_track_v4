@@ -64,6 +64,7 @@ import { useLanguage } from '../../i18n/I18nContext';
 import { translate } from '../../i18n/strings';
 import { normalizeSearch } from '../../utils/localeUtils';
 import { formatDisplayDate, getTodayDateString } from '../../utils/dateUtils';
+import { formatKcal } from '../../utils/formatKcal';
 import { getPreviousDayString } from '../../utils/streak';
 import {
   loadRecentFoods,
@@ -1273,7 +1274,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             </Text>
                           </View>
                           <Text style={styles.selectedKcal}>
-                            {Math.round(activeCalories * scaleRatio)} kcal
+                            {formatKcal(activeCalories * scaleRatio, t)}
                           </Text>
                         </View>
 
@@ -1337,7 +1338,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                     <View style={{ alignItems: 'flex-end', marginStart: 8 }}>
                                       <Text style={styles.ingredientGrams}>{ing.grams}g</Text>
                                       {ing.calories !== undefined ? (
-                                        <Text style={styles.ingredientKcal}>{ing.calories} kcal</Text>
+                                        <Text style={styles.ingredientKcal}>{formatKcal(ing.calories, t)}</Text>
                                       ) : null}
                                     </View>
                                   </View>
@@ -1578,7 +1579,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         )}
                         <Text style={styles.quickActionBtnText} numberOfLines={1}>
                           {getCopyMealTypeLabel(selectedMeal)}
-                          {yesterdayMealTypePreview.count > 0 ? ` (${yesterdayMealTypePreview.count} • ${yesterdayMealTypePreview.calories} kcal)` : ''}
+                          {yesterdayMealTypePreview.count > 0 ? ` (${yesterdayMealTypePreview.count} • ${formatKcal(yesterdayMealTypePreview.calories, t)})` : ''}
                         </Text>
                       </TouchableOpacity>
 
@@ -1596,7 +1597,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         )}
                         <Text style={styles.quickActionBtnText} numberOfLines={1}>
                           {t("Copy yesterday's meals")}
-                          {yesterdayAllPreview.count > 0 ? ` (${yesterdayAllPreview.count} • ${yesterdayAllPreview.calories} kcal)` : ''}
+                          {yesterdayAllPreview.count > 0 ? ` (${yesterdayAllPreview.count} • ${formatKcal(yesterdayAllPreview.calories, t)})` : ''}
                         </Text>
                       </TouchableOpacity>
 
@@ -1685,7 +1686,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                   {template.mealType ? t(template.mealType.charAt(0).toUpperCase() + template.mealType.slice(1)) : t('Meal')} · {template.items.length} {template.items.length === 1 ? t('item') : t('items')}
                                 </Text>
                               </View>
-                              <Text style={styles.templateKcal}>{Math.round(template.totalCalories)} kcal</Text>
+                              <Text style={styles.templateKcal}>{formatKcal(template.totalCalories, t)}</Text>
                             </View>
 
                             <View style={styles.templateItemsList}>
@@ -1805,7 +1806,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                   </Text>
                                 </View>
                                 <View style={styles.itemRightCol}>
-                                  <Text style={styles.itemKcal}>{item.calories} kcal</Text>
+                                  <Text style={styles.itemKcal}>{formatKcal(item.calories, t)}</Text>
                                 </View>
                               </TouchableOpacity>
                             ))}
@@ -1882,7 +1883,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                 </Text>
                               </View>
                               <View style={styles.itemRightCol}>
-                                <Text style={styles.itemKcal}>{item.calories} kcal</Text>
+                                <Text style={styles.itemKcal}>{formatKcal(item.calories, t)}</Text>
                                 <TouchableOpacity
                                   style={styles.favStarBtn}
                                   onPress={() => handleToggleFavorite(item)}
@@ -1960,7 +1961,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                   </Text>
                                 </View>
                                 <View style={styles.itemRightCol}>
-                                  <Text style={styles.itemKcal}>{item.calories} kcal</Text>
+                                  <Text style={styles.itemKcal}>{formatKcal(item.calories, t)}</Text>
                                 </View>
                               </TouchableOpacity>
                             ))}

@@ -768,12 +768,12 @@ function FitTrackApp() {
               </Text>
             </TouchableOpacity>
 
-            {/* 2. Meals */}
+            {/* 2. Diary */}
             <TouchableOpacity
               style={styles.navBtn}
               onPress={() => handleSwitchTab('meals')}
               activeOpacity={0.7}
-              accessibilityLabel={t('Meals')}
+              accessibilityLabel={t('Diary')}
               accessibilityRole="button"
             >
               <UtensilsCrossed
@@ -786,7 +786,7 @@ function FitTrackApp() {
                   tempScreen === 'none' && activeTab === 'meals' && styles.navLabelActive,
                 ]}
               >
-                {t('Meals')}
+                {t('Diary')}
               </Text>
             </TouchableOpacity>
 

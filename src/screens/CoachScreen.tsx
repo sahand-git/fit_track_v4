@@ -35,6 +35,7 @@ import { askNutritionCoach, getStoredGeminiApiKey } from '../services/plateAnaly
 import { generateDailyAIReport } from '../services/aiReportService';
 import { GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
 import { formatDisplayDate } from '../utils/dateUtils';
+import { formatKcal } from '../utils/formatKcal';
 import { SkeletonCoachBubble } from '../components/SkeletonLoader';
 import { theme } from '../theme';
 import { isReducedMotion } from '../utils/motion';
@@ -260,7 +261,7 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
           <View style={styles.headerCopy}>
             <Text style={styles.title}>{t('AI Coach')}</Text>
             <Text style={styles.subtitle}>
-              {formatDisplayDate(log.date, language)} · {totals.calories} kcal
+              {formatDisplayDate(log.date, language)} · {formatKcal(totals.calories, t)}
             </Text>
           </View>
           {currentSubView === 'chat' && messages.length > 0 && (
@@ -353,7 +354,7 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                 </Text>
               </View>
               <Text style={styles.intakeMetrics}>
-                {totals.calories} / {profile.targetCalories} kcal · {totals.protein}g {t('protein')} · {totals.carbs}g {t('carbs')} · {totals.fat}g {t('fat')} · {log.steps} {t('steps')}
+                {totals.calories} / {formatKcal(profile.targetCalories, t)} · {totals.protein}g {t('protein')} · {totals.carbs}g {t('carbs')} · {totals.fat}g {t('fat')} · {log.steps} {t('steps')}
               </Text>
 
               <TouchableOpacity

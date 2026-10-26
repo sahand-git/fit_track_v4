@@ -16,6 +16,7 @@ import {
 import { UserProfile, DailyLog } from '../types';
 import { loadLogsForDates } from '../storage/storage';
 import { getPastDates, parseLocalDateString, formatDisplayDate } from '../utils/dateUtils';
+import { formatKcal } from '../utils/formatKcal';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
@@ -177,7 +178,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                   }}
                   activeOpacity={0.8}
                   accessibilityRole="button"
-                  accessibilityLabel={`${item.dayLabel}: ${dayKcal} kcal`}
+                  accessibilityLabel={`${item.dayLabel}: ${formatKcal(dayKcal, t)}`}
                   accessibilityState={{ selected: isSelected }}
                 >
                   <View style={styles.barTrack}>
@@ -208,7 +209,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
         {selectedEntry && (
           <View style={styles.detailBanner}>
             <Text style={styles.detailDayText}>
-              {formatDisplayDate(selectedEntry.date, language)}: {selectedCalories} kcal
+              {formatDisplayDate(selectedEntry.date, language)}: {formatKcal(selectedCalories, t)}
             </Text>
             <Text style={styles.detailStatusText}>
               {selectedCalories === 0

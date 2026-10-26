@@ -393,7 +393,7 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
                     placeholder="0"
                     placeholderTextColor={theme.colors.textMuted}
                   />
-                  <Text style={styles.calorieUnit}>kcal</Text>
+                  <Text style={styles.calorieUnit}>{t('kcal')}</Text>
                 </View>
               </View>
             </View>

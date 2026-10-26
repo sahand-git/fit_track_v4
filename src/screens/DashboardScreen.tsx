@@ -13,13 +13,15 @@ import {
   Plus,
   ChevronRight,
   Utensils,
+  Coffee,
+  Moon,
+  Apple,
   User,
   Pill,
   Flame,
   Dumbbell,
   Trash2,
   Footprints,
-  Sparkles,
 } from 'lucide-react-native';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { UserProfile, DailyLog, MealType, SupplementRoutineItem, WorkoutEntry } from '../types';
@@ -48,6 +50,7 @@ import { getScopedStorageKey, saveUserProfile } from '../storage/storage';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
 import { calculateActivityBudget } from '../utils/activityBudget';
+import { formatKcal } from '../utils/formatKcal';
 import { getCalorieRingSize } from '../utils/dashboardLayout';
 import { NutrientDetailModal } from '../components/NutrientDetailModal';
 import { SupportedNutrientKey, calculateNutrientDayProgress } from '../utils/nutrientTotals';
@@ -190,6 +193,21 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const burnedCalories = activityBudget.grossWorkoutCalories;
   const effectiveCalorieTarget = activityBudget.effectiveTarget;
 
+  const getMealIcon = (mealType: MealType) => {
+    switch (mealType) {
+      case 'breakfast':
+        return <Coffee size={14} color={theme.colors.secondary} />;
+      case 'lunch':
+        return <Utensils size={14} color={theme.colors.secondary} />;
+      case 'dinner':
+        return <Moon size={14} color={theme.colors.secondary} />;
+      case 'snack':
+        return <Apple size={14} color={theme.colors.secondary} />;
+      default:
+        return <Utensils size={14} color={theme.colors.secondary} />;
+    }
+  };
+
   const mealTypes: { key: MealType; label: string }[] = useMemo(
     () => [
       { key: 'breakfast', label: t('Breakfast') },
@@ -320,6 +338,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             activeOpacity={0.8}
             accessibilityLabel={t('Profile & Goals')}
             accessibilityRole="button"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <User size={18} color={theme.colors.textPrimary} />
           </TouchableOpacity>
@@ -408,7 +427,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 >
                   <View style={styles.mealLeft}>
                     <View style={styles.mealIconBox}>
-                      <Utensils size={14} color={theme.colors.secondary} />
+                      {getMealIcon(m.key)}
                     </View>
                     <View>
                       <Text style={styles.mealName}>{m.label}</Text>
@@ -421,7 +440,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   </View>
 
                   <View style={styles.mealRight}>
-                    {cals > 0 && <Text style={styles.mealCals}>{cals} kcal</Text>}
+                    {cals > 0 && <Text style={styles.mealCals}>{formatKcal(cals, t)}</Text>}
                     <View style={styles.plusIconCircle}>
                       <Plus size={14} color={theme.colors.primary} />
                     </View>
@@ -644,7 +663,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </Animated.View>
       </ScrollView>
 
-      {/* Reserved action area keeps Add Food and Quick Add clear of the dashboard cards */}
+      {/* Canonical Floating Add Food Button */}
       {!isFuture && (
         <View
           style={[
@@ -653,23 +672,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               paddingBottom: dockClearance,
               flexDirection: isRtl ? 'row-reverse' : 'row',
               justifyContent: isRtl ? 'flex-start' : 'flex-end',
-              gap: 10,
             },
           ]}
         >
-          <TouchableOpacity
-            style={styles.floatingQuickBtn}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              setQuickActionVisible(true);
-            }}
-            activeOpacity={0.88}
-            accessibilityLabel={t('Quick Add')}
-            accessibilityRole="button"
-          >
-            <Sparkles size={16} color="#D97706" />
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.floatingAddBtn}
             onPress={handleOpenFloatingAddFood}

@@ -1,4 +1,5 @@
 import { WorkoutEntry } from '../types';
+import { formatKcal } from './formatKcal';
 
 export interface WorkoutDisplayMeta {
   category: string;
@@ -19,7 +20,7 @@ export function getWorkoutDisplayMeta(
   return {
     category: translate(category),
     duration: `${workout.durationMinutes} ${translate('min')}`,
-    calories: `${workout.caloriesBurned} ${translate('kcal')}`,
+    calories: formatKcal(workout.caloriesBurned, translate),
     ...(workout.sets?.length
       ? { sets: `${workout.sets.length} ${translate('sets')} · ${completedSets} ${translate('completed')}` }
       : {}),

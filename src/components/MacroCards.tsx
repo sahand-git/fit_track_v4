@@ -12,7 +12,7 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import { isReducedMotion } from '../utils/motion';
-import { Sparkles, ChevronRight } from 'lucide-react-native';
+import { Activity, ChevronRight } from 'lucide-react-native';
 
 interface MacroCardsProps {
   calorieTarget: number;
@@ -185,7 +185,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           accessibilityRole="button"
           accessibilityLabel={t('Micronutrients & Daily Allowance (RDA)')}
         >
-          <Sparkles size={12} color={theme.colors.primary} />
+          <Activity size={12} color={theme.colors.primary} />
           <Text style={styles.vitaminsBtnText} numberOfLines={1}>{t('Vitamins')}</Text>
           <ChevronRight size={12} color={theme.colors.textMuted} />
         </TouchableOpacity>

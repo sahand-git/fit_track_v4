@@ -14,6 +14,7 @@ import { ArrowRight, Check } from 'lucide-react-native';
 import { Gender, ActivityLevel, FitnessGoal, UserProfile, AppLanguage } from '../types';
 import { languageNames, translate } from '../i18n/strings';
 import { calculateTargets } from '../utils/calculator';
+import { formatKcal } from '../utils/formatKcal';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
@@ -284,9 +285,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
 
             <View style={styles.summaryCard}>
               <Text style={styles.summaryTitle}>{t('Estimated Daily Target')}</Text>
-              <Text style={styles.summaryValue}>{targets.targetCalories} kcal</Text>
+              <Text style={styles.summaryValue}>{formatKcal(targets.targetCalories, t)}</Text>
               <Text style={styles.summarySub}>
-                {t('BMR')}: {targets.bmr} kcal • {t('TDEE')}: {targets.tdee} kcal
+                {t('BMR')}: {formatKcal(targets.bmr, t)} • {t('TDEE')}: {formatKcal(targets.tdee, t)}
               </Text>
 
               <View style={styles.macroSplitRow}>

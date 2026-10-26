@@ -14,7 +14,7 @@ import {
   ChevronDown,
   ChevronUp,
   AlertTriangle,
-  Sparkles,
+  ShieldCheck,
   Info,
 } from 'lucide-react-native';
 
@@ -57,7 +57,7 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
       <View style={[styles.headerRow, isRtl && styles.rowRtl]}>
         <View style={[styles.titleGroup, isRtl && styles.titleGroupRtl]}>
           <View style={styles.iconCircle}>
-            <Sparkles size={16} color={theme.colors.primary} />
+            <ShieldCheck size={16} color={theme.colors.primary} />
           </View>
           <View>
             <Text style={styles.cardTitle}>

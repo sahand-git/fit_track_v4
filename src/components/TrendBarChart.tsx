@@ -13,6 +13,7 @@ import {
   MIN_LOGGING_COVERAGE_CALORIES,
 } from '../utils/trends';
 import { formatDisplayDate } from '../utils/dateUtils';
+import { formatKcal } from '../utils/formatKcal';
 
 export interface TrendBarChartProps {
   data: CalorieTrendPoint[];
@@ -115,7 +116,7 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
             <Text style={styles.mainAvg}>
               {metrics.avgCalories.toLocaleString()}
             </Text>
-            <Text style={styles.unitText}>kcal</Text>
+            <Text style={styles.unitText}>{t('kcal')}</Text>
           </View>
           <Text style={styles.rangeLabel}>
             {`${t('avg kcal / day')} (${metrics.coveredDaysCount} ${
@@ -215,7 +216,7 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
             {formatDisplayDate(inspectedBar.data.date, language)}
           </Text>
           <Text style={styles.inspectorValue}>
-            {inspectedBar.data.calories} kcal
+            {formatKcal(inspectedBar.data.calories, t)}
           </Text>
           <Text style={styles.inspectorPct}>
             ({Math.round((inspectedBar.data.calories / targetCalories) * 100)}% {t('of target')})

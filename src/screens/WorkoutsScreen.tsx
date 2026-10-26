@@ -11,6 +11,7 @@ import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
+import { formatKcal } from '../utils/formatKcal';
 import { getStaggeredCardEntry, getItemExitAnimation, getListLayoutTransition } from '../utils/reanimatedMotion';
 
 interface Props {
@@ -84,7 +85,7 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
           <View style={styles.divider} />
           <Summary label={t('Duration')} value={`${totalMinutes} ${t('min')}`} />
           <View style={styles.divider} />
-          <Summary label={t('Estimated burn')} value={`${totalKcal} kcal`} />
+          <Summary label={t('Estimated burn')} value={formatKcal(totalKcal, t)} />
         </View>
         <View style={styles.search}><Search size={17} color={theme.colors.textMuted} /><TextInput value={query} onChangeText={setQuery} placeholder={t('Search workouts')} placeholderTextColor={theme.colors.textMuted} style={styles.searchInput} accessibilityLabel={t('Search workouts')} /></View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>

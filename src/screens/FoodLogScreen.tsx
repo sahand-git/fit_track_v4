@@ -17,6 +17,10 @@ import {
   Trash2,
   CalendarDays,
   Calendar as CalendarIcon,
+  Coffee,
+  Utensils,
+  Moon,
+  Apple,
 } from 'lucide-react-native';
 import { DailyLog, LoggedMeal, MealType } from '../types';
 import { FoodDetailsModal } from '../components/FoodDetailsModal';
@@ -33,6 +37,7 @@ import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { MealsSkeleton } from '../components/SkeletonLoader';
+import { formatKcal } from '../utils/formatKcal';
 
 interface FoodLogScreenProps {
   selectedDate: string;
@@ -191,6 +196,21 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     setInspectingMeal(null);
   };
 
+  const getMealIcon = (mealType: MealType) => {
+    switch (mealType) {
+      case 'breakfast':
+        return <Coffee size={14} color={theme.colors.secondary} />;
+      case 'lunch':
+        return <Utensils size={14} color={theme.colors.secondary} />;
+      case 'dinner':
+        return <Moon size={14} color={theme.colors.secondary} />;
+      case 'snack':
+        return <Apple size={14} color={theme.colors.secondary} />;
+      default:
+        return <Utensils size={14} color={theme.colors.secondary} />;
+    }
+  };
+
   const mealCategories: { key: MealType; label: string }[] = [
     { key: 'breakfast', label: t('Breakfast') },
     { key: 'lunch', label: t('Lunch') },
@@ -287,11 +307,16 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
             <View key={cat.key} style={styles.mealSection}>
               {/* Category Header */}
               <View style={styles.mealSectionHeader}>
-                <View>
-                  <Text style={styles.categoryTitle}>{cat.label}</Text>
-                  {categoryKcal > 0 && (
-                    <Text style={styles.categoryKcal}>{categoryKcal} kcal</Text>
-                  )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={styles.categoryIconCircle}>
+                    {getMealIcon(cat.key)}
+                  </View>
+                  <View>
+                    <Text style={styles.categoryTitle}>{cat.label}</Text>
+                    {categoryKcal > 0 && (
+                      <Text style={styles.categoryKcal}>{formatKcal(categoryKcal, t)}</Text>
+                    )}
+                  </View>
                 </View>
 
                 {!isFuture && (
@@ -338,7 +363,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                         }}
                         activeOpacity={0.7}
                         accessibilityRole="button"
-                        accessibilityLabel={`${item.name}, ${item.calories} kcal`}
+                        accessibilityLabel={`${item.name}, ${formatKcal(item.calories, t)}`}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <FoodThumbnail name={item.name} category={item.category} imageUrl={item.imageUrl} size="small" style={{ marginEnd: 12 }} />
@@ -356,7 +381,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                         </View>
 
                         <View style={[styles.foodRight, isRtl && styles.foodRightRtl]}>
-                          <Text style={styles.foodKcal}>{item.calories} kcal</Text>
+                          <Text style={styles.foodKcal}>{formatKcal(item.calories, t)}</Text>
                           <TouchableOpacity
                             style={styles.deleteBtn}
                             onPress={(e) => {
@@ -543,6 +568,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'baseline',
     paddingHorizontal: 4,
+  },
+  categoryIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   categoryTitle: {
     fontFamily: theme.fonts.serif,

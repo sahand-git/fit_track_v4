@@ -7,6 +7,7 @@ import { LoggedMeal, MealType } from '../../types';
 import { useLanguage } from '../../i18n/I18nContext';
 import { translate } from '../../i18n/strings';
 import { theme } from '../../theme';
+import { formatKcal } from '../../utils/formatKcal';
 import * as Haptics from 'expo-haptics';
 
 interface AiReviewProps {
@@ -173,7 +174,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
         <Text style={styles.mealName}>{result.mealName}</Text>
 
         <View style={styles.totalsRow}>
-          <Text style={styles.totalKcal}>{totalCalories} kcal</Text>
+          <Text style={styles.totalKcal}>{formatKcal(totalCalories, t)}</Text>
           <Text style={styles.totalMacros}>
             P: {totalProtein}g • C: {totalCarbs}g • F: {totalFat}g
           </Text>
@@ -200,7 +201,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
                   <Text style={styles.itemPortionSub}>{entry.item.portionEstimate}</Text>
                 </View>
                 <View style={styles.itemRight}>
-                  <Text style={styles.itemKcal}>{nut.calories} kcal</Text>
+                  <Text style={styles.itemKcal}>{formatKcal(nut.calories, t)}</Text>
                   <View style={[styles.confBadge, { backgroundColor: badgeColors.bg }]}>
                     <Text style={[styles.confBadgeText, { color: badgeColors.text }]}>
                       {t(entry.item.confidence)}

@@ -13,6 +13,7 @@ import { AppText as Text } from '../components/AppText';
 import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText } from 'lucide-react-native';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
+import { formatKcal } from '../utils/formatKcal';
 import { GeminiKeyManager } from '../components/GeminiKeyManager';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
 import { BackupModal } from '../components/BackupModal';
@@ -244,9 +245,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* Daily Target Estimation Summary Card */}
       <View style={styles.targetPreviewCard}>
         <Text style={styles.previewTitle}>{t('Estimated Daily Target')}</Text>
-        <Text style={styles.previewKcal}>{liveTargets.targetCalories} kcal</Text>
+        <Text style={styles.previewKcal}>{formatKcal(liveTargets.targetCalories, t)}</Text>
         <Text style={styles.previewMeta}>
-          {t('BMR')}: {liveTargets.bmr} kcal • {t('TDEE')}: {liveTargets.tdee} kcal
+          {t('BMR')}: {formatKcal(liveTargets.bmr, t)} • {t('TDEE')}: {formatKcal(liveTargets.tdee, t)}
         </Text>
 
         <View style={styles.macroStrip}>

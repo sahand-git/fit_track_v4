@@ -6,6 +6,7 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { theme } from '../theme';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
+import { formatKcal } from '../utils/formatKcal';
 import { estimateStepCalories } from '../utils/activityBudget';
 import { isHealthStepServiceAvailable, syncHealthStepsForDate } from '../services/stepTrackingService';
 
@@ -109,7 +110,7 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
       </View>
 
       <View style={styles.stats}>
-        <Stat icon={<FlameIcon />} label={t('Estimated active calories')} value={`${estimated.calories} kcal`} />
+        <Stat icon={<FlameIcon />} label={t('Estimated active calories')} value={formatKcal(estimated.calories, t)} />
         <Stat icon={<Activity size={17} color={theme.colors.secondary} />} label={t('Estimated distance')} value={`${estimated.distanceKm} km`} />
         <Stat icon={<HeartPulse size={17} color={theme.colors.secondary} />} label={t('Estimated active minutes')} value={`${estimated.activeMinutes} min`} />
       </View>
