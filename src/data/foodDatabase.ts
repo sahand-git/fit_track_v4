@@ -13,6 +13,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   ...DAILY_FOODS,
   {
     "id": "food_chicken_breast",
+    "nameAr": "صدر دجاج مشوي (بدون جلد)",
+    "nameCkb": "سنگی مریشکی برژاو (بێ پێست)",
     "sourceRef": "USDA FDC 171077",
     "name": "Grilled Chicken Breast (Skinless)",
     "servingSize": "100g cooked",
@@ -32,6 +34,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_eggs_large",
+    "nameAr": "بيضة كاملة كبيرة",
+    "nameCkb": "هێلکەی تەواوی گەورە",
     "sourceRef": "USDA FDC 171287",
     "name": "Whole Large Egg",
     "servingSize": "1 large egg (50g)",
@@ -52,6 +56,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_egg_whites",
+    "nameAr": "بياض بيض سائل",
+    "nameCkb": "سپیێنەی هێلکەی شل",
     "sourceRef": "USDA FDC 172183",
     "name": "Liquid Egg Whites",
     "servingSize": "100g (~3 whites)",
@@ -69,6 +75,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_whey_isolate",
+    "nameAr": "واي بروتين آيزوليت (غولد ستاندرد)",
+    "nameCkb": "وای پرۆتین ئایزۆلێت (گۆڵد ستاندارد)",
     "sourceRef": "label: Optimum Nutrition Gold Standard 100% Whey",
     "name": "Whey Protein Isolate (Gold Standard)",
     "brand": "Optimum Nutrition",
@@ -87,6 +95,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_greek_yogurt_0",
+    "nameAr": "زبادي يوناني خالي الدسم سادة",
+    "nameCkb": "ماستی یۆنانی بێ چەوری سادە",
     "sourceRef": "USDA FDC 170903",
     "name": "Greek Yogurt 0% Fat Plain",
     "barcode": "894700010328",
@@ -106,6 +116,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_salmon_fillet",
+    "nameAr": "فيليه سلمون أطلسي مشوي بالفرن",
+    "nameCkb": "فیلیەی سەلەمۆنی ئەتڵەسی برژاو",
     "sourceRef": "USDA FDC 173686",
     "name": "Atlantic Salmon Fillet (Pan-seared)",
     "servingSize": "100g cooked",
@@ -125,6 +137,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_lean_beef",
+    "nameAr": "لحم بقري مفروم قليل الدهن (٩٣/٧)",
+    "nameCkb": "گۆشتی مانگای قیمەکراوی کەم چەوری (٩٣/٧)",
     "sourceRef": "USDA FDC 174032",
     "name": "Lean Ground Beef (93/7)",
     "servingSize": "100g cooked",
@@ -144,6 +158,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_canned_tuna",
+    "nameAr": "تونة معلبة مصفاة بالماء",
+    "nameCkb": "توونەی لەقوتوونراو لە ئاودا",
     "sourceRef": "USDA FDC 171986",
     "name": "Canned Tuna in Water",
     "servingSize": "1 can drained (120g)",
@@ -162,6 +178,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_white_rice",
+    "nameAr": "أرز بسمتي أبيض على البخار",
+    "nameCkb": "برنجی بەسمەتی سپی هەڵمی",
     "sourceRef": "USDA FDC 168878",
     "name": "Steamed White Basmati Rice",
     "servingSize": "1 cup cooked (158g)",
@@ -179,6 +197,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_rolled_oats",
+    "nameAr": "رقائق شوفان كاملة كلاسيكية",
+    "nameCkb": "شۆفانی تەواوی کلاسیک",
     "sourceRef": "USDA FDC 173904",
     "name": "Rolled Oats (Old Fashioned)",
     "servingSize": "1/2 cup dry (40g)",
@@ -197,6 +217,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_sweet_potato",
+    "nameAr": "بطاطا حلوة مشوية بالفرن",
+    "nameCkb": "پەتاتەی شیرینی برژاو لە فڕن",
     "sourceRef": "USDA FDC 168483",
     "name": "Baked Sweet Potato (Medium)",
     "servingSize": "1 medium (114g)",
@@ -215,6 +237,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_pita_bread",
+    "nameAr": "خبز بيتا قمح كامل أسمر",
+    "nameCkb": "نانی پیتا گەنمی تەواو (نانی ئاسایی)",
     "name": "Whole Wheat Pita Bread",
     "servingSize": "1 medium pocket (60g)",
     "servingGrams": 60,
@@ -230,6 +254,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_banana",
+    "nameAr": "موز طازج (حجم متوسط)",
+    "nameCkb": "مۆزی فرێش (قەبارەی ناوەند)",
     "sourceRef": "USDA FDC 173944",
     "name": "Fresh Banana (Medium)",
     "servingSize": "1 medium (118g)",
@@ -280,6 +306,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_apple",
+    "nameAr": "تفاح أحمر ديلشس طازج",
+    "nameCkb": "سێوی سووری فرێش",
     "sourceRef": "USDA FDC 171688",
     "name": "Red Delicious Apple",
     "servingSize": "1 medium (182g)",
@@ -297,6 +325,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_peanut_butter",
+    "nameAr": "زبدة فول سوداني طبيعية ناعمة",
+    "nameCkb": "کەرەی فستقی سودانی سروشتی نەرم",
     "sourceRef": "USDA FDC 174266",
     "name": "Natural Creamy Peanut Butter",
     "servingSize": "2 tbsp (32g)",
@@ -315,6 +345,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_olive_oil",
+    "nameAr": "زيت زيتون بكر ممتاز",
+    "nameCkb": "زەیتی زەیتوونی پە پەتی (بکر)",
     "sourceRef": "USDA FDC 171413",
     "name": "Extra Virgin Olive Oil",
     "servingSize": "1 tablespoon (14ml)",
@@ -363,6 +395,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_avocado",
+    "nameAr": "أفوكادو هاس طازج",
+    "nameCkb": "ئەڤۆکادۆی هاسی فرێش",
     "sourceRef": "USDA FDC 171705",
     "name": "Fresh Hass Avocado",
     "servingSize": "1/2 medium (100g)",
@@ -473,6 +507,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_cottage_cheese",
+    "nameAr": "جبن قريش قليل الدسم ٢٪",
+    "nameCkb": "پەنیری کوتیجی کەم چەوری ٢٪",
     "name": "Low-Fat Cottage Cheese (2% Milkfat)",
     "servingSize": "113g (1/2 cup)",
     "servingGrams": 113,
@@ -491,6 +527,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_tofu_firm",
+    "nameAr": "توفو نباتي متماسك عضوي",
+    "nameCkb": "تۆفۆی ڕووەکی ڕەق",
     "name": "Organic Firm Tofu",
     "servingSize": "100g (approx 1/4 block)",
     "servingGrams": 100,
@@ -511,6 +549,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_brown_rice",
+    "nameAr": "أرز بني حبوب كاملة مطبوخ",
+    "nameCkb": "برنجی قاوەیی کوڵاو",
     "sourceRef": "USDA FDC 169704",
     "name": "Whole Grain Brown Rice (Cooked)",
     "servingSize": "150g",
@@ -564,6 +604,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_whole_wheat_bread",
+    "nameAr": "خبز توست قمح كامل ١٠٠٪",
+    "nameCkb": "تۆستی گەنمی تەواو ١٠٠٪",
     "name": "100% Whole Wheat Sliced Bread",
     "servingSize": "1 slice (38g)",
     "servingGrams": 38,
@@ -584,6 +626,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_blueberries",
+    "nameAr": "توت أزرق طازج",
+    "nameCkb": "بلوبێری (تووی شین)ی فرێش",
     "sourceRef": "USDA FDC 171711",
     "name": "Fresh Blueberries",
     "servingSize": "100g (approx 3/4 cup)",
@@ -627,6 +671,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_almonds",
+    "nameAr": "لوز نيء كامل",
+    "nameCkb": "بادامی تەواوی خاو",
     "sourceRef": "USDA FDC 170567",
     "name": "Whole Raw Almonds",
     "barcode": "041570054000",
@@ -650,6 +696,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_broccoli",
+    "nameAr": "زهرات بروكلي مطبوخة على البخار",
+    "nameCkb": "برۆکلی کوڵاو بە هەڵم",
     "sourceRef": "USDA FDC 170379",
     "name": "Steamed Broccoli Florets",
     "servingSize": "100g (approx 1 cup)",
@@ -672,6 +720,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_spinach",
+    "nameAr": "أوراق سبانخ صغيرة طازجة",
+    "nameCkb": "گەڵای سپێناخی فرێش",
     "sourceRef": "USDA FDC 170417",
     "name": "Fresh Baby Spinach",
     "servingSize": "100g (approx 3 cups)",
@@ -694,6 +744,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_kind_bar",
+    "nameAr": "لوح مكسرات وشوكولاتة داكنة وملح بحري",
+    "nameCkb": "کیند بار بە چەرەز و شوکولاتەی تاڵ و خوێی دەریا",
     "sourceRef": "label: KIND Dark Chocolate Nuts & Sea Salt",
     "name": "Dark Chocolate Nuts & Sea Salt Bar",
     "brand": "KIND",
@@ -713,6 +765,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_quest_cookie_dough",
+    "nameAr": "لوح بروتين كويست بعجينة كوكيز الشوكولاتة",
+    "nameCkb": "کوێست پرۆتین بار بە هەویرێ کووکیز",
     "sourceRef": "label: Quest Nutrition Chocolate Chip Cookie Dough",
     "name": "Chocolate Chip Cookie Dough Protein Bar",
     "brand": "Quest Nutrition",
@@ -732,6 +786,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_almond_milk_unsweetened",
+    "nameAr": "حليب لوز غير محلى بنكهة الفانيليا",
+    "nameCkb": "شیری بادامی بێ شەکر بە ڤانێلا",
     "name": "Unsweetened Vanilla Almond Milk",
     "servingSize": "1 cup (240ml)",
     "servingGrams": 240,

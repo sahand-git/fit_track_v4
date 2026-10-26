@@ -5,6 +5,8 @@ import { FoodItem } from '../types';
 export const DAILY_FOODS: FoodItem[] = [
   {
     "id": "usda_sr28_17224",
+    "nameAr": "لحم غنم مفروم (نيء)",
+    "nameCkb": "گۆشتی بەرخی وردکراو (خاو)",
     "sourceRef": "USDA SR28 17224",
     "name": "Ground lamb (raw)",
     "servingSize": "100g edible portion",
@@ -21,6 +23,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_17225",
+    "nameAr": "لحم غنم مفروم (مطبوخ مشوي)",
+    "nameCkb": "گۆشتی بەرخی وردکراو (برژاو)",
     "sourceRef": "USDA SR28 17225",
     "name": "Ground lamb (cooked, broiled)",
     "servingSize": "100g edible portion",
@@ -37,6 +41,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_23567",
+    "nameAr": "لحم بقري مفروم ٨٥٪ خالي من الدهن (نيء)",
+    "nameCkb": "گۆشتی مانگای قیمەکراو ٨٥٪ کەم چەوری (خاو)",
     "sourceRef": "USDA SR28 23567",
     "name": "Ground beef, 85% lean (raw)",
     "servingSize": "100g edible portion",
@@ -53,6 +59,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_23568",
+    "nameAr": "برغر لحم بقري ٨٥٪ مشوي",
+    "nameCkb": "بەرگەری گۆشتی مانگا ٨٥٪ برژاو",
     "sourceRef": "USDA SR28 23568",
     "name": "Beef burger, 85% lean (broiled)",
     "servingSize": "100g edible portion",
@@ -69,6 +77,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_13451",
+    "nameAr": "ستيك لحم بقري سيرلوين مشوي",
+    "nameCkb": "ستیکی سێرلۆینی گۆشتی مانگای برژاو",
     "sourceRef": "USDA SR28 13451",
     "name": "Beef sirloin steak (broiled)",
     "servingSize": "100g edible portion",
@@ -85,6 +95,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_17012",
+    "nameAr": "فخذ خروف محمر بالفرن",
+    "nameCkb": "ڕانی بەرخی برژاو لە فڕن",
     "sourceRef": "USDA SR28 17012",
     "name": "Lamb leg (roasted)",
     "servingSize": "100g edible portion",
@@ -101,6 +113,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_05098",
+    "nameAr": "فخذ دجاج بدون جلد محمر بالفرن",
+    "nameCkb": "ڕانی مریشکی بێ پێست لە فڕن",
     "sourceRef": "USDA SR28 05098",
     "name": "Chicken thigh, skinless (roasted)",
     "servingSize": "100g edible portion",
@@ -117,6 +131,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_15262",
+    "nameAr": "سمك بلطي مطبوخ بالحرارة الجافة",
+    "nameCkb": "ماسی تەلاپیا کوڵاو بە گەرمی وشک",
     "sourceRef": "USDA SR28 15262",
     "name": "Tilapia fish (cooked, dry heat)",
     "servingSize": "100g edible portion",
@@ -133,6 +149,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_15192",
+    "nameAr": "سمك قد الباسيفيك مطبوخ",
+    "nameCkb": "ماسی کۆدی هێمن کوڵاو",
     "sourceRef": "USDA SR28 15192",
     "name": "Pacific cod (cooked, dry heat)",
     "servingSize": "100g edible portion",
@@ -149,6 +167,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_15151",
+    "nameAr": "روبيان مسلوق ومطبوخ",
+    "nameCkb": "ڕۆبیانی کوڵاو",
     "sourceRef": "USDA SR28 15151",
     "name": "Shrimp (cooked)",
     "servingSize": "100g edible portion",
@@ -165,6 +185,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01129",
+    "nameAr": "بيضة مسلوقة جيداً",
+    "nameCkb": "هێلکەی تەواو کوڵاو",
     "sourceRef": "USDA SR28 01129",
     "name": "Egg (hard-boiled)",
     "servingSize": "100g edible portion",
@@ -181,6 +203,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01128",
+    "nameAr": "بيضة مقلية بالزيت",
+    "nameCkb": "هێلکەی سوورکراوە بە زەیت",
     "sourceRef": "USDA SR28 01128",
     "name": "Egg (fried)",
     "servingSize": "100g edible portion",
@@ -197,6 +221,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01131",
+    "nameAr": "بيضة بوشيه مسلوقة بالماء",
+    "nameCkb": "هێلکەی ئاوپژێن (پۆچد)",
     "sourceRef": "USDA SR28 01131",
     "name": "Egg (poached)",
     "servingSize": "100g edible portion",
@@ -213,6 +239,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16070",
+    "nameAr": "عدس بني مسلوق بدون ملح",
+    "nameCkb": "نیسکی قاوەیی کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 16070",
     "name": "Lentils (boiled, no salt)",
     "servingSize": "100g edible portion",
@@ -229,6 +257,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16057",
+    "nameAr": "حمص مسلوق بدون ملح",
+    "nameCkb": "نۆکی کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 16057",
     "name": "Chickpeas (boiled, no salt)",
     "servingSize": "100g edible portion",
@@ -245,6 +275,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16033",
+    "nameAr": "فاصولياء حمراء مسلوقة بدون ملح",
+    "nameCkb": "فاسۆڵیای سووری کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 16033",
     "name": "Red kidney beans (boiled, no salt)",
     "servingSize": "100g edible portion",
@@ -261,6 +293,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16053",
+    "nameAr": "فول عريض (باقلاء) مسلوق بدون ملح",
+    "nameCkb": "پاقلەی کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 16053",
     "name": "Fava beans (boiled, no salt)",
     "servingSize": "100g edible portion",
@@ -277,6 +311,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20013",
+    "nameAr": "برغل مطبوخ ومفلفل",
+    "nameCkb": "سەوەر (بڕوێش)ی کوڵاو",
     "sourceRef": "USDA SR28 20013",
     "name": "Bulgur (cooked)",
     "servingSize": "100g edible portion",
@@ -293,6 +329,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20012",
+    "nameAr": "برغل خشن (جاف غير مطبوخ)",
+    "nameCkb": "سەوەر (بڕوێش)ی وشک نەکۆڵاو",
     "sourceRef": "USDA SR28 20012",
     "name": "Bulgur (dry)",
     "servingSize": "100g edible portion",
@@ -309,6 +347,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20045",
+    "nameAr": "أرز أبيض طويل الحبة مطبوخ",
+    "nameCkb": "برنجی سپی دەنک درێژی کوڵاو",
     "sourceRef": "USDA SR28 20045",
     "name": "White long-grain rice (cooked)",
     "servingSize": "100g edible portion",
@@ -325,6 +365,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20044",
+    "nameAr": "أرز أبيض طويل الحبة (جاف)",
+    "nameCkb": "برنجی سپی دەنک درێژی وشک",
     "sourceRef": "USDA SR28 20044",
     "name": "White long-grain rice (dry)",
     "servingSize": "100g edible portion",
@@ -341,6 +383,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20029",
+    "nameAr": "كسكسي مطبوخ على البخار",
+    "nameCkb": "کوسکوسی هەڵمی کوڵاو",
     "sourceRef": "USDA SR28 20029",
     "name": "Couscous (cooked)",
     "servingSize": "100g edible portion",
@@ -357,6 +401,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11367",
+    "nameAr": "بطاطا مقشرة مسلوقة بدون ملح",
+    "nameCkb": "پەتاتەی پاککراوی کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 11367",
     "name": "Potato, peeled (boiled, no salt)",
     "servingSize": "100g edible portion",
@@ -373,6 +419,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_18041",
+    "nameAr": "خبز بيتا أبيض (خبز عربي)",
+    "nameCkb": "نانی پیتا سپی (نانی عەرەبی)",
     "sourceRef": "USDA SR28 18041",
     "name": "White pita bread",
     "servingSize": "100g edible portion",
@@ -389,6 +437,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_18042",
+    "nameAr": "خبز بيتا قمح كامل (خبز أسمر)",
+    "nameCkb": "نانی پیتا گەنمی تەواو (نانی تیری)",
     "sourceRef": "USDA SR28 18042",
     "name": "Whole-wheat pita bread",
     "servingSize": "100g edible portion",
@@ -405,6 +455,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01116",
+    "nameAr": "زبادي طبيعي كامل الدسم",
+    "nameCkb": "ماستی سروشتی تەواو چەوری",
     "sourceRef": "USDA SR28 01116",
     "name": "Plain whole-milk yogurt",
     "servingSize": "100g edible portion",
@@ -421,6 +473,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01117",
+    "nameAr": "زبادي طبيعي قليل الدسم",
+    "nameCkb": "ماستی سروشتی کەم چەوری",
     "sourceRef": "USDA SR28 01117",
     "name": "Plain low-fat yogurt",
     "servingSize": "100g edible portion",
@@ -437,6 +491,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01077",
+    "nameAr": "حليب كامل الدسم ٣.٢٥٪",
+    "nameCkb": "شیری تەواو چەوری ٣.٢٥٪",
     "sourceRef": "USDA SR28 01077",
     "name": "Whole milk, 3.25% fat",
     "servingSize": "100g edible portion",
@@ -453,6 +509,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01019",
+    "nameAr": "جبنة فيتا يونانية أصلية",
+    "nameCkb": "پەنیری فێتای یۆنانی",
     "sourceRef": "USDA SR28 01019",
     "name": "Feta cheese",
     "servingSize": "100g edible portion",
@@ -469,6 +527,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01009",
+    "nameAr": "جبنة شيدر صفراء معتقة",
+    "nameCkb": "پەنیری چێداری زەرد",
     "sourceRef": "USDA SR28 01009",
     "name": "Cheddar cheese",
     "servingSize": "100g edible portion",
@@ -485,6 +545,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01001",
+    "nameAr": "زبدة حيوانية مملحة",
+    "nameCkb": "کەرەی ئاژەڵی خوێین",
     "sourceRef": "USDA SR28 01001",
     "name": "Butter (salted)",
     "servingSize": "100g edible portion",
@@ -501,6 +563,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11205",
+    "nameAr": "خيار طازج بقشره",
+    "nameCkb": "خەیاری فرێش بە توێکڵەوە",
     "sourceRef": "USDA SR28 11205",
     "name": "Cucumber with peel (raw)",
     "servingSize": "100g edible portion",
@@ -517,6 +581,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11529",
+    "nameAr": "طماطم حمراء طازجة (نيئة)",
+    "nameCkb": "تەماتەی سووری فرێش",
     "sourceRef": "USDA SR28 11529",
     "name": "Tomato (raw)",
     "servingSize": "100g edible portion",
@@ -533,6 +599,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11282",
+    "nameAr": "بصل طازج (نيء)",
+    "nameCkb": "پیازی فرێش (خاو)",
     "sourceRef": "USDA SR28 11282",
     "name": "Onion (raw)",
     "servingSize": "100g edible portion",
@@ -549,6 +617,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11124",
+    "nameAr": "جزر طازج (نيء)",
+    "nameCkb": "گێزەری فرێش (خاو)",
     "sourceRef": "USDA SR28 11124",
     "name": "Carrot (raw)",
     "servingSize": "100g edible portion",
@@ -565,6 +635,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11251",
+    "nameAr": "خس روماني طازج",
+    "nameCkb": "خاسی ڕۆمانی فرێش",
     "sourceRef": "USDA SR28 11251",
     "name": "Romaine lettuce (raw)",
     "servingSize": "100g edible portion",
@@ -581,6 +653,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11210",
+    "nameAr": "باذنجان مسلوق بدون ملح",
+    "nameCkb": "باینجانی کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 11210",
     "name": "Eggplant (boiled, no salt)",
     "servingSize": "100g edible portion",
@@ -597,6 +671,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11279",
+    "nameAr": "باميا مسلوقة بدون ملح",
+    "nameCkb": "بامیەی کوڵاو بێ خوێ",
     "sourceRef": "USDA SR28 11279",
     "name": "Okra (boiled, no salt)",
     "servingSize": "100g edible portion",
@@ -613,6 +689,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16137",
+    "nameAr": "حمص بطحينة محضر منزلياً",
+    "nameCkb": "حومسی ماڵەوە بە تەحین",
     "sourceRef": "USDA SR28 16137",
     "name": "Hummus (home-prepared)",
     "servingSize": "100g edible portion",
@@ -629,6 +707,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16138",
+    "nameAr": "فلافل مقلية محضرة منزلياً",
+    "nameCkb": "فەلافلی سوورکراوەی ماڵەوە",
     "sourceRef": "USDA SR28 16138",
     "name": "Falafel (home-prepared)",
     "servingSize": "100g edible portion",
@@ -643,6 +723,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09087",
+    "nameAr": "تمر دقلة نور طبيعي",
+    "nameCkb": "خورمای دەجلە نوور",
     "sourceRef": "USDA SR28 09087",
     "name": "Dates, Deglet Noor",
     "servingSize": "100g edible portion",
@@ -659,6 +741,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09421",
+    "nameAr": "تمر مجدول فاخر",
+    "nameCkb": "خورمای مەجول شاهانە",
     "sourceRef": "USDA SR28 09421",
     "name": "Dates, Medjool",
     "servingSize": "100g edible portion",
@@ -697,6 +781,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09200",
+    "nameAr": "برتقال طازج (نيء)",
+    "nameCkb": "پرتەقاڵی فرێش",
     "sourceRef": "USDA SR28 09200",
     "name": "Orange (raw)",
     "servingSize": "100g edible portion",
@@ -713,6 +799,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09326",
+    "nameAr": "بطيخ أحمر (رقي) طازج",
+    "nameCkb": "شوتی فرێش",
     "sourceRef": "USDA SR28 09326",
     "name": "Watermelon (raw)",
     "servingSize": "100g edible portion",
@@ -729,6 +817,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09132",
+    "nameAr": "عنب أحمر أو أخضر طازج",
+    "nameCkb": "تریی سوور یان سەوزی فرێش",
     "sourceRef": "USDA SR28 09132",
     "name": "Red or green grapes (raw)",
     "servingSize": "100g edible portion",
@@ -745,6 +835,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_12155",
+    "nameAr": "جوز عين الجمل نيء",
+    "nameCkb": "گوێزی سروشتی خاو",
     "sourceRef": "USDA SR28 12155",
     "name": "Walnuts",
     "servingSize": "100g edible portion",
@@ -761,6 +853,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_19335",
+    "nameAr": "سكر مائدة أبيض نقي",
+    "nameCkb": "شەکری سپی وردکراو",
     "sourceRef": "USDA SR28 19335",
     "name": "White granulated sugar",
     "servingSize": "100g edible portion",
@@ -777,6 +871,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_14185",
+    "nameAr": "شاي أولونغ مخمر بدون سكر",
+    "nameCkb": "چای ئۆلۆنگی تاڵ بێ شەکر",
     "sourceRef": "USDA SR28 14185",
     "name": "Oolong tea (brewed, unsweetened)",
     "servingSize": "100g edible portion",
@@ -794,6 +890,8 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_14180",
+    "nameAr": "قهوة سوداء مخمرة بدون سكر",
+    "nameCkb": "قاوەی ڕەشی دەمکراو بێ شەکر",
     "sourceRef": "USDA SR28 14180",
     "name": "Coffee (brewed, unsweetened)",
     "servingSize": "100g edible portion",

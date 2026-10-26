@@ -13,6 +13,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   // =========================================================================
   {
     id: 'pop_spaghetti_bolognese',
+    nameAr: 'سباغيتي بولونيز باللحم البقري',
+    nameCkb: 'سپاگێتی بۆلۆنێز بە گۆشتی مانگا',
     name: 'Spaghetti Bolognese with Beef',
     servingSize: '1 plate (350g)',
     servingGrams: 350,
@@ -30,6 +32,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_spaghetti_carbonara',
+    nameAr: 'سباغيتي كاربونارا بالبيض ولحم البقر المقدد',
+    nameCkb: 'سپاگێتی کاربۆنارا بە هێلکە و گۆشتی سوورکراوە',
     name: 'Spaghetti Carbonara (Pancetta & Egg)',
     servingSize: '1 plate (350g)',
     servingGrams: 350,
@@ -47,6 +51,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_penne_arrabbiata',
+    nameAr: 'بيني أرابياتا بصلصة الطماطم الحارة',
+    nameCkb: 'پێنی ئارابیاتا بە سۆسی تەماتەی تیژ',
     name: 'Penne all\'Arrabbiata (Spicy Tomato)',
     servingSize: '1 plate (300g)',
     servingGrams: 300,
@@ -64,6 +70,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_fettuccine_alfredo_chicken',
+    nameAr: 'فيتوتشيني ألفريدو بالدجاج المشوي',
+    nameCkb: 'فێتۆچینی ئەلفرێدۆ بە مریشکی برژاو',
     name: 'Fettuccine Alfredo with Grilled Chicken',
     servingSize: '1 plate (380g)',
     servingGrams: 380,
@@ -81,6 +89,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_beef_lasagna',
+    nameAr: 'لازانيا اللحم البقري بالفرن',
+    nameCkb: 'لازانیای گۆشتی مانگا لە فڕن',
     name: 'Baked Beef Lasagna',
     servingSize: '1 portion (300g)',
     servingGrams: 300,
@@ -98,6 +108,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_mac_and_cheese',
+    nameAr: 'معكرونة بالجبنة الغنية (ماك آند تشيز)',
+    nameCkb: 'مەعکەرۆنی بە پەنیری کرێمی',
     name: 'Creamy Macaroni and Cheese',
     servingSize: '1 bowl (250g)',
     servingGrams: 250,
@@ -115,6 +127,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_garlic_bread',
+    nameAr: 'خبز محمص بالثوم والزبدة',
+    nameCkb: 'نانی برژاو بە سیر و کەرە',
     name: 'Toasted Garlic Bread with Butter',
     servingSize: '2 slices (60g)',
     servingGrams: 60,
@@ -136,6 +150,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   // =========================================================================
   {
     id: 'pop_cheeseburger_single',
+    nameAr: 'تشيز برغر كلاسيكي بقطعة لحم واحدة',
+    nameCkb: 'چیزبەرگەری کلاسیک یەک پارچە',
     name: 'Classic Single Cheeseburger',
     servingSize: '1 burger (160g)',
     servingGrams: 160,
@@ -153,6 +169,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_cheeseburger_double',
+    nameAr: 'دبل تشيز برغر بقطعتي لحم',
+    nameCkb: 'دەبڵ چیزبەرگەر بە دوو پارچە گۆشت',
     name: 'Double Cheeseburger',
     servingSize: '1 burger (220g)',
     servingGrams: 220,
@@ -170,6 +188,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_bacon_cheeseburger',
+    nameAr: 'تشيز برغر باللحم البقري المقدد',
+    nameCkb: 'چیزبەرگەر بە گۆشتی بەیکۆن',
     name: 'Bacon Cheeseburger',
     servingSize: '1 burger (200g)',
     servingGrams: 200,
@@ -187,6 +207,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_crispy_chicken_burger',
+    nameAr: 'برغر دجاج مقرمش (كرسبي)',
+    nameCkb: 'بەرگەری مریشکی کڕسپی',
     name: 'Crispy Fried Chicken Burger',
     servingSize: '1 burger (210g)',
     servingGrams: 210,
@@ -204,6 +226,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_grilled_chicken_sandwich',
+    nameAr: 'سندويش صدر دجاج مشوي',
+    nameCkb: 'سەندویچی سنگی مریشکی برژاو',
     name: 'Grilled Chicken Breast Sandwich',
     servingSize: '1 sandwich (200g)',
     servingGrams: 200,
@@ -221,6 +245,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chicken_nuggets_6pc',
+    nameAr: 'ناجتس دجاج مقرمش (٦ قطع)',
+    nameCkb: 'ناگێتی مریشکی کڕسپی (٦ پارچە)',
     name: 'Crispy Chicken Nuggets (6 pieces)',
     servingSize: '6 pieces (100g)',
     servingGrams: 100,
@@ -238,6 +264,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chicken_nuggets_10pc',
+    nameAr: 'ناجتس دجاج مقرمش (١٠ قطع)',
+    nameCkb: 'ناگێتی مریشکی کڕسپی (١٠ پارچە)',
     name: 'Crispy Chicken Nuggets (10 pieces)',
     servingSize: '10 pieces (165g)',
     servingGrams: 165,
@@ -255,6 +283,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_french_fries_small',
+    nameAr: 'بطاطا مقلية (حجم صغير)',
+    nameCkb: 'پەتاتەی سوورکراوە (بچووک)',
     name: 'French Fries (Small)',
     servingSize: '1 small serving (80g)',
     servingGrams: 80,
@@ -272,6 +302,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_french_fries_medium',
+    nameAr: 'بطاطا مقلية (حجم متوسط)',
+    nameCkb: 'پەتاتەی سوورکراوە (ناوەند)',
     name: 'French Fries (Medium)',
     servingSize: '1 medium serving (120g)',
     servingGrams: 120,
@@ -289,6 +321,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_french_fries_large',
+    nameAr: 'بطاطا مقلية (حجم كبير)',
+    nameCkb: 'پەتاتەی سوورکراوە (گەورە)',
     name: 'French Fries (Large)',
     servingSize: '1 large serving (160g)',
     servingGrams: 160,
@@ -306,6 +340,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_onion_rings',
+    nameAr: 'حلقات بصل مقلية مقرمشة',
+    nameCkb: 'ئەڵقەی پیازی سوورکراوەی کڕسپی',
     name: 'Crispy Battered Onion Rings',
     servingSize: '1 order (110g)',
     servingGrams: 110,
@@ -323,6 +359,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_turkey_club_sandwich',
+    nameAr: 'كلوب سندويش حبش وشيدر',
+    nameCkb: 'کڵەب سەندویچی قەل و پەنیر',
     name: 'Turkey & Cheddar Club Sandwich',
     servingSize: '1 sandwich (220g)',
     servingGrams: 220,
@@ -340,6 +378,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_tuna_salad_sandwich',
+    nameAr: 'سندويش سلطة تونة بخبز القمح',
+    nameCkb: 'سەندویچی زەڵاتەی توونە بە نانی گەنم',
     name: 'Tuna Salad Sandwich on Wheat',
     servingSize: '1 sandwich (200g)',
     servingGrams: 200,
@@ -357,6 +397,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_blt_sandwich',
+    nameAr: 'سندويش لحم مقدد وخس وطماطم',
+    nameCkb: 'سەندویچی بەیکۆن و خاس و تەماتە',
     name: 'BLT Sandwich (Bacon, Lettuce, Tomato)',
     servingSize: '1 sandwich (180g)',
     servingGrams: 180,
@@ -374,6 +416,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_grilled_cheese',
+    nameAr: 'سندويش جبنة محمصة بالزبدة',
+    nameCkb: 'سەندویچی پەنیری برژاو بە کەرە',
     name: 'Classic Grilled Cheese Sandwich',
     servingSize: '1 sandwich (140g)',
     servingGrams: 140,
@@ -391,6 +435,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_pbj_sandwich',
+    nameAr: 'سندويش زبدة الفول السوداني والمربى',
+    nameCkb: 'سەندویچی کەرەی فستق و مرەبا',
     name: 'Peanut Butter & Strawberry Jelly Sandwich',
     servingSize: '1 sandwich (120g)',
     servingGrams: 120,
@@ -408,6 +454,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chicken_caesar_wrap',
+    nameAr: 'لفافة سيزر بالدجاج المشوي',
+    nameCkb: 'لەفەی سیزەر بە مریشکی برژاو',
     name: 'Grilled Chicken Caesar Wrap',
     servingSize: '1 wrap (240g)',
     servingGrams: 240,
@@ -425,6 +473,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_beef_burrito',
+    nameAr: 'بوريتو لحم بقري بالأرز والفاصولياء',
+    nameCkb: 'بۆریتۆی گۆشتی مانگا بە برنج و فاسۆڵیا',
     name: 'Beef Burrito with Rice & Black Beans',
     servingSize: '1 burrito (320g)',
     servingGrams: 320,
@@ -442,6 +492,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chicken_quesadilla',
+    nameAr: 'كاساديا دجاج وجبنة ذائبة',
+    nameCkb: 'کیسادیای مریشک و پەنیری تواوە',
     name: 'Chicken and Cheese Quesadilla',
     servingSize: '1 quesadilla (220g)',
     servingGrams: 220,
@@ -459,6 +511,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_beef_tacos',
+    nameAr: 'تاكو لحم بقري مقرمش (قطعتان)',
+    nameCkb: 'تاکۆی گۆشتی مانگای کڕسپی (٢ دانە)',
     name: 'Ground Beef Tacos (2 crunchy tacos)',
     servingSize: '2 tacos (180g)',
     servingGrams: 180,
@@ -476,6 +530,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chicken_tacos',
+    nameAr: 'تاكو دجاج مشوي طري (قطعتان)',
+    nameCkb: 'تاکۆی مریشکی برژاوی نەرم (٢ دانە)',
     name: 'Grilled Chicken Street Tacos (2 soft tacos)',
     servingSize: '2 tacos (180g)',
     servingGrams: 180,
@@ -519,6 +575,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_falafel_wrap',
+    nameAr: 'سندويش فلافل بالطحينة والسلطة',
+    nameCkb: 'لەفەی فەلافل بە تەحین و زەڵاتە',
     name: 'Falafel Wrap with Tahini & Salad',
     servingSize: '1 wrap (240g)',
     servingGrams: 240,
@@ -540,6 +598,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   // =========================================================================
   {
     id: 'pop_california_roll',
+    nameAr: 'سوشي كاليفورنيا رول (٨ قطع)',
+    nameCkb: 'سوشی کالیفۆرنیا ڕۆڵ (٨ پارچە)',
     name: 'California Sushi Roll (8 pieces)',
     servingSize: '8 pieces (240g)',
     servingGrams: 240,
@@ -557,6 +617,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_salmon_nigiri',
+    nameAr: 'سوشي نيغيري سلمون طازج (٤ قطع)',
+    nameCkb: 'سوشی نیگیری سەلەمۆنی فرێش (٤ پارچە)',
     name: 'Fresh Salmon Nigiri Sushi (4 pieces)',
     servingSize: '4 pieces (140g)',
     servingGrams: 140,
@@ -574,6 +636,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_spicy_tuna_roll',
+    nameAr: 'سوشي تونة حارة (٨ قطع)',
+    nameCkb: 'سوشی توونەی تیژ (٨ پارچە)',
     name: 'Spicy Tuna Sushi Roll (8 pieces)',
     servingSize: '8 pieces (230g)',
     servingGrams: 230,
@@ -591,6 +655,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chicken_fried_rice',
+    nameAr: 'أرز صيني مقلي بالدجاج والخضار',
+    nameCkb: 'برنجی سوورکراوە بە مریشک و سەوزە',
     name: 'Chicken Fried Rice with Vegetables',
     servingSize: '1 bowl (300g)',
     servingGrams: 300,
@@ -608,6 +674,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_shrimp_fried_rice',
+    nameAr: 'أرز صيني مقلي بالروبيان',
+    nameCkb: 'برنجی سوورکراوە بە ڕۆبیان',
     name: 'Shrimp Fried Rice with Vegetables',
     servingSize: '1 bowl (300g)',
     servingGrams: 300,
@@ -625,6 +693,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chicken_teriyaki_rice',
+    nameAr: 'دجاج ترياكي مع أرز أبيض على البخار',
+    nameCkb: 'مریشکی تێرییاکی لەگەڵ برنجی سپی',
     name: 'Chicken Teriyaki with Steamed Rice',
     servingSize: '1 plate (350g)',
     servingGrams: 350,
@@ -642,6 +712,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_beef_teriyaki_rice',
+    nameAr: 'لحم بقري ترياكي مع أرز أبيض',
+    nameCkb: 'گۆشتی مانگای تێرییاکی لەگەڵ برنجی سپی',
     name: 'Beef Teriyaki with Steamed Rice',
     servingSize: '1 plate (350g)',
     servingGrams: 350,
@@ -659,6 +731,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_pad_thai_chicken',
+    nameAr: 'نودلز باد تاي تايلندي بالدجاج',
+    nameCkb: 'نودڵزی پاد تای بە مریشک',
     name: 'Chicken Pad Thai Rice Noodles',
     servingSize: '1 plate (320g)',
     servingGrams: 320,
@@ -676,6 +750,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_japanese_ramen',
+    nameAr: 'رامن ياباني بالدجاج أو اللحم مع بيضة',
+    nameCkb: 'ڕامێنی یابانی بە مریشک یان گۆشت و هێلکە',
     name: 'Chicken or Pork Japanese Ramen with Egg',
     servingSize: '1 large bowl (500g)',
     servingGrams: 500,
@@ -693,6 +769,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_steamed_dumplings',
+    nameAr: 'فطائر دجاج على البخار (غيوزا ٦ قطع)',
+    nameCkb: 'گیۆزای مریشک بە هەڵم (٦ پارچە)',
     name: 'Steamed Chicken Dumplings / Gyoza (6 pcs)',
     servingSize: '6 pieces (150g)',
     servingGrams: 150,
@@ -710,6 +788,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_crispy_spring_rolls',
+    nameAr: 'سبرينغ رول خضار مقرمش (قطعتان)',
+    nameCkb: 'سپڕینگ ڕۆڵی سەوزەی کڕسپی (٢ دانە)',
     name: 'Crispy Vegetable Spring Rolls (2 rolls)',
     servingSize: '2 rolls (100g)',
     servingGrams: 100,
@@ -727,6 +807,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chicken_tikka_masala',
+    nameAr: 'إيدام دجاج تيكا ماسالا هندي',
+    nameCkb: 'چیکن تیکا ماسالای هیندی',
     name: 'Chicken Tikka Masala (Curry Only)',
     servingSize: '1 serving (280g)',
     servingGrams: 280,
@@ -744,6 +826,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_garlic_naan',
+    nameAr: 'خبز نان تندوري بالثوم',
+    nameCkb: 'نانی نانی تندووری بە سیر',
     name: 'Tandoori Garlic Naan Bread',
     servingSize: '1 naan (90g)',
     servingGrams: 90,
@@ -765,6 +849,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   // =========================================================================
   {
     id: 'pop_pancakes_syrup',
+    nameAr: 'بان كيك هش بشراب القيقب (٣ قطع)',
+    nameCkb: 'پانکەیک بە شیرەی میپڵ (٣ دانە)',
     name: 'Buttermilk Pancakes with Syrup (3 pcs)',
     servingSize: '3 pancakes (200g)',
     servingGrams: 200,
@@ -782,6 +868,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_belgian_waffle',
+    nameAr: 'وافل بلجيكي بالزبدة والقطر',
+    nameCkb: 'وافڵی بەلجیکی بە کەرە و شیرە',
     name: 'Belgian Waffle with Butter & Syrup',
     servingSize: '1 waffle (150g)',
     servingGrams: 150,
@@ -799,6 +887,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_french_toast',
+    nameAr: 'توست فرنسي بالسكر والقرفة (شريحتان)',
+    nameCkb: 'فرێنچ تۆست بە شەکر و دارچین (٢ لەت)',
     name: 'French Toast with Powdered Sugar (2 slices)',
     servingSize: '2 thick slices (160g)',
     servingGrams: 160,
@@ -816,6 +906,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_plain_bagel',
+    nameAr: 'خبز بيغل سادة كلاسيكي',
+    nameCkb: 'نانی بەیگڵی سادە',
     name: 'Plain NY Style Bagel',
     servingSize: '1 bagel (100g)',
     servingGrams: 100,
@@ -833,6 +925,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_bagel_cream_cheese',
+    nameAr: 'خبز بيغل بالجبنة الكريمية',
+    nameCkb: 'بەیگڵ بە پەنیری کرێمی',
     name: 'Bagel with Cream Cheese (Plain)',
     servingSize: '1 bagel + 30g spread (130g)',
     servingGrams: 130,
@@ -850,6 +944,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_butter_croissant',
+    nameAr: 'كرواسون فرنسي بالزبدة الهشة',
+    nameCkb: 'کرۆسانی کەرەی فەڕەنسی',
     name: 'Flaky Butter Croissant',
     servingSize: '1 croissant (60g)',
     servingGrams: 60,
@@ -867,6 +963,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chocolate_croissant',
+    nameAr: 'كرواسون بالشوكولاتة (بان أو شوكولا)',
+    nameCkb: 'کرۆسان بە شوکولاتە',
     name: 'Chocolate Croissant (Pain au Chocolat)',
     servingSize: '1 pastry (75g)',
     servingGrams: 75,
@@ -884,6 +982,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_blueberry_muffin',
+    nameAr: 'مافن التوت الأزرق الطازج',
+    nameCkb: 'مافنی بلوبێری فرێش',
     name: 'Blueberry Bakery Muffin',
     servingSize: '1 medium muffin (110g)',
     servingGrams: 110,
@@ -901,6 +1001,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chocolate_chip_muffin',
+    nameAr: 'مافن بقطع الشوكولاتة المزدوجة',
+    nameCkb: 'مافنی چۆکڵێت چیپس',
     name: 'Double Chocolate Chip Muffin',
     servingSize: '1 medium muffin (110g)',
     servingGrams: 110,
@@ -918,6 +1020,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_oatmeal_honey_banana',
+    nameAr: 'شوفان بالحليب والموز وعسل النحل',
+    nameCkb: 'شۆفان بە شیر و مۆز و هەنگوین',
     name: 'Rolled Oatmeal with Banana & Honey',
     servingSize: '1 bowl (250g)',
     servingGrams: 250,
@@ -935,6 +1039,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_granola_milk',
+    nameAr: 'جرانولا العسل المقرمشة بالحليب كامل الدسم',
+    nameCkb: 'گرانۆلای هەنگوینی کڕسپی بە شیر',
     name: 'Crunchy Honey Granola with Whole Milk',
     servingSize: '1 bowl (180g)',
     servingGrams: 180,
@@ -952,6 +1058,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_scrambled_eggs_butter',
+    nameAr: 'بيض مخفوق ومقلي بالزبدة (بيضتان)',
+    nameCkb: 'هێلکەی تێکدراو بە کەرە (٢ دانە)',
     name: 'Scrambled Eggs with Butter (2 large)',
     servingSize: '2 eggs (110g)',
     servingGrams: 110,
@@ -969,6 +1077,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_cheese_mushroom_omelette',
+    nameAr: 'أومليت بالجبنة والفطر الطازج',
+    nameCkb: 'ئۆملێتی پەنیر و قارچکی فرێش',
     name: 'Omelette with Cheddar Cheese & Mushrooms',
     servingSize: '1 omelette (180g)',
     servingGrams: 180,
@@ -986,6 +1096,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_crispy_bacon',
+    nameAr: 'شرائح لحم بقري مقدد مقرمشة (٣ شرائح)',
+    nameCkb: 'لەتی بەیکۆنی کڕسپی (٣ لەت)',
     name: 'Crispy Pork Bacon Strips (3 strips)',
     servingSize: '3 strips cooked (35g)',
     servingGrams: 35,
@@ -1003,6 +1115,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_breakfast_sausage',
+    nameAr: 'نقانق فطور مشوية (إصبعان)',
+    nameCkb: 'سۆسجی نانی بەیانی برژاو (٢ دانە)',
     name: 'Breakfast Pork Sausage Links (2 links)',
     servingSize: '2 links cooked (60g)',
     servingGrams: 60,
@@ -1020,6 +1134,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_wheat_bread_slice',
+    nameAr: 'شريحة خبز قمح كامل ١٠٠٪',
+    nameCkb: 'یەک لەت نانی گەنمی تەواو',
     name: '100% Whole Wheat Bread (1 slice)',
     servingSize: '1 slice (35g)',
     servingGrams: 35,
@@ -1037,6 +1153,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_white_bread_slice',
+    nameAr: 'شريحة خبز توست أبيض كلاسيكي',
+    nameCkb: 'یەک لەت تۆستی سپی کلاسیک',
     name: 'Classic White Sandwich Bread (1 slice)',
     servingSize: '1 slice (30g)',
     servingGrams: 30,
@@ -1054,6 +1172,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_sourdough_bread_slice',
+    nameAr: 'شريحة خبز الخميرة الطبيعية (ساوردو)',
+    nameCkb: 'یەک لەت نانی ساوەردۆی ترشێنراو',
     name: 'Artisan Sourdough Bread (1 slice)',
     servingSize: '1 slice (50g)',
     servingGrams: 50,
@@ -1071,6 +1191,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_white_jasmine_rice',
+    nameAr: 'أرز أبيض ياسمين أو بسمتي مطبوخ',
+    nameCkb: 'برنجی سپی یاسەمین یان بەسمەتی کوڵاو',
     name: 'Cooked White Jasmine / Basmati Rice',
     servingSize: '1 cup cooked (160g)',
     servingGrams: 160,
@@ -1088,6 +1210,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_quinoa_cooked',
+    nameAr: 'كينوا عضوية مطبوخة على البخار',
+    nameCkb: 'کینوا ئەندامی کوڵاو بە هەڵم',
     sourceRef: 'USDA FDC 168917',
     name: 'Cooked Organic Quinoa',
     servingSize: '1 cup cooked (185g)',
@@ -1110,6 +1234,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   // =========================================================================
   {
     id: 'pop_ribeye_steak',
+    nameAr: 'ستيك ريب آي بقري مشوي',
+    nameCkb: 'ستیکی ڕیب ئای مانگای برژاو',
     name: 'Grilled Beef Ribeye Steak',
     servingSize: '1 steak (200g cooked)',
     servingGrams: 200,
@@ -1127,6 +1253,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_sirloin_steak',
+    nameAr: 'ستيك سيرلوين بقري قليل الدهن',
+    nameCkb: 'ستیکی سێرلۆینی کەم چەوری برژاو',
     name: 'Grilled Top Sirloin Steak (Lean)',
     servingSize: '1 steak (200g cooked)',
     servingGrams: 200,
@@ -1144,6 +1272,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_beef_meatballs',
+    nameAr: 'كرات لحم بقري إيطالية بصلصة المارينارا (٤ قطع)',
+    nameCkb: 'گۆشتە خڕەی مانگای ئیتاڵی بە سۆسی مارینارا (٤ دانە)',
     name: 'Italian Beef Meatballs in Marinara (4 pcs)',
     servingSize: '4 meatballs (160g)',
     servingGrams: 160,
@@ -1161,6 +1291,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_atlantic_salmon',
+    nameAr: 'فيليه سلمون أطلسي مشوي بالفرن',
+    nameCkb: 'فیلیەی ماسی سەلەمۆنی ئەتڵەسی برژاو لە فڕن',
     name: 'Baked Atlantic Salmon Fillet',
     servingSize: '1 fillet (180g cooked)',
     servingGrams: 180,
@@ -1178,6 +1310,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_canned_tuna_water',
+    nameAr: 'تونة بيضاء معلبة مصفاة بالماء',
+    nameCkb: 'توونەی لەقوتوونراو لە ئاودا',
     name: 'Canned Albacore Tuna in Water (Drained)',
     servingSize: '1 can (120g drained)',
     servingGrams: 120,
@@ -1195,6 +1329,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_canned_tuna_oil',
+    nameAr: 'تونة معلبة مصفاة بزيت الزيتون',
+    nameCkb: 'توونەی لەقوتوونراو لە زەیتی زەیتووندا',
     name: 'Canned Tuna in Olive Oil (Drained)',
     servingSize: '1 can (120g drained)',
     servingGrams: 120,
@@ -1212,6 +1348,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_cod_fillet',
+    nameAr: 'فيليه سمك القد أو البلطي بالفرن',
+    nameCkb: 'فیلیەی ماسی کۆد یان تەلاپیا لە فڕن',
     name: 'Baked Pacific Cod / Tilapia Fillet',
     servingSize: '1 fillet (150g cooked)',
     servingGrams: 150,
@@ -1229,6 +1367,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_grilled_shrimp',
+    nameAr: 'روبيان جامبو مشوي (٨ قطع)',
+    nameCkb: 'ڕۆبیانی گەورەی برژاو (٨ دانە)',
     name: 'Grilled Jumbo Shrimp / Prawns (8 pcs)',
     servingSize: '8 shrimp (150g cooked)',
     servingGrams: 150,
@@ -1246,6 +1386,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_pan_fried_tofu',
+    nameAr: 'توفو نباتي متماسك محمر بالمقلاة',
+    nameCkb: 'تۆفۆی ڕووەکی سوورکراوە لە تاوە',
     name: 'Pan-Fried Firm Organic Tofu',
     servingSize: '1 serving (150g)',
     servingGrams: 150,
@@ -1267,6 +1409,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   // =========================================================================
   {
     id: 'pop_caesar_salad',
+    nameAr: 'سلطة سيزر بصلصة البارميزان والخبز المحمص',
+    nameCkb: 'زەڵاتەی سیزەر بە پەنیری پارمیزان و نانی برژاو',
     name: 'Classic Caesar Salad (Dressing & Croutons)',
     servingSize: '1 bowl (200g)',
     servingGrams: 200,
@@ -1284,6 +1428,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chicken_caesar_salad',
+    nameAr: 'سلطة سيزر بقطع الدجاج المشوي',
+    nameCkb: 'زەڵاتەی سیزەر بە مریشکی برژاو',
     name: 'Grilled Chicken Caesar Salad Bowl',
     servingSize: '1 large bowl (320g)',
     servingGrams: 320,
@@ -1301,6 +1447,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_greek_salad',
+    nameAr: 'سلطة يونانية بالخيار والطماطم وجبن الفيتا',
+    nameCkb: 'زەڵاتەی یۆنانی بە خەیار و تەماتە و پەنیری فێتا',
     name: 'Traditional Greek Salad with Feta & Olives',
     servingSize: '1 bowl (220g)',
     servingGrams: 220,
@@ -1318,6 +1466,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_baked_potato',
+    nameAr: 'بطاطا مشوية بالفرن بقشرتها',
+    nameCkb: 'پەتاتەی برژاو لە فڕن بە توێکڵەوە',
     name: 'Baked Russet Potato with Skin',
     servingSize: '1 medium potato (175g)',
     servingGrams: 175,
@@ -1335,6 +1485,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_mashed_potatoes_butter',
+    nameAr: 'بطاطا مهروسة ناعمة بالزبدة والحليب',
+    nameCkb: 'پەتاتەی شێلاو بە کەرە و شیر',
     name: 'Homestyle Mashed Potatoes with Butter & Milk',
     servingSize: '1 cup (210g)',
     servingGrams: 210,
@@ -1352,6 +1504,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_sweet_potato_roasted',
+    nameAr: 'بطاطا حلوة مشوية',
+    nameCkb: 'پەتاتەی شیرینی برژاو',
     name: 'Roasted Sweet Potato',
     servingSize: '1 medium potato (150g)',
     servingGrams: 150,
@@ -1369,6 +1523,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_steamed_broccoli',
+    nameAr: 'بروكلي طازج على البخار بزيت الزيتون',
+    nameCkb: 'برۆکلی فرێش بە هەڵم بە زەیتی زەیتوون',
     name: 'Steamed Fresh Broccoli with Olive Oil',
     servingSize: '1 bowl (150g)',
     servingGrams: 150,
@@ -1386,6 +1542,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_sweet_corn_cob',
+    nameAr: 'عرنوس ذرة حلوة مسلوقة بالزبدة',
+    nameCkb: 'گەنمەشامی شیرینی کوڵاو بە کەرە',
     sourceRef: 'USDA FDC 169998',
     name: 'Sweet Corn on the Cob',
     servingSize: '1 ear (100g kernels)',
@@ -1408,6 +1566,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   // =========================================================================
   {
     id: 'pop_red_apple',
+    nameAr: 'تفاح أحمر طازج (متوسط)',
+    nameCkb: 'سێوی سووری فرێش (ناوەند)',
     name: 'Fresh Red Apple (Medium)',
     servingSize: '1 medium apple (180g)',
     servingGrams: 180,
@@ -1425,6 +1585,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_strawberries_fresh',
+    nameAr: 'فراولة طازجة (كوب واحد)',
+    nameCkb: 'فراولەی فرێش (یەک پەرداخ)',
     sourceRef: 'USDA FDC 167762',
     name: 'Fresh Strawberries (1 cup)',
     servingSize: '1 cup whole (150g)',
@@ -1443,6 +1605,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_watermelon_slices',
+    nameAr: 'بطيخ أحمر (رقي) طازج (شريحتان)',
+    nameCkb: 'شوتی فرێش (٢ لەتی ئەستوور)',
     name: 'Fresh Sweet Watermelon (2 thick slices)',
     servingSize: '2 slices (280g)',
     servingGrams: 280,
@@ -1460,6 +1624,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_orange_medium',
+    nameAr: 'برتقال حلو طازج (متوسط)',
+    nameCkb: 'پرتەقاڵی شیرینی فرێش (ناوەند)',
     name: 'Fresh Sweet Orange (Medium)',
     servingSize: '1 medium orange (130g)',
     servingGrams: 130,
@@ -1477,6 +1643,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_grapes_red_green',
+    nameAr: 'عنب أحمر أو أخضر بدون بذور',
+    nameCkb: 'تریی سوور یان سەوز بێ ناوک',
     name: 'Fresh Red / Green Seedless Grapes',
     servingSize: '1 cup (150g)',
     servingGrams: 150,
@@ -1494,6 +1662,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_mango_slices',
+    nameAr: 'شرائح مانجو طازجة',
+    nameCkb: 'لەتە مانگۆی فرێش',
     name: 'Fresh Mango Slices',
     servingSize: '1 cup (165g)',
     servingGrams: 165,
@@ -1515,6 +1685,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   // =========================================================================
   {
     id: 'pop_espresso_single',
+    nameAr: 'شوت إسبريسو مفرد مركز',
+    nameCkb: 'قاوەی ئێسپرێسۆی تەنیا',
     name: 'Espresso Shot (Single)',
     servingSize: '1 shot (30ml)',
     servingGrams: 30,
@@ -1533,6 +1705,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_americano_coffee',
+    nameAr: 'قهوة أمريكانو سوداء مخمرة',
+    nameCkb: 'قاوەی ئەمریکانۆی ڕەش',
     name: 'Caffe Americano / Black Coffee',
     servingSize: '1 cup (240ml)',
     servingGrams: 240,
@@ -1551,6 +1725,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_caffe_latte_whole_milk',
+    nameAr: 'كافيه لاتيه بحليب كامل الدسم',
+    nameCkb: 'کافێ لاتی بە شیری تەواو',
     name: 'Caffe Latte with Whole Milk (Medium)',
     servingSize: '1 medium cup (350ml)',
     servingGrams: 350,
@@ -1569,6 +1745,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_caffe_latte_oat_milk',
+    nameAr: 'كافيه لاتيه بحليب الشوفان',
+    nameCkb: 'کافێ لاتی بە شیری شۆفان',
     name: 'Caffe Latte with Oat Milk (Medium)',
     servingSize: '1 medium cup (350ml)',
     servingGrams: 350,
@@ -1587,6 +1765,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_caffe_latte_almond_milk',
+    nameAr: 'كافيه لاتيه بحليب اللوز',
+    nameCkb: 'کافێ لاتی بە شیری بادام',
     name: 'Caffe Latte with Almond Milk (Medium)',
     servingSize: '1 medium cup (350ml)',
     servingGrams: 350,
@@ -1605,6 +1785,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_cappuccino_whole_milk',
+    nameAr: 'كابتشينو برغوة الحليب كامل الدسم',
+    nameCkb: 'کاپوچینۆ بە کەفی شیری تەواو',
     name: 'Cappuccino with Whole Milk (Medium)',
     servingSize: '1 medium cup (300ml)',
     servingGrams: 300,
@@ -1623,6 +1805,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_iced_caramel_macchiato',
+    nameAr: 'ماكياتو كراميل مثلج بالحليب والفانيليا',
+    nameCkb: 'کارامێڵ ماکیاتۆی سەهۆڵین بە شیر',
     name: 'Iced Caramel Macchiato',
     servingSize: '1 grande cup (400ml)',
     servingGrams: 400,
@@ -1641,6 +1825,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_green_tea_unsweetened',
+    nameAr: 'شاي أخضر نقي غير محلى',
+    nameCkb: 'چای سەوزی سروشتی بێ شەکر',
     name: 'Brewed Green Tea (Unsweetened)',
     servingSize: '1 cup (240ml)',
     servingGrams: 240,
@@ -1659,6 +1845,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_black_tea_milk',
+    nameAr: 'شاي أحمر مع حليب كامل الدسم',
+    nameCkb: 'چای سوور بە شیری تەواو',
     name: 'Black Tea with Splash of Whole Milk',
     servingSize: '1 cup (240ml)',
     servingGrams: 240,
@@ -1677,6 +1865,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_coca_cola_can',
+    nameAr: 'كوكاكولا كلاسيكية أصلية (علبة)',
+    nameCkb: 'کۆکاکۆلای ئەسڵی کلاسیک (قوتوو)',
     name: 'Coca-Cola Original (1 can)',
     barcode: '5449000000996',
     servingSize: '1 can (330ml)',
@@ -1696,6 +1886,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_coca_cola_zero',
+    nameAr: 'كوكاكولا زيرو سكر (علبة ٣٣٠ مل)',
+    nameCkb: 'کۆکاکۆلا زێرۆ بێ شەکر (قوتووی ٣٣٠ مل)',
     sourceRef: 'label: The Coca-Cola Company',
     name: 'Coca-Cola Zero Sugar (1 can)',
     brand: 'The Coca-Cola Company',
@@ -1739,6 +1931,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_pepsi_can',
+    nameAr: 'بيبسي كولا كلاسيك (علبة)',
+    nameCkb: 'پێپسی کۆلای کلاسیک (قوتوو)',
     name: 'Pepsi Original (1 can)',
     barcode: '012000000133',
     servingSize: '1 can (330ml)',
@@ -1758,6 +1952,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_pepsi_max_zero',
+    nameAr: 'بيبسي ماكس زيرو سكر (علبة ٣٣٠ مل)',
+    nameCkb: 'پێپسی ماکس زێرۆ بێ شەکر (قوتووی ٣٣٠ مل)',
     sourceRef: 'label: PepsiCo',
     name: 'Pepsi Max Zero Sugar (1 can)',
     brand: 'PepsiCo',
@@ -1779,6 +1975,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_red_bull_regular',
+    nameAr: 'مشروب طاقة ريد بول أصلي (علبة)',
+    nameCkb: 'خواردنەوەی وزەی ڕێدبووڵ (قوتوو)',
     name: 'Red Bull Energy Drink (1 can)',
     barcode: '9002490100070',
     servingSize: '1 can (250ml)',
@@ -1798,6 +1996,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_red_bull_sugarfree',
+    nameAr: 'مشروب طاقة ريد بول خالي من السكر',
+    nameCkb: 'ڕێدبووڵی بێ شەکر (قوتووی ٢٥٠ مل)',
     sourceRef: 'label: Red Bull',
     name: 'Red Bull Sugarfree (1 can)',
     brand: 'Red Bull',
@@ -1819,6 +2019,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_pure_orange_juice',
+    nameAr: 'عصير برتقال طبيعي معصور ١٠٠٪',
+    nameCkb: 'شەربەتی پرتەقاڵی فرێشی گوشراو ١٠٠٪',
     name: '100% Pure Squeezed Orange Juice',
     servingSize: '1 glass (250ml)',
     servingGrams: 250,
@@ -1837,6 +2039,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_pure_apple_juice',
+    nameAr: 'عصير تفاح نقي وطبيعي ١٠٠٪',
+    nameCkb: 'شەربەتی سێوی سروشتی پوخت ١٠٠٪',
     name: '100% Pure Crisp Apple Juice',
     servingSize: '1 glass (250ml)',
     servingGrams: 250,
@@ -1855,6 +2059,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_whey_shake_water',
+    nameAr: 'مخفوق واي بروتين مع الماء',
+    nameCkb: 'شەیکی وای پرۆتین لەگەڵ ئاو',
     name: 'Whey Protein Shake in Water',
     servingSize: '1 scoop (30g) + water (300ml)',
     servingGrams: 30,
@@ -1872,6 +2078,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_whey_shake_milk',
+    nameAr: 'مخفوق واي بروتين مع الحليب',
+    nameCkb: 'شەیکی وای پرۆتین لەگەڵ شیر',
     name: 'Whey Protein Shake in Whole Milk',
     servingSize: '1 scoop (30g) + 250ml milk',
     servingGrams: 280,
@@ -1893,6 +2101,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   // =========================================================================
   {
     id: 'pop_potato_chips_bag',
+    nameAr: 'شيبس بطاطا كلاسيكي مملح (كيس)',
+    nameCkb: 'چپسی پەتاتەی خوێین (کیسە)',
     name: 'Classic Salted Potato Chips (Single Bag)',
     servingSize: '1 bag (45g)',
     servingGrams: 45,
@@ -1910,6 +2120,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_doritos_nacho',
+    nameAr: 'رقائق تورتيلا دوريتوس بجبنة الناتشو',
+    nameCkb: 'دۆریتۆس بە پەنیری ناچۆ',
     sourceRef: 'label: Frito-Lay',
     name: 'Doritos Nacho Cheese Tortilla Chips (Single Bag)',
     brand: 'Frito-Lay',
@@ -1930,6 +2142,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_tortilla_chips',
+    nameAr: 'رقائق تورتيلا الذرة الصفراء المقرمشة',
+    nameCkb: 'تۆرتیلا چپسی گەنمەشامی زەرد',
     name: 'Crispy Yellow Corn Tortilla Chips',
     servingSize: '1 serving (50g)',
     servingGrams: 50,
@@ -1947,6 +2161,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_guacamole_dip',
+    nameAr: 'تغميسة غواكامولي الأفوكادو الطازج',
+    nameCkb: 'گوۆکامۆڵی ئەڤۆکادۆی فرێش',
     name: 'Fresh Guacamole Avocado Dip',
     servingSize: '3 tbsp (50g)',
     servingGrams: 50,
@@ -1964,6 +2180,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_buttered_popcorn',
+    nameAr: 'فشار بالزبدة المملحة الفاخرة',
+    nameCkb: 'پەپکەزێڕینە بە کەرە و خوێ',
     name: 'Theater Butter Flavored Popcorn',
     servingSize: '1 standard bag popped (85g)',
     servingGrams: 85,
@@ -1981,6 +2199,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_greek_yogurt_nonfat',
+    nameAr: 'زبادي يوناني سادة خالي الدسم ٠٪',
+    nameCkb: 'ماستی یۆنانی سادە بێ چەوری ٠٪',
     name: 'Plain Greek Yogurt (0% Nonfat)',
     servingSize: '1 cup (170g)',
     servingGrams: 170,
@@ -1998,6 +2218,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_greek_yogurt_whole',
+    nameAr: 'زبادي يوناني كامل الدسم ٥٪',
+    nameCkb: 'ماستی یۆنانی تەواو چەوری ٥٪',
     name: 'Plain Whole Milk Greek Yogurt (5% Fat)',
     servingSize: '1 cup (170g)',
     servingGrams: 170,
@@ -2015,6 +2237,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_cheddar_cheese_slice',
+    nameAr: 'شريحة جبنة شيدر حادة',
+    nameCkb: 'یەک لەت پەنیری چێدار',
     name: 'Sharp Cheddar Cheese (1 slice)',
     servingSize: '1 slice (28g)',
     servingGrams: 28,
@@ -2032,6 +2256,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_fresh_mozzarella',
+    nameAr: 'كرة جبنة موزاريلا طازجة',
+    nameCkb: 'تۆپی پەنیری مۆزارێلای فرێش',
     name: 'Fresh Mozzarella Cheese Ball',
     servingSize: '1 serving (50g)',
     servingGrams: 50,
@@ -2049,6 +2275,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_parmesan_grated',
+    nameAr: 'جبنة بارميزان إيطالية مبشورة',
+    nameCkb: 'پەنیری پارمیزانی ڕندەکراو',
     name: 'Grated Parmesan Cheese',
     servingSize: '2 tbsp (15g)',
     servingGrams: 15,
@@ -2066,6 +2294,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_roasted_almonds',
+    nameAr: 'لوز محمص ومملح خفيف',
+    nameCkb: 'بادامی برژاو و کەم خوێ',
     name: 'Roasted Salted Almonds (1 handful)',
     servingSize: '1 handful / oz (30g)',
     servingGrams: 30,
@@ -2083,6 +2313,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_peanut_butter_creamy',
+    nameAr: 'زبدة فول سوداني كريمية ناعمة',
+    nameCkb: 'کەرەی فستقی سودانی نەرم',
     sourceRef: 'USDA FDC 174266',
     name: 'Creamy Peanut Butter (2 tbsp)',
     servingSize: '2 tbsp (32g)',
@@ -2101,6 +2333,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_dark_chocolate_70',
+    nameAr: 'شوكولاتة داكنة فاخرة ٧٠٪+ كاكاو',
+    nameCkb: 'شوکولاتەی تاڵ ٧٠٪+ کاکاو',
     name: 'Rich Dark Chocolate (70%+ Cacao)',
     servingSize: '4 squares (40g)',
     servingGrams: 40,
@@ -2118,6 +2352,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_milk_chocolate_bar',
+    nameAr: 'لوح شوكولاتة بالحليب ناعم',
+    nameCkb: 'تەختە شوکولاتە بە شیر',
     name: 'Milk Chocolate Candy Bar',
     servingSize: '1 standard bar (45g)',
     servingGrams: 45,
@@ -2135,6 +2371,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chocolate_chip_cookie',
+    nameAr: 'كوكيز بحبيبات الشوكولاتة الذائبة',
+    nameCkb: 'کووکیز بە چۆکڵێت چیپس',
     name: 'Bakery Chocolate Chip Cookie',
     servingSize: '1 large cookie (55g)',
     servingGrams: 55,
@@ -2152,6 +2390,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_vanilla_ice_cream',
+    nameAr: 'آيس كريم فانيليا طبيعية غنية',
+    nameCkb: 'ئایسکرێمی ڤانێلای سروشتی',
     name: 'Vanilla Bean Ice Cream',
     servingSize: '1 scoop (75g)',
     servingGrams: 75,
@@ -2169,6 +2409,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_chocolate_ice_cream',
+    nameAr: 'آيس كريم شوكولاتة بلجيكية غنية',
+    nameCkb: 'ئایسکرێمی شوکولاتەی بەلجیکی',
     name: 'Chocolate Fudge Ice Cream',
     servingSize: '1 scoop (75g)',
     servingGrams: 75,
@@ -2186,6 +2428,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_pure_honey',
+    nameAr: 'عسل نحل طبيعي نقي ١٠٠٪',
+    nameCkb: 'هەنگوینی سروشتی پوخت ١٠٠٪',
     name: 'Pure Natural Bee Honey',
     servingSize: '1 tbsp (21g)',
     servingGrams: 21,
@@ -2203,6 +2447,8 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_dairy_butter',
+    nameAr: 'زبدة طبيعية حيوانية مملحة',
+    nameCkb: 'کەرەی سروشتی ئاژەڵی خوێین',
     name: 'Pure Salted Dairy Butter',
     servingSize: '1 tbsp (14g)',
     servingGrams: 14,
