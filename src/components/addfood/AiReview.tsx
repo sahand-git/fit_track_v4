@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { AppText as Text } from '../AppText';
 import { Sparkles, Plus, Check, Minus } from 'lucide-react-native';
@@ -6,7 +6,8 @@ import { PlateAnalysisResult, PlateAnalysisItem } from '../../services/plateAnal
 import { LoggedMeal, MealType } from '../../types';
 import { useLanguage } from '../../i18n/I18nContext';
 import { translate } from '../../i18n/strings';
-import { theme } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
+import { ThemeType } from '../../theme';
 import { formatKcal } from '../../utils/formatKcal';
 import * as Haptics from 'expo-haptics';
 
@@ -32,6 +33,8 @@ export const AiReview: React.FC<AiReviewProps> = ({
   onLogAll,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
   const currentResultKey = result
@@ -293,7 +296,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   container: {
     gap: 12,
   },

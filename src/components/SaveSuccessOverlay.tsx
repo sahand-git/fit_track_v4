@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -17,7 +17,8 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { isReducedMotion } from '../utils/motion';
 import { getSpringConfig } from '../utils/reanimatedMotion';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 
 interface SaveSuccessOverlayProps {
   visible: boolean;
@@ -35,20 +36,9 @@ interface ConfettiPiece {
   spinSpeed: number;
 }
 
-const LUXURY_CONFETTI_COLORS = [
-  theme.colors.gold,         // Imperial Gold
-  theme.colors.goldLight,    // Champagne Pearl
-  theme.colors.primary,      // Forest Emerald
-  theme.colors.forestAlt,    // Lush Jade
-  theme.colors.accent,       // Terracotta Sienna
-  theme.colors.water,        // Slate Cyan
-  theme.colors.goldDark,     // Warm Amber
-  theme.colors.white,        // Diamond White
-];
-
 const CONFETTI_COUNT = 32;
 
-function generateParticles(): ConfettiPiece[] {
+function generateParticles(palette: string[]): ConfettiPiece[] {
   return Array.from({ length: CONFETTI_COUNT }).map((_, i) => {
     // Biased mostly upward (-PI to 0) with a 360-degree radial bloom
     const angle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI * 1.5);
@@ -60,7 +50,7 @@ function generateParticles(): ConfettiPiece[] {
       angle,
       velocity: 130 + Math.random() * 160,
       gravity: 190 + Math.random() * 80,
-      color: LUXURY_CONFETTI_COLORS[i % LUXURY_CONFETTI_COLORS.length],
+      color: palette[i % palette.length],
       size: shapeType === 'ribbon' ? 7 : shapeType === 'sequin' ? 6 : 8,
       shape: shapeType,
       spinSpeed: (Math.random() > 0.5 ? 1 : -1) * (360 + Math.random() * 540),
@@ -103,7 +93,7 @@ const ConfettiParticle: React.FC<{
   return (
     <Animated.View
       style={[
-        styles.particle,
+        { position: 'absolute' },
         {
           width,
           height,
@@ -127,7 +117,20 @@ export const SaveSuccessOverlay: React.FC<SaveSuccessOverlayProps> = ({
   message,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
+
+  const confettiPalette = useMemo(() => [
+    theme.colors.gold,
+    theme.colors.goldLight,
+    theme.colors.primary,
+    theme.colors.forestAlt,
+    theme.colors.accent,
+    theme.colors.water,
+    theme.colors.goldDark,
+    theme.colors.white,
+  ], [theme]);
 
   const [particles, setParticles] = useState<ConfettiPiece[]>([]);
   const cardScale = useSharedValue(isReducedMotion() ? 1 : 0.6);
@@ -152,7 +155,7 @@ export const SaveSuccessOverlay: React.FC<SaveSuccessOverlayProps> = ({
     }
 
     // Re-seed confetti cannon trajectories for variety each popup
-    const nextParticles = generateParticles();
+    const nextParticles = generateParticles(confettiPalette);
     requestAnimationFrame(() => {
       setParticles(nextParticles);
     });
@@ -168,7 +171,7 @@ export const SaveSuccessOverlay: React.FC<SaveSuccessOverlayProps> = ({
       duration: 900,
       easing: Easing.out(Easing.cubic),
     });
-  }, [visible, cardScale, ringScale, progress]);
+  }, [visible, cardScale, ringScale, progress, confettiPalette]);
 
   const animatedCardStyle = useAnimatedStyle(() => {
     return {
@@ -225,7 +228,7 @@ export const SaveSuccessOverlay: React.FC<SaveSuccessOverlayProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 0,

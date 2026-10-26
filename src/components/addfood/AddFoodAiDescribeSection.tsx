@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -13,7 +13,8 @@ import { PlateAnalysisResult } from '../../services/plateAnalysisService';
 import { GeminiKeyManager } from '../GeminiKeyManager';
 import { AiReview } from './AiReview';
 import { MealType } from '../../types';
-import { theme } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
+import { ThemeType } from '../../theme';
 
 export interface AddFoodAiDescribeSectionProps {
   hasApiKey: boolean;
@@ -48,6 +49,8 @@ export const AddFoodAiDescribeSection: React.FC<AddFoodAiDescribeSectionProps> =
   bottomInset,
   t,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <ScrollView
       contentContainerStyle={[
@@ -122,7 +125,7 @@ export const AddFoodAiDescribeSection: React.FC<AddFoodAiDescribeSectionProps> =
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   tabContentScroll: {
     paddingTop: 8,
     gap: 16,

@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { AppText as Text } from './AppText';
 import { FoodItem } from '../types';
 import { getFoodSourceBadgeInfo, FoodSourceBadgeType } from '../utils/foodSource';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 
 interface FoodSourceBadgeProps {
   source?: FoodItem['source'] | string;
@@ -14,41 +15,6 @@ interface FoodSourceBadgeProps {
   style?: StyleProp<ViewStyle>;
 }
 
-const TYPE_STYLES: Record<FoodSourceBadgeType, ViewStyle> = {
-  verified: {
-    backgroundColor: 'rgba(30, 58, 47, 0.08)',
-    borderColor: 'rgba(30, 58, 47, 0.2)',
-  },
-  estimate: {
-    backgroundColor: theme.colors.orangeLight,
-    borderColor: 'rgba(200, 90, 50, 0.35)',
-    borderStyle: 'dashed',
-  },
-  off: {
-    backgroundColor: theme.colors.grayLight,
-    borderColor: theme.colors.grayBorder,
-  },
-  custom: {
-    backgroundColor: theme.colors.graySubtle,
-    borderColor: theme.colors.grayOutline,
-  },
-};
-
-const TYPE_TEXT_STYLES: Record<FoodSourceBadgeType, TextStyle> = {
-  verified: {
-    color: theme.colors.primary,
-  },
-  estimate: {
-    color: theme.colors.terracottaBadge,
-  },
-  off: {
-    color: theme.colors.slateDark,
-  },
-  custom: {
-    color: theme.colors.slateBody,
-  },
-};
-
 export const FoodSourceBadge: React.FC<FoodSourceBadgeProps> = ({
   source,
   sourceRef,
@@ -56,6 +22,8 @@ export const FoodSourceBadge: React.FC<FoodSourceBadgeProps> = ({
   style,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (k: string) => translate(language, k);
 
   // Only show the Verified badge when sourceRef exists.
@@ -69,17 +37,31 @@ export const FoodSourceBadge: React.FC<FoodSourceBadgeProps> = ({
 
   const isSmall = size === 'small';
 
+  const typeBadgeStyles: Record<FoodSourceBadgeType, ViewStyle> = {
+    verified: styles.type_verified,
+    estimate: styles.type_estimate,
+    off: styles.type_off,
+    custom: styles.type_custom,
+  };
+
+  const typeTextStyles: Record<FoodSourceBadgeType, TextStyle> = {
+    verified: styles.text_verified,
+    estimate: styles.text_estimate,
+    off: styles.text_off,
+    custom: styles.text_custom,
+  };
+
   const badgeStyle: StyleProp<ViewStyle> = [
     styles.baseBadge,
     isSmall ? styles.smallBadge : styles.mediumBadge,
-    info.isEstimate ? styles.estimateBadge : TYPE_STYLES[info.type],
+    info.isEstimate ? styles.estimateBadge : typeBadgeStyles[info.type],
     style,
   ];
 
   const textStyle: StyleProp<TextStyle> = [
     styles.baseText,
     isSmall ? styles.smallText : styles.mediumText,
-    info.isEstimate ? styles.estimateText : TYPE_TEXT_STYLES[info.type],
+    info.isEstimate ? styles.estimateText : typeTextStyles[info.type],
   ];
 
   return (
@@ -89,7 +71,7 @@ export const FoodSourceBadge: React.FC<FoodSourceBadgeProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   baseBadge: {
     alignSelf: 'flex-start',
     borderRadius: 6,
@@ -119,13 +101,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
-  // Distinct "estimate" look for generic_estimate, regional_culinary_estimate, and ai_estimated
   estimateBadge: {
-    backgroundColor: theme.colors.orangeLight,
-    borderColor: 'rgba(200, 90, 50, 0.35)',
+    backgroundColor: theme.colors.terracottaLightWash,
+    borderColor: theme.colors.terracottaWashBorder,
     borderStyle: 'dashed',
   },
   estimateText: {
     color: theme.colors.terracottaBadge,
+  },
+  type_verified: {
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primaryBorder,
+  },
+  text_verified: {
+    color: theme.colors.primary,
+  },
+  type_estimate: {
+    backgroundColor: theme.colors.terracottaLightWash,
+    borderColor: theme.colors.terracottaWashBorder,
+    borderStyle: 'dashed',
+  },
+  text_estimate: {
+    color: theme.colors.terracottaBadge,
+  },
+  type_off: {
+    backgroundColor: theme.colors.graySubtle,
+    borderColor: theme.colors.grayBorder,
+  },
+  text_off: {
+    color: theme.colors.slateDark,
+  },
+  type_custom: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderColor: theme.colors.border,
+  },
+  text_custom: {
+    color: theme.colors.textSecondary,
   },
 });

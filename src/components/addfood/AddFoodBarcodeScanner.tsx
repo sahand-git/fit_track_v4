@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,7 +10,8 @@ import {
 import { AppText as Text } from '../AppText';
 import { AlertTriangle } from 'lucide-react-native';
 import { CameraView } from 'expo-camera';
-import { theme } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
+import { ThemeType } from '../../theme';
 
 export interface AddFoodBarcodeScannerProps {
   isScanningBarcode: boolean;
@@ -37,6 +38,8 @@ export const AddFoodBarcodeScanner: React.FC<AddFoodBarcodeScannerProps> = ({
   onRequestFoodWithBarcode,
   t,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   if (isScanningBarcode) {
     return (
       <View style={styles.cameraFrame}>
@@ -138,7 +141,7 @@ export const AddFoodBarcodeScanner: React.FC<AddFoodBarcodeScannerProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   cameraFrame: {
     height: 300,
     backgroundColor: theme.colors.black,

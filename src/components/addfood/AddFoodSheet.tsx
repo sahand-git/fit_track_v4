@@ -90,7 +90,8 @@ import {
 import { FoodSourceBadge } from '../FoodSourceBadge';
 import { getLocalizedFoodName } from '../../utils/foodLocalization';
 import { createUniqueId } from '../../utils/idUtils';
-import { theme } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
+import { ThemeType } from '../../theme';
 import * as Haptics from 'expo-haptics';
 
 export interface AddFoodSheetProps {
@@ -128,6 +129,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = useCallback((str: string) => translate(language, str), [language]);
 
   const translateY = useSharedValue(SCREEN_HEIGHT);
@@ -1991,7 +1994,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: theme.colors.backdrop,
@@ -2495,4 +2499,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.orangeDeep,
   },
-});
+  });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { AppText as Text } from '../AppText';
 import {
@@ -18,7 +18,8 @@ import { FoodThumbnail } from '../FoodThumbnail';
 import { FoodSourceBadge } from '../FoodSourceBadge';
 import { getLocalizedFoodName } from '../../utils/foodLocalization';
 import { formatKcal } from '../../utils/formatKcal';
-import { theme } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
+import { ThemeType } from '../../theme';
 import { calculatePortionMacros, PortionCalculations } from './portionCalculation';
 
 export type { PortionCalculations };
@@ -53,6 +54,8 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
   language,
   t,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const {
     activeCalories,
     activeProtein,
@@ -289,7 +292,7 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   selectedFoodCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,

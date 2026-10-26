@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -12,7 +12,8 @@ import {
 import { AppText as Text } from '../AppText';
 import { X, Check, Bookmark, AlertTriangle } from 'lucide-react-native';
 import { MealType, LoggedMeal, AppLanguage } from '../../types';
-import { theme } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
+import { ThemeType } from '../../theme';
 
 export interface AddFoodTemplateModalProps {
   visible: boolean;
@@ -41,6 +42,8 @@ export const AddFoodTemplateModal: React.FC<AddFoodTemplateModalProps> = ({
   language,
   t,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const currentSlotMeals = currentDayMeals.filter((m) => m.mealType === selectedMeal);
 
   return (
@@ -126,7 +129,7 @@ export const AddFoodTemplateModal: React.FC<AddFoodTemplateModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   customModalBackdrop: {
     flex: 1,
     backgroundColor: theme.colors.backdrop,
