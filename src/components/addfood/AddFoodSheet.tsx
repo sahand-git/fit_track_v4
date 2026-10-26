@@ -1700,15 +1700,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                 <View style={{ flex: 1 }}>
                                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                     <Text style={styles.itemTitle}>{displayName}</Text>
-                                    {item.recipeEstimate ? (
-                                      <View style={styles.recipeEstimateBadgeSmall}>
-                                        <Text style={styles.recipeEstimateBadgeSmallText}>{t('Recipe estimate')}</Text>
-                                      </View>
-                                    ) : item.isEstimate ? (
-                                      <View style={styles.estimateBadgeSmall}>
-                                        <Text style={styles.estimateBadgeSmallText}>{t('Estimate')}</Text>
-                                      </View>
-                                    ) : null}
+                                    <FoodSourceBadge
+                                      source={item.source || (item.recipeEstimate ? 'regional_culinary_estimate' : item.isEstimate ? 'generic_estimate' : undefined)}
+                                      size="small"
+                                    />
                                   </View>
                                   <Text style={styles.itemSub}>
                                     {item.portionUnit
@@ -2257,54 +2252,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textMuted,
     textAlign: 'center',
-  },
-  estimateBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.amberLight,
-    borderWidth: 1,
-    borderColor: theme.colors.amberBorder,
-  },
-  estimateBadgeSmall: {
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.amberLight,
-    borderWidth: 1,
-    borderColor: theme.colors.amberBorder,
-  },
-  estimateBadgeSmallText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.amberDark,
-  },
-  recipeEstimateBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.orangeWarmLight,
-    borderWidth: 1,
-    borderColor: theme.colors.orangeBorder,
-  },
-  recipeEstimateBadgeSmall: {
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.orangeWarmLight,
-    borderWidth: 1,
-    borderColor: theme.colors.orangeBorder,
-  },
-  recipeEstimateBadgeSmallText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.orangeDeep,
   },
   templateCard: {
     backgroundColor: theme.colors.surface,
