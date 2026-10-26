@@ -41,6 +41,29 @@ export const FOOD_ID_MIGRATIONS: Record<string, string> = {
 
   // Coca-Cola Zero duplicates (2 places -> pop_coca_cola_zero with variants)
   food_coca_cola_zero: 'pop_coca_cola_zero',
+
+  // Pizza duplicates -> canonical pizzas with variants
+  pop_pizza_cheese_slice: 'pizza_cheese_margherita',
+  pop_pizza_cheese_whole: 'pizza_cheese_margherita',
+  pop_pizza_pepperoni_slice: 'pizza_pepperoni_classic',
+  pop_pizza_pepperoni_whole: 'pizza_pepperoni_classic',
+  pop_pizza_veggie_slice: 'pizza_vegetable_supreme',
+  pop_pizza_bbq_chicken_slice: 'pizza_chicken_grilled',
+  pop_pizza_meat_lovers_slice: 'pizza_pepperoni_classic',
+
+  // Regional dishes duplicates -> recipe-based canonical entries
+  food_kurdish_chicken_biryani: 'regional_biryani_chicken',
+  food_kebab_shish: 'regional_iraqi_kebab',
+  food_chicken_tikka_skewer: 'regional_chicken_tikka_kebab',
+  food_kubba_sawar: 'regional_kubba_sawar',
+  food_kubba_halab: 'regional_kubba_halab',
+  food_tepsi_baytinjan: 'regional_tepsi_baytinjan',
+  food_samoon_bread: 'regional_stone_samoon',
+  food_kurdish_do: 'regional_shenina_ayran',
+  food_doogh_salted_ayran: 'regional_shenina_ayran',
+  food_bamya_stew: 'regional_bamya_lamb',
+  food_kleicha_pastry: 'regional_kleicha_dates',
+  food_tahini_dibis: 'regional_tahin_debs',
 };
 
 /**

@@ -27,6 +27,21 @@ assert(resolveCanonicalFoodId('food_lentil_soup') === 'regional_shorbat_adas', '
 assert(resolveCanonicalFoodId('food_shorba_nisk') === 'regional_shorbat_adas', 'Shorba nisk resolves');
 assert(resolveCanonicalFoodId('food_coca_cola_zero') === 'pop_coca_cola_zero', 'Coke zero resolves');
 
+// Pizza duplicate mappings
+assert(resolveCanonicalFoodId('pop_pizza_cheese_slice') === 'pizza_cheese_margherita', 'Pizza cheese slice resolves');
+assert(resolveCanonicalFoodId('pop_pizza_pepperoni_slice') === 'pizza_pepperoni_classic', 'Pizza pepperoni slice resolves');
+assert(resolveCanonicalFoodId('pop_pizza_veggie_slice') === 'pizza_vegetable_supreme', 'Pizza veggie resolves');
+assert(resolveCanonicalFoodId('pop_pizza_bbq_chicken_slice') === 'pizza_chicken_grilled', 'Pizza chicken resolves');
+
+// Regional dishes migrations
+assert(resolveCanonicalFoodId('food_kurdish_chicken_biryani') === 'regional_biryani_chicken', 'Biryani resolves');
+assert(resolveCanonicalFoodId('food_kebab_shish') === 'regional_iraqi_kebab', 'Kebab resolves');
+assert(resolveCanonicalFoodId('food_kubba_sawar') === 'regional_kubba_sawar', 'Kubba sawar resolves');
+assert(resolveCanonicalFoodId('food_kubba_halab') === 'regional_kubba_halab', 'Kubba halab resolves');
+assert(resolveCanonicalFoodId('food_bamya_stew') === 'regional_bamya_lamb', 'Bamya resolves');
+assert(resolveCanonicalFoodId('food_kleicha_pastry') === 'regional_kleicha_dates', 'Kleicha resolves');
+assert(resolveCanonicalFoodId('food_doogh_salted_ayran') === 'regional_shenina_ayran', 'Doogh resolves');
+
 // 3. Verify unmigrated IDs pass through untouched
 assert(resolveCanonicalFoodId('food_apple') === 'food_apple', 'Apple remains unchanged');
 assert(resolveCanonicalFoodId('pop_coca_cola') === 'pop_coca_cola', 'Coke original remains unchanged');
