@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -11,9 +11,10 @@ import { Flame } from 'lucide-react-native';
 import { AppText as Text } from './AppText';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { isReducedMotion } from '../utils/motion';
 import { getSpringConfig } from '../utils/reanimatedMotion';
-import { theme } from '../theme';
 
 interface StreakBadgeProps {
   streak: number;
@@ -22,6 +23,8 @@ interface StreakBadgeProps {
 
 export const StreakBadge: React.FC<StreakBadgeProps> = ({ streak, style }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
   const scale = useSharedValue(1);
@@ -55,7 +58,7 @@ export const StreakBadge: React.FC<StreakBadgeProps> = ({ streak, style }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',

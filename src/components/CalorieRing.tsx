@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -11,7 +11,8 @@ import { AppText as Text } from './AppText';
 import { AnimatedCount } from './AnimatedCount';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { isReducedMotion } from '../utils/motion';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -32,6 +33,8 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
   onPress,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (key: string) => translate(language, key);
 
   const strokeWidth = 10;
@@ -141,7 +144,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   wrapper: {
     alignItems: 'center',
     width: '100%',

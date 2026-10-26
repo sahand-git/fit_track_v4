@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -10,7 +10,8 @@ import { AppText as Text } from './AppText';
 import { AnimatedCount } from './AnimatedCount';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
 import { isReducedMotion } from '../utils/motion';
 import { Activity } from 'lucide-react-native';
@@ -34,7 +35,8 @@ interface MacroCardsProps {
   onSelectNutrient?: (nutrientKey: string) => void;
 }
 
-const AnimatedProgressBar: React.FC<{ pct: number; color: string }> = ({ pct, color }) => {
+const AnimatedProgressBar: React.FC<{ pct: number; color: string; trackColor?: string }> = ({ pct, color, trackColor }) => {
+  const { theme } = useTheme();
   const width = useSharedValue(pct);
 
   useEffect(() => {
@@ -55,10 +57,10 @@ const AnimatedProgressBar: React.FC<{ pct: number; color: string }> = ({ pct, co
   });
 
   return (
-    <View style={styles.track}>
+    <View style={[{ height: 6, backgroundColor: trackColor || theme.colors.surfaceSubtle, borderRadius: 3, overflow: 'hidden' }]}>
       <Animated.View
         style={[
-          styles.bar,
+          { height: '100%', borderRadius: 3 },
           { backgroundColor: color },
           animatedStyle,
         ]}
@@ -83,6 +85,8 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
   onSelectNutrient,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const isRtl = useIsRTL();
   const t = (key: string) => translate(language, key);
 
@@ -199,7 +203,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   container: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,

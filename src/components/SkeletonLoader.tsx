@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, View, ViewStyle, StyleProp, DimensionValue } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -9,7 +9,8 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { isReducedMotion } from '../utils/motion';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 
 interface SkeletonProps {
   width?: DimensionValue;
@@ -25,9 +26,12 @@ interface SkeletonProps {
 export const SkeletonLoader: React.FC<SkeletonProps> = ({
   width = '100%',
   height = 16,
-  borderRadius = theme.radius.sm,
+  borderRadius,
   style,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const finalRadius = borderRadius !== undefined ? borderRadius : theme.radius.sm;
   const opacity = useSharedValue(isReducedMotion() ? 0.6 : 0.45);
 
   useEffect(() => {
@@ -59,7 +63,7 @@ export const SkeletonLoader: React.FC<SkeletonProps> = ({
         {
           width,
           height,
-          borderRadius,
+          borderRadius: finalRadius,
         },
         style,
         animatedStyle,
@@ -72,9 +76,10 @@ export const SkeletonLoader: React.FC<SkeletonProps> = ({
  * Pre-configured skeleton card for loading states
  */
 export const SkeletonCard: React.FC<{ height?: number; style?: StyleProp<ViewStyle> }> = ({
-  height = 100,
   style,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={[styles.cardContainer, style]}>
       <SkeletonLoader width="40%" height={18} borderRadius={4} />
@@ -88,6 +93,8 @@ export const SkeletonCard: React.FC<{ height?: number; style?: StyleProp<ViewSty
  * Pre-configured skeleton for AI Coach / chat responses
  */
 export const SkeletonCoachBubble: React.FC = () => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.bubbleContainer}>
       <View style={styles.bubbleHeader}>
@@ -105,6 +112,8 @@ export const SkeletonCoachBubble: React.FC = () => {
  * Skeleton placeholder for Today screen
  */
 export const TodaySkeleton: React.FC = () => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.screenContainer}>
       {/* Header Skeleton */}
@@ -143,6 +152,8 @@ export const TodaySkeleton: React.FC = () => {
  * Skeleton placeholder for Meals screen
  */
 export const MealsSkeleton: React.FC = () => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.screenContainer}>
       {/* Date Header Strip */}
@@ -180,6 +191,8 @@ export const MealsSkeleton: React.FC = () => {
  * Skeleton placeholder for Progress screen
  */
 export const ProgressSkeleton: React.FC = () => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <View style={styles.screenContainer}>
       {/* Segment Bar */}
@@ -213,7 +226,7 @@ export const ProgressSkeleton: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   skeleton: {
     backgroundColor: theme.colors.parchmentSkeleton,
   },

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -19,9 +19,10 @@ import { Award, Sparkles } from 'lucide-react-native';
 import { AppText as Text } from './AppText';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { isReducedMotion } from '../utils/motion';
 import { getSpringConfig } from '../utils/reanimatedMotion';
-import { theme } from '../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -33,14 +34,6 @@ interface ParticleData {
   size: number;
   isPill: boolean;
 }
-
-const PARTICLE_COLORS = [
-  theme.colors.primary,   // Forest green
-  theme.colors.accent,    // Terracotta
-  theme.colors.secondary, // Muted sage
-  theme.colors.gold,      // Warm gold
-  theme.colors.water,     // Slate cyan
-];
 
 interface GoalCelebrationProps {
   visible: boolean;
@@ -77,7 +70,7 @@ const SingleParticle: React.FC<{
   return (
     <Animated.View
       style={[
-        styles.particle,
+        { position: 'absolute' },
         {
           width: particle.isPill ? particle.size * 2 : particle.size,
           height: particle.size,
@@ -95,15 +88,24 @@ export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
   onDismiss,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
   const [particles] = useState<ParticleData[]>(() => {
+    const particleColors = [
+      theme.colors.primary,   // Forest green
+      theme.colors.accent,    // Terracotta
+      theme.colors.secondary, // Muted sage
+      theme.colors.gold,      // Warm gold
+      theme.colors.water,     // Slate cyan
+    ];
     return Array.from({ length: 24 }).map((_, i) => ({
       id: i,
       // Angles spray mostly upwards (-PI to 0) with spread
       angle: -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI * 0.8),
       velocity: 140 + Math.random() * 160,
-      color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
+      color: particleColors[i % particleColors.length],
       size: 6 + Math.random() * 6,
       isPill: i % 3 === 0,
     }));
@@ -194,7 +196,7 @@ export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 70,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -8,7 +8,8 @@ import { AppText as Text } from './AppText';
 import { Droplet, Plus, Minus } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
 
 interface WaterTrackerProps {
@@ -23,6 +24,8 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
   onUpdate,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (key: string) => translate(language, key);
 
   const currentLiters = ((glasses * 250) / 1000).toFixed(1);
@@ -79,7 +82,7 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -41,7 +41,8 @@ import {
   getItemExitAnimation,
 } from '../utils/reanimatedMotion';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
 import { DirectionalIcon } from '../components/DirectionalIcon';
 import * as Haptics from 'expo-haptics';
@@ -104,6 +105,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onUpdateProfile,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const t = useCallback((str: string) => translate(language, str), [language]);
 
@@ -733,7 +736,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   scroll: {
     flex: 1,
   },
