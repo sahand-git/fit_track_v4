@@ -5,7 +5,8 @@ import { DirectionalIcon } from '../components/DirectionalIcon';
 import { AppText as Text } from '../components/AppText';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { formatKcal } from '../utils/formatKcal';
 import { estimateStepCalories } from '../utils/activityBudget';
@@ -25,6 +26,8 @@ interface Props {
 
 export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heightCm, onSetSteps, onAddSteps, onSetGoal, onBack }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
   const [stepInput, setStepInput] = useState(String(steps));
   const [goalInput, setGoalInput] = useState(String(goal));
@@ -111,9 +114,9 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
       </View>
 
       <View style={styles.stats}>
-        <Stat icon={<FlameIcon />} label={t('Estimated active calories')} value={formatKcal(estimated.calories, t)} />
-        <Stat icon={<Activity size={17} color={theme.colors.secondary} />} label={t('Estimated distance')} value={`${estimated.distanceKm} km`} />
-        <Stat icon={<HeartPulse size={17} color={theme.colors.secondary} />} label={t('Estimated active minutes')} value={`${estimated.activeMinutes} min`} />
+        <Stat styles={styles} icon={<Activity size={17} color={theme.colors.warning} />} label={t('Estimated active calories')} value={formatKcal(estimated.calories, t)} />
+        <Stat styles={styles} icon={<Activity size={17} color={theme.colors.secondary} />} label={t('Estimated distance')} value={`${estimated.distanceKm} km`} />
+        <Stat styles={styles} icon={<HeartPulse size={17} color={theme.colors.secondary} />} label={t('Estimated active minutes')} value={`${estimated.activeMinutes} min`} />
       </View>
 
       <View style={styles.card}>
@@ -200,13 +203,12 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
   );
 };
 
-const FlameIcon = () => <Activity size={17} color={theme.colors.warning} />;
-
-const Stat: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
+const Stat: React.FC<{ icon: React.ReactNode; label: string; value: string; styles: ReturnType<typeof createStyles> }> = ({ icon, label, value, styles }) => (
   <View style={styles.statRow}><View style={styles.statLabel}>{icon}<Text style={styles.statLabelText}>{label}</Text></View><Text style={styles.statValue}>{value}</Text></View>
 );
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: 20, paddingBottom: 140, gap: 16 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },

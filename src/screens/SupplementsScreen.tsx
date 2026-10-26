@@ -46,7 +46,8 @@ import {
   COMMON_SUPPLEMENT_CATALOG,
   CatalogSupplementItem,
 } from '../data/supplementCatalog';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { buildRoutineFromDay, mergeRoutineIntoDay } from '../utils/supplementRoutine';
 import * as Haptics from 'expo-haptics';
 
@@ -83,6 +84,8 @@ export function SupplementsScreen({
 }: SupplementsScreenProps) {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
 
   const isFuture = selectedDate > getTodayDateString();
@@ -787,7 +790,8 @@ export function SupplementsScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -1,15 +1,16 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { AppText as Text } from '../AppText';
 import { Sunrise, Sun, Sunset, Moon, Plus } from 'lucide-react-native';
 import { LoggedDailySupplement, SupplementTime } from '../../types';
 import { SupplementItemRow } from './SupplementItemRow';
-import { theme } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
+import { ThemeType } from '../../theme';
 import { timeLabels, getSlotStats } from './supplementTypes';
 
 export { timeLabels, getSlotStats };
 
-export const getTimeIcon = (slot: SupplementTime) => {
+export const getTimeIcon = (slot: SupplementTime, theme: ThemeType) => {
   switch (slot) {
     case 'morning':
       return <Sunrise size={18} color={theme.colors.accent} />;
@@ -45,6 +46,8 @@ export const SupplementTimeSection: React.FC<SupplementTimeSectionProps> = ({
   onDeleteItem,
   t,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const slotTakenCount = slotItems.filter((i) => i.taken).length;
 
   return (
@@ -52,7 +55,7 @@ export const SupplementTimeSection: React.FC<SupplementTimeSectionProps> = ({
       {/* Slot Header */}
       <View style={styles.slotHeader}>
         <View style={styles.slotHeaderLeft}>
-          {getTimeIcon(slot)}
+          {getTimeIcon(slot, theme)}
           <Text style={styles.slotTitle}>{t(timeLabels[slot])}</Text>
           {slotItems.length > 0 && (
             <Text style={styles.slotCountBadge}>
@@ -100,7 +103,8 @@ export const SupplementTimeSection: React.FC<SupplementTimeSectionProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   slotCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,

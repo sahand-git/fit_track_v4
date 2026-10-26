@@ -9,7 +9,8 @@ import { AddWorkoutSheet } from '../components/AddWorkoutSheet';
 import { WorkoutEntry, UserProfile, ExerciseCategory } from '../types';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
 import { formatKcal } from '../utils/formatKcal';
@@ -31,6 +32,8 @@ const categories: (ExerciseCategory | 'all')[] = ['all', 'strength', 'cardio', '
 export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSelectDate, onAddWorkout, onUpdateWorkout, onDeleteWorkout, onBack }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
   const addButtonBottom = Math.max(104, insets.bottom + 96);
   const [query, setQuery] = useState('');
@@ -82,11 +85,11 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
           </TouchableOpacity>
         </View>
         <View style={styles.summary}>
-          <Summary label={t('Workouts')} value={String(visibleWorkouts.length)} />
+          <Summary styles={styles} label={t('Workouts')} value={String(visibleWorkouts.length)} />
           <View style={styles.divider} />
-          <Summary label={t('Duration')} value={`${totalMinutes} ${t('min')}`} />
+          <Summary styles={styles} label={t('Duration')} value={`${totalMinutes} ${t('min')}`} />
           <View style={styles.divider} />
-          <Summary label={t('Estimated burn')} value={formatKcal(totalKcal, t)} />
+          <Summary styles={styles} label={t('Estimated burn')} value={formatKcal(totalKcal, t)} />
         </View>
         <View style={styles.search}><Search size={17} color={theme.colors.textMuted} /><TextInput value={query} onChangeText={setQuery} placeholder={t('Search workouts')} placeholderTextColor={theme.colors.textMuted} style={styles.searchInput} accessibilityLabel={t('Search workouts')} /></View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
@@ -159,9 +162,12 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
   );
 };
 
-const Summary: React.FC<{ label: string; value: string }> = ({ label, value }) => <View style={styles.summaryItem}><Text style={styles.summaryValue}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>;
+const Summary: React.FC<{ label: string; value: string; styles: ReturnType<typeof createStyles> }> = ({ label, value, styles }) => (
+  <View style={styles.summaryItem}><Text style={styles.summaryValue}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>
+);
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background }, content: { padding: 18, paddingBottom: 210, gap: 14 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 }, back: { padding: 10, borderRadius: 24, backgroundColor: theme.colors.surface },
   eyebrow: { color: theme.colors.textMuted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }, title: { fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontSize: 29 },

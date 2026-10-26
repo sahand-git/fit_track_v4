@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AppText as Text } from '../AppText';
@@ -10,7 +10,8 @@ import {
   getItemExitAnimation,
   getListLayoutTransition,
 } from '../../utils/reanimatedMotion';
-import { theme } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
+import { ThemeType } from '../../theme';
 import { categoryLabels } from './supplementTypes';
 
 export { categoryLabels };
@@ -36,6 +37,8 @@ export const SupplementItemRow: React.FC<SupplementItemRowProps> = ({
   onDelete,
   t,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const hasNumericAmount =
     item.amount !== undefined && item.amount > 0 && Boolean(item.unit);
 
@@ -138,7 +141,8 @@ export const SupplementItemRow: React.FC<SupplementItemRowProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',

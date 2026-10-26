@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -18,7 +18,8 @@ import {
   AppLanguage,
 } from '../../types';
 import { CatalogSupplementItem } from '../../data/supplementCatalog';
-import { theme } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
+import { ThemeType } from '../../theme';
 import { categoryLabels, timeLabels } from './supplementTypes';
 
 const COMMON_UNITS = ['mg', 'mcg', 'IU', 'g', 'ml', 'drops', 'capsules', 'tablets'];
@@ -87,6 +88,8 @@ export const SupplementModal: React.FC<SupplementModalProps> = ({
   language,
   t,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <Modal
       visible={visible}
@@ -457,7 +460,8 @@ export const SupplementModal: React.FC<SupplementModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   modalBackdrop: {
     flex: 1,
     backgroundColor: theme.colors.backdrop,

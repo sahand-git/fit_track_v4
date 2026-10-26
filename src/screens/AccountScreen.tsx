@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { Check, ChevronDown, ChevronUp, Cloud, Copy, ExternalLink, LogIn, LogOut, Mail, ShieldCheck, Trash2, Wrench } from 'lucide-react-native';
 import { DirectionalIcon } from '../components/DirectionalIcon';
@@ -12,7 +12,8 @@ import { copyGuestDataToAccount, getGuestDataSummary, isAccountEmpty } from '../
 import { firebaseConfigured } from '../services/firebaseApp';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FIREBASE_SETUP_GUIDE_URL, PRIVACY_POLICY_URL, SUPPORT_EMAIL } from '../constants/urls';
 
@@ -21,6 +22,8 @@ interface Props { user: AuthIdentity | null; onBack: () => void; onRestoreComple
 export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
   const [mode, setMode] = useState<'login' | 'create'>('login');
   const [email, setEmail] = useState(user?.email || '');
@@ -497,7 +500,8 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   keyboardAvoidingView: { flex: 1 },
   container: { flex: 1, backgroundColor: theme.colors.background }, content: { padding: 18, paddingBottom: 145, gap: 14 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 }, back: { padding: 10, borderRadius: 24, backgroundColor: theme.colors.surface }, eyebrow: { fontSize: 12, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 1 }, title: { fontFamily: theme.fonts.serif, fontSize: 27, color: theme.colors.textPrimary },

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { AppText as Text } from '../AppText';
 import { Trash2 } from 'lucide-react-native';
 import { LoggedDailySupplement, AppLanguage } from '../../types';
-import { theme } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
+import { ThemeType } from '../../theme';
 
 export interface SupplementDeleteModalProps {
   item: LoggedDailySupplement | null;
@@ -24,6 +25,8 @@ export const SupplementDeleteModal: React.FC<SupplementDeleteModalProps> = ({
   language,
   t,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <Modal
       visible={Boolean(item)}
@@ -108,7 +111,8 @@ export const SupplementDeleteModal: React.FC<SupplementDeleteModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   deleteModalBackdrop: {
     flex: 1,
     backgroundColor: theme.colors.backdrop,
