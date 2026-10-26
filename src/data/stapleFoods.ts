@@ -4,6 +4,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 1. Hot dog (USDA #174034)
   {
     id: 'food_hot_dog_frankfurter',
+    sourceRef: 'USDA FDC 174577',
     name: 'Hot Dog (Frankfurter, beef & pork, cooked)',
     nameAr: 'هوت دوغ (سجق فرانكفورتر مطبوخ)',
     nameCkb: 'هۆت دۆگ (سۆسجی فرانکفۆرتەری کوڵاو)',
@@ -52,6 +53,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 3. Halloumi Cheese (UK CoFID / USDA)
   {
     id: 'food_halloumi_cheese',
+    sourceRef: 'USDA FDC 170882',
     name: 'Halloumi Cheese',
     nameAr: 'جبنة حلوم',
     nameCkb: 'پەنیری حەلووم',
@@ -78,6 +80,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 4. Labneh (USDA #170903)
   {
     id: 'food_labneh_strained_yogurt',
+    sourceRef: 'USDA FDC 170884',
     name: 'Labneh (Strained Yogurt Spread)',
     nameAr: 'لبنة بلدية كاملة الدسم',
     nameCkb: 'لەبنەی خۆماڵی',
@@ -142,7 +145,7 @@ export const STAPLE_FOODS: FoodItem[] = [
     fiber: 0.5,
     sugars: 0.6,
     sodium: 336,
-    source: 'verified_database',
+    source: 'regional_culinary_estimate',
     variants: [
       { id: 'var_kofta_1skewer', name: '1 skewer (80g)', calories: 196, protein: 14.6, carbs: 2.8, fat: 14.0, servingSize: '1 skewer (80g)', servingGrams: 80 },
       { id: 'var_kofta_2skewers', name: '2 skewers (160g)', calories: 392, protein: 29.1, carbs: 5.6, fat: 28.0, servingSize: '2 skewers (160g)', servingGrams: 160 },
@@ -202,6 +205,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 10. Freekeh (USDA #170288)
   {
     id: 'food_freekeh_cooked',
+    sourceRef: 'USDA FDC 170691',
     name: 'Freekeh (Green Durum Wheat, cooked)',
     nameAr: 'فريكة خضراء مطبوخة',
     nameCkb: 'فەريكەی سەوزی کوڵاو',
@@ -229,6 +233,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 11. Pistachios (USDA #170184)
   {
     id: 'food_pistachios_roasted_salted',
+    sourceRef: 'USDA FDC 170184',
     name: 'Pistachios (Dry Roasted, Salted)',
     nameAr: 'فستق حلبي محمص ومملح',
     nameCkb: 'فستقی برژاو و خوێدار',
@@ -257,6 +262,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 12. Cashews (USDA #170163)
   {
     id: 'food_cashews_roasted_salted',
+    sourceRef: 'USDA FDC 170163',
     name: 'Cashews (Dry Roasted, Salted)',
     nameAr: 'كاجو محمص ومملح',
     nameCkb: 'کاجۆی برژاو و خوێدار',
@@ -285,6 +291,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 13. Figs (USDA #173021)
   {
     id: 'food_figs_fresh_raw',
+    sourceRef: 'USDA FDC 173021',
     name: 'Fresh Figs (raw)',
     nameAr: 'تين طازج',
     nameCkb: 'هەنجیری تازە',
@@ -312,6 +319,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 14. Pomegranate (USDA #169134)
   {
     id: 'food_pomegranate_arils_raw',
+    sourceRef: 'USDA FDC 169134',
     name: 'Pomegranate Arils (fresh seeds)',
     nameAr: 'حبوب الرمان الطازج',
     nameCkb: 'دانەی هەناری تازە',
@@ -339,6 +347,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 15. Peach (USDA #169928)
   {
     id: 'food_peach_fresh_raw',
+    sourceRef: 'USDA FDC 169927',
     name: 'Peach (fresh, raw)',
     nameAr: 'خوخ طازج',
     nameCkb: 'قۆخی تازە',
@@ -362,6 +371,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 16. Pear (USDA #169960)
   {
     id: 'food_pear_fresh_raw',
+    sourceRef: 'USDA FDC 169118',
     name: 'Pear (fresh, raw with skin)',
     nameAr: 'كمثرى (عرموط) طازج',
     nameCkb: 'هرمێی تازە',
@@ -385,6 +395,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 17. Sweet Cherries (USDA #171719)
   {
     id: 'food_sweet_cherries_raw',
+    sourceRef: 'USDA FDC 171719',
     name: 'Sweet Cherries (fresh, raw)',
     nameAr: 'كرز حلو طازج',
     nameCkb: 'گێلاسی تازە',
@@ -412,6 +423,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 18. Kiwi (USDA #169917)
   {
     id: 'food_kiwi_green_raw',
+    sourceRef: 'USDA FDC 168153',
     name: 'Kiwi Fruit (green, raw)',
     nameAr: 'كيوي طازج',
     nameCkb: 'کیوی تازە',
@@ -439,6 +451,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 19. Pineapple (USDA #169124)
   {
     id: 'food_pineapple_fresh_raw',
+    sourceRef: 'USDA FDC 169124',
     name: 'Pineapple (fresh chunks, raw)',
     nameAr: 'أناناس طازج مقطع',
     nameCkb: 'ئەناناسی تازە',
@@ -466,6 +479,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 20. Lemon (USDA #167746)
   {
     id: 'food_lemon_raw_peeled',
+    sourceRef: 'USDA FDC 167746',
     name: 'Lemon (raw, without peel)',
     nameAr: 'ليمون طازج (مقشر)',
     nameCkb: 'لیمۆی تازەی بێ توێکڵ',
@@ -493,6 +507,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 21. Coconut Meat (USDA #170169)
   {
     id: 'food_coconut_meat_raw',
+    sourceRef: 'USDA FDC 170169',
     name: 'Coconut Meat (fresh, raw)',
     nameAr: 'لب جوز الهند الطازج',
     nameCkb: 'گۆشتی گوێزی هیندیی تازە',
@@ -516,6 +531,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 22. Zucchini (USDA #170457)
   {
     id: 'food_zucchini_cooked_boiled',
+    sourceRef: 'USDA FDC 169308',
     name: 'Cooked Zucchini (courgette, boiled)',
     nameAr: 'كوسة مطبوخة (شجر مسلوق)',
     nameCkb: 'کولەکەی سەوزی کوڵاو',
@@ -544,6 +560,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 23. Canned Sardines (USDA #175139)
   {
     id: 'food_sardines_canned_oil',
+    sourceRef: 'USDA FDC 175139',
     name: 'Canned Sardines (in oil, drained solids)',
     nameAr: 'سردين معلب بالزيت (مصفى)',
     nameCkb: 'سەردینی قوتوو لەناو ڕۆن',
@@ -574,6 +591,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 24. Chicken Liver (USDA #171060)
   {
     id: 'food_chicken_liver_cooked',
+    sourceRef: 'USDA FDC 171060',
     name: 'Chicken Liver (cooked, simmered)',
     nameAr: 'كبدة دجاج مطبوخة',
     nameCkb: 'جگەری مریشکی کوڵاو',
@@ -603,6 +621,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 25. Beef Liver (USDA #169451)
   {
     id: 'food_beef_liver_cooked',
+    sourceRef: 'USDA FDC 169451',
     name: 'Beef Liver (cooked, braised)',
     nameAr: 'كبدة بقري مطبوخة',
     nameCkb: 'جگەری مانگای کوڵاو',
@@ -645,7 +664,7 @@ export const STAPLE_FOODS: FoodItem[] = [
     fiber: 1.9,
     sugars: 1.5,
     sodium: 1444,
-    source: 'verified_database',
+    source: 'generic_estimate',
     variants: [
       { id: 'var_instant_noodle_pkt', name: '1 prepared packet (380g)', calories: 331, protein: 6.8, carbs: 44.1, fat: 14.1, servingSize: '1 prepared packet (380g)', servingGrams: 380 },
       { id: 'var_instant_noodle_100g', name: '100g prepared soup', calories: 87, protein: 1.8, carbs: 11.6, fat: 3.7, servingSize: '100g prepared soup', servingGrams: 100 },
@@ -655,6 +674,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 27. Cornflakes (USDA #171661)
   {
     id: 'food_cornflakes_cereal_plain',
+    sourceRef: 'USDA FDC 170669',
     name: 'Cornflakes Cereal (plain)',
     nameAr: 'رقائق الذرة (كورن فليكس)',
     nameCkb: 'کۆرن فلێکس',
@@ -682,6 +702,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 28. Fruit Jam (USDA #173295)
   {
     id: 'food_fruit_jam_preserves',
+    sourceRef: 'USDA FDC 172901',
     name: 'Fruit Jam / Preserves',
     nameAr: 'مربى فواكه',
     nameCkb: 'مرەبای میوە',
@@ -718,7 +739,7 @@ export const STAPLE_FOODS: FoodItem[] = [
     fiber: 0.6,
     sugars: 10.7,
     sodium: 8,
-    source: 'verified_database',
+    source: 'generic_estimate',
     variants: [
       { id: 'var_nutella_1tbsp', name: '1 tbsp (19g)', calories: 102, protein: 1.2, carbs: 10.9, fat: 5.9, servingSize: '1 tbsp (19g)', servingGrams: 19 },
       { id: 'var_nutella_2tbsp', name: '2 tbsp (37g)', calories: 200, protein: 2.3, carbs: 21.3, fat: 11.4, servingSize: '2 tbsp (37g)', servingGrams: 37 },
@@ -728,6 +749,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 30. Tomato Ketchup (USDA #170457)
   {
     id: 'food_tomato_ketchup',
+    sourceRef: 'USDA FDC 170457',
     name: 'Tomato Ketchup',
     nameAr: 'كاتشب طماطم',
     nameCkb: 'کەچەپی تەماتە',
@@ -751,6 +773,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 31. Mayonnaise (USDA #172348)
   {
     id: 'food_mayonnaise_regular',
+    sourceRef: 'USDA FDC 172230',
     name: 'Mayonnaise (regular full fat)',
     nameAr: 'مايونيز كلاسيكي كامل الدسم',
     nameCkb: 'مایۆنێزی کلاسیک',
@@ -774,6 +797,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 32. Sprite (The Coca-Cola Company, Drinks, ml)
   {
     id: 'pop_sprite_lemon_lime',
+    sourceRef: 'label: The Coca-Cola Company',
     name: 'Sprite Lemon-Lime Soda',
     nameAr: 'سبرايت ليمون',
     nameCkb: 'سپڕایت',
@@ -800,6 +824,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 33. Fanta Orange (The Coca-Cola Company, Drinks, ml)
   {
     id: 'pop_fanta_orange',
+    sourceRef: 'label: The Coca-Cola Company',
     name: 'Fanta Orange Soda',
     nameAr: 'فانتا برتقال',
     nameCkb: 'فانتا پرتەقاڵ',
@@ -826,6 +851,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 34. 7Up (PepsiCo, Drinks, ml)
   {
     id: 'pop_7up_lemon_lime',
+    sourceRef: 'label: PepsiCo',
     name: '7Up Lemon-Lime Soda',
     nameAr: 'سفن أب',
     nameCkb: 'سێڤن ئەپ',
@@ -865,7 +891,7 @@ export const STAPLE_FOODS: FoodItem[] = [
     fiber: 0.8,
     sugars: 7.0,
     sodium: 131,
-    source: 'verified_database',
+    source: 'generic_estimate',
     variants: [
       { id: 'var_biscuit_4pc', name: '4 biscuits (32g)', calories: 141, protein: 2.4, carbs: 23.8, fat: 3.8, servingSize: '4 biscuits (32g)', servingGrams: 32 },
       { id: 'var_biscuit_1pc', name: '1 biscuit (8g)', calories: 35, protein: 0.6, carbs: 6.0, fat: 1.0, servingSize: '1 biscuit (8g)', servingGrams: 8 },
@@ -888,7 +914,7 @@ export const STAPLE_FOODS: FoodItem[] = [
     fiber: 0.4,
     sugars: 13.5,
     sodium: 68,
-    source: 'verified_database',
+    source: 'generic_estimate',
     variants: [
       { id: 'var_wafer_3pc', name: '3 wafers (36g)', calories: 181, protein: 1.5, carbs: 24.6, fat: 8.7, servingSize: '3 wafers (36g)', servingGrams: 36 },
       { id: 'var_wafer_1pc', name: '1 wafer (12g)', calories: 60, protein: 0.5, carbs: 8.2, fat: 2.9, servingSize: '1 wafer (12g)', servingGrams: 12 },
@@ -911,7 +937,7 @@ export const STAPLE_FOODS: FoodItem[] = [
     fiber: 1.0,
     sugars: 17.3,
     sodium: 209,
-    source: 'verified_database',
+    source: 'generic_estimate',
     variants: [
       { id: 'var_donut_1med', name: '1 medium donut (64g)', calories: 269, protein: 3.5, carbs: 31.4, fat: 14.6, servingSize: '1 medium donut (64g)', servingGrams: 64 },
       { id: 'var_donut_mini', name: '1 mini donut hole (20g)', calories: 84, protein: 1.1, carbs: 9.8, fat: 4.6, servingSize: '1 mini donut hole (20g)', servingGrams: 20 },
@@ -934,7 +960,7 @@ export const STAPLE_FOODS: FoodItem[] = [
     fiber: 1.9,
     sugars: 22.8,
     sodium: 162,
-    source: 'verified_database',
+    source: 'generic_estimate',
     variants: [
       { id: 'var_brownie_1sq', name: '1 square (60g)', calories: 280, protein: 3.0, carbs: 33.0, fat: 15.6, servingSize: '1 square (60g)', servingGrams: 60 },
       { id: 'var_brownie_mini', name: '1 bite / mini (30g)', calories: 140, protein: 1.5, carbs: 16.5, fat: 7.8, servingSize: '1 bite / mini (30g)', servingGrams: 30 },
@@ -944,6 +970,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 39. Spaghetti (USDA #168937)
   {
     id: 'food_spaghetti_cooked_plain',
+    sourceRef: 'USDA FDC 168936',
     name: 'Spaghetti Pasta (cooked plain)',
     nameAr: 'معكرونة سباغيتي مطبوخة سادة',
     nameCkb: 'سپاگێتی کوڵاوی سادە',
@@ -971,6 +998,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 40. Penne (USDA #168937)
   {
     id: 'food_penne_cooked_plain',
+    sourceRef: 'USDA FDC 168936',
     name: 'Penne Pasta (cooked plain)',
     nameAr: 'معكرونة بيني مطبوخة سادة',
     nameCkb: 'پێنێی کوڵاوی سادە',
@@ -998,6 +1026,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 41. Macaroni (USDA #168937)
   {
     id: 'food_macaroni_cooked_plain',
+    sourceRef: 'USDA FDC 168936',
     name: 'Elbow Macaroni (cooked plain)',
     nameAr: 'معكرونة كوع (إلبو) مطبوخة سادة',
     nameCkb: 'مەعکەرۆنی کوڵاوی سادە',
@@ -1044,7 +1073,7 @@ export const STAPLE_FOODS: FoodItem[] = [
     fiber: 2.5,
     sugars: 3.9,
     sodium: 640,
-    source: 'verified_database',
+    source: 'generic_estimate',
     variants: [
       { id: 'var_pizza_cheese_100g', name: 'Per 100g', calories: 267, protein: 11.3, carbs: 32.2, fat: 10.4, servingSize: '100g', servingGrams: 100 },
       { id: 'var_pizza_cheese_slice', name: '1 slice of medium (107g)', calories: 286, protein: 12.1, carbs: 34.5, fat: 11.1, servingSize: '1 slice (107g)', servingGrams: 107 },
@@ -1069,7 +1098,7 @@ export const STAPLE_FOODS: FoodItem[] = [
     fiber: 2.3,
     sugars: 3.7,
     sodium: 748,
-    source: 'verified_database',
+    source: 'generic_estimate',
     variants: [
       { id: 'var_pizza_pep_100g', name: 'Per 100g', calories: 298, protein: 12.3, carbs: 31.2, fat: 13.8, servingSize: '100g', servingGrams: 100 },
       { id: 'var_pizza_pep_slice', name: '1 slice of medium (110g)', calories: 328, protein: 13.5, carbs: 34.3, fat: 15.2, servingSize: '1 slice (110g)', servingGrams: 110 },
@@ -1094,7 +1123,7 @@ export const STAPLE_FOODS: FoodItem[] = [
     fiber: 2.9,
     sugars: 4.4,
     sodium: 587,
-    source: 'verified_database',
+    source: 'generic_estimate',
     variants: [
       { id: 'var_pizza_veg_100g', name: 'Per 100g', calories: 235, protein: 9.5, carbs: 30.8, fat: 8.2, servingSize: '100g', servingGrams: 100 },
       { id: 'var_pizza_veg_slice', name: '1 slice of medium (115g)', calories: 270, protein: 10.9, carbs: 35.4, fat: 9.4, servingSize: '1 slice (115g)', servingGrams: 115 },
@@ -1119,7 +1148,7 @@ export const STAPLE_FOODS: FoodItem[] = [
     fiber: 2.0,
     sugars: 4.7,
     sodium: 650,
-    source: 'verified_database',
+    source: 'generic_estimate',
     variants: [
       { id: 'var_pizza_chick_100g', name: 'Per 100g', calories: 252, protein: 14.2, carbs: 29.0, fat: 8.8, servingSize: '100g', servingGrams: 100 },
       { id: 'var_pizza_chick_slice', name: '1 slice of medium (112g)', calories: 282, protein: 15.9, carbs: 32.5, fat: 9.9, servingSize: '1 slice (112g)', servingGrams: 112 },

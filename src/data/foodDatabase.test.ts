@@ -239,12 +239,24 @@ function runFoodDatabaseTests() {
       );
     }
 
-    // Verify badge helper
-    assert(getFoodSourceBadgeInfo('verified_database')?.label === 'Verified', 'Verified badge label');
+    // Verify badge helper & sourceRef enforcement
+    assert(getFoodSourceBadgeInfo('verified_database')?.label === 'Verified', 'Verified badge label fallback');
+    assert(getFoodSourceBadgeInfo('verified_database', 'USDA FDC 170467')?.label === 'Verified', 'Verified badge label with sourceRef');
+    assert(getFoodSourceBadgeInfo('verified_database', '') === null, 'Verified badge hidden when sourceRef is empty');
     assert(getFoodSourceBadgeInfo('generic_estimate')?.isEstimate === true, 'generic_estimate is flagged as estimate');
     assert(getFoodSourceBadgeInfo('regional_culinary_estimate')?.isEstimate === true, 'regional_culinary_estimate is flagged as estimate');
     assert(getFoodSourceBadgeInfo('ai_estimated')?.isEstimate === true, 'ai_estimated is flagged as estimate');
-    console.log('✓ Test 11 passed: Phase 2 honest labelling verified (0 placeholder brands, valid sources, and estimate badges).');
+
+    // All verified_database foods must have a valid sourceRef
+    for (const food of VERIFIED_FOOD_DATABASE) {
+      if (food.source === 'verified_database' || food.source === 'usda_sr28') {
+        assert(
+          Boolean(food.sourceRef && food.sourceRef.trim().length > 0),
+          `Verified food ${food.id} ("${food.name}") must have a defined sourceRef.`
+        );
+      }
+    }
+    console.log('✓ Test 11 passed: Phase 2 & Step 4 honest labelling verified (0 placeholder brands, valid sources, sourceRef present for all verified entries, and estimate badges).');
   }
 
   // Test 12: Phase 3 Multilingual Separation and Drinks Unit

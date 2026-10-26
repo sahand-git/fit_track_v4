@@ -1088,6 +1088,7 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_quinoa_cooked',
+    sourceRef: 'USDA FDC 168917',
     name: 'Cooked Organic Quinoa',
     servingSize: '1 cup cooked (185g)',
     servingGrams: 185,
@@ -1385,6 +1386,7 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_sweet_corn_cob',
+    sourceRef: 'USDA FDC 169998',
     name: 'Sweet Corn on the Cob',
     servingSize: '1 ear (100g kernels)',
     servingGrams: 100,
@@ -1423,6 +1425,7 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_strawberries_fresh',
+    sourceRef: 'USDA FDC 167762',
     name: 'Fresh Strawberries (1 cup)',
     servingSize: '1 cup whole (150g)',
     servingGrams: 150,
@@ -1693,6 +1696,7 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_coca_cola_zero',
+    sourceRef: 'label: The Coca-Cola Company',
     name: 'Coca-Cola Zero Sugar (1 can)',
     brand: 'The Coca-Cola Company',
     barcode: '5449000131805',
@@ -1754,6 +1758,7 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_pepsi_max_zero',
+    sourceRef: 'label: PepsiCo',
     name: 'Pepsi Max Zero Sugar (1 can)',
     brand: 'PepsiCo',
     barcode: '4060800169457',
@@ -1793,6 +1798,7 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_red_bull_sugarfree',
+    sourceRef: 'label: Red Bull',
     name: 'Red Bull Sugarfree (1 can)',
     brand: 'Red Bull',
     barcode: '9002490200077',
@@ -1904,6 +1910,7 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_doritos_nacho',
+    sourceRef: 'label: Frito-Lay',
     name: 'Doritos Nacho Cheese Tortilla Chips (Single Bag)',
     brand: 'Frito-Lay',
     barcode: '028400010771',
@@ -2076,6 +2083,7 @@ export const POPULAR_FOODS: FoodItem[] = [
   },
   {
     id: 'pop_peanut_butter_creamy',
+    sourceRef: 'USDA FDC 174266',
     name: 'Creamy Peanut Butter (2 tbsp)',
     servingSize: '2 tbsp (32g)',
     servingGrams: 32,

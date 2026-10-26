@@ -26,6 +26,7 @@
  *   npm run audit:foods
  */
 
+import { FoodItem } from '../src/types';
 import { VERIFIED_FOOD_DATABASE } from '../src/data/foodDatabase';
 import { isValidBarcode } from '../src/utils/barcodeUtils';
 import { CANONICAL_FOOD_CATEGORIES } from '../src/utils/foodCategories';
@@ -53,7 +54,8 @@ export interface QualityAuditError {
     | 'zero_calorie_non_drink'
     | 'placeholder_brand'
     | 'drink_missing_unit'
-    | 'non_english_name';
+    | 'non_english_name'
+    | 'verified_missing_sourceref';
   message: string;
 }
 
@@ -125,7 +127,7 @@ const BANNED_BRAND_PATTERNS = [
   /\//, // Multiple slash placeholder brands like "Silk / Almond Breeze" or "Fage / Chobani"
 ];
 
-export function auditFoodDatabase(thresholdPercentage = 12): {
+export function auditFoodDatabase(thresholdPercentage = 12, foods: FoodItem[] = VERIFIED_FOOD_DATABASE): {
   totalAudited: number;
   discrepancies: AuditDiscrepancy[];
   reviewedExceptions: AuditDiscrepancy[];
@@ -145,7 +147,7 @@ export function auditFoodDatabase(thresholdPercentage = 12): {
   const canonicalCategories = new Set<string>(CANONICAL_FOOD_CATEGORIES);
   const ARABIC_SCRIPT_REGEX = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/;
 
-  for (const food of VERIFIED_FOOD_DATABASE) {
+  for (const food of foods) {
     // 1. Duplicate ID check
     if (seenIds.has(food.id)) {
       qualityErrors.push({
@@ -237,6 +239,18 @@ export function auditFoodDatabase(thresholdPercentage = 12): {
           name: food.name,
           type: 'placeholder_brand',
           message: `Food "${food.name}" (${food.id}) contains prohibited placeholder brand "${brandStr}".`,
+        });
+      }
+    }
+
+    // 4b. Verified database entries must have valid sourceRef
+    if (food.source === 'verified_database' || food.source === 'usda_sr28') {
+      if (!food.sourceRef || food.sourceRef.trim() === '') {
+        qualityErrors.push({
+          id: food.id,
+          name: food.name,
+          type: 'verified_missing_sourceref',
+          message: `Food "${food.name}" (${food.id}) has source "${food.source}" but lacks a valid sourceRef (e.g. USDA FDC ID or product label reference).`,
         });
       }
     }
@@ -369,7 +383,7 @@ export function auditFoodDatabase(thresholdPercentage = 12): {
   }
 
   return {
-    totalAudited: VERIFIED_FOOD_DATABASE.length,
+    totalAudited: foods.length,
     discrepancies,
     reviewedExceptions,
     categoryStats,

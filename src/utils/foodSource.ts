@@ -45,12 +45,20 @@ export interface FoodSourceBadgeInfo {
  */
 export function getFoodSourceBadgeInfo(
   source?: FoodItem['source'] | string,
-  t?: (key: string) => string
+  sourceRefOrT?: string | ((key: string) => string),
+  maybeT?: (key: string) => string
 ): FoodSourceBadgeInfo | null {
+  const sourceRef = typeof sourceRefOrT === 'string' ? sourceRefOrT : undefined;
+  const t = typeof sourceRefOrT === 'function' ? sourceRefOrT : maybeT;
   const tr = t || ((s: string) => s);
+
   switch (source) {
     case 'verified_database':
     case 'usda_sr28':
+      // Only show the Verified badge when sourceRef exists
+      if (sourceRef !== undefined && (!sourceRef || sourceRef.trim() === '')) {
+        return null;
+      }
       return { label: tr('Verified'), type: 'verified', isEstimate: false };
     case 'generic_estimate':
       return { label: tr('Estimate'), type: 'estimate', isEstimate: true };

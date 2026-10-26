@@ -371,7 +371,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                         <View style={styles.foodInfo}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                             <Text style={styles.foodName}>{getLocalizedFoodName(item, language)}</Text>
-                            {item.source && <FoodSourceBadge source={item.source} size="small" />}
+                            {item.source && <FoodSourceBadge source={item.source} sourceRef={item.sourceRef} size="small" />}
                           </View>
                           <Text style={styles.foodPortion}>
                             {item.servings} × {item.servingSize}

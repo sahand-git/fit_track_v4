@@ -40,6 +40,28 @@ assert(isValidBarcode('602652171680'), 'Real KIND bar barcode must pass isValidB
 assert(isValidBarcode('888849000012'), 'Real Quest bar barcode must pass isValidBarcode');
 console.log('✓ GS1 Modulo-10 check digit algorithm verified on sample barcodes.');
 
+// 6. Test sourceRef requirement for verified entries
+const testFoodDatabase = [
+  {
+    id: 'test_verified_missing_ref',
+    name: 'Unreferenced Food',
+    servingSize: '100g',
+    servingGrams: 100,
+    calories: 100,
+    protein: 10,
+    carbs: 10,
+    fat: 2,
+    category: 'Fruit',
+    source: 'verified_database' as const,
+  },
+];
+const testAuditResult = auditFoodDatabase(12, testFoodDatabase);
+assert(
+  testAuditResult.qualityErrors.some((e) => e.type === 'verified_missing_sourceref'),
+  'auditFoodDatabase must flag verified_missing_sourceref for verified entries without sourceRef'
+);
+console.log('✓ sourceRef enforcement verified: auditFoodDatabase rejects verified entries without sourceRef.');
+
 console.log('========================================================================');
 console.log('✓ All auditFoodDatabase unit and quality regression tests passed cleanly!');
 console.log('========================================================================');

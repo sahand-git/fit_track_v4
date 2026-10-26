@@ -1615,7 +1615,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                   <View style={{ flex: 1 }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                                       <Text style={styles.itemTitle}>{onlineDisplayName}</Text>
-                                      {item.source && <FoodSourceBadge source={item.source} size="small" />}
+                                      {item.source && <FoodSourceBadge source={item.source} sourceRef={item.sourceRef} size="small" />}
                                       {item.isIncomplete && (
                                         <View style={styles.incompleteItemBadge}>
                                           <Text style={styles.incompleteItemBadgeText}>{t('Incomplete Data')}</Text>
@@ -1702,6 +1702,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                     <Text style={styles.itemTitle}>{displayName}</Text>
                                     <FoodSourceBadge
                                       source={item.source || (item.recipeEstimate ? 'regional_culinary_estimate' : item.isEstimate ? 'generic_estimate' : undefined)}
+                                      sourceRef={item.sourceRef}
                                       size="small"
                                     />
                                   </View>
@@ -1824,7 +1825,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                   <View style={{ flex: 1 }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                                       <Text style={styles.itemTitle}>{onlineDisplayName}</Text>
-                                      {item.source && <FoodSourceBadge source={item.source} size="small" />}
+                                      {item.source && <FoodSourceBadge source={item.source} sourceRef={item.sourceRef} size="small" />}
                                       {item.isIncomplete && (
                                         <View style={styles.incompleteItemBadge}>
                                           <Text style={styles.incompleteItemBadgeText}>{t('Incomplete Data')}</Text>

@@ -13,6 +13,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   ...DAILY_FOODS,
   {
     "id": "food_chicken_breast",
+    "sourceRef": "USDA FDC 171077",
     "name": "Grilled Chicken Breast (Skinless)",
     "servingSize": "100g cooked",
     "servingGrams": 100,
@@ -31,6 +32,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_eggs_large",
+    "sourceRef": "USDA FDC 171287",
     "name": "Whole Large Egg",
     "servingSize": "1 large egg (50g)",
     "servingGrams": 50,
@@ -50,6 +52,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_egg_whites",
+    "sourceRef": "USDA FDC 172183",
     "name": "Liquid Egg Whites",
     "servingSize": "100g (~3 whites)",
     "servingGrams": 100,
@@ -66,6 +69,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_whey_isolate",
+    "sourceRef": "label: Optimum Nutrition Gold Standard 100% Whey",
     "name": "Whey Protein Isolate (Gold Standard)",
     "brand": "Optimum Nutrition",
     "barcode": "748927028669",
@@ -83,6 +87,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_greek_yogurt_0",
+    "sourceRef": "USDA FDC 170903",
     "name": "Greek Yogurt 0% Fat Plain",
     "barcode": "894700010328",
     "servingSize": "1 cup (170g)",
@@ -101,6 +106,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_salmon_fillet",
+    "sourceRef": "USDA FDC 173686",
     "name": "Atlantic Salmon Fillet (Pan-seared)",
     "servingSize": "100g cooked",
     "servingGrams": 100,
@@ -119,6 +125,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_lean_beef",
+    "sourceRef": "USDA FDC 174032",
     "name": "Lean Ground Beef (93/7)",
     "servingSize": "100g cooked",
     "servingGrams": 100,
@@ -137,6 +144,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_canned_tuna",
+    "sourceRef": "USDA FDC 171986",
     "name": "Canned Tuna in Water",
     "servingSize": "1 can drained (120g)",
     "servingGrams": 120,
@@ -154,6 +162,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_white_rice",
+    "sourceRef": "USDA FDC 168878",
     "name": "Steamed White Basmati Rice",
     "servingSize": "1 cup cooked (158g)",
     "servingGrams": 158,
@@ -170,6 +179,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_rolled_oats",
+    "sourceRef": "USDA FDC 173904",
     "name": "Rolled Oats (Old Fashioned)",
     "servingSize": "1/2 cup dry (40g)",
     "servingGrams": 40,
@@ -187,6 +197,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_sweet_potato",
+    "sourceRef": "USDA FDC 168483",
     "name": "Baked Sweet Potato (Medium)",
     "servingSize": "1 medium (114g)",
     "servingGrams": 114,
@@ -219,6 +230,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_banana",
+    "sourceRef": "USDA FDC 173944",
     "name": "Fresh Banana (Medium)",
     "servingSize": "1 medium (118g)",
     "servingGrams": 118,
@@ -268,6 +280,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_apple",
+    "sourceRef": "USDA FDC 171688",
     "name": "Red Delicious Apple",
     "servingSize": "1 medium (182g)",
     "servingGrams": 182,
@@ -284,6 +297,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_peanut_butter",
+    "sourceRef": "USDA FDC 174266",
     "name": "Natural Creamy Peanut Butter",
     "servingSize": "2 tbsp (32g)",
     "servingGrams": 32,
@@ -301,6 +315,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_olive_oil",
+    "sourceRef": "USDA FDC 171413",
     "name": "Extra Virgin Olive Oil",
     "servingSize": "1 tablespoon (14ml)",
     "servingGrams": 14,
@@ -348,6 +363,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_avocado",
+    "sourceRef": "USDA FDC 171705",
     "name": "Fresh Hass Avocado",
     "servingSize": "1/2 medium (100g)",
     "servingGrams": 100,
@@ -495,6 +511,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_brown_rice",
+    "sourceRef": "USDA FDC 169704",
     "name": "Whole Grain Brown Rice (Cooked)",
     "servingSize": "150g",
     "servingGrams": 150,
@@ -567,6 +584,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_blueberries",
+    "sourceRef": "USDA FDC 171711",
     "name": "Fresh Blueberries",
     "servingSize": "100g (approx 3/4 cup)",
     "servingGrams": 100,
@@ -609,6 +627,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_almonds",
+    "sourceRef": "USDA FDC 170567",
     "name": "Whole Raw Almonds",
     "barcode": "041570054000",
     "servingSize": "28g (approx 23 almonds)",
@@ -631,6 +650,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_broccoli",
+    "sourceRef": "USDA FDC 170379",
     "name": "Steamed Broccoli Florets",
     "servingSize": "100g (approx 1 cup)",
     "servingGrams": 100,
@@ -652,6 +672,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_spinach",
+    "sourceRef": "USDA FDC 170417",
     "name": "Fresh Baby Spinach",
     "servingSize": "100g (approx 3 cups)",
     "servingGrams": 100,
@@ -673,6 +694,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_kind_bar",
+    "sourceRef": "label: KIND Dark Chocolate Nuts & Sea Salt",
     "name": "Dark Chocolate Nuts & Sea Salt Bar",
     "brand": "KIND",
     "barcode": "602652171680",
@@ -691,6 +713,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   },
   {
     "id": "food_quest_cookie_dough",
+    "sourceRef": "label: Quest Nutrition Chocolate Chip Cookie Dough",
     "name": "Chocolate Chip Cookie Dough Protein Bar",
     "brand": "Quest Nutrition",
     "barcode": "888849000012",

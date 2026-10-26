@@ -135,7 +135,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
               {item.brand && <Text style={styles.brand}>{item.brand}</Text>}
               {item.source && (
                 <View style={{ marginTop: 4 }}>
-                  <FoodSourceBadge source={item.source} size="small" />
+                  <FoodSourceBadge source={item.source} sourceRef={item.sourceRef} size="small" />
                 </View>
               )}
             </View>

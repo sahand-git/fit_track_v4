@@ -5,6 +5,7 @@ import { FoodItem } from '../types';
 export const DAILY_FOODS: FoodItem[] = [
   {
     "id": "usda_sr28_17224",
+    "sourceRef": "USDA SR28 17224",
     "name": "Ground lamb (raw)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -20,6 +21,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_17225",
+    "sourceRef": "USDA SR28 17225",
     "name": "Ground lamb (cooked, broiled)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -35,6 +37,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_23567",
+    "sourceRef": "USDA SR28 23567",
     "name": "Ground beef, 85% lean (raw)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -50,6 +53,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_23568",
+    "sourceRef": "USDA SR28 23568",
     "name": "Beef burger, 85% lean (broiled)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -65,6 +69,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_13451",
+    "sourceRef": "USDA SR28 13451",
     "name": "Beef sirloin steak (broiled)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -80,6 +85,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_17012",
+    "sourceRef": "USDA SR28 17012",
     "name": "Lamb leg (roasted)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -95,6 +101,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_05098",
+    "sourceRef": "USDA SR28 05098",
     "name": "Chicken thigh, skinless (roasted)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -110,6 +117,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_15262",
+    "sourceRef": "USDA SR28 15262",
     "name": "Tilapia fish (cooked, dry heat)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -125,6 +133,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_15192",
+    "sourceRef": "USDA SR28 15192",
     "name": "Pacific cod (cooked, dry heat)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -140,6 +149,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_15151",
+    "sourceRef": "USDA SR28 15151",
     "name": "Shrimp (cooked)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -155,6 +165,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01129",
+    "sourceRef": "USDA SR28 01129",
     "name": "Egg (hard-boiled)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -170,6 +181,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01128",
+    "sourceRef": "USDA SR28 01128",
     "name": "Egg (fried)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -185,6 +197,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01131",
+    "sourceRef": "USDA SR28 01131",
     "name": "Egg (poached)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -200,6 +213,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16070",
+    "sourceRef": "USDA SR28 16070",
     "name": "Lentils (boiled, no salt)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -215,6 +229,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16057",
+    "sourceRef": "USDA SR28 16057",
     "name": "Chickpeas (boiled, no salt)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -230,6 +245,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16033",
+    "sourceRef": "USDA SR28 16033",
     "name": "Red kidney beans (boiled, no salt)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -245,6 +261,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16053",
+    "sourceRef": "USDA SR28 16053",
     "name": "Fava beans (boiled, no salt)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -260,6 +277,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20013",
+    "sourceRef": "USDA SR28 20013",
     "name": "Bulgur (cooked)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -275,6 +293,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20012",
+    "sourceRef": "USDA SR28 20012",
     "name": "Bulgur (dry)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -290,6 +309,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20045",
+    "sourceRef": "USDA SR28 20045",
     "name": "White long-grain rice (cooked)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -305,6 +325,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20044",
+    "sourceRef": "USDA SR28 20044",
     "name": "White long-grain rice (dry)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -320,6 +341,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_20029",
+    "sourceRef": "USDA SR28 20029",
     "name": "Couscous (cooked)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -335,6 +357,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11367",
+    "sourceRef": "USDA SR28 11367",
     "name": "Potato, peeled (boiled, no salt)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -350,6 +373,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_18041",
+    "sourceRef": "USDA SR28 18041",
     "name": "White pita bread",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -365,6 +389,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_18042",
+    "sourceRef": "USDA SR28 18042",
     "name": "Whole-wheat pita bread",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -380,6 +405,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01116",
+    "sourceRef": "USDA SR28 01116",
     "name": "Plain whole-milk yogurt",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -395,6 +421,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01117",
+    "sourceRef": "USDA SR28 01117",
     "name": "Plain low-fat yogurt",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -410,6 +437,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01077",
+    "sourceRef": "USDA SR28 01077",
     "name": "Whole milk, 3.25% fat",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -425,6 +453,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01019",
+    "sourceRef": "USDA SR28 01019",
     "name": "Feta cheese",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -440,6 +469,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01009",
+    "sourceRef": "USDA SR28 01009",
     "name": "Cheddar cheese",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -455,6 +485,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_01001",
+    "sourceRef": "USDA SR28 01001",
     "name": "Butter (salted)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -470,6 +501,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11205",
+    "sourceRef": "USDA SR28 11205",
     "name": "Cucumber with peel (raw)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -485,6 +517,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11529",
+    "sourceRef": "USDA SR28 11529",
     "name": "Tomato (raw)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -500,6 +533,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11282",
+    "sourceRef": "USDA SR28 11282",
     "name": "Onion (raw)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -515,6 +549,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11124",
+    "sourceRef": "USDA SR28 11124",
     "name": "Carrot (raw)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -530,6 +565,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11251",
+    "sourceRef": "USDA SR28 11251",
     "name": "Romaine lettuce (raw)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -545,6 +581,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11210",
+    "sourceRef": "USDA SR28 11210",
     "name": "Eggplant (boiled, no salt)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -560,6 +597,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_11279",
+    "sourceRef": "USDA SR28 11279",
     "name": "Okra (boiled, no salt)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -575,6 +613,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16137",
+    "sourceRef": "USDA SR28 16137",
     "name": "Hummus (home-prepared)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -590,6 +629,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_16138",
+    "sourceRef": "USDA SR28 16138",
     "name": "Falafel (home-prepared)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -603,6 +643,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09087",
+    "sourceRef": "USDA SR28 09087",
     "name": "Dates, Deglet Noor",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -618,6 +659,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09421",
+    "sourceRef": "USDA SR28 09421",
     "name": "Dates, Medjool",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -655,6 +697,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09200",
+    "sourceRef": "USDA SR28 09200",
     "name": "Orange (raw)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -670,6 +713,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09326",
+    "sourceRef": "USDA SR28 09326",
     "name": "Watermelon (raw)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -685,6 +729,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_09132",
+    "sourceRef": "USDA SR28 09132",
     "name": "Red or green grapes (raw)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -700,6 +745,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_12155",
+    "sourceRef": "USDA SR28 12155",
     "name": "Walnuts",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -715,6 +761,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_19335",
+    "sourceRef": "USDA SR28 19335",
     "name": "White granulated sugar",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -730,6 +777,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_14185",
+    "sourceRef": "USDA SR28 14185",
     "name": "Oolong tea (brewed, unsweetened)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,
@@ -746,6 +794,7 @@ export const DAILY_FOODS: FoodItem[] = [
   },
   {
     "id": "usda_sr28_14180",
+    "sourceRef": "USDA SR28 14180",
     "name": "Coffee (brewed, unsweetened)",
     "servingSize": "100g edible portion",
     "servingGrams": 100,

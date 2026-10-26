@@ -9,6 +9,7 @@ import { theme } from '../theme';
 
 interface FoodSourceBadgeProps {
   source?: FoodItem['source'] | string;
+  sourceRef?: string;
   size?: 'small' | 'medium';
   style?: StyleProp<ViewStyle>;
 }
@@ -50,12 +51,19 @@ const TYPE_TEXT_STYLES: Record<FoodSourceBadgeType, TextStyle> = {
 
 export const FoodSourceBadge: React.FC<FoodSourceBadgeProps> = ({
   source,
+  sourceRef,
   size = 'small',
   style,
 }) => {
   const language = useLanguage();
   const t = (k: string) => translate(language, k);
-  const info = getFoodSourceBadgeInfo(source, t);
+
+  // Only show the Verified badge when sourceRef exists.
+  if ((source === 'verified_database' || source === 'usda_sr28') && (!sourceRef || sourceRef.trim() === '')) {
+    return null;
+  }
+
+  const info = getFoodSourceBadgeInfo(source, sourceRef, t);
 
   if (!info) return null;
 
