@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
-import { ArrowRight, Check } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
+import { DirectionalIcon } from './DirectionalIcon';
 import { Gender, ActivityLevel, FitnessGoal, UserProfile, AppLanguage } from '../types';
 import { languageNames, translate } from '../i18n/strings';
 import { calculateTargets } from '../utils/calculator';
@@ -202,7 +203,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.nextBtnText}>{t('Continue')}</Text>
-              <ArrowRight size={16} color={theme.colors.textInverted} />
+              <DirectionalIcon name="ArrowRight" size={16} color={theme.colors.textInverted} />
             </TouchableOpacity>
           </View>
         )}
@@ -269,7 +270,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.nextBtnText}>{t('Review Plan')}</Text>
-                <ArrowRight size={16} color={theme.colors.textInverted} />
+                <DirectionalIcon name="ArrowRight" size={16} color={theme.colors.textInverted} />
               </TouchableOpacity>
             </View>
           </View>
@@ -332,7 +333,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.nextBtnText}>{t('Next: AI Setup (Optional)')}</Text>
-                <ArrowRight size={16} color={theme.colors.textInverted} />
+                <DirectionalIcon name="ArrowRight" size={16} color={theme.colors.textInverted} />
               </TouchableOpacity>
             </View>
           </View>

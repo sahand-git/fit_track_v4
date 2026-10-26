@@ -60,6 +60,7 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
           disabled={glasses === 0}
           accessibilityLabel={t('Remove 1 glass of water')}
           accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Minus size={15} color={glasses === 0 ? theme.colors.textMuted : theme.colors.textPrimary} />
         </TouchableOpacity>
@@ -69,6 +70,7 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
           onPress={handleAdd}
           accessibilityLabel={t('Add 1 glass of water')}
           accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Plus size={15} color={theme.colors.textInverted} />
         </TouchableOpacity>

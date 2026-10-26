@@ -20,8 +20,8 @@ import {
   Eye,
   EyeOff,
   X,
-  ArrowRight,
 } from 'lucide-react-native';
+import { DirectionalIcon } from './DirectionalIcon';
 import { testGeminiConnection, GeminiError, getDefaultMessageForKind, sanitizeGeminiString } from '../utils/geminiModels';
 import { setStoredGeminiApiKey, getStoredGeminiApiKey } from '../services/plateAnalysisService';
 import { useLanguage } from '../i18n/I18nContext';
@@ -349,7 +349,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
             <Text style={styles.finishBtnText}>
               {inputKey.trim() ? t('Save & Finish') : t('Use FitTrack without AI')}
             </Text>
-            <ArrowRight size={16} color={theme.colors.textInverted} style={{ marginStart: 8 }} />
+            <DirectionalIcon name="ArrowRight" size={16} color={theme.colors.textInverted} style={{ marginStart: 8 }} />
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -404,6 +404,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel={t('View diary')}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Text style={styles.seeAllText}>{t('View diary')}</Text>
               <DirectionalIcon name="ChevronRight" size={14} color={theme.colors.primary} />
@@ -442,8 +443,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
                   <View style={styles.mealRight}>
                     {cals > 0 && <Text style={styles.mealCals}>{formatKcal(cals, t)}</Text>}
-                    <View style={styles.plusIconCircle}>
-                      <Plus size={14} color={theme.colors.primary} />
+                    <View style={styles.plusIconWrapper}>
+                      <View style={styles.plusIconCircle}>
+                        <Plus size={14} color={theme.colors.primary} />
+                      </View>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -511,7 +514,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   style={styles.manageBtn}
                   accessibilityRole="button"
                   accessibilityLabel={`${t('Manage')} ${t('Vitamins & supplements')}`}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
                 >
                   <Text style={styles.manageBtnText}>{t('Manage')}</Text>
                 </TouchableOpacity>
@@ -532,7 +535,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       accessibilityRole="checkbox"
                       accessibilityLabel={`${item.name}${item.doseText ? ` (${item.doseText})` : ''}, ${item.isTaken ? t('taken') : t('not taken')}`}
                       accessibilityState={{ checked: item.isTaken }}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <View style={styles.checkboxCircle}>
                         <AnimatedCheckbox checked={item.isTaken} size={19} />
@@ -567,7 +570,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   style={styles.manageBtn}
                   accessibilityRole="button"
                   accessibilityLabel={t('History')}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
                 >
                   <Text style={styles.manageBtnText}>{t('History')}</Text>
                 </AnimatedPressable>
@@ -839,7 +842,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    minHeight: 42,
+    minHeight: 44,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: theme.radius.md,
@@ -851,6 +854,8 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   emptyWorkoutRow: {
+    minHeight: 44,
+    justifyContent: 'center',
     paddingVertical: 10,
     alignItems: 'center',
   },
@@ -895,8 +900,8 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   deleteWorkoutBtn: {
-    minWidth: 40,
-    minHeight: 40,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 8,
@@ -1020,6 +1025,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   manageBtn: {
+    minHeight: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: theme.radius.sm,
@@ -1038,6 +1046,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     paddingVertical: 4,
+    minHeight: 44,
   },
   checkboxCircle: {
     padding: 2,
@@ -1074,6 +1083,8 @@ const styles = StyleSheet.create({
   seeAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
     gap: 2,
   },
   seeAllText: {
@@ -1094,6 +1105,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 48,
     paddingVertical: 14,
     paddingHorizontal: theme.spacing.md,
     borderBottomWidth: 1,
@@ -1138,6 +1150,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },
+  plusIconWrapper: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   plusIconCircle: {
     width: 28,
     height: 28,
@@ -1147,6 +1165,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   floatingAddBtn: {
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,

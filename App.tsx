@@ -864,6 +864,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 44,
     paddingVertical: 4,
     paddingHorizontal: 6,
   },
