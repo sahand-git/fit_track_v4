@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -32,7 +32,8 @@ import { getLocalizedFoodName } from '../utils/foodLocalization';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
 import { DirectionalIcon } from '../components/DirectionalIcon';
 import * as Haptics from 'expo-haptics';
@@ -63,6 +64,8 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   onCopyYesterdayMeals,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const t = (value: string) => translate(language, value);
   const isRtl = useIsRTL();
@@ -467,7 +470,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

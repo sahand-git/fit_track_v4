@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, Image, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { getFoodEmoji } from '../utils/foodCategories';
 
 export interface FoodThumbnailProps {
@@ -28,6 +29,8 @@ export const FoodThumbnail: React.FC<FoodThumbnailProps> = ({
   size = 'small',
   style,
 }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [imageFailed, setImageFailed] = useState(false);
 
   const emoji = getFoodEmoji(name, category);
@@ -82,7 +85,7 @@ export const FoodThumbnail: React.FC<FoodThumbnailProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   container: {
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
