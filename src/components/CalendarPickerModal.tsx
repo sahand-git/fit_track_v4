@@ -8,12 +8,15 @@ import { translate } from '../i18n/strings';
 import { DailyLog } from '../types';
 import { loadLogsForDates } from '../storage/storage';
 import { addDaysToDateString, formatDateToLocalString, getTodayDateString, parseLocalDateString } from '../utils/dateUtils';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 
 interface CalendarPickerModalProps { visible: boolean; selectedDate: string; onClose: () => void; onSelect: (date: string) => void }
 
 export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }: CalendarPickerModalProps) {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
   const [month, setMonth] = useState(() => {
     const date = parseLocalDateString(selectedDate);
@@ -132,7 +135,8 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: theme.colors.backdrop, justifyContent: 'center', padding: 18 },
   sheet: { backgroundColor: theme.colors.surface, borderRadius: theme.radius.xl, borderWidth: 1, borderColor: theme.colors.border, padding: 16, ...theme.shadow.floating },
   header: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 10 },

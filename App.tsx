@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -68,9 +68,9 @@ import { ScientificReferencesModal } from './src/components/ScientificReferences
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { ScreenTransitionView } from './src/components/ScreenTransitionView';
 import { persistRoutineThenCommit } from './src/utils/supplementRoutine';
-import { I18nProvider } from './src/i18n/I18nContext';
+import { I18nProvider, useLanguage } from './src/i18n/I18nContext';
 import { translate } from './src/i18n/strings';
-import { theme } from './src/theme';
+import { ThemeType } from './src/theme';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import * as Haptics from 'expo-haptics';
 
@@ -147,6 +147,261 @@ const ThemedAppLayout: React.FC<{
     </View>
   );
 };
+
+interface ThemedBottomNavProps {
+  activeTab: Tab;
+  tempScreen: TemporaryScreen;
+  isHighlightToday: boolean;
+  onSwitchTab: (tab: Tab) => void;
+  insetsBottom: number;
+}
+
+const ThemedBottomNav: React.FC<ThemedBottomNavProps> = ({
+  activeTab,
+  tempScreen,
+  isHighlightToday,
+  onSwitchTab,
+  insetsBottom,
+}) => {
+  const { theme: activeTheme } = useTheme();
+  const styles = useMemo(() => createNavStyles(activeTheme), [activeTheme]);
+  const language = useLanguage();
+  const t = useCallback((str: string) => translate(language, str), [language]);
+
+  return (
+    <View
+      style={[
+        styles.dockContainer,
+        {
+          bottom: insetsBottom > 0 ? insetsBottom + 8 : (Platform.OS === 'ios' ? 18 : 10),
+        },
+      ]}
+    >
+      <View style={styles.bottomNav}>
+        {/* 1. Today */}
+        <TouchableOpacity
+          style={styles.navBtn}
+          onPress={() => onSwitchTab('today')}
+          activeOpacity={0.7}
+          accessibilityLabel={t('Today')}
+          accessibilityRole="button"
+        >
+          <LayoutDashboard
+            size={20}
+            color={isHighlightToday ? activeTheme.colors.primary : activeTheme.colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.navLabel,
+              isHighlightToday && styles.navLabelActive,
+            ]}
+          >
+            {t('Today')}
+          </Text>
+        </TouchableOpacity>
+
+        {/* 2. Diary */}
+        <TouchableOpacity
+          style={styles.navBtn}
+          onPress={() => onSwitchTab('meals')}
+          activeOpacity={0.7}
+          accessibilityLabel={t('Diary')}
+          accessibilityRole="button"
+        >
+          <UtensilsCrossed
+            size={20}
+            color={tempScreen === 'none' && activeTab === 'meals' ? activeTheme.colors.primary : activeTheme.colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.navLabel,
+              tempScreen === 'none' && activeTab === 'meals' && styles.navLabelActive,
+            ]}
+          >
+            {t('Diary')}
+          </Text>
+        </TouchableOpacity>
+
+        {/* 3. Coach */}
+        <TouchableOpacity
+          style={styles.navBtn}
+          onPress={() => onSwitchTab('coach')}
+          activeOpacity={0.7}
+          accessibilityLabel={t('Coach')}
+          accessibilityRole="button"
+        >
+          <Bot
+            size={20}
+            color={tempScreen === 'none' && activeTab === 'coach' ? activeTheme.colors.primary : activeTheme.colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.navLabel,
+              tempScreen === 'none' && activeTab === 'coach' && styles.navLabelActive,
+            ]}
+          >
+            {t('Coach')}
+          </Text>
+        </TouchableOpacity>
+
+        {/* 4. Progress */}
+        <TouchableOpacity
+          style={styles.navBtn}
+          onPress={() => onSwitchTab('progress')}
+          activeOpacity={0.7}
+          accessibilityLabel={t('Progress')}
+          accessibilityRole="button"
+        >
+          <TrendingUp
+            size={20}
+            color={tempScreen === 'none' && activeTab === 'progress' ? activeTheme.colors.primary : activeTheme.colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.navLabel,
+              tempScreen === 'none' && activeTab === 'progress' && styles.navLabelActive,
+            ]}
+          >
+            {t('Progress')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const createNavStyles = (activeTheme: ThemeType) =>
+  StyleSheet.create({
+    dockContainer: {
+      position: 'absolute',
+      left: 14,
+      right: 14,
+    },
+    bottomNav: {
+      flexDirection: 'row',
+      backgroundColor: activeTheme.colors.surface,
+      borderRadius: activeTheme.radius.xl,
+      borderWidth: 1,
+      borderColor: activeTheme.colors.border,
+      paddingVertical: 8,
+      paddingHorizontal: 8,
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      ...activeTheme.shadow.floating,
+    },
+    navBtn: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 44,
+      paddingVertical: 4,
+      paddingHorizontal: 6,
+    },
+    navLabel: {
+      fontFamily: activeTheme.fonts.sans,
+      fontSize: 11,
+      fontWeight: '500',
+      color: activeTheme.colors.textMuted,
+      marginTop: 3,
+    },
+    navLabelActive: {
+      color: activeTheme.colors.primary,
+      fontWeight: '600',
+    },
+  });
+
+const InitErrorScreen: React.FC<{ onRetry: () => void; language: AppLanguage }> = ({ onRetry, language }) => {
+  const { theme: activeTheme } = useTheme();
+  const styles = useMemo(() => createInitErrorStyles(activeTheme), [activeTheme]);
+  const t = (str: string) => translate(language, str);
+
+  return (
+    <View style={styles.initErrorContainer}>
+      <View style={styles.initErrorCard}>
+        <View style={styles.initErrorIconCircle}>
+          <AlertTriangle size={36} color={activeTheme.colors.danger} />
+        </View>
+        <Text style={styles.initErrorTitle}>{t('Failed to start FitTrack')}</Text>
+        <Text style={styles.initErrorMessage}>
+          {t('Unable to load app data. Please try again.')}
+        </Text>
+        <TouchableOpacity
+          style={styles.initRetryButton}
+          onPress={onRetry}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={t('Retry')}
+        >
+          <RefreshCw size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={styles.initRetryButtonText}>{t('Retry')}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const createInitErrorStyles = (activeTheme: ThemeType) =>
+  StyleSheet.create({
+    initErrorContainer: {
+      flex: 1,
+      backgroundColor: activeTheme.colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    initErrorCard: {
+      backgroundColor: activeTheme.colors.surface,
+      borderRadius: activeTheme.radius.lg,
+      borderWidth: 1,
+      borderColor: activeTheme.colors.border,
+      padding: 28,
+      alignItems: 'center',
+      width: '100%',
+      maxWidth: 380,
+      ...activeTheme.shadow.floating,
+    },
+    initErrorIconCircle: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: activeTheme.colors.dangerLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    initErrorTitle: {
+      fontFamily: activeTheme.fonts.serif,
+      fontSize: 22,
+      fontWeight: '700',
+      color: activeTheme.colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    initErrorMessage: {
+      fontFamily: activeTheme.fonts.sans,
+      fontSize: 15,
+      color: activeTheme.colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: 24,
+    },
+    initRetryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: activeTheme.colors.primary,
+      borderRadius: activeTheme.radius.md,
+      paddingVertical: 13,
+      paddingHorizontal: 28,
+      minWidth: 140,
+    },
+    initRetryButtonText: {
+      fontFamily: activeTheme.fonts.sans,
+      fontSize: 15,
+      fontWeight: '600',
+      color: '#FFFFFF',
+    },
+  });
 
 function FitTrackApp() {
   const insets = useSafeAreaInsets();
@@ -541,30 +796,15 @@ function FitTrackApp() {
   if (initError) {
     return (
       <I18nProvider language={language}>
-        <View style={styles.initErrorContainer}>
-          <View style={styles.initErrorCard}>
-            <View style={styles.initErrorIconCircle}>
-              <AlertTriangle size={36} color={theme.colors.danger} />
-            </View>
-            <Text style={styles.initErrorTitle}>{t('Failed to start FitTrack')}</Text>
-            <Text style={styles.initErrorMessage}>
-              {t('Unable to load app data. Please try again.')}
-            </Text>
-            <TouchableOpacity
-              style={styles.initRetryButton}
-              onPress={() => {
-                setInitError(null);
-                setInitRetryCount((c) => c + 1);
-              }}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel={t('Retry')}
-            >
-              <RefreshCw size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={styles.initRetryButtonText}>{t('Retry')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <ThemeProvider themeMode={profile?.themeMode}>
+          <InitErrorScreen
+            language={language}
+            onRetry={() => {
+              setInitError(null);
+              setInitRetryCount((c) => c + 1);
+            }}
+          />
+        </ThemeProvider>
       </I18nProvider>
     );
   }
@@ -792,104 +1032,13 @@ function FitTrackApp() {
         />
 
         {/* Bottom Navigation Dock: Exactly 4 Tabs */}
-        <View
-          style={[
-            styles.dockContainer,
-            {
-              bottom: insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10),
-            },
-          ]}
-        >
-          <View style={styles.bottomNav}>
-            {/* 1. Today */}
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() => handleSwitchTab('today')}
-              activeOpacity={0.7}
-              accessibilityLabel={t('Today')}
-              accessibilityRole="button"
-            >
-              <LayoutDashboard
-                size={20}
-                color={isHighlightToday ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.navLabel,
-                  isHighlightToday && styles.navLabelActive,
-                ]}
-              >
-                {t('Today')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* 2. Diary */}
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() => handleSwitchTab('meals')}
-              activeOpacity={0.7}
-              accessibilityLabel={t('Diary')}
-              accessibilityRole="button"
-            >
-              <UtensilsCrossed
-                size={20}
-                color={tempScreen === 'none' && activeTab === 'meals' ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.navLabel,
-                  tempScreen === 'none' && activeTab === 'meals' && styles.navLabelActive,
-                ]}
-              >
-                {t('Diary')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* 3. Coach */}
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() => handleSwitchTab('coach')}
-              activeOpacity={0.7}
-              accessibilityLabel={t('Coach')}
-              accessibilityRole="button"
-            >
-              <Bot
-                size={20}
-                color={tempScreen === 'none' && activeTab === 'coach' ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.navLabel,
-                  tempScreen === 'none' && activeTab === 'coach' && styles.navLabelActive,
-                ]}
-              >
-                {t('Coach')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* 4. Progress */}
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() => handleSwitchTab('progress')}
-              activeOpacity={0.7}
-              accessibilityLabel={t('Progress')}
-              accessibilityRole="button"
-            >
-              <TrendingUp
-                size={20}
-                color={tempScreen === 'none' && activeTab === 'progress' ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.navLabel,
-                  tempScreen === 'none' && activeTab === 'progress' && styles.navLabelActive,
-                ]}
-              >
-                {t('Progress')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <ThemedBottomNav
+          activeTab={activeTab}
+          tempScreen={tempScreen}
+          isHighlightToday={isHighlightToday}
+          onSwitchTab={handleSwitchTab}
+          insetsBottom={insets.bottom}
+        />
       </ThemedAppLayout>
       </ThemeProvider>
     </I18nProvider>
@@ -922,105 +1071,9 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
     position: 'relative',
   },
   main: {
     flex: 1,
-  },
-  dockContainer: {
-    position: 'absolute',
-    left: 14,
-    right: 14,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.xl,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    ...theme.shadow.floating,
-  },
-  navBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-  },
-  navLabel: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 11,
-    fontWeight: '500',
-    color: theme.colors.textMuted,
-    marginTop: 3,
-  },
-  navLabelActive: {
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
-  initErrorContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  initErrorCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 28,
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: 380,
-    ...theme.shadow.floating,
-  },
-  initErrorIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: theme.colors.dangerLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  initErrorTitle: {
-    fontFamily: theme.fonts.serif,
-    fontSize: 22,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  initErrorMessage: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 15,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  initRetryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    paddingVertical: 13,
-    paddingHorizontal: 28,
-    minWidth: 140,
-  },
-  initRetryButtonText: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
 });

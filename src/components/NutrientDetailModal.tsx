@@ -30,7 +30,8 @@ import {
 } from '../utils/nutrientTotals';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 
@@ -56,6 +57,8 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   onResetGoal,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const isRtl = useIsRTL();
   const t = (key: string) => translate(language, key);
 
@@ -512,7 +515,8 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: theme.colors.backdrop,

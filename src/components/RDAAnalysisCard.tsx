@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { AppText as Text } from './AppText';
 import {
@@ -9,7 +9,8 @@ import { MicronutrientKey } from '../data/supplementCatalog';
 import { LoggedMeal, LoggedDailySupplement } from '../types';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
 import {
   ChevronDown,
@@ -31,6 +32,8 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
   onSelectNutrient,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const isRtl = useIsRTL();
   const [expanded, setExpanded] = useState(false);
 
@@ -227,7 +230,8 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.xl,

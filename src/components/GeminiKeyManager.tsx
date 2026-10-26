@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { AppText as Text } from './AppText';
 import { Key, Check, Trash2, ExternalLink, AlertCircle, Sparkles } from 'lucide-react-native';
@@ -6,7 +6,8 @@ import { getStoredGeminiApiKey, setStoredGeminiApiKey, clearGeminiApiKey } from 
 import { testGeminiConnection, GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 import { AiSetupWizard } from './AiSetupWizardModal';
@@ -18,6 +19,8 @@ interface GeminiKeyManagerProps {
 
 export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged, compact = false }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
   const isRTL = useIsRTL();
 
@@ -330,7 +333,8 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   wizardLaunchBtn: {
     flexDirection: 'row',
     alignItems: 'center',

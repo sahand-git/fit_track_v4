@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -29,7 +29,8 @@ import {
 } from '../services/backupService';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { SaveSuccessOverlay } from './SaveSuccessOverlay';
 import * as Haptics from 'expo-haptics';
 
@@ -45,6 +46,8 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   onRestoreComplete,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
   const [isExporting, setIsExporting] = useState(false);
@@ -328,7 +331,8 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

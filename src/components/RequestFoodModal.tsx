@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -21,7 +21,8 @@ import {
   createFoodRequestMailtoUrl,
   formatFoodRequestShareMessage,
 } from '../services/foodRequestService';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 
 export interface RequestFoodModalProps {
   visible: boolean;
@@ -37,6 +38,8 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
   initialBarcode = '',
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
   const [foodName, setFoodName] = useState(initialFoodName);
@@ -316,7 +319,8 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(31, 36, 33, 0.45)',

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
 import { CheckCircle2, Circle } from 'lucide-react-native';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 import { isReducedMotion } from '../utils/motion';
 
 interface AnimatedCheckboxProps {
@@ -14,9 +14,12 @@ interface AnimatedCheckboxProps {
 export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   checked,
   size = 20,
-  activeColor = theme.colors.primary,
-  inactiveColor = theme.colors.textMuted,
+  activeColor,
+  inactiveColor,
 }) => {
+  const { theme } = useTheme();
+  const resolvedActive = activeColor ?? theme.colors.primary;
+  const resolvedInactive = inactiveColor ?? theme.colors.textMuted;
   const [scale] = React.useState(() => new Animated.Value(1));
   const isFirstRender = useRef(true);
 
@@ -39,9 +42,9 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       {checked ? (
-        <CheckCircle2 size={size} color={activeColor} />
+        <CheckCircle2 size={size} color={resolvedActive} />
       ) : (
-        <Circle size={size} color={inactiveColor} />
+        <Circle size={size} color={resolvedInactive} />
       )}
     </Animated.View>
   );

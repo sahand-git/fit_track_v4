@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -26,7 +26,8 @@ import { testGeminiConnection, GeminiError, getDefaultMessageForKind, sanitizeGe
 import { setStoredGeminiApiKey, getStoredGeminiApiKey } from '../services/plateAnalysisService';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 
@@ -48,6 +49,8 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
   isSkippable = true,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
   const isRTL = useIsRTL();
 
@@ -367,7 +370,8 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

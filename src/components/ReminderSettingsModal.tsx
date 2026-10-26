@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -33,7 +33,8 @@ import {
 } from '../types';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
 import {
   checkNotificationPermissions,
@@ -81,6 +82,8 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
   const [settings, setSettings] = useState<ReminderSettings>(DEFAULT_REMINDER_SETTINGS);
@@ -648,7 +651,8 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: theme.colors.backdrop,

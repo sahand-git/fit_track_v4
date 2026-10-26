@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -37,7 +37,8 @@ import { getTodayDateString, formatDisplayDate } from '../utils/dateUtils';
 import { createUniqueId } from '../utils/idUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { SaveSuccessOverlay } from './SaveSuccessOverlay';
 import * as Haptics from 'expo-haptics';
 
@@ -62,6 +63,8 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
   const isFuture = date > getTodayDateString();
@@ -479,7 +482,8 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -822,4 +826,3 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverted,
   },
 });
-

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,7 +16,8 @@ import { Gender, ActivityLevel, FitnessGoal, UserProfile, AppLanguage } from '..
 import { languageNames, translate } from '../i18n/strings';
 import { calculateTargets } from '../utils/calculator';
 import { formatKcal } from '../utils/formatKcal';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
 import { AiSetupWizard } from './AiSetupWizardModal';
@@ -28,6 +29,8 @@ interface OnboardingModalProps {
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, onLanguageChange }) => {
   const currentLanguage = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [step, setStep] = useState(1);
 
   // Handle Android hardware back press during onboarding steps
@@ -366,7 +369,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

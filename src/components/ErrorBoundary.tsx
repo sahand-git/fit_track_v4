@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,8 +10,9 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { AppText as Text } from './AppText';
 import { AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react-native';
-import { theme } from '../theme';
-import { I18nContext } from '../i18n/I18nContext';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
+import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { recordCrash, scrubCrashText, getAppVersion } from '../services/crashReportingService';
 
@@ -103,97 +104,15 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <I18nContext.Consumer>
-          {(language) => {
-            const t = (key: string) => translate(language, key);
-            const errorName = scrubCrashText(this.state.error?.name || 'Error');
-            const errorMessage = scrubCrashText(
-              this.state.error?.message || this.state.error?.toString() || t('Unknown error')
-            );
-            const rawStack = this.state.errorInfo?.componentStack || this.state.error?.stack || '';
-            const scrubbedStack = scrubCrashText(rawStack);
-            const stackLines = scrubbedStack
-              .split('\n')
-              .map((l) => l.trim())
-              .filter(Boolean)
-              .slice(0, 8)
-              .join('\n');
-
-            return (
-              <SafeAreaView style={styles.safeArea}>
-                <ScrollView contentContainerStyle={styles.container}>
-                  <View style={styles.iconCircle}>
-                    <AlertTriangle size={36} color={theme.colors.warning} />
-                  </View>
-
-                  <Text style={styles.title}>{t('Something went wrong')}</Text>
-                  <Text style={styles.subtitle}>
-                    {t('FitTrack encountered an unexpected issue, but your saved data and meals are safe.')}
-                  </Text>
-
-                  <TouchableOpacity
-                    style={styles.reloadBtn}
-                    onPress={this.handleReload}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Reload application')}
-                  >
-                    <RefreshCw size={18} color={theme.colors.textInverted} style={{ marginRight: 8 }} />
-                    <Text style={styles.reloadBtnText}>{t('Try Again')}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.detailsToggle}
-                    onPress={this.toggleDetails}
-                    activeOpacity={0.7}
-                    accessibilityRole="button"
-                    accessibilityLabel={this.state.showDetails ? t('Hide error details') : t('Show error details')}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Text style={styles.detailsToggleText}>
-                      {this.state.showDetails ? t('Hide error details') : t('Show error details')}
-                    </Text>
-                    {this.state.showDetails ? (
-                      <ChevronUp size={16} color={theme.colors.textMuted} />
-                    ) : (
-                      <ChevronDown size={16} color={theme.colors.textMuted} />
-                    )}
-                  </TouchableOpacity>
-
-                  {this.state.showDetails && (
-                    <View style={styles.detailsBox}>
-                      <Text style={styles.errorText}>
-                        {errorName}: {errorMessage}
-                      </Text>
-                      {stackLines ? (
-                        <Text style={styles.stackText}>
-                          {stackLines}
-                        </Text>
-                      ) : null}
-                      <TouchableOpacity
-                        style={styles.copyBtn}
-                        onPress={this.handleCopyDetails}
-                        activeOpacity={0.7}
-                        accessibilityRole="button"
-                        accessibilityLabel={this.state.copied ? t('Copied!') : t('Copy error details')}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      >
-                        {this.state.copied ? (
-                          <Check size={14} color={theme.colors.primary} />
-                        ) : (
-                          <Copy size={14} color={theme.colors.textMuted} />
-                        )}
-                        <Text style={styles.copyBtnText}>
-                          {this.state.copied ? t('Copied!') : t('Copy error details')}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </ScrollView>
-              </SafeAreaView>
-            );
-          }}
-        </I18nContext.Consumer>
+        <ErrorBoundaryFallbackContent
+          error={this.state.error}
+          errorInfo={this.state.errorInfo}
+          showDetails={this.state.showDetails}
+          copied={this.state.copied}
+          onReload={this.handleReload}
+          onToggleDetails={this.toggleDetails}
+          onCopyDetails={this.handleCopyDetails}
+        />
       );
     }
 
@@ -201,7 +120,120 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
+interface FallbackProps {
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
+  showDetails: boolean;
+  copied: boolean;
+  onReload: () => void;
+  onToggleDetails: () => void;
+  onCopyDetails: () => void;
+}
+
+const ErrorBoundaryFallbackContent: React.FC<FallbackProps> = ({
+  error,
+  errorInfo,
+  showDetails,
+  copied,
+  onReload,
+  onToggleDetails,
+  onCopyDetails,
+}) => {
+  const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const t = (key: string) => translate(language, key);
+
+  const errorName = scrubCrashText(error?.name || 'Error');
+  const errorMessage = scrubCrashText(
+    error?.message || error?.toString() || t('Unknown error')
+  );
+  const rawStack = errorInfo?.componentStack || error?.stack || '';
+  const scrubbedStack = scrubCrashText(rawStack);
+  const stackLines = scrubbedStack
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(0, 8)
+    .join('\n');
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.iconCircle}>
+          <AlertTriangle size={36} color={theme.colors.warning} />
+        </View>
+
+        <Text style={styles.title}>{t('Something went wrong')}</Text>
+        <Text style={styles.subtitle}>
+          {t('FitTrack encountered an unexpected issue, but your saved data and meals are safe.')}
+        </Text>
+
+        <TouchableOpacity
+          style={styles.reloadBtn}
+          onPress={onReload}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={t('Reload application')}
+        >
+          <RefreshCw size={18} color={theme.colors.textInverted} style={{ marginRight: 8 }} />
+          <Text style={styles.reloadBtnText}>{t('Try Again')}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.detailsToggle}
+          onPress={onToggleDetails}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={showDetails ? t('Hide error details') : t('Show error details')}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.detailsToggleText}>
+            {showDetails ? t('Hide error details') : t('Show error details')}
+          </Text>
+          {showDetails ? (
+            <ChevronUp size={16} color={theme.colors.textMuted} />
+          ) : (
+            <ChevronDown size={16} color={theme.colors.textMuted} />
+          )}
+        </TouchableOpacity>
+
+        {showDetails && (
+          <View style={styles.detailsBox}>
+            <Text style={styles.errorText}>
+              {errorName}: {errorMessage}
+            </Text>
+            {stackLines ? (
+              <Text style={styles.stackText}>
+                {stackLines}
+              </Text>
+            ) : null}
+            <TouchableOpacity
+              style={styles.copyBtn}
+              onPress={onCopyDetails}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={copied ? t('Copied!') : t('Copy error details')}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              {copied ? (
+                <Check size={14} color={theme.colors.primary} />
+              ) : (
+                <Copy size={14} color={theme.colors.textMuted} />
+              )}
+              <Text style={styles.copyBtnText}>
+                {copied ? t('Copied!') : t('Copy error details')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
