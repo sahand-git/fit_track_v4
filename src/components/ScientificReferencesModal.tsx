@@ -125,7 +125,7 @@ export const ScientificReferencesModal: React.FC<ScientificReferencesModalProps>
                     {t('Open Food Facts Global Database')}
                   </Text>
                   <Text style={styles.referenceItemDesc}>
-                    {t('Barcode lookups query Open Food Facts API v2. Provides Nutri-Score, NOVA food processing classifications, and manufacturer package nutrition panels.')}
+                    {t('Global food search and barcode lookups powered by Open Food Facts (openfoodfacts.org), made available under the Open Database License (ODbL).')}
                   </Text>
                 </View>
               </View>

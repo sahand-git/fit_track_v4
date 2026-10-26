@@ -626,6 +626,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </View>
           </View>
         </TouchableOpacity>
+
+        {/* Open Food Facts Attribution */}
+        <View style={styles.attributionCard}>
+          <Globe2 size={16} color={theme.colors.secondary} />
+          <Text style={styles.attributionText}>
+            {t('Global food search & barcode data powered by Open Food Facts (openfoodfacts.org), under Open Database License (ODbL).')}
+          </Text>
+        </View>
       </View>
 
       {/* Save Button */}
@@ -951,5 +959,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textSecondary,
     lineHeight: 17,
+  },
+  attributionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: theme.colors.surfaceSubtle,
+    padding: 12,
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginTop: 8,
+  },
+  attributionText: {
+    flex: 1,
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 16,
   },
 });

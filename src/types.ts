@@ -149,6 +149,8 @@ export interface FoodItem {
   magnesium?: number; // mg
   zinc?: number; // mg
   isEstimate?: boolean;
+  isIncomplete?: boolean;
+  incompleteReason?: string;
   portionUnit?: PortionUnit;
   gramsPerUnit?: number;
   ingredients?: RecipeIngredient[];
@@ -198,6 +200,8 @@ export interface LoggedMeal {
   source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate' | 'generic_estimate' | 'gemini';
   timestamp: string; // ISO string
   isEstimate?: boolean;
+  isIncomplete?: boolean;
+  incompleteReason?: string;
   portionUnit?: PortionUnit;
   gramsPerUnit?: number;
   copiedFromId?: string;

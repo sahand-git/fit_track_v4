@@ -23,10 +23,14 @@ function roundVal(value: number): number {
 export function normalizeOpenFoodFactsProduct(barcode: string, product: Record<string, any>): FoodItem {
   const nutriments = product.nutriments ?? {};
   const energyKj = parseNumber(nutriments.energy_100g);
-  const calories100g = parseNumber(nutriments['energy-kcal_100g']) ?? (energyKj ? energyKj / 4.184 : undefined);
-  const protein100g = parseNumber(nutriments.proteins_100g) ?? 0;
-  const carbs100g = parseNumber(nutriments.carbohydrates_100g) ?? 0;
-  const fat100g = parseNumber(nutriments.fat_100g) ?? 0;
+  const rawCalories100g = parseNumber(nutriments['energy-kcal_100g']);
+  const calories100g = rawCalories100g ?? (energyKj ? energyKj / 4.184 : undefined);
+  const rawProtein100g = parseNumber(nutriments.proteins_100g);
+  const rawCarbs100g = parseNumber(nutriments.carbohydrates_100g);
+  const rawFat100g = parseNumber(nutriments.fat_100g);
+  const protein100g = rawProtein100g ?? 0;
+  const carbs100g = rawCarbs100g ?? 0;
+  const fat100g = rawFat100g ?? 0;
 
   const productName = parseString(product.product_name) || parseString(product.product_name_en) || 'Scanned Food Product';
   const brandName = parseString(product.brands);
@@ -45,6 +49,11 @@ export function normalizeOpenFoodFactsProduct(barcode: string, product: Record<s
 
   const effectiveKcal100g = calories100g ?? (protein100g * 4 + carbs100g * 4 + fat100g * 9);
 
+  const isIncomplete =
+    (rawCalories100g === undefined && energyKj === undefined) ||
+    (rawProtein100g === undefined && rawCarbs100g === undefined && rawFat100g === undefined) ||
+    (effectiveKcal100g === 0 && (rawProtein100g === undefined || rawCarbs100g === undefined || rawFat100g === undefined));
+
   return {
     id: `barcode_${barcode}`,
     name: productName,
@@ -61,6 +70,8 @@ export function normalizeOpenFoodFactsProduct(barcode: string, product: Record<s
     sodium: scaleOptional(sodiumMg100g),
     category: 'Packaged Food',
     source: 'open_food_facts',
+    isIncomplete: isIncomplete || undefined,
+    incompleteReason: isIncomplete ? 'Open Food Facts entry lacks full calorie or macronutrient values' : undefined,
   };
 }
 

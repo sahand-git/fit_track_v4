@@ -10,6 +10,8 @@ import {
   Info,
   Barcode as BarcodeIcon,
   Utensils,
+  AlertTriangle,
+  Edit3,
 } from 'lucide-react-native';
 import { FoodItem, FoodVariant, AppLanguage } from '../../types';
 import { FoodThumbnail } from '../FoodThumbnail';
@@ -60,11 +62,22 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
     scaleRatio,
   } = calculatePortionMacros(food, servingsCount, activeVariant);
 
+  const isIncompleteFood = Boolean(
+    food.isIncomplete ||
+    (food.source === 'open_food_facts' && (food.calories === 0 || (food.protein === 0 && food.carbs === 0 && food.fat === 0)))
+  );
+
   return (
     <View style={styles.selectedFoodCard}>
       <View style={styles.selectedHeaderRow}>
         <View style={styles.selectedBadgesRow}>
           {food.source ? <FoodSourceBadge source={food.source} size="small" /> : null}
+          {isIncompleteFood ? (
+            <View style={styles.incompleteBadge}>
+              <AlertTriangle size={11} color={theme.colors.orangeDeep} />
+              <Text style={styles.incompleteBadgeText}>{t('Incomplete Data')}</Text>
+            </View>
+          ) : null}
           {food.recipeEstimate ? (
             <View style={styles.recipeEstimateBadge}>
               <Sparkles size={11} color={theme.colors.orangeDeep} />
@@ -203,6 +216,29 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
         </View>
       ) : null}
 
+      {/* Incomplete Nutrition Warning Notice */}
+      {isIncompleteFood ? (
+        <View style={styles.incompleteNoticeCard}>
+          <View style={styles.incompleteNoticeHeader}>
+            <AlertTriangle size={15} color={theme.colors.orangeDeep} />
+            <Text style={styles.incompleteNoticeTitle}>{t('Incomplete Nutrition Data')}</Text>
+          </View>
+          <Text style={styles.incompleteNoticeBody}>
+            {t('This entry is missing complete nutritional values on Open Food Facts. You can adjust the calories and macros before logging.')}
+          </Text>
+          <TouchableOpacity
+            style={styles.incompleteAdjustBtn}
+            onPress={onCustomizeRecipe}
+            accessibilityRole="button"
+            accessibilityLabel={t('Adjust Macros')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Edit3 size={13} color={theme.colors.primary} />
+            <Text style={styles.incompleteAdjustBtnText}>{t('Adjust Macros')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       <View style={styles.stepperRow}>
         <Text style={styles.stepperLabel}>
           {food.portionUnit
@@ -273,6 +309,65 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flexWrap: 'wrap',
+  },
+  incompleteBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.colors.orangeLight,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.orangeBorder,
+  },
+  incompleteBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.orangeDeep,
+  },
+  incompleteNoticeCard: {
+    backgroundColor: theme.colors.orangeLight,
+    borderWidth: 1,
+    borderColor: theme.colors.orangeBorder,
+    borderRadius: theme.radius.md,
+    padding: 12,
+    marginTop: 10,
+    marginBottom: 6,
+    gap: 6,
+  },
+  incompleteNoticeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  incompleteNoticeTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.orangeDeep,
+  },
+  incompleteNoticeBody: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 16,
+  },
+  incompleteAdjustBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginTop: 4,
+  },
+  incompleteAdjustBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.primary,
   },
   recipeEstimateBadge: {
     flexDirection: 'row',

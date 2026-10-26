@@ -35,6 +35,9 @@ import {
   Bookmark,
   Globe,
   Zap,
+  WifiOff,
+  Clock,
+  Database,
 } from 'lucide-react-native';
 import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -207,6 +210,9 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [onlineFoods, setOnlineFoods] = useState<FoodItem[]>([]);
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
   const [hasSearchedOnline, setHasSearchedOnline] = useState(false);
+  const [isOnlineOffline, setIsOnlineOffline] = useState(false);
+  const [isOnlineRateLimited, setIsOnlineRateLimited] = useState(false);
+  const [isOnlineFromCache, setIsOnlineFromCache] = useState(false);
 
   // Quick Add state
   const [quickAddModalVisible, setQuickAddModalVisible] = useState(false);
@@ -345,6 +351,9 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     setQuickAddError(null);
     setOnlineFoods([]);
     setHasSearchedOnline(false);
+    setIsOnlineOffline(false);
+    setIsOnlineRateLimited(false);
+    setIsOnlineFromCache(false);
     onClose();
   };
 
@@ -376,15 +385,22 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     if (!clean || clean.length < 2 || isSearchingOnline) return;
     setIsSearchingOnline(true);
     setHasSearchedOnline(true);
+    setIsOnlineOffline(false);
+    setIsOnlineRateLimited(false);
+    setIsOnlineFromCache(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     try {
-      const results = await searchOnlineFoodDatabase(clean);
-      setOnlineFoods(results);
-      if (results.length > 0) {
+      const result = await searchOnlineFoodDatabase(clean);
+      setOnlineFoods(result.foods);
+      setIsOnlineOffline(!!result.isOffline);
+      setIsOnlineRateLimited(!!result.isRateLimited);
+      setIsOnlineFromCache(!!result.fromCache);
+      if (result.foods.length > 0) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
     } catch {
       setOnlineFoods([]);
+      setIsOnlineOffline(true);
     } finally {
       setIsSearchingOnline(false);
     }
@@ -453,7 +469,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     setBarcodeError(null);
   };
 
-  const handleSaveSelectedFood = () => {
+  const doSaveMeal = () => {
     if (!selectedFood || isFuture) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
@@ -518,6 +534,37 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       setShowSuccess(false);
       handleClose();
     }, 950);
+  };
+
+  const handleSaveSelectedFood = () => {
+    if (!selectedFood || isFuture) return;
+
+    const isIncomplete = Boolean(
+      selectedFood.isIncomplete ||
+      (selectedFood.source === 'open_food_facts' && (selectedFood.calories === 0 || (selectedFood.protein === 0 && selectedFood.carbs === 0 && selectedFood.fat === 0)))
+    );
+
+    if (isIncomplete) {
+      Alert.alert(
+        t('Incomplete Nutrition Data'),
+        t('This food is missing full nutrition information. Would you like to log it anyway or customize the values first?'),
+        [
+          { text: t('Cancel'), style: 'cancel' },
+          {
+            text: t('Customize Values'),
+            onPress: () => handleCustomizeSelectedFood(),
+          },
+          {
+            text: t('Log Anyway'),
+            style: 'destructive',
+            onPress: () => doSaveMeal(),
+          },
+        ]
+      );
+      return;
+    }
+
+    doSaveMeal();
   };
 
   const handleCustomizeSelectedFood = () => {
@@ -1066,6 +1113,9 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           setSearchQuery(txt);
                           setOnlineFoods([]);
                           setHasSearchedOnline(false);
+                          setIsOnlineOffline(false);
+                          setIsOnlineRateLimited(false);
+                          setIsOnlineFromCache(false);
                         }}
                         autoFocus={!selectedFood}
                       />
@@ -1493,12 +1543,41 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           </View>
                         )}
 
+                        {isOnlineRateLimited && (
+                          <View style={styles.onlineAlertBox}>
+                            <Clock size={16} color={theme.colors.orangeDeep} />
+                            <Text style={styles.onlineAlertText}>
+                              {t('Rate limit reached. Please wait a few seconds before searching again.')}
+                            </Text>
+                          </View>
+                        )}
+
+                        {isOnlineOffline && onlineFoods.length === 0 && (
+                          <View style={styles.onlineOfflineBox}>
+                            <WifiOff size={18} color={theme.colors.orangeDeep} />
+                            <Text style={styles.onlineOfflineText}>
+                              {t('You are currently offline. Check your internet connection or browse the offline catalog.')}
+                            </Text>
+                          </View>
+                        )}
+
                         {hasSearchedOnline && onlineFoods.length > 0 && (
                           <View style={{ width: '100%', marginTop: 8 }}>
                             <View style={styles.onlineSectionHeader}>
-                              <Globe size={14} color={theme.colors.secondary} />
-                              <Text style={styles.onlineSectionTitle}>
-                                {t('Global Database Results')} ({onlineFoods.length})
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, flexWrap: 'wrap' }}>
+                                <Globe size={14} color={theme.colors.secondary} />
+                                <Text style={styles.onlineSectionTitle}>
+                                  {t('Global Database Results')} ({onlineFoods.length})
+                                </Text>
+                                {isOnlineFromCache && (
+                                  <View style={styles.cachedBadge}>
+                                    <Database size={11} color={theme.colors.textMuted} />
+                                    <Text style={styles.cachedBadgeText}>{t('Showing cached results')}</Text>
+                                  </View>
+                                )}
+                              </View>
+                              <Text style={styles.openFoodFactsCreditText}>
+                                {t('Powered by Open Food Facts (ODbL)')}
                               </Text>
                             </View>
                             {onlineFoods.map((item) => (
@@ -1525,6 +1604,11 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                   <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                                     <Text style={styles.itemTitle}>{getLocalizedFoodName(item, language)}</Text>
                                     {item.source && <FoodSourceBadge source={item.source} size="small" />}
+                                    {item.isIncomplete && (
+                                      <View style={styles.incompleteItemBadge}>
+                                        <Text style={styles.incompleteItemBadgeText}>{t('Incomplete Data')}</Text>
+                                      </View>
+                                    )}
                                   </View>
                                   <Text style={styles.itemSub}>
                                     {item.brand ? `${item.brand} • ` : ''}
@@ -1539,7 +1623,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           </View>
                         )}
 
-                        {hasSearchedOnline && onlineFoods.length === 0 && (
+                        {hasSearchedOnline && !isOnlineOffline && !isOnlineRateLimited && onlineFoods.length === 0 && (
                           <View style={styles.onlineNoResultsBox}>
                             <Text style={styles.onlineNoResultsText}>{t('No online foods found.')}</Text>
                           </View>
@@ -1648,12 +1732,41 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                           </View>
                         )}
 
+                        {isOnlineRateLimited && (
+                          <View style={styles.onlineAlertBox}>
+                            <Clock size={16} color={theme.colors.orangeDeep} />
+                            <Text style={styles.onlineAlertText}>
+                              {t('Rate limit reached. Please wait a few seconds before searching again.')}
+                            </Text>
+                          </View>
+                        )}
+
+                        {isOnlineOffline && onlineFoods.length === 0 && (
+                          <View style={styles.onlineOfflineBox}>
+                            <WifiOff size={18} color={theme.colors.orangeDeep} />
+                            <Text style={styles.onlineOfflineText}>
+                              {t('You are currently offline. Check your internet connection or browse the offline catalog.')}
+                            </Text>
+                          </View>
+                        )}
+
                         {hasSearchedOnline && onlineFoods.length > 0 && (
                           <View style={{ width: '100%', marginTop: 8 }}>
                             <View style={styles.onlineSectionHeader}>
-                              <Globe size={14} color={theme.colors.secondary} />
-                              <Text style={styles.onlineSectionTitle}>
-                                {t('Global Database Results')} ({onlineFoods.length})
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, flexWrap: 'wrap' }}>
+                                <Globe size={14} color={theme.colors.secondary} />
+                                <Text style={styles.onlineSectionTitle}>
+                                  {t('Global Database Results')} ({onlineFoods.length})
+                                </Text>
+                                {isOnlineFromCache && (
+                                  <View style={styles.cachedBadge}>
+                                    <Database size={11} color={theme.colors.textMuted} />
+                                    <Text style={styles.cachedBadgeText}>{t('Showing cached results')}</Text>
+                                  </View>
+                                )}
+                              </View>
+                              <Text style={styles.openFoodFactsCreditText}>
+                                {t('Powered by Open Food Facts (ODbL)')}
                               </Text>
                             </View>
                             {onlineFoods.map((item) => (
@@ -1680,6 +1793,11 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                   <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                                     <Text style={styles.itemTitle}>{getLocalizedFoodName(item, language)}</Text>
                                     {item.source && <FoodSourceBadge source={item.source} size="small" />}
+                                    {item.isIncomplete && (
+                                      <View style={styles.incompleteItemBadge}>
+                                        <Text style={styles.incompleteItemBadgeText}>{t('Incomplete Data')}</Text>
+                                      </View>
+                                    )}
                                   </View>
                                   <Text style={styles.itemSub}>
                                     {item.brand ? `${item.brand} • ` : ''}
@@ -1691,6 +1809,12 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                                 </View>
                               </TouchableOpacity>
                             ))}
+                          </View>
+                        )}
+
+                        {hasSearchedOnline && !isOnlineOffline && !isOnlineRateLimited && onlineFoods.length === 0 && (
+                          <View style={styles.onlineNoResultsBox}>
+                            <Text style={styles.onlineNoResultsText}>{t('No online foods found.')}</Text>
                           </View>
                         )}
 
@@ -2296,5 +2420,74 @@ const styles = StyleSheet.create({
   onlineNoResultsText: {
     fontSize: 13,
     color: theme.colors.textMuted,
+  },
+  onlineAlertBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.orangeLight,
+    borderWidth: 1,
+    borderColor: theme.colors.orangeBorder,
+    borderRadius: theme.radius.sm,
+    padding: 10,
+    marginTop: 8,
+    width: '100%',
+  },
+  onlineAlertText: {
+    flex: 1,
+    fontSize: 12,
+    color: theme.colors.orangeDeep,
+    lineHeight: 16,
+  },
+  onlineOfflineBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.sm,
+    padding: 12,
+    marginTop: 8,
+    width: '100%',
+  },
+  onlineOfflineText: {
+    flex: 1,
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 17,
+  },
+  cachedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.colors.surfaceSubtle,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  cachedBadgeText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+  },
+  openFoodFactsCreditText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    fontStyle: 'italic',
+  },
+  incompleteItemBadge: {
+    backgroundColor: theme.colors.orangeLight,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.orangeBorder,
+  },
+  incompleteItemBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.orangeDeep,
   },
 });
