@@ -35,13 +35,13 @@ import {
   addWorkoutToDay,
   removeWorkoutFromDay,
   updateWorkoutInDay,
-  loadWeightHistory,
   loadAccurateStreak,
   setDailySteps,
   addDailySteps,
   loadMedicalDisclaimerAccepted,
   saveMedicalDisclaimerAccepted,
   saveDailyAIReport,
+  setAccountStorageNamespace,
 } from './src/storage/storage';
 import {
   initNotificationService,
@@ -76,7 +76,6 @@ import { StepsScreen } from './src/screens/StepsScreen';
 import { WorkoutsScreen } from './src/screens/WorkoutsScreen';
 import { AccountScreen } from './src/screens/AccountScreen';
 import { AuthIdentity, watchAuthState } from './src/services/authService';
-import { setAccountStorageNamespace } from './src/storage/storage';
 
 type Tab = 'today' | 'meals' | 'coach' | 'progress';
 type TemporaryScreen = 'none' | 'profile' | 'supplements' | 'steps' | 'workouts' | 'account';
@@ -167,9 +166,6 @@ function FitTrackApp() {
         setProfile(p);
         const appLang = p.language || 'en';
         setAppLanguage(appLang);
-        const l = await loadDailyLog(selectedDate);
-        if (isCancelled) return;
-        setLog(l);
         const initialRoutine = await loadSupplementRoutine();
         if (isCancelled) return;
         setSupplementRoutine(initialRoutine);
@@ -368,17 +364,6 @@ function FitTrackApp() {
       await scheduleSupplementReminders(remSettings, items, language);
     } catch (e) {
       console.warn('Error syncing reminders after routine update:', e);
-    }
-  };
-
-  const handleUpdateSupplement = async (item: SupplementRoutineItem) => {
-    const updated = supplementRoutine.map((existing) => existing.id === item.id ? item : existing);
-    await persistRoutineThenCommit(updated, saveSupplementRoutine, setSupplementRoutine);
-    try {
-      const remSettings = await loadReminderSettings();
-      await scheduleSupplementReminders(remSettings, updated, language);
-    } catch (e) {
-      console.warn('Error syncing reminders after supplement update:', e);
     }
   };
 

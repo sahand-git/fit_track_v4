@@ -54,7 +54,7 @@ const themeColors: Record<string, string> = {
 
 function runContrastAudit() {
   console.log('=== WCAG AA Contrast Audit ===');
-  const pairs: Array<{ name: string; fg: string; bg: string; min: number }> = [
+  const pairs: { name: string; fg: string; bg: string; min: number }[] = [
     { name: 'textPrimary on background', fg: themeColors.textPrimary, bg: themeColors.background, min: 4.5 },
     { name: 'textPrimary on surface', fg: themeColors.textPrimary, bg: themeColors.surface, min: 4.5 },
     { name: 'textSecondary on background', fg: themeColors.textSecondary, bg: themeColors.background, min: 4.5 },
@@ -99,7 +99,6 @@ function scanFilesForInteractiveElements(dir: string): Issue[] {
     } else if (entry.isFile() && (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts'))) {
       if (entry.name.endsWith('.test.ts') || entry.name.endsWith('.test.tsx')) continue;
       const content = fs.readFileSync(fullPath, 'utf8');
-      const lines = content.split('\n');
 
       const regex = /<(TouchableOpacity|Pressable|AnimatedPressable)\b/g;
       let match: RegExpExecArray | null;
