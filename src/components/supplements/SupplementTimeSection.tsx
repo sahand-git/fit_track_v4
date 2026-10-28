@@ -131,7 +131,7 @@ const createStyles = (theme: ThemeType) =>
   slotCountBadge: {
     fontSize: 12,
     fontWeight: '600',
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     backgroundColor: theme.colors.surfaceSubtle,
     paddingHorizontal: 6,
     paddingVertical: 2,

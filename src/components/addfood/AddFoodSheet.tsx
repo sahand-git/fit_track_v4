@@ -2023,7 +2023,7 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     fontWeight: '600',
   },
   headerTitle: {
@@ -2417,7 +2417,7 @@ const createStyles = (theme: ThemeType) =>
   onlineSectionTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },

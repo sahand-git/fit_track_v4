@@ -613,7 +613,7 @@ const createStyles = (theme: ThemeType) =>
   tabIncompleteStar: {
     fontSize: 13,
     fontWeight: '700',
-    color: theme.colors.amber,
+    color: theme.colors.amberText,
     marginLeft: 1,
   },
   content: {
@@ -653,7 +653,7 @@ const createStyles = (theme: ThemeType) =>
   asteriskIndicator: {
     fontSize: 22,
     fontWeight: '700',
-    color: theme.colors.amber,
+    color: theme.colors.amberText,
     marginLeft: 2,
   },
   currentLabel: {

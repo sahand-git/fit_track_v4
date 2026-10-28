@@ -242,5 +242,5 @@ const createStyles = (theme: ThemeType) =>
   healthButtonText: { color: theme.colors.primary, fontWeight: '700', fontSize: 14, textAlign: 'center', flexShrink: 1 },
   disclaimer: { color: theme.colors.textMuted, fontSize: 12, lineHeight: 18, textAlign: 'center' },
   error: { color: theme.colors.danger, fontSize: 13, textAlign: 'center' },
-  success: { color: theme.colors.secondary, fontSize: 13, textAlign: 'center' },
+  success: { color: theme.colors.emeraldDark, fontSize: 13, textAlign: 'center' },
 });

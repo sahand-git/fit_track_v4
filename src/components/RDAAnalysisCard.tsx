@@ -170,7 +170,7 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
                         item.percent >= 80
                           ? theme.colors.emeraldDark
                           : item.percent >= 50
-                          ? theme.colors.amber
+                          ? theme.colors.amberText
                           : theme.colors.crimsonDark,
                     },
                   ]}
@@ -351,7 +351,7 @@ const createStyles = (theme: ThemeType) =>
   incompleteAsterisk: {
     fontSize: 12,
     fontWeight: '700',
-    color: theme.colors.amber,
+    color: theme.colors.amberText,
   },
   nutrientName: {
     fontSize: 12,

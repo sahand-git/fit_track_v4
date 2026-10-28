@@ -883,7 +883,7 @@ const createStyles = (theme: ThemeType) =>
   },
   futureBannerText: {
     fontSize: 12,
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     fontWeight: '600',
   },
   progressCard: {

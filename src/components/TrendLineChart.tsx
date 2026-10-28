@@ -298,7 +298,7 @@ const createStyles = (theme: ThemeType) =>
     color: theme.colors.emeraldDark,
   },
   deltaGainText: {
-    color: theme.colors.amber,
+    color: theme.colors.amberText,
   },
   deltaNeutralText: {
     color: theme.colors.textMuted,

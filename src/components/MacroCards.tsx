@@ -284,7 +284,7 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   incompleteAsterisk: {
     fontSize: 12,
     fontWeight: '700',
-    color: theme.colors.amber,
+    color: theme.colors.amberText,
     marginLeft: 1,
   },
   vitaminsBtn: {

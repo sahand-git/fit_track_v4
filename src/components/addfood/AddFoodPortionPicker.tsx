@@ -503,7 +503,7 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   },
   ingredientsToggleAction: {
     fontSize: 12,
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     fontWeight: '600',
   },
   ingredientsListCard: {

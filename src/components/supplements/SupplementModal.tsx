@@ -499,7 +499,7 @@ const createStyles = (theme: ThemeType) =>
   fieldSectionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 8,
