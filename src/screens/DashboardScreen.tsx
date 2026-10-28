@@ -118,7 +118,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const isRtl = useIsRTL();
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const dockClearance = dockBottom + 72;
-  const scrollBottomPadding = Math.max(140, dockClearance + 24);
+  const scrollBottomPadding = Math.max(160, dockClearance + 80);
 
   const fiberProgress = useMemo(
     () => calculateNutrientDayProgress('fiber', log.meals, log.dailySupplements, profile),
@@ -673,6 +673,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       {/* Canonical Floating Add Food Button */}
       {!isFuture && (
         <View
+          pointerEvents="box-none"
           style={[
             styles.addFoodFooter,
             {
@@ -1190,9 +1191,13 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     ...theme.shadow.subtle,
   },
   addFoodFooter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
     paddingHorizontal: 18,
     paddingTop: 8,
-    backgroundColor: theme.colors.background,
   },
   floatingAddBtnText: {
     fontFamily: theme.fonts.sans,
