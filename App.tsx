@@ -123,6 +123,7 @@ const ThemedAppLayout: React.FC<{
               paddingTop,
               backgroundColor: activeTheme.colors.background,
               borderColor: activeTheme.colors.border,
+              shadowColor: activeTheme.colors.shadow,
             },
           ]}
         >
@@ -332,7 +333,7 @@ const InitErrorScreen: React.FC<{ onRetry: () => void; language: AppLanguage }> 
           accessibilityRole="button"
           accessibilityLabel={t('Retry')}
         >
-          <RefreshCw size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <RefreshCw size={18} color={activeTheme.colors.white} style={{ marginRight: 8 }} />
           <Text style={styles.initRetryButtonText}>{t('Retry')}</Text>
         </TouchableOpacity>
       </View>
@@ -399,7 +400,7 @@ const createInitErrorStyles = (activeTheme: ThemeType) =>
       fontFamily: activeTheme.fonts.sans,
       fontSize: 15,
       fontWeight: '600',
-      color: '#FFFFFF',
+      color: activeTheme.colors.white,
     },
   });
 
@@ -1061,7 +1062,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 'auto',
     ...Platform.select({
       web: {
-        shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 12,

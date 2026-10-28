@@ -17,8 +17,12 @@ function walk(dir: string): string[] {
 }
 
 const files = walk('src');
+if (fs.existsSync('App.tsx')) {
+  files.push('App.tsx');
+}
 let totalHexOccurrences = 0;
-const colorRegex = /['"](#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}))['"]/g;
+// Catches 3-digit (#000), 4-digit (#0000), 6-digit (#000000), and 8-digit (#00000000) hex color string literals
+const colorRegex = /['"`](#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}))['"`]/g;
 
 const filesWithColors: { file: string; count: number; colors: string[] }[] = [];
 

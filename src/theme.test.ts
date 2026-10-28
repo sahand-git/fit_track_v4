@@ -43,7 +43,10 @@ function walk(dir: string): string[] {
 }
 
 const files = walk('src');
-const colorRegex = /['"](#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}))['"]/g;
+if (fs.existsSync('App.tsx')) {
+  files.push('App.tsx');
+}
+const colorRegex = /['"`](#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}))['"`]/g;
 const violations: { file: string; color: string; line: number }[] = [];
 
 files.forEach((f) => {
