@@ -93,6 +93,8 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
     return calculateNutrientDayProgress(activeKey, meals, supplements, profile);
   }, [activeKey, meals, supplements, profile]);
 
+  const progressColor = theme.colors[progress.colorToken] || theme.colors.primary;
+
   const handleStartEdit = () => {
     setGoalInput(String(progress.target));
     setIsEditingGoal(true);
@@ -155,8 +157,8 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             <View style={{ flex: 1 }}>
               <View style={[styles.titleRow, isRtl && styles.rowRtl]}>
                 <Text style={styles.sheetTitle}>{t(progress.label)}</Text>
-                <View style={[styles.unitPill, { backgroundColor: `${progress.color}20` }]}>
-                  <Text style={[styles.unitText, { color: progress.color }]}>{progress.unit}</Text>
+                <View style={[styles.unitPill, { backgroundColor: `${progressColor}20` }]}>
+                  <Text style={[styles.unitText, { color: progressColor }]}>{progress.unit}</Text>
                 </View>
               </View>
               <Text style={styles.sheetSub}>
@@ -185,13 +187,14 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
               {ORDERED_NUTRIENT_KEYS.map((key) => {
                 const isActive = key === activeKey;
                 const tabMeta = calculateNutrientDayProgress(key, meals, supplements, profile);
+                const tabColor = theme.colors[tabMeta.colorToken] || theme.colors.primary;
                 return (
                   <TouchableOpacity
                     key={key}
                     style={[
                       styles.tabPill,
                       isActive && styles.tabPillActive,
-                      isActive && { borderColor: tabMeta.color },
+                      isActive && { borderColor: tabColor },
                     ]}
                     onPress={() => {
                       Haptics.selectionAsync().catch(() => {});
@@ -207,7 +210,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                       style={[
                         styles.tabText,
                         isActive && styles.tabTextActive,
-                        isActive && { color: tabMeta.color },
+                        isActive && { color: tabColor },
                       ]}
                     >
                       {t(tabMeta.label)}
@@ -248,8 +251,8 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                 </View>
 
                 {/* Percentage & Status Pill */}
-                <View style={[styles.statusBadge, { backgroundColor: `${progress.color}15` }]}>
-                  <Text style={[styles.statusBadgeText, { color: progress.color }]}>
+                <View style={[styles.statusBadge, { backgroundColor: `${progressColor}15` }]}>
+                  <Text style={[styles.statusBadgeText, { color: progressColor }]}>
                     {progress.percent}%
                   </Text>
                   <Text style={styles.statusSubText}>
@@ -265,7 +268,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                     styles.progressFill,
                     {
                       width: `${pctFill}%`,
-                      backgroundColor: progress.color,
+                      backgroundColor: progressColor,
                     },
                   ]}
                 />
@@ -462,7 +465,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                               styles.contribFill,
                               {
                                 width: `${Math.min(100, c.percentage)}%`,
-                                backgroundColor: progress.color,
+                                backgroundColor: progressColor,
                               },
                             ]}
                           />

@@ -4,14 +4,14 @@ import {
   MicronutrientKey,
   CatalogSupplementItem,
 } from '../data/supplementCatalog';
-import { theme } from '../theme';
+import type { ThemeColorKey } from '../theme';
 
 export interface RDAMetadata {
   key: MicronutrientKey;
   label: string;
   target: number;
   unit: 'mg' | 'mcg';
-  color: string;
+  colorToken: ThemeColorKey;
   foodSources: string;
 }
 
@@ -21,7 +21,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Vitamin A',
     target: 900,
     unit: 'mcg',
-    color: theme.colors.nutrientVitaminA,
+    colorToken: 'nutrientVitaminA',
     foodSources: 'Carrots, sweet potatoes, spinach, liver, eggs',
   },
   vitaminC: {
@@ -29,7 +29,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Vitamin C',
     target: 90,
     unit: 'mg',
-    color: theme.colors.nutrientVitaminC,
+    colorToken: 'nutrientVitaminC',
     foodSources: 'Citrus, strawberries, bell peppers, broccoli',
   },
   vitaminD: {
@@ -37,7 +37,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Vitamin D',
     target: 20,
     unit: 'mcg',
-    color: theme.colors.nutrientVitaminD,
+    colorToken: 'nutrientVitaminD',
     foodSources: 'Sunlight, fatty fish, fortified dairy, eggs',
   },
   vitaminB12: {
@@ -45,7 +45,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Vitamin B12',
     target: 2.4,
     unit: 'mcg',
-    color: theme.colors.nutrientVitaminB12,
+    colorToken: 'nutrientVitaminB12',
     foodSources: 'Meat, fish, poultry, eggs, dairy, fortified yeast',
   },
   calcium: {
@@ -53,7 +53,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Calcium',
     target: 1000,
     unit: 'mg',
-    color: theme.colors.nutrientCalcium,
+    colorToken: 'nutrientCalcium',
     foodSources: 'Dairy, fortified plant milk, tofu, chia seeds, leafy greens',
   },
   iron: {
@@ -61,7 +61,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Iron',
     target: 18,
     unit: 'mg',
-    color: theme.colors.nutrientIron,
+    colorToken: 'nutrientIron',
     foodSources: 'Red meat, lentils, beans, spinach, pumpkin seeds',
   },
   potassium: {
@@ -69,7 +69,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Potassium',
     target: 3400,
     unit: 'mg',
-    color: theme.colors.nutrientPotassium,
+    colorToken: 'nutrientPotassium',
     foodSources: 'Bananas, potatoes, spinach, avocados, yogurt',
   },
   magnesium: {
@@ -77,7 +77,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Magnesium',
     target: 400,
     unit: 'mg',
-    color: theme.colors.nutrientMagnesium,
+    colorToken: 'nutrientMagnesium',
     foodSources: 'Pumpkin seeds, almonds, spinach, black beans, dark chocolate',
   },
   zinc: {
@@ -85,7 +85,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     label: 'Zinc',
     target: 11,
     unit: 'mg',
-    color: theme.colors.nutrientZinc,
+    colorToken: 'nutrientZinc',
     foodSources: 'Oysters, beef, pumpkin seeds, lentils, chickpeas',
   },
 };
@@ -113,7 +113,7 @@ export interface MicronutrientIntake {
   percent: number;
   status: 'optimal' | 'low' | 'deficient';
   isDeficient: boolean;
-  color: string;
+  colorToken: ThemeColorKey;
   foodSources: string;
   hasData: boolean;
   isIncomplete: boolean;
@@ -362,7 +362,7 @@ export function calculateMicronutrientIntake(
       percent,
       status,
       isDeficient,
-      color: meta.color,
+      colorToken: meta.colorToken,
       foodSources: meta.foodSources,
       hasData,
       isIncomplete,

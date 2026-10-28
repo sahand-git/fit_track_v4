@@ -461,6 +461,8 @@ export const darkTheme = {
 };
 
 export type ThemeType = typeof theme;
+export type ThemeColors = typeof theme.colors;
+export type ThemeColorKey = keyof ThemeColors;
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 export function getTheme(mode: ThemeMode = 'light', systemScheme?: 'light' | 'dark' | string | null): ThemeType {

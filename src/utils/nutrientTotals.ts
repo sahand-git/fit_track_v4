@@ -4,7 +4,7 @@ import {
   ORDERED_MICRONUTRIENT_KEYS,
   resolveSupplementNutrientContribution,
 } from './micronutrients';
-import { theme } from '../theme';
+import type { ThemeColorKey } from '../theme';
 
 export type SupportedNutrientKey =
   | 'calories'
@@ -47,7 +47,7 @@ export interface NutrientMetadata {
   key: SupportedNutrientKey;
   label: string;
   unit: 'kcal' | 'g' | 'mg' | 'mcg';
-  color: string;
+  colorToken: ThemeColorKey;
   defaultTarget: number;
   description: string;
   foodSources?: string;
@@ -68,7 +68,7 @@ export interface NutrientDayProgress {
   key: SupportedNutrientKey;
   label: string;
   unit: string;
-  color: string;
+  colorToken: ThemeColorKey;
   target: number;
   isCustomTarget: boolean;
   current: number;
@@ -97,7 +97,7 @@ export function getNutrientMetadata(
         key: 'calories',
         label: 'Calories',
         unit: 'kcal',
-        color: theme.colors.amber,
+        colorToken: 'amber',
         defaultTarget: profile?.targetCalories ?? 2000,
         description: 'Daily energy intake budget for your body and activity level.',
         foodSources: 'All foods and beverages provide dietary energy.',
@@ -107,7 +107,7 @@ export function getNutrientMetadata(
         key: 'protein',
         label: 'Protein',
         unit: 'g',
-        color: theme.colors.blue,
+        colorToken: 'blue',
         defaultTarget: profile?.targetProtein ?? 150,
         description: 'Crucial for muscle synthesis, recovery, and immune defenses.',
         foodSources: 'Chicken, meat, fish, eggs, lentils, tofu, Greek yogurt.',
@@ -117,7 +117,7 @@ export function getNutrientMetadata(
         key: 'carbs',
         label: 'Carbs',
         unit: 'g',
-        color: theme.colors.nutrientVitaminA,
+        colorToken: 'nutrientVitaminA',
         defaultTarget: profile?.targetCarbs ?? 200,
         description: 'Primary energy source for brain function and muscle glycogen.',
         foodSources: 'Rice, oats, potatoes, whole grains, fruits, vegetables.',
@@ -127,7 +127,7 @@ export function getNutrientMetadata(
         key: 'fat',
         label: 'Fat',
         unit: 'g',
-        color: theme.colors.crimson,
+        colorToken: 'crimson',
         defaultTarget: profile?.targetFat ?? 65,
         description: 'Essential for hormone production and fat-soluble vitamin absorption.',
         foodSources: 'Olive oil, avocados, nuts, seeds, fatty fish, eggs.',
@@ -137,7 +137,7 @@ export function getNutrientMetadata(
         key: 'fiber',
         label: 'Fiber',
         unit: 'g',
-        color: theme.colors.emerald,
+        colorToken: 'emerald',
         defaultTarget: 28, // Standard FDA / Dietary Guidelines for 2,000 kcal
         description: 'Promotes gut microbiome health, satiety, and digestive regularity.',
         foodSources: 'Oats, chia seeds, lentils, beans, berries, apples, broccoli.',
@@ -147,7 +147,7 @@ export function getNutrientMetadata(
         key: 'sugar',
         label: 'Sugar',
         unit: 'g',
-        color: theme.colors.nutrientSugar,
+        colorToken: 'nutrientSugar',
         defaultTarget: 50, // Dietary reference upper limit
         description: 'Simple carbohydrates. Monitoring aids insulin sensitivity and steady energy.',
         foodSources: 'Fruits, dairy, honey, dried fruit, natural sweeteners.',
@@ -157,7 +157,7 @@ export function getNutrientMetadata(
         key: 'sodium',
         label: 'Sodium',
         unit: 'mg',
-        color: theme.colors.nutrientSodium,
+        colorToken: 'nutrientSodium',
         defaultTarget: 2300, // Dietary Guidelines recommendation
         description: 'Electrolyte regulating fluid balance, nerve signals, and muscle contraction.',
         foodSources: 'Table salt, olives, cured meats, cheeses, savory broths.',
@@ -170,7 +170,7 @@ export function getNutrientMetadata(
           key,
           label: rda.label,
           unit: rda.unit,
-          color: rda.color,
+          colorToken: rda.colorToken,
           defaultTarget: rda.target,
           description: `Recommended Dietary Allowance (RDA) established by dietary health authorities.`,
           foodSources: rda.foodSources,
@@ -180,7 +180,7 @@ export function getNutrientMetadata(
         key,
         label: key,
         unit: 'g',
-        color: theme.colors.emerald,
+        colorToken: 'emerald',
         defaultTarget: 100,
         description: '',
       };
@@ -316,7 +316,7 @@ export function calculateNutrientDayProgress(
     key: nutrientKey,
     label: meta.label,
     unit: meta.unit,
-    color: meta.color,
+    colorToken: meta.colorToken,
     target,
     isCustomTarget,
     current: currentTotal,
