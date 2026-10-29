@@ -12,6 +12,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Dimensions,
+  InteractionManager,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -293,6 +294,12 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   // Filter & Collections state
   const [foodFilter, setFoodFilter] = useState<FoodFilter>('all');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const isCurrentlyVisible = Boolean(visible);
+  const [hasEverOpened, setHasEverOpened] = useState(isCurrentlyVisible);
+  if (isCurrentlyVisible && !hasEverOpened) {
+    setHasEverOpened(true);
+  }
+  const [isDeferredLoaded, setIsDeferredLoaded] = useState(false);
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
   const [frequentFoods, setFrequentFoods] = useState<FoodItem[]>([]);
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
@@ -452,11 +459,25 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
   useEffect(() => {
     if (!visible) return;
-    const cleanApiKey = checkApiKey();
-    const cleanCollections = loadCollections();
+
+    let isMounted = true;
+    let cleanApiKey: (() => void) | undefined;
+    let cleanCollections: (() => void) | undefined;
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!isMounted) return;
+      cleanApiKey = checkApiKey();
+      cleanCollections = loadCollections();
+      setIsDeferredLoaded(true);
+    });
+
     return () => {
-      cleanApiKey();
-      cleanCollections();
+      isMounted = false;
+      if (task && typeof task.cancel === 'function') {
+        task.cancel();
+      }
+      if (cleanApiKey) cleanApiKey();
+      if (cleanCollections) cleanCollections();
     };
   }, [visible, checkApiKey, loadCollections]);
 
@@ -1122,6 +1143,12 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     if (isDiscoveryMode) {
       return (
         <View style={{ width: '100%', gap: 12, paddingBottom: 4 }}>
+          {!isDeferredLoaded && (
+            <View style={{ paddingVertical: 10, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            </View>
+          )}
+
           {/* 1. Recents */}
           {recentFoods.length > 0 && (
             <View style={styles.discoverySection}>
@@ -1375,6 +1402,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     );
   }, [
     isDiscoveryMode,
+    isDeferredLoaded,
     recentFoods,
     frequentFoods,
     favoriteFoods,
@@ -1555,6 +1583,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     styles,
     handleSearchOnline,
   ]);
+
+  if (!hasEverOpened && !visible) {
+    return null;
+  }
 
   return (
     <>
@@ -2038,7 +2070,11 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                       keyboardShouldPersistTaps="handled"
                     >
                       {renderListHeader}
-                      {mealTemplates.length === 0 ? (
+                      {!isDeferredLoaded ? (
+                        <View style={styles.emptyStateBox}>
+                          <ActivityIndicator size="small" color={theme.colors.primary} />
+                        </View>
+                      ) : mealTemplates.length === 0 ? (
                         <View style={styles.emptyStateBox}>
                           <Bookmark size={28} color={theme.colors.textMuted} style={{ marginBottom: 8 }} />
                           <Text style={styles.emptyStateText}>{t('No meal templates saved yet.')}</Text>
