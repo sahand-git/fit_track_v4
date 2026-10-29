@@ -67,28 +67,36 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
   }, [language, t]);
 
   const proteinTarget = profile?.customNutrientGoals?.protein ?? profile?.targetProtein ?? 140;
+  const MIN_LOGGED_CALORIES = 500;
 
   const {
     activeDays,
+    completeDays,
     dailyAvgCalories,
     dailyAvgProtein,
     maxWeeklyCalories,
     avgDailyCalorieTarget,
   } = useMemo(() => {
     const active = daysLogs.filter((d) => d.log.meals.length > 0);
-    const totalCal = daysLogs.reduce((sum, d) => {
+    const complete = daysLogs.filter(
+      (d) => d.log.meals.reduce((s, m) => s + m.calories, 0) >= MIN_LOGGED_CALORIES
+    );
+
+    // Compute averages only over days with complete tracking (>= 500 kcal), falling back to all active if none reach threshold
+    const sampleDays = complete.length > 0 ? complete : active;
+    const sampleCal = sampleDays.reduce((sum, d) => {
       return sum + d.log.meals.reduce((mSum, m) => mSum + m.calories, 0);
     }, 0);
-    const totalProt = daysLogs.reduce((sum, d) => {
+    const sampleProt = sampleDays.reduce((sum, d) => {
       return sum + d.log.meals.reduce((mSum, m) => mSum + m.protein, 0);
     }, 0);
-    const avgCal = active.length > 0 ? Math.round(totalCal / active.length) : 0;
-    const avgProt = active.length > 0 ? Math.round((totalProt / active.length) * 10) / 10 : 0;
+    const avgCal = sampleDays.length > 0 ? Math.round(sampleCal / sampleDays.length) : 0;
+    const avgProt = sampleDays.length > 0 ? Math.round((sampleProt / sampleDays.length) * 10) / 10 : 0;
 
     const allTargets = daysLogs.map((d) => getDailyEffectiveCalorieTarget(profile, d.log));
-    const activeTargets = active.map((d) => getDailyEffectiveCalorieTarget(profile, d.log));
-    const avgCalTarget = activeTargets.length > 0
-      ? Math.round(activeTargets.reduce((s, t) => s + t, 0) / activeTargets.length)
+    const sampleTargets = sampleDays.map((d) => getDailyEffectiveCalorieTarget(profile, d.log));
+    const avgCalTarget = sampleTargets.length > 0
+      ? Math.round(sampleTargets.reduce((s, t) => s + t, 0) / sampleTargets.length)
       : Math.round(allTargets.reduce((s, t) => s + t, 0) / (allTargets.length || 1));
 
     const maxCal = Math.max(
@@ -99,8 +107,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
 
     return {
       activeDays: active,
-      totalCaloriesLogged: totalCal,
-      totalProteinLogged: totalProt,
+      completeDays: complete,
       dailyAvgCalories: avgCal,
       dailyAvgProtein: avgProt,
       maxWeeklyCalories: maxCal,
@@ -153,7 +160,13 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
             <Text style={styles.statUnit}>kcal</Text>
           </View>
           <Text style={styles.statSub}>
-            {activeDays.length > 0 ? `${activeDays.length} ${t('of')} 7 ${t('days logged')}` : t('No data yet')}
+            {activeDays.length > 0
+              ? `${activeDays.length} ${t('of')} 7 ${t('days logged')}${
+                  completeDays.length < activeDays.length && completeDays.length > 0
+                    ? ` (${t('avg of')} ${completeDays.length} ${t('full days')})`
+                    : ''
+                }`
+              : t('No data yet')}
           </Text>
         </View>
 
@@ -196,6 +209,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                 : 6;
               const isSelected = selectedDayIdx === idx;
               const hasData = dayKcal > 0;
+              const isLowDay = dayKcal > 0 && dayKcal < MIN_LOGGED_CALORIES;
               const itemTarget = getDailyEffectiveCalorieTarget(profile, item.log);
 
               return (
@@ -208,7 +222,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                   }}
                   activeOpacity={0.8}
                   accessibilityRole="button"
-                  accessibilityLabel={`${item.dayLabel}: ${formatKcal(dayKcal, t)}`}
+                  accessibilityLabel={`${item.dayLabel}: ${formatKcal(dayKcal, t)}${isLowDay ? ` (${t('Partial day')})` : ''}`}
                   accessibilityState={{ selected: isSelected }}
                 >
                   <View style={styles.barTrack}>
@@ -219,9 +233,12 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                           height: `${heightPct}%`,
                           backgroundColor: !hasData
                             ? theme.colors.surfaceSubtle
+                            : isLowDay
+                            ? theme.colors.borderStrong
                             : dayKcal <= itemTarget
                             ? theme.colors.primary
                             : theme.colors.accent,
+                          opacity: isLowDay ? 0.65 : 1,
                         },
                         isSelected && styles.barFillSelected,
                       ]}
@@ -230,6 +247,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                   <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
                     {item.dayLabel}
                   </Text>
+                  {isLowDay && <View style={styles.lowDayMarker} />}
                 </TouchableOpacity>
               );
             })}
@@ -240,6 +258,9 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
           <View style={styles.detailBanner}>
             <Text style={styles.detailDayText}>
               {formatDisplayDate(selectedEntry.date, language)}: {formatKcal(selectedCalories, t)}
+              {selectedCalories > 0 && selectedCalories < MIN_LOGGED_CALORIES
+                ? ` · ${t('Partial day (<500 kcal)')}`
+                : ''}
             </Text>
             <Text style={styles.detailStatusText}>
               {selectedCalories === 0
@@ -459,6 +480,13 @@ const createStyles = (theme: ThemeType) =>
   dayLabelSelected: {
     color: theme.colors.textPrimary,
     fontWeight: '600',
+  },
+  lowDayMarker: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.textMuted,
+    marginTop: 2,
   },
   detailBanner: {
     flexDirection: 'row',
