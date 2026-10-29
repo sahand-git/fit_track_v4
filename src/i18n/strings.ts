@@ -1065,6 +1065,10 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Above target': 'أعلى من الهدف',
     'Reference Upper Limit': 'الحد الأعلى المرجعي',
     'Dietary reference guidance for general informational reference, not medical advice.': 'إرشادات غذائية مرجعية للمعلومات العامة فقط، وليست استشارة طبية.',
+    'Not sent': 'لم يتم الإرسال',
+    'Could not send message': 'تعذر إرسال الرسالة',
+    'eaten today': 'مستهلكة اليوم',
+    'eaten': 'مستهلكة',
   },
   ckb: {
     'Account': 'هەژمار',
@@ -2122,6 +2126,10 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Above target': 'سەرووی ئامانج',
     'Reference Upper Limit': 'بەرزترین ئاستی ڕێنمایی',
     'Dietary reference guidance for general informational reference, not medical advice.': 'ڕێنمایی خۆراکی تەنها بۆ زانیاری گشتییە، نەک ڕاوێژی پزیشکی.',
+    'Not sent': 'نەنێردراوە',
+    'Could not send message': 'نەتوانرا پەیام بنێردرێت',
+    'eaten today': 'ئەمڕۆ خوراوە',
+    'eaten': 'خوراوە',
   },
 };
 

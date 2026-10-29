@@ -20,6 +20,8 @@ import {
   Sparkles,
   Trash2,
   AlertTriangle,
+  AlertCircle,
+  RotateCcw,
   CheckCircle2,
   TrendingUp,
   Award,
@@ -31,12 +33,14 @@ import { AICoachReport, DailyLog, UserProfile } from '../types';
 import { AppText as Text } from '../components/AppText';
 import { translate } from '../i18n/strings';
 import { useLanguage } from '../i18n/I18nContext';
+import { useIsRTL } from '../hooks/useIsRTL';
 import { askNutritionCoach, getStoredGeminiApiKey } from '../services/plateAnalysisService';
 import { generateDailyAIReport } from '../services/aiReportService';
 import { GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
-import { formatDisplayDate } from '../utils/dateUtils';
+import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { formatKcal } from '../utils/formatKcal';
 import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
+import { createUniqueId } from '../utils/idUtils';
 import { SkeletonCoachBubble } from '../components/SkeletonLoader';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
@@ -50,8 +54,11 @@ interface CoachScreenProps {
 }
 
 interface Message {
+  id: string;
   role: 'user' | 'coach';
   text: string;
+  failed?: boolean;
+  errorMessage?: string;
 }
 
 const COACH_HISTORY_KEY = '@fittrack_coach_history';
@@ -61,15 +68,16 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const isRtl = useIsRTL();
   const [currentSubView, setCurrentSubView] = useState<'audit' | 'chat'>('audit');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [isLoadingAudit, setIsLoadingAudit] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const isSendingRef = useRef(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   useEffect(() => {
@@ -134,7 +142,14 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
           try {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setMessages((current) => (current.length > 0 ? [...parsed, ...current] : parsed));
+              const normalized = parsed.map((m: any) => ({
+                id: m.id || createUniqueId('hist'),
+                role: m.role || 'user',
+                text: m.text || '',
+                failed: Boolean(m.failed),
+                errorMessage: m.errorMessage,
+              }));
+              setMessages((current) => (current.length > 0 ? [...normalized, ...current] : normalized));
             }
           } catch {
             // Graceful fallback
@@ -157,7 +172,6 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
           style: 'destructive',
           onPress: async () => {
             setMessages([]);
-            setError('');
             try {
               await AsyncStorage.removeItem(getScopedStorageKey(COACH_HISTORY_KEY));
             } catch (err) {
@@ -206,17 +220,35 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
     }
   };
 
-  const send = async (text: string) => {
+  const send = async (text: string, retryMessageId?: string) => {
     const trimmed = text.trim();
-    if (!trimmed || busy) return;
-    setInput('');
-    setError('');
-    setMessages((current) => [...current, { role: 'user', text: trimmed }]);
+    if (!trimmed || busy || isSendingRef.current) return;
+    isSendingRef.current = true;
+
+    let targetId: string;
+    if (retryMessageId) {
+      targetId = retryMessageId;
+      setMessages((current) =>
+        current.map((m) =>
+          m.id === retryMessageId ? { ...m, failed: false, errorMessage: undefined } : m
+        )
+      );
+    } else {
+      targetId = createUniqueId('msg');
+      setMessages((current) => [...current, { id: targetId, role: 'user', text: trimmed }]);
+      setInput('');
+    }
+
     setBusy(true);
     try {
       const languageName =
         language === 'ar' ? 'Arabic' : language === 'ckb' ? 'Sorani Kurdish' : 'English';
-      const transcript = [...messages, { role: 'user' as const, text: trimmed }]
+      const activeMessages = retryMessageId
+        ? messages.map((m) => (m.id === retryMessageId ? { ...m, failed: false } : m))
+        : [...messages, { id: targetId, role: 'user' as const, text: trimmed }];
+
+      const transcript = activeMessages
+        .filter((item) => !item.failed)
         .slice(-8)
         .map((item) => `${item.role === 'user' ? 'User' : 'Coach'}: ${item.text}`)
         .join('\n');
@@ -236,15 +268,29 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
         } as any,
         languageName
       );
-      setMessages((current) => [...current, { role: 'coach', text: reply }]);
+      const replyId = createUniqueId('coach');
+      setMessages((current) => [...current, { id: replyId, role: 'coach', text: reply }]);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
+      }, 100);
     } catch (err: any) {
+      let friendlyMessage: string;
       if (err instanceof GeminiError) {
-        setError(t(getDefaultMessageForKind(err.kind)));
+        friendlyMessage = t(getDefaultMessageForKind(err.kind));
       } else {
-        setError(err instanceof Error ? err.message : t('Could not reach the AI coach. Try again.'));
+        friendlyMessage = t('Gemini service is temporarily unavailable. Please try again shortly.');
       }
+      setMessages((current) =>
+        current.map((m) =>
+          m.id === targetId ? { ...m, failed: true, errorMessage: friendlyMessage } : m
+        )
+      );
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
+      }, 100);
     } finally {
       setBusy(false);
+      isSendingRef.current = false;
     }
   };
 
@@ -270,7 +316,9 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
           <View style={styles.headerCopy}>
             <Text style={styles.title}>{t('AI Coach')}</Text>
             <Text style={styles.subtitle}>
-              {formatDisplayDate(log.date, language)} · {formatKcal(totals.calories, t)}
+              {log.date === getTodayDateString()
+                ? `${formatKcal(totals.calories, t)} ${t('eaten today')}`
+                : `${formatDisplayDate(log.date, language)} · ${formatKcal(totals.calories, t)} ${t('eaten')}`}
             </Text>
           </View>
           {currentSubView === 'chat' && messages.length > 0 && (
@@ -550,26 +598,59 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                   </TouchableOpacity>
                 </View>
               ) : (
-                messages.map((message, index) => (
-                  <View
-                    key={`${message.role}_${index}`}
-                    style={[
-                      styles.bubble,
-                      message.role === 'user' ? styles.userBubble : styles.coachBubble,
-                    ]}
-                  >
-                    <Text
-                      style={
-                        message.role === 'user' ? styles.userText : styles.coachText
-                      }
+                messages.map((message) => (
+                  <View key={message.id} style={styles.messageRowGroup}>
+                    <View
+                      style={[
+                        styles.bubble,
+                        message.role === 'user' ? styles.userBubble : styles.coachBubble,
+                        message.failed && styles.userBubbleFailed,
+                      ]}
                     >
-                      {message.text}
-                    </Text>
+                      <Text
+                        style={
+                          message.role === 'user' ? styles.userText : styles.coachText
+                        }
+                      >
+                        {message.text}
+                      </Text>
+                    </View>
+
+                    {message.failed && message.role === 'user' ? (
+                      <>
+                        <View style={[styles.notSentRow, isRtl && styles.rowRtl]}>
+                          <AlertCircle size={12} color={theme.colors.danger} />
+                          <Text style={styles.notSentText}>{t('Not sent')}</Text>
+                        </View>
+
+                        {message.errorMessage ? (
+                          <View style={styles.errorBubbleContainer}>
+                            <View style={styles.errorBubble}>
+                              <View style={[styles.errorBubbleHeader, isRtl && styles.rowRtl]}>
+                                <AlertTriangle size={14} color={theme.colors.danger} />
+                                <Text style={styles.errorBubbleTitle}>{t('Could not send message')}</Text>
+                              </View>
+                              <Text style={styles.errorBubbleMessage}>{message.errorMessage}</Text>
+                              <TouchableOpacity
+                                style={[styles.retryButton, isRtl && styles.rowRtl]}
+                                onPress={() => send(message.text, message.id)}
+                                disabled={busy}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('Retry')}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              >
+                                <RotateCcw size={13} color={theme.colors.danger} />
+                                <Text style={styles.retryButtonText}>{t('Retry')}</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        ) : null}
+                      </>
+                    ) : null}
                   </View>
                 ))
               )}
               {busy && <SkeletonCoachBubble />}
-              {error ? <Text style={styles.error}>{error}</Text> : null}
             </ScrollView>
 
             <View style={styles.composer}>
@@ -1000,10 +1081,73 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 14,
     lineHeight: 20,
   },
-  error: {
+  messageRowGroup: {
+    gap: 4,
+  },
+  userBubbleFailed: {
+    borderWidth: 1.5,
+    borderColor: theme.colors.danger,
+    opacity: 0.9,
+  },
+  notSentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: 4,
+    marginTop: 2,
+    marginRight: 4,
+  },
+  notSentText: {
+    fontSize: 11,
+    fontWeight: '600',
     color: theme.colors.danger,
+  },
+  errorBubbleContainer: {
+    alignSelf: 'flex-end',
+    maxWidth: '92%',
+    marginTop: 2,
+  },
+  errorBubble: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.4)',
+    borderRadius: 14,
+    padding: 12,
+    gap: 6,
+  },
+  errorBubbleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  errorBubbleTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.danger,
+  },
+  errorBubbleMessage: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: theme.colors.textSecondary,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.full,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  retryButtonText: {
     fontSize: 12,
-    paddingHorizontal: 4,
+    fontWeight: '700',
+    color: theme.colors.danger,
+  },
+  rowRtl: {
+    flexDirection: 'row-reverse',
   },
   composer: {
     flexDirection: 'row',

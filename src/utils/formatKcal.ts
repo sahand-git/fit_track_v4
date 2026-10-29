@@ -9,5 +9,5 @@ export function formatKcal(
   if (calories === undefined || calories === null || isNaN(calories)) {
     return `0 ${t('kcal')}`;
   }
-  return `${Math.round(calories)} ${t('kcal')}`;
+  return `${Math.round(calories).toLocaleString('en-US')} ${t('kcal')}`;
 }

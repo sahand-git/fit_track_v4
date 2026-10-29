@@ -10,6 +10,7 @@ console.log('Testing formatKcal shared formatter...');
 
 // 1. Basic formatting
 assertEqual(formatKcal(500), '500 kcal');
+assertEqual(formatKcal(1928), '1,928 kcal');
 assertEqual(formatKcal(123.45), '123 kcal');
 assertEqual(formatKcal(123.8), '124 kcal');
 
