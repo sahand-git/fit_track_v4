@@ -131,7 +131,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
     >
       {/* Header */}
       <View style={styles.headerRow}>
-        <View>
+        <View style={styles.headerTextGroup}>
           <Text style={styles.headerSubtitle}>{t('Weekly Review')}</Text>
           <Text style={styles.headerTitle}>{t('Nutrition Insights')}</Text>
         </View>
@@ -292,7 +292,14 @@ const createStyles = (theme: ThemeType) =>
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  headerTextGroup: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
   headerSubtitle: {
     fontFamily: theme.fonts.sans,
@@ -320,6 +327,8 @@ const createStyles = (theme: ThemeType) =>
     borderRadius: theme.radius.full,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    flexShrink: 0,
+    alignSelf: 'flex-start',
   },
   rangeBadgeText: {
     fontFamily: theme.fonts.sans,
