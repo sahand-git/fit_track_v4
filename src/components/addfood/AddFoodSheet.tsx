@@ -68,6 +68,8 @@ import { AddFoodCustomModal } from './AddFoodCustomModal';
 import { AddFoodQuickAddModal } from './AddFoodQuickAddModal';
 import { AddFoodTemplateModal } from './AddFoodTemplateModal';
 import { useFoodSearch, FoodFilter } from './useFoodSearch';
+import { CANONICAL_FOOD_CATEGORIES, CATEGORY_DEFAULT_EMOJI, CanonicalFoodCategory } from '../../utils/foodCategories';
+import { REGIONAL_FOODS } from '../../data/foodDatabase';
 import {
   loadRecentFoods,
   addRecentFood,
@@ -290,6 +292,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
   // Filter & Collections state
   const [foodFilter, setFoodFilter] = useState<FoodFilter>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
   const [frequentFoods, setFrequentFoods] = useState<FoodItem[]>([]);
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
@@ -1045,6 +1048,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const filteredFoods = useFoodSearch({
     searchQuery,
     foodFilter,
+    selectedCategory,
     recentFoods,
     frequentFoods,
     favoriteFoods,
@@ -1053,6 +1057,16 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     language,
     t,
   });
+
+  const isDiscoveryMode =
+    foodFilter === 'all' && searchQuery.trim() === '' && !selectedCategory;
+
+  const listData = useMemo(() => {
+    if (isDiscoveryMode) {
+      return REGIONAL_FOODS;
+    }
+    return filteredFoods;
+  }, [isDiscoveryMode, filteredFoods]);
 
   const mealCategories: { key: MealType; label: string }[] = useMemo(
     () => [
@@ -1105,6 +1119,237 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   );
 
   const renderListHeader = useMemo(() => {
+    if (isDiscoveryMode) {
+      return (
+        <View style={{ width: '100%', gap: 12, paddingBottom: 4 }}>
+          {/* 1. Recents */}
+          {recentFoods.length > 0 && (
+            <View style={styles.discoverySection}>
+              <View style={styles.discoverySectionHeader}>
+                <Clock size={14} color={theme.colors.primary} />
+                <Text style={styles.discoverySectionTitle}>
+                  {t('Recent')} ({recentFoods.length})
+                </Text>
+              </View>
+              <View style={{ gap: 6 }}>
+                {recentFoods.slice(0, 5).map((item) => (
+                  <FoodListItemRow
+                    key={item.id}
+                    item={item}
+                    isSelected={selectedFood?.id === item.id}
+                    isFavorite={
+                      favoriteFoodIds.has(item.id) ||
+                      favoriteFoodIds.has(item.name.trim().toLowerCase())
+                    }
+                    language={language}
+                    onSelect={handleSelectFood}
+                    onToggleFavorite={handleToggleFavorite}
+                    t={t}
+                    theme={theme}
+                    styles={styles}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* 2. Frequent */}
+          {frequentFoods.length > 0 && (
+            <View style={styles.discoverySection}>
+              <View style={styles.discoverySectionHeader}>
+                <Zap size={14} color={theme.colors.orangeDeep} />
+                <Text style={styles.discoverySectionTitle}>
+                  {t('Frequent')} ({frequentFoods.length})
+                </Text>
+              </View>
+              <View style={{ gap: 6 }}>
+                {frequentFoods.slice(0, 5).map((item) => (
+                  <FoodListItemRow
+                    key={item.id}
+                    item={item}
+                    isSelected={selectedFood?.id === item.id}
+                    isFavorite={
+                      favoriteFoodIds.has(item.id) ||
+                      favoriteFoodIds.has(item.name.trim().toLowerCase())
+                    }
+                    language={language}
+                    onSelect={handleSelectFood}
+                    onToggleFavorite={handleToggleFavorite}
+                    t={t}
+                    theme={theme}
+                    styles={styles}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* 3. Favorites */}
+          {favoriteFoods.length > 0 && (
+            <View style={styles.discoverySection}>
+              <View style={styles.discoverySectionHeader}>
+                <Star size={14} color={theme.colors.secondary} />
+                <Text style={styles.discoverySectionTitle}>
+                  {t('Favorites')} ({favoriteFoods.length})
+                </Text>
+              </View>
+              <View style={{ gap: 6 }}>
+                {favoriteFoods.slice(0, 5).map((item) => (
+                  <FoodListItemRow
+                    key={item.id}
+                    item={item}
+                    isSelected={selectedFood?.id === item.id}
+                    isFavorite={true}
+                    language={language}
+                    onSelect={handleSelectFood}
+                    onToggleFavorite={handleToggleFavorite}
+                    t={t}
+                    theme={theme}
+                    styles={styles}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* 4. Category Chips */}
+          <View style={styles.discoverySection}>
+            <View style={styles.discoverySectionHeader}>
+              <Utensils size={14} color={theme.colors.primary} />
+              <Text style={styles.discoverySectionTitle}>
+                {t('Categories')}
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryChipsScroll}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.categoryChip,
+                  selectedCategory === 'all' && styles.categoryChipActive,
+                ]}
+                onPress={() => setSelectedCategory('all')}
+                accessibilityRole="button"
+                accessibilityLabel={t('All')}
+              >
+                <Text style={styles.categoryChipEmoji}>🍽️</Text>
+                <Text
+                  style={[
+                    styles.categoryChipText,
+                    selectedCategory === 'all' && styles.categoryChipTextActive,
+                  ]}
+                >
+                  {t('All')}
+                </Text>
+              </TouchableOpacity>
+              {CANONICAL_FOOD_CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.categoryChip,
+                    selectedCategory === cat && styles.categoryChipActive,
+                  ]}
+                  onPress={() => setSelectedCategory(cat)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(cat)}
+                >
+                  <Text style={styles.categoryChipEmoji}>{CATEGORY_DEFAULT_EMOJI[cat]}</Text>
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      selectedCategory === cat && styles.categoryChipTextActive,
+                    ]}
+                  >
+                    {t(cat)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* 5. Regional Dishes Section Header */}
+          <View style={[styles.discoverySectionHeader, { marginTop: 2 }]}>
+            <Globe size={14} color={theme.colors.secondary} />
+            <Text style={styles.discoverySectionTitle}>
+              {t('Iraqi & Kurdish')} ({REGIONAL_FOODS.length})
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    if (foodFilter === 'all' && selectedCategory) {
+      return (
+        <View style={{ width: '100%', gap: 8, paddingBottom: 6 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryChipsScroll}
+          >
+            <TouchableOpacity
+              style={styles.categoryChip}
+              onPress={() => setSelectedCategory(null)}
+              accessibilityRole="button"
+              accessibilityLabel={t('Clear')}
+            >
+              <X size={12} color={theme.colors.textMuted} />
+              <Text style={styles.categoryChipText}>{t('Clear')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.categoryChip,
+                selectedCategory === 'all' && styles.categoryChipActive,
+              ]}
+              onPress={() => setSelectedCategory('all')}
+              accessibilityRole="button"
+              accessibilityLabel={t('All')}
+            >
+              <Text style={styles.categoryChipEmoji}>🍽️</Text>
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  selectedCategory === 'all' && styles.categoryChipTextActive,
+                ]}
+              >
+                {t('All')}
+              </Text>
+            </TouchableOpacity>
+            {CANONICAL_FOOD_CATEGORIES.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.categoryChip,
+                  selectedCategory === cat && styles.categoryChipActive,
+                ]}
+                onPress={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                accessibilityRole="button"
+                accessibilityLabel={t(cat)}
+              >
+                <Text style={styles.categoryChipEmoji}>{CATEGORY_DEFAULT_EMOJI[cat]}</Text>
+                <Text
+                  style={[
+                    styles.categoryChipText,
+                    selectedCategory === cat && styles.categoryChipTextActive,
+                  ]}
+                >
+                  {t(cat)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <View style={styles.listHeaderRow}>
+            <Text style={styles.listHeaderTitle}>
+              {selectedCategory === 'all'
+                ? `${filteredFoods.length} ${t('results')}`
+                : `${CATEGORY_DEFAULT_EMOJI[selectedCategory as CanonicalFoodCategory] || ''} ${t(selectedCategory)} (${filteredFoods.length})`}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View style={styles.listHeaderRow}>
         <Text style={styles.listHeaderTitle}>
@@ -1128,7 +1373,24 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
         </Text>
       </View>
     );
-  }, [searchQuery, filteredFoods.length, foodFilter, t, styles]);
+  }, [
+    isDiscoveryMode,
+    recentFoods,
+    frequentFoods,
+    favoriteFoods,
+    selectedCategory,
+    foodFilter,
+    searchQuery,
+    filteredFoods.length,
+    selectedFood?.id,
+    favoriteFoodIds,
+    language,
+    handleSelectFood,
+    handleToggleFavorite,
+    t,
+    theme,
+    styles,
+  ]);
 
   const renderEmptyState = useMemo(() => {
     return (
@@ -1236,7 +1498,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
           </View>
         )}
 
-        {filteredFoods.length === 0 && (
+        {listData.length === 0 && (
           <TouchableOpacity
             style={styles.requestFoodPromptBtn}
             onPress={() => {
@@ -1283,7 +1545,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     isOnlineOffline,
     onlineFoods,
     isOnlineFromCache,
-    filteredFoods.length,
+    listData.length,
     selectedFood?.id,
     language,
     handleSelectFood,
@@ -1842,7 +2104,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                     </ScrollView>
                   ) : (
                     <FlatList
-                      data={filteredFoods}
+                      data={listData}
                       keyExtractor={(item) => item.id}
                       renderItem={renderFoodItem}
                       initialNumToRender={12}
@@ -2237,6 +2499,56 @@ const createStyles = (theme: ThemeType) =>
     padding: 32,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  discoverySection: {
+    width: '100%',
+    gap: 6,
+    marginBottom: 10,
+  },
+  discoverySectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  discoverySectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  categoryChipsScroll: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 2,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  categoryChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  categoryChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  categoryChipTextActive: {
+    color: theme.colors.textInverted,
+  },
+  categoryChipEmoji: {
+    fontSize: 13,
   },
   emptyStateText: {
     fontSize: 13,

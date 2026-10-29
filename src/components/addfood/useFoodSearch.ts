@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { FoodItem, AppLanguage } from '../../types';
 import { VERIFIED_FOOD_DATABASE, REGIONAL_FOODS } from '../../data/foodDatabase';
+import { foodCategory } from '../../utils/foodCategories';
 import { normalizeSearch } from '../../utils/localeUtils';
 
 export type FoodFilter =
@@ -16,6 +17,7 @@ export type FoodFilter =
 export interface FilterFoodCatalogOptions {
   searchQuery: string;
   foodFilter: FoodFilter;
+  selectedCategory?: string | null;
   recentFoods: FoodItem[];
   frequentFoods: FoodItem[];
   favoriteFoods: FoodItem[];
@@ -32,6 +34,7 @@ export interface FilterFoodCatalogOptions {
 export function filterFoodCatalog({
   searchQuery,
   foodFilter,
+  selectedCategory,
   recentFoods,
   frequentFoods,
   favoriteFoods,
@@ -54,6 +57,15 @@ export function filterFoodCatalog({
     sourceList = barcodeCache;
   } else {
     sourceList = [...customFoods, ...barcodeCache, ...VERIFIED_FOOD_DATABASE];
+  }
+
+  if (selectedCategory && selectedCategory !== 'all') {
+    sourceList = sourceList.filter((f) => {
+      const cat = foodCategory(f).toLowerCase();
+      const explicitCat = (f.category || '').toLowerCase();
+      const target = selectedCategory.toLowerCase();
+      return cat === target || explicitCat === target;
+    });
   }
 
   const normalizedQuery = normalizeSearch(searchQuery);
@@ -86,6 +98,7 @@ export function useFoodSearch(options: FilterFoodCatalogOptions): FoodItem[] {
   const {
     searchQuery,
     foodFilter,
+    selectedCategory,
     recentFoods,
     frequentFoods,
     favoriteFoods,
@@ -98,6 +111,7 @@ export function useFoodSearch(options: FilterFoodCatalogOptions): FoodItem[] {
     return filterFoodCatalog({
       searchQuery,
       foodFilter,
+      selectedCategory,
       recentFoods,
       frequentFoods,
       favoriteFoods,
@@ -108,6 +122,7 @@ export function useFoodSearch(options: FilterFoodCatalogOptions): FoodItem[] {
   }, [
     searchQuery,
     foodFilter,
+    selectedCategory,
     recentFoods,
     frequentFoods,
     favoriteFoods,

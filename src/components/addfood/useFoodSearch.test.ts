@@ -150,4 +150,20 @@ const barcodeResults = filterFoodCatalog({
 assert(barcodeResults.some((f) => f.id === 'f3'), 'Barcode query should find Hummus Dip');
 console.log('✓ Test 4 passed: Brand and barcode searching verified.');
 
+// Test 5: Category chip filtering
+const meatCategoryResults = filterFoodCatalog({
+  searchQuery: '',
+  foodFilter: 'all',
+  selectedCategory: 'Meat & Poultry',
+  recentFoods: [],
+  frequentFoods: [],
+  favoriteFoods: [],
+  customFoods: sampleFoods,
+  barcodeCache: [],
+  t: mockT,
+});
+assert(meatCategoryResults.some((f) => f.id === 'f2'), 'Category filter should find chicken');
+assert(!meatCategoryResults.some((f) => f.id === 'f1'), 'Category filter should exclude rice');
+console.log('✓ Test 5 passed: Canonical category selection accurately filters catalog items.');
+
 console.log('All useFoodSearch Unit Tests PASSED Cleanly!');

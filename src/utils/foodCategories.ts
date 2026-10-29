@@ -50,7 +50,7 @@ export interface FoodCategoryInfo {
   emoji: string;
 }
 
-const CATEGORY_DEFAULT_EMOJI: Record<CanonicalFoodCategory, string> = {
+export const CATEGORY_DEFAULT_EMOJI: Record<CanonicalFoodCategory, string> = {
   'Meat & Poultry': '🥩',
   'Fish & Seafood': '🐟',
   'Eggs & Dairy': '🥛',
