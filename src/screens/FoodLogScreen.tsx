@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -72,6 +72,19 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
   const insets = useSafeAreaInsets();
   const t = (value: string) => translate(language, value);
   const isRtl = useIsRTL();
+  const [userAddedMealIds, setUserAddedMealIds] = useState<Set<string>>(() => new Set());
+
+  const handleAddMeal = useCallback(
+    (meal: LoggedMeal, targetDate: string) => {
+      setUserAddedMealIds((prev) => {
+        const next = new Set(prev);
+        next.add(meal.id);
+        return next;
+      });
+      onAddMeal(meal, targetDate);
+    },
+    [onAddMeal]
+  );
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const floatingBottom = dockBottom + 66;
@@ -363,7 +376,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
                     const isFirst = idx === 0;
                     const isLast = idx === categoryMeals.length - 1;
                     return (
-                      <AnimatedFoodRow key={item.id} delay={idx * 30}>
+                      <AnimatedFoodRow key={item.id} isNew={userAddedMealIds.has(item.id)} delay={0}>
                         <TouchableOpacity
                           style={[
                             styles.foodRow,
@@ -460,7 +473,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         mealType={activeMealType}
         date={selectedDate}
         onClose={() => setAddSheetVisible(false)}
-        onAddMeal={onAddMeal}
+        onAddMeal={handleAddMeal}
         onCopyYesterdayMeals={onCopyYesterdayMeals}
       />
 

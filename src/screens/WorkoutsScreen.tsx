@@ -14,7 +14,7 @@ import { ThemeType } from '../theme';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
 import { formatKcal } from '../utils/formatKcal';
-import { getStaggeredCardEntry, getItemExitAnimation, getListLayoutTransition } from '../utils/reanimatedMotion';
+import { getItemEnterAnimation, getItemExitAnimation, getListLayoutTransition } from '../utils/reanimatedMotion';
 
 interface Props {
   date: string;
@@ -46,6 +46,16 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
   ), [workouts, category, query]);
   const totalMinutes = visibleWorkouts.reduce((total, workout) => total + workout.durationMinutes, 0);
   const totalKcal = visibleWorkouts.reduce((total, workout) => total + workout.caloriesBurned, 0);
+  const [userAddedWorkoutIds, setUserAddedWorkoutIds] = useState<Set<string>>(() => new Set());
+
+  const handleAddWorkoutInternal = (workout: WorkoutEntry, targetDate: string) => {
+    setUserAddedWorkoutIds((prev) => {
+      const next = new Set(prev);
+      next.add(workout.id);
+      return next;
+    });
+    onAddWorkout(workout, targetDate);
+  };
 
   const openEdit = (workout: WorkoutEntry) => { setEditing(workout); setSheetVisible(true); };
   const closeSheet = () => { setSheetVisible(false); setEditing(null); };
@@ -123,7 +133,7 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
           return (
             <Animated.View
               key={workout.id}
-              entering={getStaggeredCardEntry(index, 30)}
+              entering={userAddedWorkoutIds.has(workout.id) ? getItemEnterAnimation() : undefined}
               exiting={getItemExitAnimation()}
               layout={getListLayoutTransition()}
               style={styles.workoutCard}
@@ -165,7 +175,7 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
           <Text style={styles.addButtonText}>{t('Add workout')}</Text>
         </TouchableOpacity>
       )}
-      {sheetVisible && <AddWorkoutSheet visible onClose={closeSheet} date={date} profile={profile} onSaveWorkout={onAddWorkout} editingWorkout={editing} onUpdateWorkout={onUpdateWorkout} />}
+      {sheetVisible && <AddWorkoutSheet visible onClose={closeSheet} date={date} profile={profile} onSaveWorkout={handleAddWorkoutInternal} editingWorkout={editing} onUpdateWorkout={onUpdateWorkout} />}
     </View>
     </KeyboardAvoidingView>
   );

@@ -25,6 +25,7 @@ export interface SupplementItemRowProps {
   onEdit: (item: LoggedDailySupplement) => void;
   onDelete: (item: LoggedDailySupplement) => void;
   t: (key: string) => string;
+  isNew?: boolean;
 }
 
 const styleCache = new Map<ThemeType, ReturnType<typeof createStyles>>();
@@ -47,6 +48,7 @@ export const SupplementItemRow: React.FC<SupplementItemRowProps> = ({
   onEdit,
   onDelete,
   t,
+  isNew = false,
 }) => {
   const { theme } = useTheme();
   const styles = getSupplementRowStyles(theme);
@@ -55,7 +57,7 @@ export const SupplementItemRow: React.FC<SupplementItemRowProps> = ({
 
   return (
     <Animated.View
-      entering={getItemEnterAnimation()}
+      entering={isNew ? getItemEnterAnimation() : undefined}
       exiting={getItemExitAnimation()}
       layout={getListLayoutTransition()}
       style={[styles.itemRow, !isLast && styles.itemRowBorder]}

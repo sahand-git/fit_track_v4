@@ -37,7 +37,6 @@ import Animated from 'react-native-reanimated';
 import {
   getStaggeredCardEntry,
   getListLayoutTransition,
-  getItemEnterAnimation,
   getItemExitAnimation,
 } from '../utils/reanimatedMotion';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -629,7 +628,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
                 {log.workouts.map((w) => (
                   <Animated.View
                     key={w.id}
-                    entering={getItemEnterAnimation()}
                     exiting={getItemExitAnimation()}
                     layout={getListLayoutTransition()}
                     style={styles.workoutItemRow}
