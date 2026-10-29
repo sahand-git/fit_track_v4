@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AppText as Text } from '../AppText';
@@ -27,6 +27,17 @@ export interface SupplementItemRowProps {
   t: (key: string) => string;
 }
 
+const styleCache = new Map<ThemeType, ReturnType<typeof createStyles>>();
+
+function getSupplementRowStyles(theme: ThemeType): ReturnType<typeof createStyles> {
+  let cached = styleCache.get(theme);
+  if (!cached) {
+    cached = createStyles(theme);
+    styleCache.set(theme, cached);
+  }
+  return cached;
+}
+
 export const SupplementItemRow: React.FC<SupplementItemRowProps> = ({
   item,
   isLast,
@@ -38,7 +49,7 @@ export const SupplementItemRow: React.FC<SupplementItemRowProps> = ({
   t,
 }) => {
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const styles = getSupplementRowStyles(theme);
   const hasNumericAmount =
     item.amount !== undefined && item.amount > 0 && Boolean(item.unit);
 

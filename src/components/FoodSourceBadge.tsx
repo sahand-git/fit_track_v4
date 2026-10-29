@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { AppText as Text } from './AppText';
 import { FoodItem } from '../types';
@@ -15,6 +15,17 @@ interface FoodSourceBadgeProps {
   style?: StyleProp<ViewStyle>;
 }
 
+const styleCache = new Map<ThemeType, ReturnType<typeof createStyles>>();
+
+function getBadgeStyles(theme: ThemeType): ReturnType<typeof createStyles> {
+  let cached = styleCache.get(theme);
+  if (!cached) {
+    cached = createStyles(theme);
+    styleCache.set(theme, cached);
+  }
+  return cached;
+}
+
 export const FoodSourceBadge: React.FC<FoodSourceBadgeProps> = ({
   source,
   sourceRef,
@@ -23,7 +34,7 @@ export const FoodSourceBadge: React.FC<FoodSourceBadgeProps> = ({
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const styles = getBadgeStyles(theme);
   const t = (k: string) => translate(language, k);
 
   // Only show the Verified badge when sourceRef exists.
