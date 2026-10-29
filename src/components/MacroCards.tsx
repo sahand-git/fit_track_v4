@@ -154,15 +154,17 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           accessibilityRole="button"
           accessibilityLabel={t('Fiber')}
         >
-          <Text style={styles.secondaryLabel} numberOfLines={1}>{t('Fiber')}:</Text>
-          <Text style={styles.secondaryValue} numberOfLines={1}>
-            {typeof fiberConsumed === 'number' ? Math.round(fiberConsumed * 10) / 10 : 0}/{fiberTarget}g
-          </Text>
-          {fiberIsIncomplete && (
-            <Text style={styles.incompleteAsterisk} accessibilityLabel={t('Incomplete data')}>
-              *
+          <Text style={styles.pillCombinedText} numberOfLines={2}>
+            <Text style={styles.secondaryLabel}>{t('Fiber')}: </Text>
+            <Text style={styles.secondaryValue}>
+              {typeof fiberConsumed === 'number' ? Math.round(fiberConsumed * 10) / 10 : 0}/{fiberTarget}g
             </Text>
-          )}
+            {fiberIsIncomplete && (
+              <Text style={styles.incompleteAsterisk} accessibilityLabel={t('Incomplete data')}>
+                {' '}*
+              </Text>
+            )}
+          </Text>
         </TouchableOpacity>
 
         {/* Sugar Pill */}
@@ -174,15 +176,17 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           accessibilityRole="button"
           accessibilityLabel={t('Sugar')}
         >
-          <Text style={styles.secondaryLabel} numberOfLines={1}>{t('Sugar')}:</Text>
-          <Text style={styles.secondaryValue} numberOfLines={1}>
-            {typeof sugarConsumed === 'number' ? Math.round(sugarConsumed * 10) / 10 : 0}/{sugarTarget}g
-          </Text>
-          {sugarIsIncomplete && (
-            <Text style={styles.incompleteAsterisk} accessibilityLabel={t('Incomplete data')}>
-              *
+          <Text style={styles.pillCombinedText} numberOfLines={2}>
+            <Text style={styles.secondaryLabel}>{t('Sugar')}: </Text>
+            <Text style={styles.secondaryValue}>
+              {typeof sugarConsumed === 'number' ? Math.round(sugarConsumed * 10) / 10 : 0}/{sugarTarget}g
             </Text>
-          )}
+            {sugarIsIncomplete && (
+              <Text style={styles.incompleteAsterisk} accessibilityLabel={t('Incomplete data')}>
+                {' '}*
+              </Text>
+            )}
+          </Text>
         </TouchableOpacity>
 
         {/* Vitamins & RDA Explorer Button */}
@@ -258,23 +262,28 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     gap: 6,
+    flexWrap: 'wrap',
   },
   secondaryPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.surfaceSubtle,
     flexShrink: 1,
     minWidth: 0,
   },
+  pillCombinedText: {
+    fontSize: 12,
+    flexShrink: 1,
+    lineHeight: 16,
+  },
   secondaryLabel: {
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
-    flexShrink: 1,
   },
   secondaryValue: {
     fontSize: 12,
@@ -285,7 +294,6 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: theme.colors.amberText,
-    marginLeft: 1,
   },
   vitaminsBtn: {
     flexDirection: 'row',
