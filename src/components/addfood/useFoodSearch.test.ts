@@ -217,4 +217,47 @@ assert.strictEqual(synthCatMatches.length, 500, 'Should find exactly 500 synthet
 assert(catDurationMs < 20, `Category filtering 1,000 items took ${catDurationMs.toFixed(2)}ms, must be < 20ms`);
 console.log(`✓ Test 7 passed: Category filtering across 1,000 foods executed in ${catDurationMs.toFixed(2)}ms.`);
 
+// Test 8: Multilingual search across newly added supplementary foods
+const testQueries = [
+  { lang: 'en', query: 'Chicken Wings', expectedId: 'food_chicken_wings_roasted' },
+  { lang: 'ar', query: 'أجنحة دجاج', expectedId: 'food_chicken_wings_roasted' },
+  { lang: 'ckb', query: 'باڵی مریشک', expectedId: 'food_chicken_wings_roasted' },
+  { lang: 'en', query: 'Tannour', expectedId: 'food_iraqi_tannour_bread' },
+  { lang: 'ar', query: 'تنور', expectedId: 'food_iraqi_tannour_bread' },
+  { lang: 'ckb', query: 'تەنوور', expectedId: 'food_iraqi_tannour_bread' },
+  { lang: 'en', query: 'Edamame', expectedId: 'food_cooked_edamame_pods' },
+  { lang: 'ar', query: 'إدامامي', expectedId: 'food_cooked_edamame_pods' },
+  { lang: 'ckb', query: 'ئیدامامی', expectedId: 'food_cooked_edamame_pods' },
+  { lang: 'en', query: 'Kefir', expectedId: 'food_kefir_lowfat_plain' },
+  { lang: 'ar', query: 'كفير', expectedId: 'food_kefir_lowfat_plain' },
+  { lang: 'ckb', query: 'کێفیر', expectedId: 'food_kefir_lowfat_plain' },
+  { lang: 'en', query: 'Shakshuka', expectedId: 'food_skillet_shakshuka' },
+  { lang: 'ar', query: 'شكشوكة', expectedId: 'food_skillet_shakshuka' },
+  { lang: 'ckb', query: 'شکشوکە', expectedId: 'food_skillet_shakshuka' },
+  { lang: 'en', query: 'Baklava', expectedId: 'food_pistachio_baklava' },
+  { lang: 'ar', query: 'بقلاوة', expectedId: 'food_pistachio_baklava' },
+  { lang: 'ckb', query: 'بەقڵاوە', expectedId: 'food_pistachio_baklava' },
+  { lang: 'en', query: 'Harira', expectedId: 'food_moroccan_harira_soup' },
+  { lang: 'ar', query: 'حريرة', expectedId: 'food_moroccan_harira_soup' },
+  { lang: 'ckb', query: 'حەریرە', expectedId: 'food_moroccan_harira_soup' },
+];
+
+for (const tq of testQueries) {
+  const res = filterFoodCatalog({
+    searchQuery: tq.query,
+    foodFilter: 'all',
+    recentFoods: [],
+    frequentFoods: [],
+    favoriteFoods: [],
+    customFoods: [],
+    barcodeCache: [],
+    t: mockT,
+  });
+  assert(
+    res.some((f) => f.id === tq.expectedId),
+    `Search for "${tq.query}" (${tq.lang}) should locate food with id ${tq.expectedId}`
+  );
+}
+console.log(`✓ Test 8 passed: Multilingual search across English, Arabic, and Kurdish Sorani successfully verified for newly added foods.`);
+
 console.log('All useFoodSearch Unit Tests PASSED Cleanly!');

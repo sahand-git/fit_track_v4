@@ -3,14 +3,16 @@ import { DAILY_FOODS } from './dailyFoods';
 import { REGIONAL_FOODS } from './regionalFoods';
 import { POPULAR_FOODS } from './popularFoods';
 import { STAPLE_FOODS } from './stapleFoods';
+import { SUPPLEMENTARY_FOODS } from './supplementaryFoods';
 
-export { DAILY_FOODS, REGIONAL_FOODS, POPULAR_FOODS, STAPLE_FOODS };
+export { DAILY_FOODS, REGIONAL_FOODS, POPULAR_FOODS, STAPLE_FOODS, SUPPLEMENTARY_FOODS };
 
 export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
   ...REGIONAL_FOODS,
   ...POPULAR_FOODS,
   ...STAPLE_FOODS,
   ...DAILY_FOODS,
+  ...SUPPLEMENTARY_FOODS,
   {
     "id": "food_chicken_breast",
     "nameAr": "صدر دجاج مشوي (بدون جلد)",
