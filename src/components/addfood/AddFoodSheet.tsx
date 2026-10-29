@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  FlatList,
   ActivityIndicator,
   Platform,
   Alert,
@@ -41,7 +42,7 @@ import {
 } from 'lucide-react-native';
 import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { LoggedMeal, MealType, FoodItem, MealTemplate } from '../../types';
+import { LoggedMeal, MealType, FoodItem, MealTemplate, AppLanguage } from '../../types';
 import { lookupBarcodeWithFallbacks } from '../../services/barcodeService';
 import { searchOnlineFoodDatabase } from '../../services/onlineFoodSearchService';
 import {
@@ -116,6 +117,116 @@ function getDefaultMealType(): MealType {
   if (currentHour < 18) return 'snack';
   return 'dinner';
 }
+
+interface FoodListItemRowProps {
+  item: FoodItem;
+  isSelected: boolean;
+  isFavorite: boolean;
+  language: AppLanguage;
+  onSelect: (item: FoodItem) => void;
+  onToggleFavorite?: (item: FoodItem) => void;
+  t: (key: string) => string;
+  theme: ThemeType;
+  styles: ReturnType<typeof createStyles>;
+  isOnlineItem?: boolean;
+}
+
+const FoodListItemRow = React.memo<FoodListItemRowProps>(
+  ({
+    item,
+    isSelected,
+    isFavorite,
+    language,
+    onSelect,
+    onToggleFavorite,
+    t,
+    theme,
+    styles,
+    isOnlineItem = false,
+  }) => {
+    const displayName = getLocalizedFoodName(item, language);
+    const servingStr = item.portionUnit
+      ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g)`
+      : item.servingSize;
+    const kcalStr = formatKcal(item.calories, t);
+    const macrosStr = `${t('Protein')} ${item.protein}g, ${t('Carbs')} ${item.carbs}g, ${t('Fat')} ${item.fat}g`;
+    const foodAccessibilityLabel = `${displayName}, ${item.brand ? `${item.brand}, ` : ''}${servingStr}, ${kcalStr}, ${macrosStr}`;
+
+    return (
+      <View
+        style={[
+          styles.foodListItem,
+          isOnlineItem && styles.foodListItemSimple,
+          isSelected && styles.foodListItemActive,
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.foodListItemMain}
+          onPress={() => onSelect(item)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={foodAccessibilityLabel}
+        >
+          <FoodThumbnail
+            name={displayName}
+            category={item.category}
+            imageUrl={item.imageUrl}
+            size="small"
+            style={{ marginEnd: 12 }}
+          />
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <Text style={styles.itemTitle}>{displayName}</Text>
+              <FoodSourceBadge
+                source={item.source || (item.recipeEstimate ? 'regional_culinary_estimate' : item.isEstimate ? 'generic_estimate' : undefined)}
+                sourceRef={item.sourceRef}
+                size="small"
+              />
+              {item.isIncomplete && (
+                <View style={styles.incompleteItemBadge}>
+                  <Text style={styles.incompleteItemBadgeText}>{t('Incomplete Data')}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.itemSub}>
+              {item.brand ? `${item.brand} • ` : ''}
+              {servingStr} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
+            </Text>
+          </View>
+          <View style={styles.itemRightCol}>
+            <Text style={styles.itemKcal}>{kcalStr}</Text>
+          </View>
+        </TouchableOpacity>
+        {!isOnlineItem && onToggleFavorite && (
+          <TouchableOpacity
+            style={styles.favStarBtn}
+            onPress={() => onToggleFavorite(item)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={isFavorite ? `${t('Remove from favorites')}: ${displayName}` : `${t('Add to favorites')}: ${displayName}`}
+          >
+            <Star
+              size={16}
+              color={isFavorite ? theme.colors.amber : theme.colors.textMuted}
+              fill={isFavorite ? theme.colors.amber : 'none'}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  },
+  (prev, next) =>
+    prev.item.id === next.item.id &&
+    prev.isSelected === next.isSelected &&
+    prev.isFavorite === next.isFavorite &&
+    prev.theme === next.theme &&
+    prev.language === next.language &&
+    prev.item.calories === next.item.calories &&
+    prev.item.protein === next.item.protein &&
+    prev.item.carbs === next.item.carbs &&
+    prev.item.fat === next.item.fat
+);
+FoodListItemRow.displayName = 'FoodListItemRow';
 
 export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   visible,
@@ -393,7 +504,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     }
   };
 
-  const handleSearchOnline = async () => {
+  const handleSearchOnline = useCallback(async () => {
     const clean = searchQuery.trim();
     if (!clean || clean.length < 2 || isSearchingOnline) return;
     setIsSearchingOnline(true);
@@ -417,7 +528,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     } finally {
       setIsSearchingOnline(false);
     }
-  };
+  }, [searchQuery, isSearchingOnline]);
 
   const handleQuickAddSave = () => {
     if (isFuture) return;
@@ -605,7 +716,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     setCustomModalVisible(true);
   };
 
-  const handleToggleFavorite = async (item: FoodItem) => {
+  const handleToggleFavorite = useCallback(async (item: FoodItem) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       const { favorites } = await toggleFavoriteFood(item);
@@ -613,7 +724,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     } catch (err) {
       console.error('Failed to toggle favorite:', err);
     }
-  };
+  }, []);
 
   const handleSaveCustomFood = async () => {
     const trimmedName = customName.trim();
@@ -956,6 +1067,232 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const headerTitle = isToday
     ? `${t('Add food')} · ${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))}`
     : `${formatDisplayDate(date, language)} · ${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))}`;
+
+  const handleSelectFood = useCallback((item: FoodItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setSelectedFood(item);
+  }, []);
+
+  const favoriteFoodIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of favoriteFoods) {
+      set.add(f.id);
+      set.add(f.name.trim().toLowerCase());
+    }
+    return set;
+  }, [favoriteFoods]);
+
+  const renderFoodItem = useCallback(
+    ({ item }: { item: FoodItem }) => {
+      const isFav =
+        favoriteFoodIds.has(item.id) ||
+        favoriteFoodIds.has(item.name.trim().toLowerCase());
+      return (
+        <FoodListItemRow
+          item={item}
+          isSelected={selectedFood?.id === item.id}
+          isFavorite={isFav}
+          language={language}
+          onSelect={handleSelectFood}
+          onToggleFavorite={handleToggleFavorite}
+          t={t}
+          theme={theme}
+          styles={styles}
+        />
+      );
+    },
+    [favoriteFoodIds, selectedFood?.id, language, handleSelectFood, handleToggleFavorite, t, theme, styles]
+  );
+
+  const renderListHeader = useMemo(() => {
+    return (
+      <View style={styles.listHeaderRow}>
+        <Text style={styles.listHeaderTitle}>
+          {searchQuery.trim().length > 0
+            ? `${filteredFoods.length} ${t('results')}`
+            : foodFilter === 'recent'
+            ? t('Recent foods')
+            : foodFilter === 'frequent'
+            ? t('Frequent foods')
+            : foodFilter === 'favorites'
+            ? t('Favorites')
+            : foodFilter === 'templates'
+            ? t('Meal templates')
+            : foodFilter === 'regional'
+            ? t('Iraqi & Kurdish')
+            : foodFilter === 'custom'
+            ? t('Custom foods')
+            : foodFilter === 'scanned'
+            ? t('Scanned')
+            : t('Common & Frequent Foods')}
+        </Text>
+      </View>
+    );
+  }, [searchQuery, filteredFoods.length, foodFilter, t, styles]);
+
+  const renderEmptyState = useMemo(() => {
+    return (
+      <View style={styles.emptyStateBox}>
+        <Text style={styles.emptyStateText}>
+          {foodFilter === 'recent'
+            ? t('No recent foods yet.')
+            : foodFilter === 'frequent'
+            ? t('No frequent foods logged yet.')
+            : foodFilter === 'favorites'
+            ? t('No favorite foods yet.')
+            : foodFilter === 'regional'
+            ? t('No regional foods found.')
+            : foodFilter === 'custom'
+            ? t('No custom foods yet.')
+            : foodFilter === 'scanned'
+            ? t('No scanned foods in cache yet.')
+            : `${t('No foods found matching')} "${searchQuery}"`}
+        </Text>
+      </View>
+    );
+  }, [foodFilter, searchQuery, t, styles]);
+
+  const renderListFooter = useMemo(() => {
+    return (
+      <View style={{ width: '100%', gap: 6, paddingTop: 4 }}>
+        {searchQuery.trim().length >= 2 && !isSearchingOnline && !hasSearchedOnline && (
+          <TouchableOpacity
+            style={styles.globalSearchPromptBtn}
+            onPress={handleSearchOnline}
+            accessibilityRole="button"
+            accessibilityLabel={t('Search Global Database')}
+          >
+            <Globe size={15} color={theme.colors.primary} />
+            <Text style={styles.globalSearchPromptBtnText}>
+              {`${t('Search Global Database')} ("${searchQuery.trim()}")`}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {isSearchingOnline && (
+          <View style={styles.globalSearchLoadingBox}>
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <Text style={styles.globalSearchLoadingText}>{t('Searching global database...')}</Text>
+          </View>
+        )}
+
+        {isOnlineRateLimited && (
+          <View style={styles.onlineAlertBox}>
+            <Clock size={16} color={theme.colors.orangeDeep} />
+            <Text style={styles.onlineAlertText}>
+              {t('Rate limit reached. Please wait a few seconds before searching again.')}
+            </Text>
+          </View>
+        )}
+
+        {isOnlineOffline && onlineFoods.length === 0 && (
+          <View style={styles.onlineOfflineBox}>
+            <WifiOff size={18} color={theme.colors.orangeDeep} />
+            <Text style={styles.onlineOfflineText}>
+              {t('You are currently offline. Check your internet connection or browse the offline catalog.')}
+            </Text>
+          </View>
+        )}
+
+        {hasSearchedOnline && onlineFoods.length > 0 && (
+          <View style={{ width: '100%', marginTop: 8, gap: 6 }}>
+            <View style={styles.onlineSectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, flexWrap: 'wrap' }}>
+                <Globe size={14} color={theme.colors.secondary} />
+                <Text style={styles.onlineSectionTitle}>
+                  {t('Global Database Results')} ({onlineFoods.length})
+                </Text>
+                {isOnlineFromCache && (
+                  <View style={styles.cachedBadge}>
+                    <Database size={11} color={theme.colors.textMuted} />
+                    <Text style={styles.cachedBadgeText}>{t('Showing cached results')}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.openFoodFactsCreditText}>
+                {t('Powered by Open Food Facts (ODbL)')}
+              </Text>
+            </View>
+            {onlineFoods.map((item) => (
+              <FoodListItemRow
+                key={item.id}
+                item={item}
+                isSelected={selectedFood?.id === item.id}
+                isFavorite={false}
+                language={language}
+                onSelect={handleSelectFood}
+                t={t}
+                theme={theme}
+                styles={styles}
+                isOnlineItem={true}
+              />
+            ))}
+          </View>
+        )}
+
+        {hasSearchedOnline && !isOnlineOffline && !isOnlineRateLimited && onlineFoods.length === 0 && (
+          <View style={styles.onlineNoResultsBox}>
+            <Text style={styles.onlineNoResultsText}>{t('No online foods found.')}</Text>
+          </View>
+        )}
+
+        {filteredFoods.length === 0 && (
+          <TouchableOpacity
+            style={styles.requestFoodPromptBtn}
+            onPress={() => {
+              setRequestModalInitialName(searchQuery.trim());
+              setRequestModalInitialBarcode(manualBarcode.trim());
+              setRequestModalVisible(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Request a Food')}
+          >
+            <Plus size={14} color={theme.colors.primary} />
+            <Text style={styles.requestFoodPromptBtnText}>
+              {t('Request a Food')}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {searchQuery.trim().length > 0 && (
+          <TouchableOpacity
+            style={styles.searchFooterRequestBtn}
+            onPress={() => {
+              setRequestModalInitialName(searchQuery.trim());
+              setRequestModalInitialBarcode('');
+              setRequestModalVisible(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Request a food')}
+          >
+            <Text style={styles.searchFooterRequestText}>
+              {t("Can't find what you are looking for?")}{' '}
+              <Text style={{ color: theme.colors.primary, fontWeight: '700' }}>
+                {t('Request a food')}
+              </Text>
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }, [
+    searchQuery,
+    isSearchingOnline,
+    hasSearchedOnline,
+    isOnlineRateLimited,
+    isOnlineOffline,
+    onlineFoods,
+    isOnlineFromCache,
+    filteredFoods.length,
+    selectedFood?.id,
+    language,
+    handleSelectFood,
+    manualBarcode,
+    t,
+    theme,
+    styles,
+    handleSearchOnline,
+  ]);
 
   return (
     <>
@@ -1430,37 +1767,16 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                   </View>
 
                   {/* Foods List / Meal Templates List */}
-                  <ScrollView
-                    contentContainerStyle={[
-                      styles.foodListScroll,
-                      { paddingBottom: Math.max(48, insets.bottom + 36) },
-                    ]}
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    <View style={styles.listHeaderRow}>
-                      <Text style={styles.listHeaderTitle}>
-                        {searchQuery.trim().length > 0
-                          ? `${filteredFoods.length} ${t('results')}`
-                          : foodFilter === 'recent'
-                          ? t('Recent foods')
-                          : foodFilter === 'frequent'
-                          ? t('Frequent foods')
-                          : foodFilter === 'favorites'
-                          ? t('Favorites')
-                          : foodFilter === 'templates'
-                          ? t('Meal templates')
-                          : foodFilter === 'regional'
-                          ? t('Iraqi & Kurdish')
-                          : foodFilter === 'custom'
-                          ? t('Custom foods')
-                          : foodFilter === 'scanned'
-                          ? t('Scanned')
-                          : t('Common & Frequent Foods')}
-                      </Text>
-                    </View>
-
-                    {foodFilter === 'templates' ? (
-                      mealTemplates.length === 0 ? (
+                  {foodFilter === 'templates' ? (
+                    <ScrollView
+                      contentContainerStyle={[
+                        styles.foodListScroll,
+                        { paddingBottom: Math.max(48, insets.bottom + 36) },
+                      ]}
+                      keyboardShouldPersistTaps="handled"
+                    >
+                      {renderListHeader}
+                      {mealTemplates.length === 0 ? (
                         <View style={styles.emptyStateBox}>
                           <Bookmark size={28} color={theme.colors.textMuted} style={{ marginBottom: 8 }} />
                           <Text style={styles.emptyStateText}>{t('No meal templates saved yet.')}</Text>
@@ -1522,377 +1838,27 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                             </View>
                           </View>
                         ))
-                      )
-                    ) : filteredFoods.length === 0 ? (
-                      <View style={styles.emptyStateBox}>
-                        <Text style={styles.emptyStateText}>
-                          {foodFilter === 'recent'
-                            ? t('No recent foods yet.')
-                            : foodFilter === 'frequent'
-                            ? t('No frequent foods logged yet.')
-                            : foodFilter === 'favorites'
-                            ? t('No favorite foods yet.')
-                            : foodFilter === 'regional'
-                            ? t('No regional foods found.')
-                            : foodFilter === 'custom'
-                            ? t('No custom foods yet.')
-                            : foodFilter === 'scanned'
-                            ? t('No scanned foods in cache yet.')
-                            : `${t('No foods found matching')} "${searchQuery}"`}
-                        </Text>
-
-                        {searchQuery.trim().length >= 2 && !isSearchingOnline && !hasSearchedOnline && (
-                          <TouchableOpacity
-                            style={styles.globalSearchPromptBtn}
-                            onPress={handleSearchOnline}
-                            accessibilityRole="button"
-                            accessibilityLabel={t('Search Global Database')}
-                          >
-                            <Globe size={15} color={theme.colors.primary} />
-                            <Text style={styles.globalSearchPromptBtnText}>
-                              {`${t('Search Global Database')} ("${searchQuery.trim()}")`}
-                            </Text>
-                          </TouchableOpacity>
-                        )}
-
-                        {isSearchingOnline && (
-                          <View style={styles.globalSearchLoadingBox}>
-                            <ActivityIndicator size="small" color={theme.colors.primary} />
-                            <Text style={styles.globalSearchLoadingText}>{t('Searching global database...')}</Text>
-                          </View>
-                        )}
-
-                        {isOnlineRateLimited && (
-                          <View style={styles.onlineAlertBox}>
-                            <Clock size={16} color={theme.colors.orangeDeep} />
-                            <Text style={styles.onlineAlertText}>
-                              {t('Rate limit reached. Please wait a few seconds before searching again.')}
-                            </Text>
-                          </View>
-                        )}
-
-                        {isOnlineOffline && onlineFoods.length === 0 && (
-                          <View style={styles.onlineOfflineBox}>
-                            <WifiOff size={18} color={theme.colors.orangeDeep} />
-                            <Text style={styles.onlineOfflineText}>
-                              {t('You are currently offline. Check your internet connection or browse the offline catalog.')}
-                            </Text>
-                          </View>
-                        )}
-
-                        {hasSearchedOnline && onlineFoods.length > 0 && (
-                          <View style={{ width: '100%', marginTop: 8 }}>
-                            <View style={styles.onlineSectionHeader}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, flexWrap: 'wrap' }}>
-                                <Globe size={14} color={theme.colors.secondary} />
-                                <Text style={styles.onlineSectionTitle}>
-                                  {t('Global Database Results')} ({onlineFoods.length})
-                                </Text>
-                                {isOnlineFromCache && (
-                                  <View style={styles.cachedBadge}>
-                                    <Database size={11} color={theme.colors.textMuted} />
-                                    <Text style={styles.cachedBadgeText}>{t('Showing cached results')}</Text>
-                                  </View>
-                                )}
-                              </View>
-                              <Text style={styles.openFoodFactsCreditText}>
-                                {t('Powered by Open Food Facts (ODbL)')}
-                              </Text>
-                            </View>
-                            {onlineFoods.map((item) => {
-                              const onlineDisplayName = getLocalizedFoodName(item, language);
-                              const onlineServing = item.portionUnit
-                                ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g)`
-                                : item.servingSize;
-                              const onlineKcal = formatKcal(item.calories, t);
-                              const onlineMacros = `${t('Protein')} ${item.protein}g, ${t('Carbs')} ${item.carbs}g, ${t('Fat')} ${item.fat}g`;
-                              const onlineA11yLabel = `${onlineDisplayName}, ${item.brand ? `${item.brand}, ` : ''}${onlineServing}, ${onlineKcal}, ${onlineMacros}`;
-
-                              return (
-                                <TouchableOpacity
-                                  key={item.id}
-                                  style={[
-                                    styles.foodListItem,
-                                    styles.foodListItemSimple,
-                                    selectedFood?.id === item.id && styles.foodListItemActive,
-                                  ]}
-                                  onPress={() => {
-                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                                    setSelectedFood(item);
-                                  }}
-                                  activeOpacity={0.7}
-                                  accessibilityRole="button"
-                                  accessibilityLabel={onlineA11yLabel}
-                                >
-                                  <FoodThumbnail
-                                    name={item.name}
-                                    category={item.category}
-                                    imageUrl={item.imageUrl}
-                                    size="small"
-                                    style={{ marginEnd: 12 }}
-                                  />
-                                  <View style={{ flex: 1 }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                                      <Text style={styles.itemTitle}>{onlineDisplayName}</Text>
-                                      {item.source && <FoodSourceBadge source={item.source} sourceRef={item.sourceRef} size="small" />}
-                                      {item.isIncomplete && (
-                                        <View style={styles.incompleteItemBadge}>
-                                          <Text style={styles.incompleteItemBadgeText}>{t('Incomplete Data')}</Text>
-                                        </View>
-                                      )}
-                                    </View>
-                                    <Text style={styles.itemSub}>
-                                      {item.brand ? `${item.brand} • ` : ''}
-                                      {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
-                                    </Text>
-                                  </View>
-                                  <View style={styles.itemRightCol}>
-                                    <Text style={styles.itemKcal}>{formatKcal(item.calories, t)}</Text>
-                                  </View>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-                        )}
-
-                        {hasSearchedOnline && !isOnlineOffline && !isOnlineRateLimited && onlineFoods.length === 0 && (
-                          <View style={styles.onlineNoResultsBox}>
-                            <Text style={styles.onlineNoResultsText}>{t('No online foods found.')}</Text>
-                          </View>
-                        )}
-
-                        <TouchableOpacity
-                          style={styles.requestFoodPromptBtn}
-                          onPress={() => {
-                            setRequestModalInitialName(searchQuery.trim());
-                            setRequestModalInitialBarcode(manualBarcode.trim());
-                            setRequestModalVisible(true);
-                          }}
-                          accessibilityRole="button"
-                          accessibilityLabel={t('Request a Food')}
-                        >
-                          <Plus size={14} color={theme.colors.primary} />
-                          <Text style={styles.requestFoodPromptBtnText}>
-                            {t('Request a Food')}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <>
-                        {filteredFoods.map((item) => {
-                          const isFav = favoriteFoods.some(
-                            (f) => f.id === item.id || f.name.trim().toLowerCase() === item.name.trim().toLowerCase()
-                          );
-                          const displayName = getLocalizedFoodName(item, language);
-                          const servingStr = item.portionUnit
-                            ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g)`
-                            : item.servingSize;
-                          const kcalStr = formatKcal(item.calories, t);
-                          const macrosStr = `${t('Protein')} ${item.protein}g, ${t('Carbs')} ${item.carbs}g, ${t('Fat')} ${item.fat}g`;
-                          const foodAccessibilityLabel = `${displayName}, ${item.brand ? `${item.brand}, ` : ''}${servingStr}, ${kcalStr}, ${macrosStr}`;
-
-                          return (
-                            <View
-                              key={item.id}
-                              style={[
-                                styles.foodListItem,
-                                selectedFood?.id === item.id && styles.foodListItemActive,
-                              ]}
-                            >
-                              <TouchableOpacity
-                                style={styles.foodListItemMain}
-                                onPress={() => {
-                                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                                  setSelectedFood(item);
-                                }}
-                                activeOpacity={0.7}
-                                accessibilityRole="button"
-                                accessibilityLabel={foodAccessibilityLabel}
-                              >
-                                <FoodThumbnail
-                                  name={displayName}
-                                  category={item.category}
-                                  imageUrl={item.imageUrl}
-                                  size="small"
-                                  style={{ marginEnd: 12 }}
-                                />
-                                <View style={{ flex: 1 }}>
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                    <Text style={styles.itemTitle}>{displayName}</Text>
-                                    <FoodSourceBadge
-                                      source={item.source || (item.recipeEstimate ? 'regional_culinary_estimate' : item.isEstimate ? 'generic_estimate' : undefined)}
-                                      sourceRef={item.sourceRef}
-                                      size="small"
-                                    />
-                                  </View>
-                                  <Text style={styles.itemSub}>
-                                    {item.portionUnit
-                                      ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g) • P: ${item.protein}g C: ${item.carbs}g F: ${item.fat}g`
-                                      : `${item.servingSize} • P: ${item.protein}g C: ${item.carbs}g F: ${item.fat}g`}
-                                  </Text>
-                                </View>
-                                <View style={styles.itemRightCol}>
-                                  <Text style={styles.itemKcal}>{formatKcal(item.calories, t)}</Text>
-                                </View>
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                style={styles.favStarBtn}
-                                onPress={() => handleToggleFavorite(item)}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                accessibilityRole="button"
-                                accessibilityLabel={isFav ? `${t('Remove from favorites')}: ${displayName}` : `${t('Add to favorites')}: ${displayName}`}
-                              >
-                                <Star
-                                  size={16}
-                                  color={isFav ? theme.colors.amber : theme.colors.textMuted}
-                                  fill={isFav ? theme.colors.amber : 'none'}
-                                />
-                              </TouchableOpacity>
-                            </View>
-                          );
-                        })}
-                        {searchQuery.trim().length >= 2 && !isSearchingOnline && !hasSearchedOnline && (
-                          <TouchableOpacity
-                            style={styles.globalSearchPromptBtn}
-                            onPress={handleSearchOnline}
-                            accessibilityRole="button"
-                            accessibilityLabel={t('Search Global Database')}
-                          >
-                            <Globe size={15} color={theme.colors.primary} />
-                            <Text style={styles.globalSearchPromptBtnText}>
-                              {`${t('Search Global Database')} ("${searchQuery.trim()}")`}
-                            </Text>
-                          </TouchableOpacity>
-                        )}
-
-                        {isSearchingOnline && (
-                          <View style={styles.globalSearchLoadingBox}>
-                            <ActivityIndicator size="small" color={theme.colors.primary} />
-                            <Text style={styles.globalSearchLoadingText}>{t('Searching global database...')}</Text>
-                          </View>
-                        )}
-
-                        {isOnlineRateLimited && (
-                          <View style={styles.onlineAlertBox}>
-                            <Clock size={16} color={theme.colors.orangeDeep} />
-                            <Text style={styles.onlineAlertText}>
-                              {t('Rate limit reached. Please wait a few seconds before searching again.')}
-                            </Text>
-                          </View>
-                        )}
-
-                        {isOnlineOffline && onlineFoods.length === 0 && (
-                          <View style={styles.onlineOfflineBox}>
-                            <WifiOff size={18} color={theme.colors.orangeDeep} />
-                            <Text style={styles.onlineOfflineText}>
-                              {t('You are currently offline. Check your internet connection or browse the offline catalog.')}
-                            </Text>
-                          </View>
-                        )}
-
-                        {hasSearchedOnline && onlineFoods.length > 0 && (
-                          <View style={{ width: '100%', marginTop: 8 }}>
-                            <View style={styles.onlineSectionHeader}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, flexWrap: 'wrap' }}>
-                                <Globe size={14} color={theme.colors.secondary} />
-                                <Text style={styles.onlineSectionTitle}>
-                                  {t('Global Database Results')} ({onlineFoods.length})
-                                </Text>
-                                {isOnlineFromCache && (
-                                  <View style={styles.cachedBadge}>
-                                    <Database size={11} color={theme.colors.textMuted} />
-                                    <Text style={styles.cachedBadgeText}>{t('Showing cached results')}</Text>
-                                  </View>
-                                )}
-                              </View>
-                              <Text style={styles.openFoodFactsCreditText}>
-                                {t('Powered by Open Food Facts (ODbL)')}
-                              </Text>
-                            </View>
-                            {onlineFoods.map((item) => {
-                              const onlineDisplayName = getLocalizedFoodName(item, language);
-                              const onlineServing = item.portionUnit
-                                ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g)`
-                                : item.servingSize;
-                              const onlineKcal = formatKcal(item.calories, t);
-                              const onlineMacros = `${t('Protein')} ${item.protein}g, ${t('Carbs')} ${item.carbs}g, ${t('Fat')} ${item.fat}g`;
-                              const onlineA11yLabel = `${onlineDisplayName}, ${item.brand ? `${item.brand}, ` : ''}${onlineServing}, ${onlineKcal}, ${onlineMacros}`;
-
-                              return (
-                                <TouchableOpacity
-                                  key={item.id}
-                                  style={[
-                                    styles.foodListItem,
-                                    styles.foodListItemSimple,
-                                    selectedFood?.id === item.id && styles.foodListItemActive,
-                                  ]}
-                                  onPress={() => {
-                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                                    setSelectedFood(item);
-                                  }}
-                                  activeOpacity={0.7}
-                                  accessibilityRole="button"
-                                  accessibilityLabel={onlineA11yLabel}
-                                >
-                                  <FoodThumbnail
-                                    name={item.name}
-                                    category={item.category}
-                                    imageUrl={item.imageUrl}
-                                    size="small"
-                                    style={{ marginEnd: 12 }}
-                                  />
-                                  <View style={{ flex: 1 }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                                      <Text style={styles.itemTitle}>{onlineDisplayName}</Text>
-                                      {item.source && <FoodSourceBadge source={item.source} sourceRef={item.sourceRef} size="small" />}
-                                      {item.isIncomplete && (
-                                        <View style={styles.incompleteItemBadge}>
-                                          <Text style={styles.incompleteItemBadgeText}>{t('Incomplete Data')}</Text>
-                                        </View>
-                                      )}
-                                    </View>
-                                    <Text style={styles.itemSub}>
-                                      {item.brand ? `${item.brand} • ` : ''}
-                                      {item.servingSize} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
-                                    </Text>
-                                  </View>
-                                  <View style={styles.itemRightCol}>
-                                    <Text style={styles.itemKcal}>{formatKcal(item.calories, t)}</Text>
-                                  </View>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-                        )}
-
-                        {hasSearchedOnline && !isOnlineOffline && !isOnlineRateLimited && onlineFoods.length === 0 && (
-                          <View style={styles.onlineNoResultsBox}>
-                            <Text style={styles.onlineNoResultsText}>{t('No online foods found.')}</Text>
-                          </View>
-                        )}
-
-                        {searchQuery.trim().length > 0 && (
-                          <TouchableOpacity
-                            style={styles.searchFooterRequestBtn}
-                            onPress={() => {
-                              setRequestModalInitialName(searchQuery.trim());
-                              setRequestModalInitialBarcode('');
-                              setRequestModalVisible(true);
-                            }}
-                            accessibilityRole="button"
-                            accessibilityLabel={t('Request a food')}
-                          >
-                            <Text style={styles.searchFooterRequestText}>
-                              {t("Can't find what you are looking for?")}{' '}
-                              <Text style={{ color: theme.colors.primary, fontWeight: '700' }}>
-                                {t('Request a food')}
-                              </Text>
-                            </Text>
-                          </TouchableOpacity>
-                        )}
-                      </>
-                    )}
-                  </ScrollView>
+                      )}
+                    </ScrollView>
+                  ) : (
+                    <FlatList
+                      data={filteredFoods}
+                      keyExtractor={(item) => item.id}
+                      renderItem={renderFoodItem}
+                      initialNumToRender={12}
+                      maxToRenderPerBatch={10}
+                      windowSize={5}
+                      removeClippedSubviews={Platform.OS === 'android'}
+                      keyboardShouldPersistTaps="handled"
+                      contentContainerStyle={[
+                        styles.foodListScroll,
+                        { paddingBottom: Math.max(48, insets.bottom + 36) },
+                      ]}
+                      ListHeaderComponent={renderListHeader}
+                      ListEmptyComponent={renderEmptyState}
+                      ListFooterComponent={renderListFooter}
+                    />
+                  )}
                 </>
               )}
             </View>
