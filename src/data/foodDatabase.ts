@@ -429,20 +429,6 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "source": "verified_database"
   },
   {
-    "id": "food_naan_bread",
-    "name": "Samoon / Kurdish Flatbread",
-    "nameAr": "صمون / خبز عراقي",
-    "nameCkb": "نان / سەمون",
-    "servingSize": "1 piece (120g)",
-    "servingGrams": 120,
-    "calories": 290,
-    "protein": 8.5,
-    "carbs": 58,
-    "fat": 2.2,
-    "category": "Grains & Bread",
-    "source": "regional_culinary_estimate"
-  },
-  {
     "id": "food_hummus",
     "name": "Traditional Hummus Tahini",
     "nameAr": "حمص بطحينة",
@@ -589,23 +575,58 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "id": "food_whole_wheat_bread",
     "nameAr": "خبز توست قمح كامل ١٠٠٪",
     "nameCkb": "تۆستی گەنمی تەواو ١٠٠٪",
+    "sourceRef": "USDA FDC 172685",
     "name": "100% Whole Wheat Sliced Bread",
     "servingSize": "1 slice (38g)",
     "servingGrams": 38,
-    "calories": 80,
-    "protein": 4,
-    "carbs": 15,
-    "fat": 1,
-    "fiber": 3,
-    "sugars": 2,
-    "sodium": 135,
+    "calories": 94,
+    "protein": 4.9,
+    "carbs": 15.7,
+    "fat": 1.3,
+    "fiber": 2.3,
+    "sugar": 1.8,
+    "sodium": 140,
     "calcium": 64,
     "iron": 1.0,
     "potassium": 102,
     "magnesium": 30,
     "nutriScore": "A",
     "category": "Grains & Bread",
-    "source": "generic_estimate"
+    "source": "verified_database",
+    "portionUnit": "piece",
+    "gramsPerUnit": 38,
+    "variants": [
+      {
+        "id": "var_wheat_bread_slice_38g",
+        "name": "Standard Slice (38g)",
+        "calories": 94,
+        "protein": 4.9,
+        "carbs": 15.7,
+        "fat": 1.3,
+        "servingSize": "1 slice (38g)",
+        "servingGrams": 38
+      },
+      {
+        "id": "var_wheat_bread_slice_35g",
+        "name": "Thin Slice (35g)",
+        "calories": 85,
+        "protein": 4.0,
+        "carbs": 14.5,
+        "fat": 1.2,
+        "servingSize": "1 slice (35g)",
+        "servingGrams": 35
+      },
+      {
+        "id": "var_wheat_bread_100g",
+        "name": "Per 100g",
+        "calories": 247,
+        "protein": 13.0,
+        "carbs": 41.3,
+        "fat": 3.4,
+        "servingSize": "100g",
+        "servingGrams": 100
+      }
+    ]
   },
   {
     "id": "food_blueberries",

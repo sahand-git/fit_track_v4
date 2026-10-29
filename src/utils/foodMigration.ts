@@ -54,6 +54,10 @@ export const FOOD_ID_MIGRATIONS: Record<string, string> = {
   pop_pizza_bbq_chicken_slice: 'pizza_chicken_grilled',
   pop_pizza_meat_lovers_slice: 'pizza_pepperoni_classic',
 
+  // Breads & flatbread duplicates merged with variants
+  pop_wheat_bread_slice: 'food_whole_wheat_bread',
+  food_naan_bread: 'regional_stone_samoon',
+
   // Regional dishes duplicates -> recipe-based canonical entries
   food_kurdish_chicken_biryani: 'regional_biryani_chicken',
   food_kebab_shish: 'regional_iraqi_kebab',

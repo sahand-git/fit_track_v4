@@ -34,6 +34,10 @@ assert(resolveCanonicalFoodId('pop_pizza_pepperoni_slice') === 'pizza_pepperoni_
 assert(resolveCanonicalFoodId('pop_pizza_veggie_slice') === 'pizza_vegetable_supreme', 'Pizza veggie resolves');
 assert(resolveCanonicalFoodId('pop_pizza_bbq_chicken_slice') === 'pizza_chicken_grilled', 'Pizza chicken resolves');
 
+// Breads & flatbread duplicate migrations
+assert(resolveCanonicalFoodId('pop_wheat_bread_slice') === 'food_whole_wheat_bread', 'Whole wheat bread resolves to canonical');
+assert(resolveCanonicalFoodId('food_naan_bread') === 'regional_stone_samoon', 'Samoon / Kurdish flatbread resolves to canonical');
+
 // Regional dishes migrations
 assert(resolveCanonicalFoodId('food_kurdish_chicken_biryani') === 'regional_biryani_chicken', 'Biryani resolves');
 assert(resolveCanonicalFoodId('food_kebab_shish') === 'regional_iraqi_kebab', 'Kebab resolves');

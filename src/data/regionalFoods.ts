@@ -813,6 +813,15 @@ export const REGIONAL_FOODS: FoodItem[] = [
         fat: 3.5,
         description: 'Top crust coated with toasted sesame seeds before firing.',
       },
+      {
+        id: 'var_samoon_flatbread_120g',
+        name: 'Large Kurdish Flatbread Samoon (120g)',
+        calories: 290,
+        protein: 8.5,
+        carbs: 58,
+        fat: 2.2,
+        description: 'Large traditional stone-hearth Kurdish flatbread / samoon (120g).',
+      },
     ],
   },
   {
