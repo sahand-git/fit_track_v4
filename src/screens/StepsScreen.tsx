@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { Activity, Footprints, HeartPulse, Minus, Plus, RefreshCw, Target } from 'lucide-react-native';
 import { DirectionalIcon } from '../components/DirectionalIcon';
 import { AppText as Text } from '../components/AppText';
@@ -95,11 +95,16 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, { paddingBottom: Math.max(140, insets.bottom + 90) }]}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView
+      behavior="padding"
+      style={{ flex: 1 }}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
     >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(140, insets.bottom + 90) }]}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel={t('Back')} style={styles.back}>
           <DirectionalIcon name="ArrowLeft" size={20} color={theme.colors.textPrimary} />
@@ -206,6 +211,7 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
       {isFuture && <Text style={styles.error}>{t('Future dates are read-only.')}</Text>}
       {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

@@ -7,6 +7,7 @@ import {
   ScrollView,
   Platform,
   BackHandler,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
@@ -99,7 +100,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
 
   return (
     <SafeAreaView style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Step Indicator */}
         <View style={styles.stepHeader}>
           <Text style={styles.badgeText}>{t('Welcome to FitTrack')}</Text>
@@ -365,6 +367,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

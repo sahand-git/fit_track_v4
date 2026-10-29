@@ -7,7 +7,6 @@ import {
   TextInput,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { AppText as Text } from '../AppText';
 import { X, Check, AlertTriangle } from 'lucide-react-native';
@@ -72,7 +71,7 @@ export const AddFoodCustomModal: React.FC<AddFoodCustomModalProps> = ({
         ]}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           style={{ width: '100%', alignItems: 'center' }}
         >
           <View style={styles.customModalCard}>

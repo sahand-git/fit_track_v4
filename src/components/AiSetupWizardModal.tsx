@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Linking,
   Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
@@ -136,7 +137,8 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
 
   const content = (
     <SafeAreaView style={[styles.container, { direction: isRTL ? 'rtl' : 'ltr' }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Header Bar */}
         <View style={[styles.headerBar, isRTL && styles.rowRTL]}>
           <View style={[styles.titleGroup, isRTL && styles.rowRTL]}>
@@ -356,6 +358,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 

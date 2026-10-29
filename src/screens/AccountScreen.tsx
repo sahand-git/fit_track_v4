@@ -219,7 +219,7 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
   return (
     <KeyboardAvoidingView
       style={styles.keyboardAvoidingView}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
     >
     <ScrollView

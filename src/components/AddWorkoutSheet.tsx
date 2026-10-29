@@ -207,7 +207,7 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
           accessibilityLabel={t('Close')}
         />
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           style={styles.sheetContainer}
         >
           <SaveSuccessOverlay visible={showSuccess} message={t('Workout Logged')} />

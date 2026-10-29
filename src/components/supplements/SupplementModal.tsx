@@ -7,7 +7,6 @@ import {
   TextInput,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { AppText as Text } from '../AppText';
 import { X, Search } from 'lucide-react-native';
@@ -104,7 +103,7 @@ export const SupplementModal: React.FC<SupplementModalProps> = ({
         ]}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           style={{ width: '100%', justifyContent: 'flex-end' }}
         >
           <View

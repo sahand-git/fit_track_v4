@@ -7,6 +7,7 @@ import {
   TextInput,
   Platform,
   BackHandler,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
@@ -166,10 +167,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   ];
 
   return (
-    <ScrollView
-      style={[styles.container, { direction: currentLanguage === 'en' ? 'ltr' : 'rtl' }]}
-      contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+    <KeyboardAvoidingView
+      behavior="padding"
+      style={{ flex: 1 }}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
     >
+      <ScrollView
+        style={[styles.container, { direction: currentLanguage === 'en' ? 'ltr' : 'rtl' }]}
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+        keyboardShouldPersistTaps="handled"
+      >
       {onBack && (
         <TouchableOpacity
           onPress={onBack}
@@ -690,6 +697,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         }}
       />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

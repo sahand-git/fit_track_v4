@@ -7,7 +7,6 @@ import {
   TextInput,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Linking,
   Share,
@@ -146,7 +145,7 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.backdrop}
       >
         <View style={styles.sheetContainer}>

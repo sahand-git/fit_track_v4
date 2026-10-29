@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Activity, Dumbbell, Plus, Search, Trash2 } from 'lucide-react-native';
 import { DirectionalIcon } from '../components/DirectionalIcon';
@@ -55,7 +55,12 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
   ]);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      behavior="padding"
+      style={{ flex: 1 }}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+    >
+      <View style={styles.container}>
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: Math.max(210, addButtonBottom + 72) }]}
         keyboardShouldPersistTaps="handled"
@@ -162,6 +167,7 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
       )}
       {sheetVisible && <AddWorkoutSheet visible onClose={closeSheet} date={date} profile={profile} onSaveWorkout={onAddWorkout} editingWorkout={editing} onUpdateWorkout={onUpdateWorkout} />}
     </View>
+    </KeyboardAvoidingView>
   );
 };
 

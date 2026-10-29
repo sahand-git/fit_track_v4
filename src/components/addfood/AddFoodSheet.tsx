@@ -959,7 +959,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
             accessibilityRole="button"
           />
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior="padding"
             style={{ width: '100%', height: '92%', justifyContent: 'flex-end' }}
             pointerEvents="box-none"
           >

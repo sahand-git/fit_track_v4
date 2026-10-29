@@ -498,7 +498,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior="padding"
             style={{ width: '100%', alignItems: 'center' }}
           >
             <View style={styles.modalCard}>
