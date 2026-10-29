@@ -17,6 +17,7 @@ import { UserProfile, DailyLog } from '../types';
 import { loadLogsForDates } from '../storage/storage';
 import { getPastDates, parseLocalDateString, formatDisplayDate } from '../utils/dateUtils';
 import { formatKcal } from '../utils/formatKcal';
+import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
@@ -65,14 +66,14 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
     };
   }, [language, t]);
 
-  const calorieTarget = profile?.targetCalories || 2000;
-  const proteinTarget = profile?.targetProtein || 140;
+  const proteinTarget = profile?.customNutrientGoals?.protein ?? profile?.targetProtein ?? 140;
 
   const {
     activeDays,
     dailyAvgCalories,
     dailyAvgProtein,
     maxWeeklyCalories,
+    avgDailyCalorieTarget,
   } = useMemo(() => {
     const active = daysLogs.filter((d) => d.log.meals.length > 0);
     const totalCal = daysLogs.reduce((sum, d) => {
@@ -83,9 +84,17 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
     }, 0);
     const avgCal = active.length > 0 ? Math.round(totalCal / active.length) : 0;
     const avgProt = active.length > 0 ? Math.round((totalProt / active.length) * 10) / 10 : 0;
+
+    const allTargets = daysLogs.map((d) => getDailyEffectiveCalorieTarget(profile, d.log));
+    const activeTargets = active.map((d) => getDailyEffectiveCalorieTarget(profile, d.log));
+    const avgCalTarget = activeTargets.length > 0
+      ? Math.round(activeTargets.reduce((s, t) => s + t, 0) / activeTargets.length)
+      : Math.round(allTargets.reduce((s, t) => s + t, 0) / (allTargets.length || 1));
+
     const maxCal = Math.max(
-      calorieTarget * 1.2,
-      ...daysLogs.map((d) => d.log.meals.reduce((s, m) => s + m.calories, 0))
+      ...allTargets.map((t) => t * 1.2),
+      ...daysLogs.map((d) => d.log.meals.reduce((s, m) => s + m.calories, 0)),
+      1000
     );
 
     return {
@@ -95,12 +104,19 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
       dailyAvgCalories: avgCal,
       dailyAvgProtein: avgProt,
       maxWeeklyCalories: maxCal,
+      avgDailyCalorieTarget: avgCalTarget,
     };
-  }, [daysLogs, calorieTarget]);
+  }, [daysLogs, profile]);
 
   const selectedEntry = selectedDayIdx !== null && daysLogs[selectedDayIdx]
     ? daysLogs[selectedDayIdx]
     : null;
+
+  const selectedDayTarget = useMemo(() => {
+    return selectedEntry
+      ? getDailyEffectiveCalorieTarget(profile, selectedEntry.log)
+      : avgDailyCalorieTarget;
+  }, [selectedEntry, profile, avgDailyCalorieTarget]);
 
   const selectedCalories = useMemo(() => {
     return selectedEntry
@@ -158,10 +174,20 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
       <View style={styles.chartCard}>
         <View style={styles.chartHeader}>
           <Text style={styles.chartTitle}>{t('7-Day Intake Trend')}</Text>
-          <Text style={styles.targetLabel}>{calorieTarget} {t('kcal target')}</Text>
+          <Text style={styles.targetLabel}>{selectedDayTarget} {t('kcal target')}</Text>
         </View>
 
         <View style={styles.barChartContainer}>
+          {maxWeeklyCalories > 0 && selectedDayTarget > 0 && (
+            <View
+              style={[
+                styles.chartTargetLine,
+                {
+                  bottom: Math.min(78, Math.max(6, Math.round((selectedDayTarget / maxWeeklyCalories) * 80))),
+                },
+              ]}
+            />
+          )}
           <View style={styles.barsRow}>
             {daysLogs.map((item, idx) => {
               const dayKcal = item.log.meals.reduce((s, m) => s + m.calories, 0);
@@ -170,6 +196,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                 : 6;
               const isSelected = selectedDayIdx === idx;
               const hasData = dayKcal > 0;
+              const itemTarget = getDailyEffectiveCalorieTarget(profile, item.log);
 
               return (
                 <TouchableOpacity
@@ -192,7 +219,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                           height: `${heightPct}%`,
                           backgroundColor: !hasData
                             ? theme.colors.surfaceSubtle
-                            : dayKcal <= calorieTarget
+                            : dayKcal <= itemTarget
                             ? theme.colors.primary
                             : theme.colors.accent,
                         },
@@ -217,9 +244,9 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
             <Text style={styles.detailStatusText}>
               {selectedCalories === 0
                 ? t('No entries')
-                : selectedCalories <= calorieTarget
-                ? `${calorieTarget - selectedCalories} ${t('kcal under budget')}`
-                : `${selectedCalories - calorieTarget} ${t('kcal over budget')}`}
+                : selectedCalories <= selectedDayTarget
+                ? `${selectedDayTarget - selectedCalories} ${t('kcal under budget')}`
+                : `${selectedCalories - selectedDayTarget} ${t('kcal over budget')}`}
             </Text>
           </View>
         )}
@@ -376,6 +403,16 @@ const createStyles = (theme: ThemeType) =>
     height: 120,
     justifyContent: 'flex-end',
     marginBottom: 10,
+    position: 'relative',
+  },
+  chartTargetLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    borderBottomWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: theme.colors.border,
+    zIndex: 1,
   },
   barsRow: {
     flexDirection: 'row',

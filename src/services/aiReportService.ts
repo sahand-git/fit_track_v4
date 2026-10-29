@@ -1,6 +1,7 @@
 import { AICoachReport, DailyLog, UserProfile, AppLanguage } from '../types';
 import { executeGeminiRequest } from '../utils/geminiCore';
 import { FetchFunction } from '../utils/geminiModels';
+import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
 
 /**
  * Validates and parses raw Gemini JSON response into an AICoachReport structure.
@@ -69,7 +70,7 @@ export function generateFallbackDailyReport(
   const totalCarbs = Math.round(log.meals.reduce((sum, m) => sum + m.carbs, 0) * 10) / 10;
   const totalFat = Math.round(log.meals.reduce((sum, m) => sum + m.fat, 0) * 10) / 10;
   const waterTarget = profile.waterTargetGlasses || 8;
-  const targetCalories = profile.targetCalories || 2000;
+  const targetCalories = getDailyEffectiveCalorieTarget(profile, log);
   const targetProtein = profile.targetProtein || 140;
 
   const calDiff = totalCalories - targetCalories;
@@ -288,7 +289,7 @@ export async function generateDailyAIReport(
       goal: profile.goal,
       weightKg: profile.weightKg,
       targetWeightKg: profile.targetWeightKg,
-      targetCalories: profile.targetCalories,
+      targetCalories: getDailyEffectiveCalorieTarget(profile, log),
       targetProtein: profile.targetProtein,
       targetCarbs: profile.targetCarbs,
       targetFat: profile.targetFat,

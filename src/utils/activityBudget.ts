@@ -44,12 +44,15 @@ export function calculateActivityBudget(input: {
     Math.max(0, deduplicated.nonWorkoutSteps - BASELINE_NON_WORKOUT_STEPS),
     profile.weightKg,
   );
-  const fixedTarget = Math.max(0, Math.round(profile.targetCalories || 0));
+  const customCal = profile.customNutrientGoals?.calories;
+  const fixedTarget = Math.max(0, Math.round(customCal ?? profile.targetCalories ?? 0));
   const model = profile.includeWorkoutsInCalorieBudget ? 'adaptive_net' : 'fixed';
   // Adaptive target starts from a sedentary baseline, then adds only net logged activity.
   // This prevents activityLevel's multiplier from counting the same activity a second time.
   const baseTarget = model === 'adaptive_net'
-    ? calculateTargets(profile.gender, profile.weightKg, profile.heightCm, profile.age, 'sedentary', profile.goal).targetCalories
+    ? (customCal !== undefined
+        ? Math.round(customCal)
+        : calculateTargets(profile.gender, profile.weightKg, profile.heightCm, profile.age, 'sedentary', profile.goal).targetCalories)
     : fixedTarget;
   const eligibleActivityCalories = model === 'adaptive_net' ? workoutCalories + stepCalories : 0;
   const effectiveTarget = model === 'adaptive_net'
@@ -69,4 +72,21 @@ export function calculateActivityBudget(input: {
     workoutSteps: deduplicated.workoutSteps,
     nonWorkoutSteps: deduplicated.nonWorkoutSteps,
   };
+}
+
+/**
+ * Single source of truth for resolving the effective daily calorie target.
+ * Resolves the exact target for any given day based on that day's workouts, steps,
+ * and user profile budgeting model.
+ */
+export function getDailyEffectiveCalorieTarget(
+  profile?: UserProfile | null,
+  log?: { workouts?: WorkoutEntry[]; steps?: number } | null
+): number {
+  if (!profile) return 2000;
+  return calculateActivityBudget({
+    profile,
+    workouts: log?.workouts || [],
+    steps: log?.steps || 0,
+  }).effectiveTarget;
 }

@@ -33,6 +33,7 @@ import { translate } from '../i18n/strings';
 import { InsightsScreen } from './InsightsScreen';
 import { TrendLineChart } from '../components/TrendLineChart';
 import { TrendBarChart } from '../components/TrendBarChart';
+import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
 import {
   generateDateWindow,
   CalorieTrendPoint,
@@ -124,7 +125,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
       return {
         date: d,
         calories: totalCal,
-        target: profile?.targetCalories || 2000,
+        target: getDailyEffectiveCalorieTarget(profile, dayLog),
         label: daysRange === 7 ? t(weekdayNames[dateObj.getDay()]) : d.slice(-2),
       };
     });
@@ -404,7 +405,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
               </View>
               <TrendBarChart
                 data={calorieData}
-                targetCalories={profile?.targetCalories || 2000}
+                targetCalories={getDailyEffectiveCalorieTarget(profile)}
                 isRTL={isRTL}
                 selectedRange={daysRange}
               />

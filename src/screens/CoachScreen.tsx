@@ -36,6 +36,7 @@ import { generateDailyAIReport } from '../services/aiReportService';
 import { GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
 import { formatDisplayDate } from '../utils/dateUtils';
 import { formatKcal } from '../utils/formatKcal';
+import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
 import { SkeletonCoachBubble } from '../components/SkeletonLoader';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
@@ -112,6 +113,11 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
   const burnedCalories = useMemo(
     () => (log.workouts || []).reduce((sum, w) => sum + (w.caloriesBurned || 0), 0),
     [log.workouts]
+  );
+
+  const effectiveCalorieTarget = useMemo(
+    () => getDailyEffectiveCalorieTarget(profile, log),
+    [profile, log]
   );
 
   const t = (value: string) => translate(language, value);
@@ -222,7 +228,7 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
         {
           name: profile.name,
           goal: profile.goal,
-          targetCalories: profile.targetCalories,
+          targetCalories: effectiveCalorieTarget,
           ...totals,
           waterGlasses: log.waterGlasses,
           burnedCalories,
@@ -357,7 +363,7 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                 </Text>
               </View>
               <Text style={styles.intakeMetrics}>
-                {totals.calories} / {formatKcal(profile.targetCalories, t)} · {totals.protein}g {t('protein')} · {totals.carbs}g {t('carbs')} · {totals.fat}g {t('fat')} · {log.steps} {t('steps')}
+                {totals.calories} / {formatKcal(effectiveCalorieTarget, t)} · {totals.protein}g {t('protein')} · {totals.carbs}g {t('carbs')} · {totals.fat}g {t('fat')} · {log.steps} {t('steps')}
               </Text>
 
               <TouchableOpacity

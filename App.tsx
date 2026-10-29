@@ -993,6 +993,7 @@ function FitTrackApp() {
           {/* Tab 2: Meals */}
           {tempScreen === 'none' && activeTab === 'meals' && (
             <FoodLogScreen
+              profile={profile}
               selectedDate={selectedDate}
               onSelectDate={setSelectedDate}
               log={log}

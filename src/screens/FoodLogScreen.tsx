@@ -20,7 +20,7 @@ import {
   Moon,
   Apple,
 } from 'lucide-react-native';
-import { DailyLog, LoggedMeal, MealType } from '../types';
+import { DailyLog, LoggedMeal, MealType, UserProfile } from '../types';
 import { FoodDetailsModal } from '../components/FoodDetailsModal';
 import { CalendarPickerModal } from '../components/CalendarPickerModal';
 import { AddFoodSheet } from '../components/addfood/AddFoodSheet';
@@ -39,8 +39,10 @@ import { DirectionalIcon } from '../components/DirectionalIcon';
 import * as Haptics from 'expo-haptics';
 import { MealsSkeleton } from '../components/SkeletonLoader';
 import { formatKcal } from '../utils/formatKcal';
+import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
 
 interface FoodLogScreenProps {
+  profile?: UserProfile;
   selectedDate: string;
   onSelectDate: (date: string) => void;
   log: DailyLog;
@@ -53,6 +55,7 @@ interface FoodLogScreenProps {
 }
 
 export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
+  profile,
   selectedDate,
   onSelectDate,
   log,
@@ -124,11 +127,12 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     onSelectDate(getTodayDateString());
   };
 
-  // Daily Totals
+  // Daily Totals & Targets
   const totalKcal = log.meals.reduce((sum, m) => sum + m.calories, 0);
   const totalProtein = Math.round(log.meals.reduce((sum, m) => sum + m.protein, 0) * 10) / 10;
   const totalCarbs = Math.round(log.meals.reduce((sum, m) => sum + m.carbs, 0) * 10) / 10;
   const totalFat = Math.round(log.meals.reduce((sum, m) => sum + m.fat, 0) * 10) / 10;
+  const effectiveCalorieTarget = profile ? getDailyEffectiveCalorieTarget(profile, log) : null;
 
   const openAddSheet = (mealType: MealType) => {
     if (isFuture) return;
@@ -281,7 +285,9 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       <View style={styles.summaryBar}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{totalKcal}</Text>
-          <Text style={styles.summaryLabel}>kcal</Text>
+          <Text style={styles.summaryLabel}>
+            {effectiveCalorieTarget ? `/ ${effectiveCalorieTarget} kcal` : 'kcal'}
+          </Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.summaryItem}>

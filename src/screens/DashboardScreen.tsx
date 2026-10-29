@@ -262,7 +262,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   // Trigger celebration once per day when target is reached appropriately
   useEffect(() => {
     async function checkGoalCelebration() {
-      const resolvedCalorieTarget = profile.customNutrientGoals?.calories ?? effectiveCalorieTarget;
+      const resolvedCalorieTarget = effectiveCalorieTarget;
       const resolvedProteinTarget = profile.customNutrientGoals?.protein ?? profile.targetProtein;
       const isGoalMet = evaluateGoalAchievement({
         goal: profile.goal,
@@ -356,21 +356,24 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         >
           <CalorieRing
             consumed={consumedCalories}
-            target={profile.customNutrientGoals?.calories ?? effectiveCalorieTarget}
+            target={effectiveCalorieTarget}
             proteinConsumed={consumedProtein}
             proteinTarget={profile.customNutrientGoals?.protein ?? profile.targetProtein}
             size={getCalorieRingSize(heroWidth)}
             onPress={() => setSelectedNutrientForDetail('calories')}
           />
 
-          {burnedCalories > 0 && (
+          {(burnedCalories > 0 || (profile.includeWorkoutsInCalorieBudget && activityBudget.eligibleActivityCalories > 0)) && (
             <View style={styles.burnBanner}>
               <Flame size={14} color={theme.colors.warning} />
               <Text style={styles.burnBannerText}>
-                {burnedCalories} {t('kcal burned in active workouts')}
-                {profile.includeWorkoutsInCalorieBudget
-                  ? ` · ${t('Net activity added')}: ${activityBudget.eligibleActivityCalories} ${t('kcal')}`
-                  : ` · ${t('tracked as burn, not in food budget')}`}
+                {!profile.includeWorkoutsInCalorieBudget
+                  ? `${burnedCalories} ${t('kcal burned in active workouts')} · ${t('tracked as burn, not in food budget')}`
+                  : activityBudget.workoutCalories > 0 && activityBudget.stepCalories > 0
+                  ? `+${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.workoutCalories} ${t('net workout')} + ${activityBudget.stepCalories} ${t('steps')})`
+                  : activityBudget.workoutCalories > 0
+                  ? `+${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.workoutCalories} ${t('net workout')})`
+                  : `+${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.stepCalories} ${t('steps')})`}
               </Text>
             </View>
           )}
@@ -379,7 +382,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         {/* Nutrients Bar */}
         <Animated.View entering={getStaggeredCardEntry(1)}>
           <MacroCards
-            calorieTarget={profile.customNutrientGoals?.calories ?? effectiveCalorieTarget}
+            calorieTarget={effectiveCalorieTarget}
             calorieConsumed={consumedCalories}
             proteinTarget={profile.customNutrientGoals?.protein ?? profile.targetProtein}
             proteinConsumed={consumedProtein}
