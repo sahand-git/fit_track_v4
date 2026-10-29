@@ -50,6 +50,7 @@ export const FoodThumbnail: React.FC<FoodThumbnailProps> = ({
           width: sizeDimensions.width,
           height: sizeDimensions.height,
           borderRadius: sizeDimensions.borderRadius,
+          overflow: showImage ? 'hidden' : 'visible',
         },
         style,
       ]}
@@ -75,7 +76,7 @@ export const FoodThumbnail: React.FC<FoodThumbnailProps> = ({
         <Text
           style={[
             styles.emoji,
-            { fontSize: sizeDimensions.fontSize, lineHeight: sizeDimensions.fontSize + 4 },
+            { fontSize: sizeDimensions.fontSize },
           ]}
         >
           {emoji}
@@ -92,12 +93,13 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
   image: {
     backgroundColor: theme.colors.surfaceSubtle,
   },
   emoji: {
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 });

@@ -359,54 +359,60 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                 </TouchableOpacity>
               ) : (
                 <View style={styles.foodListContainer}>
-                  {categoryMeals.map((item, idx) => (
-                    <AnimatedFoodRow key={item.id} delay={idx * 30}>
-                      <TouchableOpacity
-                        style={[
-                          styles.foodRow,
-                          isRtl && styles.rowRtl,
-                          idx > 0 && styles.foodRowBorder,
-                        ]}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                          setInspectingMeal(item);
-                        }}
-                        activeOpacity={0.7}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${item.name}, ${formatKcal(item.calories, t)}`}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <FoodThumbnail name={item.name} category={item.category} imageUrl={item.imageUrl} size="small" style={{ marginEnd: 12 }} />
-                        <View style={styles.foodInfo}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                            <Text style={styles.foodName}>{getLocalizedFoodName(item, language)}</Text>
-                            {item.source && <FoodSourceBadge source={item.source} sourceRef={item.sourceRef} size="small" />}
+                  {categoryMeals.map((item, idx) => {
+                    const isFirst = idx === 0;
+                    const isLast = idx === categoryMeals.length - 1;
+                    return (
+                      <AnimatedFoodRow key={item.id} delay={idx * 30}>
+                        <TouchableOpacity
+                          style={[
+                            styles.foodRow,
+                            isRtl && styles.rowRtl,
+                            idx > 0 && styles.foodRowBorder,
+                            isFirst && styles.foodRowFirst,
+                            isLast && styles.foodRowLast,
+                          ]}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                            setInspectingMeal(item);
+                          }}
+                          activeOpacity={0.7}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${item.name}, ${formatKcal(item.calories, t)}`}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <FoodThumbnail name={item.name} category={item.category} imageUrl={item.imageUrl} size="small" style={{ marginEnd: 12 }} />
+                          <View style={styles.foodInfo}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                              <Text style={styles.foodName}>{getLocalizedFoodName(item, language)}</Text>
+                              {item.source && <FoodSourceBadge source={item.source} sourceRef={item.sourceRef} size="small" />}
+                            </View>
+                            <Text style={styles.foodPortion}>
+                              {item.servings} × {item.servingSize}
+                            </Text>
+                            <Text style={styles.foodMacros}>
+                              P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g
+                            </Text>
                           </View>
-                          <Text style={styles.foodPortion}>
-                            {item.servings} × {item.servingSize}
-                          </Text>
-                          <Text style={styles.foodMacros}>
-                            P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g
-                          </Text>
-                        </View>
 
-                        <View style={[styles.foodRight, isRtl && styles.foodRightRtl]}>
-                          <Text style={styles.foodKcal}>{formatKcal(item.calories, t)}</Text>
-                          <TouchableOpacity
-                            style={styles.deleteBtn}
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              handleDelete(item.id);
-                            }}
-                            accessibilityLabel={`${t('Delete')} ${item.name}`}
-                            accessibilityRole="button"
-                          >
-                            <Trash2 size={15} color={theme.colors.danger} />
-                          </TouchableOpacity>
-                        </View>
-                      </TouchableOpacity>
-                    </AnimatedFoodRow>
-                  ))}
+                          <View style={[styles.foodRight, isRtl && styles.foodRightRtl]}>
+                            <Text style={styles.foodKcal}>{formatKcal(item.calories, t)}</Text>
+                            <TouchableOpacity
+                              style={styles.deleteBtn}
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleDelete(item.id);
+                              }}
+                              accessibilityLabel={`${t('Delete')} ${item.name}`}
+                              accessibilityRole="button"
+                            >
+                              <Trash2 size={15} color={theme.colors.danger} />
+                            </TouchableOpacity>
+                          </View>
+                        </TouchableOpacity>
+                      </AnimatedFoodRow>
+                    );
+                  })}
                 </View>
               )}
             </View>
@@ -638,7 +644,6 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    overflow: 'hidden',
     ...theme.shadow.subtle,
   },
   foodRow: {
@@ -647,6 +652,14 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: theme.spacing.md,
+  },
+  foodRowFirst: {
+    borderTopLeftRadius: theme.radius.md,
+    borderTopRightRadius: theme.radius.md,
+  },
+  foodRowLast: {
+    borderBottomLeftRadius: theme.radius.md,
+    borderBottomRightRadius: theme.radius.md,
   },
   rowRtl: {
     flexDirection: 'row-reverse',
