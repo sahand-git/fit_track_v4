@@ -316,11 +316,11 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
             <View key={cat.key} style={styles.mealSection}>
               {/* Category Header */}
               <View style={styles.mealSectionHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                   <View style={styles.categoryIconCircle}>
                     {getMealIcon(cat.key)}
                   </View>
-                  <View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.categoryTitle}>{cat.label}</Text>
                     {categoryKcal > 0 && (
                       <Text style={styles.categoryKcal}>{formatKcal(categoryKcal, t)}</Text>
@@ -576,8 +576,9 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   mealSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
+    alignItems: 'center',
     paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   categoryIconCircle: {
     width: 28,
@@ -603,16 +604,21 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   addFoodBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.primaryLight,
+    flexShrink: 0,
   },
   addFoodBtnText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.primary,
+    lineHeight: 16,
+    includeFontPadding: false,
   },
   emptyPromptBox: {
     backgroundColor: theme.colors.surface,
