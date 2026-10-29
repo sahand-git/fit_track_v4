@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -60,7 +60,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const isRtl = useIsRTL();
-  const t = (key: string) => translate(language, key);
+  const t = useCallback((key: string) => translate(language, key), [language]);
 
   const [activeKey, setActiveKey] = useState<SupportedNutrientKey>(() => {
     return (ORDERED_NUTRIENT_KEYS.includes(initialNutrientKey as SupportedNutrientKey)
@@ -92,6 +92,34 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   const progress = useMemo(() => {
     return calculateNutrientDayProgress(activeKey, meals, supplements, profile);
   }, [activeKey, meals, supplements, profile]);
+
+  const intakeBreakdown = useMemo(() => {
+    const hasSupplements = progress.supplementAmount > 0;
+    const hasMissing = progress.missingCount > 0;
+    if (!hasSupplements && !hasMissing) return '';
+
+    let foodText = '';
+    if (hasMissing && progress.foodAmount === 0) {
+      foodText = `${t('no data for')} ${progress.missingCount} ${progress.missingCount > 1 ? t('foods') : t('food')}`;
+    } else if (hasMissing && progress.foodAmount > 0) {
+      foodText = `${progress.foodAmount} ${t('food')} (${t('no data for')} ${progress.missingCount})`;
+    } else if (progress.totalMealsCount > 0) {
+      foodText = `${progress.foodAmount} ${t('food')}`;
+    }
+
+    const suppText = hasSupplements ? `${progress.supplementAmount} ${t('from supplements')}` : '';
+
+    if (foodText && suppText) {
+      return ` (${foodText} + ${suppText})`;
+    }
+    if (foodText && hasMissing) {
+      return ` (${foodText})`;
+    }
+    if (suppText) {
+      return ` (${suppText})`;
+    }
+    return '';
+  }, [progress, t]);
 
   const progressColor = theme.colors[progress.colorToken] || theme.colors.primary;
 
@@ -230,7 +258,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             {/* Primary Progress Card */}
             <View style={styles.progressCard}>
               <View style={[styles.progressTopRow, isRtl && styles.rowRtl]}>
-                <View>
+                <View style={styles.progressLeftCol}>
                   <View style={[styles.amountRow, isRtl && styles.rowRtl]}>
                     <Text style={styles.currentAmount}>{progress.current}</Text>
                     <Text style={styles.targetAmount}>
@@ -244,9 +272,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                   </View>
                   <Text style={styles.currentLabel}>
                     {t('Today’s Intake')}
-                    {progress.supplementAmount > 0
-                      ? ` (${progress.foodAmount} ${t('food')} + ${progress.supplementAmount} ${t('supplements')})`
-                      : ''}
+                    {intakeBreakdown}
                   </Text>
                 </View>
 
@@ -256,7 +282,11 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                     {progress.percent}%
                   </Text>
                   <Text style={styles.statusSubText}>
-                    {progress.percent >= 100 ? t('Target reached') : t('of daily goal')}
+                    {progress.percent > 100
+                      ? t('Above target')
+                      : progress.percent === 100
+                      ? t('Target reached')
+                      : t('of daily goal')}
                   </Text>
                 </View>
               </View>
@@ -290,6 +320,21 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                 </View>
               )}
             </View>
+
+            {/* Reference Upper Intake Limit (Item 6 requirement: neutral reference, not medical advice) */}
+            {progress.upperLimit !== undefined && (
+              <View style={styles.upperLimitCard}>
+                <View style={[styles.upperLimitHeader, isRtl && styles.rowRtl]}>
+                  <Info size={15} color={theme.colors.textSecondary} />
+                  <Text style={styles.upperLimitTitle}>
+                    {t('Reference Upper Limit')}: {progress.upperLimit} {progress.unit}
+                  </Text>
+                </View>
+                <Text style={styles.upperLimitText}>
+                  {t('Dietary reference guidance for general informational reference, not medical advice.')}
+                </Text>
+              </View>
+            )}
 
             {/* Goal Management Card (Item 2 requirement: edit the goal stored safely) */}
             <View style={styles.goalCard}>
@@ -634,6 +679,11 @@ const createStyles = (theme: ThemeType) =>
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: 12,
+  },
+  progressLeftCol: {
+    flex: 1,
+    minWidth: 0,
   },
   amountRow: {
     flexDirection: 'row',
@@ -660,10 +710,12 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
+    flexWrap: 'wrap',
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    flexShrink: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: theme.radius.md,
     alignItems: 'flex-end',
   },
@@ -706,6 +758,29 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     color: theme.colors.amberText,
     marginTop: 2,
+  },
+  upperLimitCard: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.lg,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 4,
+  },
+  upperLimitHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  upperLimitTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  upperLimitText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    lineHeight: 16,
   },
   goalCard: {
     backgroundColor: theme.colors.surface,

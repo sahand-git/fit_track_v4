@@ -13,6 +13,7 @@ export interface RDAMetadata {
   unit: 'mg' | 'mcg';
   colorToken: ThemeColorKey;
   foodSources: string;
+  upperLimit?: number;
 }
 
 export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
@@ -23,6 +24,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     unit: 'mcg',
     colorToken: 'nutrientVitaminA',
     foodSources: 'Carrots, sweet potatoes, spinach, liver, eggs',
+    upperLimit: 3000,
   },
   vitaminC: {
     key: 'vitaminC',
@@ -31,6 +33,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     unit: 'mg',
     colorToken: 'nutrientVitaminC',
     foodSources: 'Citrus, strawberries, bell peppers, broccoli',
+    upperLimit: 2000,
   },
   vitaminD: {
     key: 'vitaminD',
@@ -39,6 +42,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     unit: 'mcg',
     colorToken: 'nutrientVitaminD',
     foodSources: 'Sunlight, fatty fish, fortified dairy, eggs',
+    upperLimit: 100,
   },
   vitaminB12: {
     key: 'vitaminB12',
@@ -55,6 +59,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     unit: 'mg',
     colorToken: 'nutrientCalcium',
     foodSources: 'Dairy, fortified plant milk, tofu, chia seeds, leafy greens',
+    upperLimit: 2500,
   },
   iron: {
     key: 'iron',
@@ -63,6 +68,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     unit: 'mg',
     colorToken: 'nutrientIron',
     foodSources: 'Red meat, lentils, beans, spinach, pumpkin seeds',
+    upperLimit: 45,
   },
   potassium: {
     key: 'potassium',
@@ -79,6 +85,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     unit: 'mg',
     colorToken: 'nutrientMagnesium',
     foodSources: 'Pumpkin seeds, almonds, spinach, black beans, dark chocolate',
+    upperLimit: 350,
   },
   zinc: {
     key: 'zinc',
@@ -87,6 +94,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     unit: 'mg',
     colorToken: 'nutrientZinc',
     foodSources: 'Oysters, beef, pumpkin seeds, lentils, chickpeas',
+    upperLimit: 40,
   },
 };
 

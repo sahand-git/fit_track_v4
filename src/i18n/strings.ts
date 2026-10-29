@@ -1060,6 +1060,11 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Light': 'فاتح',
     'Dark': 'داكن',
     'Matches device system appearance settings.': 'يطابق إعدادات مظهر الجهاز.',
+    'no data for': 'لا تتوفر بيانات لـ',
+    'from supplements': 'من المكملات',
+    'Above target': 'أعلى من الهدف',
+    'Reference Upper Limit': 'الحد الأعلى المرجعي',
+    'Dietary reference guidance for general informational reference, not medical advice.': 'إرشادات غذائية مرجعية للمعلومات العامة فقط، وليست استشارة طبية.',
   },
   ckb: {
     'Account': 'هەژمار',
@@ -2112,6 +2117,11 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Light': 'ڕۆشن',
     'Dark': 'تاریک',
     'Matches device system appearance settings.': 'لەگەڵ ڕێکخستنەکانی سیستەمی ئامێرەکە دەگونجێت.',
+    'no data for': 'زانیاری نییە بۆ',
+    'from supplements': 'لە تەواوکەرەکانەوە',
+    'Above target': 'سەرووی ئامانج',
+    'Reference Upper Limit': 'بەرزترین ئاستی ڕێنمایی',
+    'Dietary reference guidance for general informational reference, not medical advice.': 'ڕێنمایی خۆراکی تەنها بۆ زانیاری گشتییە، نەک ڕاوێژی پزیشکی.',
   },
 };
 

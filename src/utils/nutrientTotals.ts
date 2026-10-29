@@ -51,6 +51,7 @@ export interface NutrientMetadata {
   defaultTarget: number;
   description: string;
   foodSources?: string;
+  upperLimit?: number;
 }
 
 export interface NutrientContributor {
@@ -82,6 +83,7 @@ export interface NutrientDayProgress {
   missingItems: NutrientContributor[];
   status: 'optimal' | 'good' | 'low' | 'deficient' | 'exceeded';
   foodSources?: string;
+  upperLimit?: number;
 }
 
 /**
@@ -151,6 +153,7 @@ export function getNutrientMetadata(
         defaultTarget: 50, // Dietary reference upper limit
         description: 'Simple carbohydrates. Monitoring aids insulin sensitivity and steady energy.',
         foodSources: 'Fruits, dairy, honey, dried fruit, natural sweeteners.',
+        upperLimit: 50,
       };
     case 'sodium':
       return {
@@ -161,6 +164,7 @@ export function getNutrientMetadata(
         defaultTarget: 2300, // Dietary Guidelines recommendation
         description: 'Electrolyte regulating fluid balance, nerve signals, and muscle contraction.',
         foodSources: 'Table salt, olives, cured meats, cheeses, savory broths.',
+        upperLimit: 2300,
       };
     default: {
       // 9 Micronutrients from RDA_TARGETS
@@ -174,6 +178,7 @@ export function getNutrientMetadata(
           defaultTarget: rda.target,
           description: `Recommended Dietary Allowance (RDA) established by dietary health authorities.`,
           foodSources: rda.foodSources,
+          upperLimit: rda.upperLimit,
         };
       }
       return {
@@ -330,5 +335,6 @@ export function calculateNutrientDayProgress(
     missingItems,
     status,
     foodSources: meta.foodSources,
+    upperLimit: meta.upperLimit,
   };
 }
