@@ -268,6 +268,16 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     }
   }
 
+  useEffect(() => {
+    if (visible) {
+      requestAnimationFrame(() => {
+        try {
+          console.timeEnd('[PERF] Add Food Sheet -> Interactive');
+        } catch {}
+      });
+    }
+  }, [visible]);
+
   const loadCollections = useCallback(() => {
     let isMounted = true;
     Promise.all([
@@ -1113,12 +1123,18 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                         placeholderTextColor={theme.colors.textMuted}
                         value={searchQuery}
                         onChangeText={(txt) => {
+                          console.time('[PERF] Search Keystroke -> Rendered');
                           setSearchQuery(txt);
                           setOnlineFoods([]);
                           setHasSearchedOnline(false);
                           setIsOnlineOffline(false);
                           setIsOnlineRateLimited(false);
                           setIsOnlineFromCache(false);
+                          requestAnimationFrame(() => {
+                            try {
+                              console.timeEnd('[PERF] Search Keystroke -> Rendered');
+                            } catch {}
+                          });
                         }}
                         autoFocus={!selectedFood}
                       />
