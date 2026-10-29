@@ -1069,6 +1069,7 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Could not send message': 'تعذر إرسال الرسالة',
     'eaten today': 'مستهلكة اليوم',
     'eaten': 'مستهلكة',
+    'Change key': 'تغيير المفتاح',
   },
   ckb: {
     'Account': 'هەژمار',
@@ -2130,6 +2131,7 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Could not send message': 'نەتوانرا پەیام بنێردرێت',
     'eaten today': 'ئەمڕۆ خوراوە',
     'eaten': 'خوراوە',
+    'Change key': 'گۆڕینی کلیل',
   },
 };
 

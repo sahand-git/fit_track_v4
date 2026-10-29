@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking, useWindowDimensions } from 'react-native';
 import { AppText as Text } from './AppText';
 import { Key, Check, Trash2, ExternalLink, AlertCircle, Sparkles } from 'lucide-react-native';
 import { getStoredGeminiApiKey, setStoredGeminiApiKey, clearGeminiApiKey } from '../services/plateAnalysisService';
@@ -35,6 +35,15 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [providerDetail, setProviderDetail] = useState<string | null>(null);
   const [showWizardModal, setShowWizardModal] = useState(false);
+  const { fontScale } = useWindowDimensions();
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [textOverflowed, setTextOverflowed] = useState(false);
+
+  const shouldStack =
+    fontScale > 1.15 ||
+    textOverflowed ||
+    (language === 'ckb' && containerWidth > 0 && containerWidth < 330) ||
+    (containerWidth > 0 && containerWidth < 280);
 
   const checkKey = useCallback(() => {
     let isMounted = true;
@@ -129,9 +138,11 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
         </View>
         <View style={styles.titleCol}>
           <Text style={[styles.title, isRTL && styles.textRTL]}>{t('Google Gemini API Key')}</Text>
-          <Text style={[styles.subtitle, isRTL && styles.textRTL]}>
-            {hasSavedKey ? t('API key saved') : t('Connect a Gemini API key in Profile to use AI features.')}
-          </Text>
+          {!hasSavedKey && (
+            <Text style={[styles.subtitle, isRTL && styles.textRTL]}>
+              {t('Connect a Gemini API key in Profile to use AI features.')}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -153,14 +164,20 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
 
       {hasSavedKey && !isEditing ? (
         <View style={styles.savedSection}>
-          <View style={[styles.savedRow, isRTL && styles.rowRTL]}>
+          <View style={[styles.statusPillRow, isRTL && styles.rowRTL]}>
             <View style={[styles.savedBadge, isRTL && styles.rowRTL]}>
               <Check size={14} color={theme.colors.primary} />
               <Text style={styles.savedBadgeText}>{t('API key saved')}</Text>
             </View>
-            <View style={[styles.savedActions, isRTL && styles.rowRTL]}>
+          </View>
+
+          {shouldStack ? (
+            <View
+              style={styles.savedActionsStacked}
+              onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+            >
               <TouchableOpacity
-                style={[styles.actionBtnSmall, testState === 'testing' && styles.btnDisabled]}
+                style={[styles.actionBtnFull, testState === 'testing' && styles.btnDisabled]}
                 onPress={handleTestConnection}
                 disabled={testState === 'testing'}
                 accessibilityRole="button"
@@ -170,33 +187,104 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
                 {testState === 'testing' ? (
                   <View style={[styles.inlineTestingRow, isRTL && styles.rowRTL]}>
                     <ActivityIndicator size="small" color={theme.colors.primary} />
-                    <Text style={styles.actionBtnSmallText}>{t('Testing connection…')}</Text>
+                    <Text style={styles.actionBtnText}>{t('Testing connection…')}</Text>
                   </View>
                 ) : (
-                  <Text style={styles.actionBtnSmallText}>{t('Test connection')}</Text>
+                  <Text style={styles.actionBtnText}>{t('Test connection')}</Text>
                 )}
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={styles.actionBtnSmall}
+                style={styles.actionBtnFull}
                 onPress={() => {
                   setIsEditing(true);
                   resetTestState();
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={t('Configure Gemini API Key')}
+                accessibilityLabel={t('Change key')}
               >
-                <Text style={styles.actionBtnSmallText}>{t('Configure Gemini API Key')}</Text>
+                <Text style={styles.actionBtnText}>{t('Change key')}</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={[styles.actionBtnSmall, styles.actionBtnDanger]}
+                style={[styles.actionBtnFull, styles.actionBtnDanger, styles.trashBtnFull, isRTL && styles.rowRTL]}
                 onPress={handleRemove}
                 accessibilityRole="button"
                 accessibilityLabel={t('Remove API key')}
               >
-                <Trash2 size={13} color={theme.colors.danger} />
+                <Trash2 size={16} color={theme.colors.danger} />
+                <Text style={styles.trashBtnFullText}>{t('Remove API key')}</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          ) : (
+            <View
+              style={[styles.savedActionsRow, isRTL && styles.rowRTL]}
+              onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+            >
+              <TouchableOpacity
+                style={[styles.actionBtnFlex, testState === 'testing' && styles.btnDisabled]}
+                onPress={handleTestConnection}
+                disabled={testState === 'testing'}
+                accessibilityRole="button"
+                accessibilityLabel={t('Test connection')}
+                accessibilityState={{ busy: testState === 'testing' }}
+              >
+                {testState === 'testing' ? (
+                  <View style={[styles.inlineTestingRow, isRTL && styles.rowRTL]}>
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                    <Text
+                      style={styles.actionBtnText}
+                      numberOfLines={2}
+                      onTextLayout={(e) => {
+                        if (e.nativeEvent.lines.length > 2) setTextOverflowed(true);
+                      }}
+                    >
+                      {t('Testing connection…')}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text
+                    style={styles.actionBtnText}
+                    numberOfLines={2}
+                    onTextLayout={(e) => {
+                      if (e.nativeEvent.lines.length > 2) setTextOverflowed(true);
+                    }}
+                  >
+                    {t('Test connection')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionBtnFlex}
+                onPress={() => {
+                  setIsEditing(true);
+                  resetTestState();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t('Change key')}
+              >
+                <Text
+                  style={styles.actionBtnText}
+                  numberOfLines={2}
+                  onTextLayout={(e) => {
+                    if (e.nativeEvent.lines.length > 2) setTextOverflowed(true);
+                  }}
+                >
+                  {t('Change key')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.trashBtnSquare, styles.actionBtnDanger]}
+                onPress={handleRemove}
+                accessibilityRole="button"
+                accessibilityLabel={t('Remove API key')}
+              >
+                <Trash2 size={16} color={theme.colors.danger} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       ) : (
         <View style={styles.inputContainer}>
@@ -409,46 +497,88 @@ const createStyles = (theme: ThemeType) =>
   },
   savedSection: {
     gap: 8,
+    marginTop: 4,
   },
-  savedRow: {
+  statusPillRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 4,
-    flexWrap: 'wrap',
-    gap: 8,
   },
   savedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: theme.colors.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: theme.radius.full,
+    alignSelf: 'flex-start',
   },
   savedBadgeText: {
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.primary,
   },
-  savedActions: {
+  savedActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    width: '100%',
   },
-  actionBtnSmall: {
-    paddingHorizontal: 10,
+  savedActionsStacked: {
+    flexDirection: 'column',
+    gap: 8,
+    width: '100%',
+  },
+  actionBtnFlex: {
+    flex: 1,
+    minHeight: 44,
+    paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  actionBtnSmallText: {
+  actionBtnFull: {
+    width: '100%',
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionBtnText: {
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+  trashBtnSquare: {
+    width: 44,
+    height: 44,
+    minWidth: 44,
+    minHeight: 44,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trashBtnFull: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  trashBtnFullText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.danger,
   },
   actionBtnDanger: {
     backgroundColor: theme.colors.crimsonLight,
