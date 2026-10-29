@@ -519,7 +519,7 @@ export function SupplementsScreen({
     }
   };
 
-  const bottomPadding = Math.max(112, insets.bottom + 76);
+  const bottomPadding = Math.max(120, insets.bottom + 90);
 
   return (
     <View style={styles.container}>

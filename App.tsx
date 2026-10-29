@@ -169,16 +169,30 @@ const ThemedBottomNav: React.FC<ThemedBottomNavProps> = ({
   const language = useLanguage();
   const t = useCallback((str: string) => translate(language, str), [language]);
 
+  const dockBottom = insetsBottom > 0 ? insetsBottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
+
   return (
-    <View
-      style={[
-        styles.dockContainer,
-        {
-          bottom: insetsBottom > 0 ? insetsBottom + 8 : (Platform.OS === 'ios' ? 18 : 10),
-        },
-      ]}
-    >
-      <View style={styles.bottomNav}>
+    <>
+      {/* Solid background covering the area below the tab bar and system navigation bar */}
+      <View
+        pointerEvents="none"
+        style={[
+          styles.bottomSolidBar,
+          {
+            height: dockBottom + 4,
+            backgroundColor: activeTheme.colors.background,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.dockContainer,
+          {
+            bottom: dockBottom,
+          },
+        ]}
+      >
+        <View style={styles.bottomNav}>
         {/* 1. Today */}
         <TouchableOpacity
           style={styles.navBtn}
@@ -268,11 +282,18 @@ const ThemedBottomNav: React.FC<ThemedBottomNavProps> = ({
         </TouchableOpacity>
       </View>
     </View>
+    </>
   );
 };
 
 const createNavStyles = (activeTheme: ThemeType) =>
   StyleSheet.create({
+    bottomSolidBar: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
     dockContainer: {
       position: 'absolute',
       left: 14,

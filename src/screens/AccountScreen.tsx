@@ -222,7 +222,11 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
     >
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingBottom: Math.max(145, insets.bottom + 90) }]}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.back} accessibilityLabel={t('Back')} accessibilityRole="button"><DirectionalIcon name="ArrowLeft" size={19} color={theme.colors.textPrimary} /></TouchableOpacity>
         <View style={{ flex: 1 }}><Text style={styles.eyebrow}>{t('Account')}</Text><Text style={styles.title}>{t('Sign in & backup')}</Text></View>

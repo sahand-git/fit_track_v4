@@ -57,7 +57,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const bottomPadding = Math.max(110, insets.bottom + 76);
+  const bottomPadding = Math.max(120, insets.bottom + 90);
   const t = (str: string) => translate(currentLanguage, str);
 
   const [remindersModalVisible, setRemindersModalVisible] = useState(false);

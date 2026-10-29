@@ -27,6 +27,7 @@ import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 export interface QuickActionSheetProps {
@@ -55,6 +56,7 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
   onOpenLogWeight,
 }) => {
   const language = useLanguage();
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
@@ -96,7 +98,15 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
           accessibilityRole="button"
           accessibilityLabel={t('Close')}
         />
-        <View style={[styles.sheetCard, { direction: isRTL ? 'rtl' : 'ltr' }]}>
+        <View
+          style={[
+            styles.sheetCard,
+            {
+              direction: isRTL ? 'rtl' : 'ltr',
+              paddingBottom: Math.max(Platform.OS === 'ios' ? 32 : 24, insets.bottom + 16),
+            },
+          ]}
+        >
           {/* Handle bar */}
           <View style={styles.handleBar} />
 
@@ -128,7 +138,10 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
           {/* Grid of Actions */}
           <ScrollView
             style={styles.scrollArea}
-            contentContainerStyle={styles.gridContainer}
+            contentContainerStyle={[
+              styles.gridContainer,
+              { paddingBottom: Math.max(16, insets.bottom + 16) },
+            ]}
             showsVerticalScrollIndicator={false}
           >
             {/* 1. Barcode Scanner */}

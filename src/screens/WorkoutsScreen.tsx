@@ -56,7 +56,10 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(210, addButtonBottom + 72) }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.back} accessibilityLabel={t('Back')} accessibilityRole="button"><DirectionalIcon name="ArrowLeft" size={19} color={theme.colors.textPrimary} /></TouchableOpacity>
           <View style={{ flex: 1 }}><Text style={styles.eyebrow}>{t('Activity history')}</Text><Text style={styles.title}>{t('Workouts')}</Text></View>

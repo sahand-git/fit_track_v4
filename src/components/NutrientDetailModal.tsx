@@ -33,6 +33,7 @@ import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 interface NutrientDetailModalProps {
@@ -57,6 +58,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   onResetGoal,
 }) => {
   const language = useLanguage();
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const isRtl = useIsRTL();
@@ -179,7 +181,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ width: '100%', justifyContent: 'flex-end' }}
         >
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { paddingBottom: insets.bottom > 0 ? insets.bottom : 0 }]}>
           {/* Header */}
           <View style={[styles.header, isRtl && styles.rowRtl]}>
             <View style={{ flex: 1 }}>
@@ -254,7 +256,13 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             </ScrollView>
           </View>
 
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.content,
+              { paddingBottom: Math.max(40, insets.bottom + 28) },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Primary Progress Card */}
             <View style={styles.progressCard}>
               <View style={[styles.progressTopRow, isRtl && styles.rowRtl]}>

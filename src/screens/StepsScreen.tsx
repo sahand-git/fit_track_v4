@@ -7,6 +7,7 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { formatKcal } from '../utils/formatKcal';
 import { estimateStepCalories } from '../utils/activityBudget';
@@ -26,6 +27,7 @@ interface Props {
 
 export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heightCm, onSetSteps, onAddSteps, onSetGoal, onBack }) => {
   const language = useLanguage();
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
@@ -93,7 +95,11 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingBottom: Math.max(140, insets.bottom + 90) }]}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel={t('Back')} style={styles.back}>
           <DirectionalIcon name="ArrowLeft" size={20} color={theme.colors.textPrimary} />

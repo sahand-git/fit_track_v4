@@ -94,7 +94,7 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
 
   const bottomPadding = isKeyboardVisible
     ? theme.spacing.sm
-    : Math.max(100, insets.bottom + 76);
+    : Math.max(110, insets.bottom + 84);
 
   const totals = useMemo(
     () =>
