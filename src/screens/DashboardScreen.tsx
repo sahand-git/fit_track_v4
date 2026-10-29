@@ -84,7 +84,7 @@ interface DashboardScreenProps {
   onUpdateProfile?: (profile: UserProfile) => Promise<void> | void;
 }
 
-export const DashboardScreen: React.FC<DashboardScreenProps> = ({
+export const DashboardScreen = React.memo<DashboardScreenProps>(({
   profile,
   log,
   supplementRoutine,
@@ -738,7 +738,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       />
     </View>
   );
-};
+});
+DashboardScreen.displayName = 'DashboardScreen';
 
 const createStyles = (theme: ThemeType) => StyleSheet.create({
   scroll: {

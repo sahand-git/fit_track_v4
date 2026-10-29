@@ -54,7 +54,7 @@ interface FoodLogScreenProps {
   onCopyYesterdayMeals?: (targetDate: string) => Promise<void>;
 }
 
-export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
+export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
   profile,
   selectedDate,
   onSelectDate,
@@ -480,7 +480,8 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       />
     </View>
   );
-};
+});
+FoodLogScreen.displayName = 'FoodLogScreen';
 
 const createStyles = (theme: ThemeType) => StyleSheet.create({
   container: {

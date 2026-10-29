@@ -468,16 +468,16 @@ function FitTrackApp() {
   });
 
   const language = appLanguage;
-  const t = (str: string) => translate(language, str);
+  const t = useCallback((str: string) => translate(language, str), [language]);
 
-  const refreshStreak = async () => {
+  const refreshStreak = useCallback(async () => {
     try {
       const res = await loadAccurateStreak();
       setStreak(res.currentStreak);
     } catch (e) {
       console.warn('Error calculating streak:', e);
     }
-  };
+  }, []);
 
   useEffect(() => watchAuthState((user) => {
     setAccountStorageNamespace(user?.uid || null);
@@ -541,7 +541,7 @@ function FitTrackApp() {
     }
     init();
     return () => { isCancelled = true; };
-  }, [authReady, authUser?.uid, initRetryCount]);
+  }, [authReady, authUser?.uid, initRetryCount, refreshStreak]);
 
   // Reload log whenever date changes with cancellation to prevent race conditions
   useEffect(() => {
@@ -558,7 +558,7 @@ function FitTrackApp() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedDate, authReady, authUser?.uid]);
+  }, [selectedDate, authReady, authUser?.uid, refreshStreak]);
 
   // Handle Android hardware back button
   useEffect(() => {
@@ -583,8 +583,8 @@ function FitTrackApp() {
   }, [addSheetConfig.visible, tempScreen, activeTab]);
 
   // Handlers
-  const handleUpdateWater = async (delta: number) => {
-    const targetDate = selectedDate;
+  const handleUpdateWater = useCallback(async (delta: number) => {
+    const targetDate = selectedDateRef.current;
     if (targetDate > getTodayDateString()) return;
     try {
       const updated = await updateWater(targetDate, delta);
@@ -595,9 +595,9 @@ function FitTrackApp() {
       console.error('Failed to update water:', err);
       Alert.alert(t('Error'), t('Could not update water intake.'));
     }
-  };
+  }, [t]);
 
-  const handleAddMeal = async (meal: LoggedMeal, targetDate: string) => {
+  const handleAddMeal = useCallback(async (meal: LoggedMeal, targetDate: string) => {
     if (targetDate > getTodayDateString()) return;
     try {
       const updated = await addMealToDay(targetDate, meal);
@@ -609,10 +609,10 @@ function FitTrackApp() {
       console.error('Failed to add meal:', err);
       Alert.alert(t('Error'), t('Failed to save meal.'));
     }
-  };
+  }, [refreshStreak, t]);
 
-  const handleUpdateMeal = async (meal: LoggedMeal) => {
-    const targetDate = selectedDate;
+  const handleUpdateMeal = useCallback(async (meal: LoggedMeal) => {
+    const targetDate = selectedDateRef.current;
     try {
       const updated = await updateMealInDay(targetDate, meal);
       if (selectedDateRef.current === targetDate) {
@@ -622,10 +622,10 @@ function FitTrackApp() {
       console.error('Failed to update meal:', err);
       Alert.alert(t('Error'), t('Failed to update meal.'));
     }
-  };
+  }, [t]);
 
-  const handleRemoveMeal = async (mealId: string) => {
-    const targetDate = selectedDate;
+  const handleRemoveMeal = useCallback(async (mealId: string) => {
+    const targetDate = selectedDateRef.current;
     try {
       const updated = await removeMealFromDay(targetDate, mealId);
       if (selectedDateRef.current === targetDate) {
@@ -636,9 +636,9 @@ function FitTrackApp() {
       console.error('Failed to remove meal:', err);
       Alert.alert(t('Error'), t('Failed to remove meal.'));
     }
-  };
+  }, [refreshStreak, t]);
 
-  const handleCopyYesterdayMeals = async (targetDate: string) => {
+  const handleCopyYesterdayMeals = useCallback(async (targetDate: string) => {
     try {
       const updated = await loadDailyLog(targetDate);
       if (selectedDateRef.current === targetDate) {
@@ -648,7 +648,7 @@ function FitTrackApp() {
     } catch (err) {
       console.error('Failed to reload after copying meals:', err);
     }
-  };
+  }, [refreshStreak]);
 
   const handleSaveProfile = async (newProfile: UserProfile) => {
     try {
@@ -702,16 +702,16 @@ function FitTrackApp() {
     }
   };
 
-  const handleToggleSupplement = async (id: string, taken: boolean) => {
-    const targetDate = selectedDate;
+  const handleToggleSupplement = useCallback(async (id: string, taken: boolean) => {
+    const targetDate = selectedDateRef.current;
     if (targetDate > getTodayDateString()) return;
     const updated = await setSupplementTaken(targetDate, id, taken);
     if (selectedDateRef.current === targetDate) {
       setLog(updated);
     }
-  };
+  }, []);
 
-  const handleAddWorkout = async (workout: WorkoutEntry, targetDate: string) => {
+  const handleAddWorkout = useCallback(async (workout: WorkoutEntry, targetDate: string) => {
     if (targetDate > getTodayDateString()) return;
     try {
       const updated = await addWorkoutToDay(targetDate, workout);
@@ -723,10 +723,10 @@ function FitTrackApp() {
       console.error('Failed to add workout:', err);
       Alert.alert(t('Error'), t('Failed to save workout.'));
     }
-  };
+  }, [refreshStreak, t]);
 
-  const handleDeleteWorkout = async (workoutId: string) => {
-    const targetDate = selectedDate;
+  const handleDeleteWorkout = useCallback(async (workoutId: string) => {
+    const targetDate = selectedDateRef.current;
     try {
       const updated = await removeWorkoutFromDay(targetDate, workoutId);
       if (selectedDateRef.current === targetDate) {
@@ -737,18 +737,18 @@ function FitTrackApp() {
       console.error('Failed to delete workout:', err);
       Alert.alert(t('Error'), t('Failed to delete workout.'));
     }
-  };
+  }, [refreshStreak, t]);
 
-  const handleUpdateWorkout = async (workout: WorkoutEntry, targetDate: string) => {
+  const handleUpdateWorkout = useCallback(async (workout: WorkoutEntry, targetDate: string) => {
     if (targetDate > getTodayDateString()) return;
     const updated = await updateWorkoutInDay(targetDate, workout);
     if (selectedDateRef.current === targetDate) setLog(updated);
-  };
+  }, []);
 
-  const handleSaveAIReport = async (report: AICoachReport, targetDate: string) => {
+  const handleSaveAIReport = useCallback(async (report: AICoachReport, targetDate: string) => {
     const updated = await saveDailyAIReport(targetDate, report);
     if (selectedDateRef.current === targetDate) setLog(updated);
-  };
+  }, []);
 
   const handleSaveSteps = async (total: number) => {
     const targetDate = selectedDateRef.current;
@@ -786,13 +786,13 @@ function FitTrackApp() {
     }
   };
 
-  const handleNavigateToMeals = (targetMeal?: MealType) => {
+  const handleNavigateToMeals = useCallback((targetMeal?: MealType) => {
     if (targetMeal) setInitialMealForAdd(targetMeal);
     setTempScreen('none');
     setActiveTab('meals');
-  };
+  }, []);
 
-  const handleSwitchTab = (tab: Tab) => {
+  const handleSwitchTab = useCallback((tab: Tab) => {
     console.time(`[PERF] Tab Switch -> ${tab}`);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setTempScreen('none');
@@ -805,9 +805,9 @@ function FitTrackApp() {
         console.timeEnd(`[PERF] Tab Switch -> ${tab}`);
       } catch {}
     });
-  };
+  }, []);
 
-  const handleSelectDate = (newDate: string) => {
+  const handleSelectDate = useCallback((newDate: string) => {
     console.time(`[PERF] Date Change -> ${newDate}`);
     setSelectedDate(newDate);
     requestAnimationFrame(() => {
@@ -815,9 +815,9 @@ function FitTrackApp() {
         console.timeEnd(`[PERF] Date Change -> ${newDate}`);
       } catch {}
     });
-  };
+  }, []);
 
-  const handleOpenAddFoodToday = (
+  const handleOpenAddFoodToday = useCallback((
     mealType?: MealType,
     initialTab?: 'search' | 'photo' | 'describe',
     initialScanBarcode?: boolean
@@ -830,7 +830,20 @@ function FitTrackApp() {
       initialTab,
       initialScanBarcode,
     });
-  };
+  }, []);
+
+  const handleOpenSupplements = useCallback(() => setTempScreen('supplements'), []);
+  const handleOpenProfile = useCallback(() => setTempScreen('profile'), []);
+  const handleOpenSteps = useCallback(() => setTempScreen('steps'), []);
+  const handleOpenWorkouts = useCallback(() => setTempScreen('workouts'), []);
+  const handleOpenLogWeight = useCallback(() => handleSwitchTab('progress'), [handleSwitchTab]);
+  const handleUpdateProfile = useCallback(async (p: UserProfile) => {
+    await saveUserProfile(p);
+    setProfile(p);
+  }, []);
+  const handleBackToNone = useCallback(() => setTempScreen('none'), []);
+  const handleBackToProfile = useCallback(() => setTempScreen('profile'), []);
+  const handleCloseAddSheet = useCallback(() => setAddSheetConfig((prev) => ({ ...prev, visible: false })), []);
 
   if (initError) {
     return (
@@ -985,18 +998,18 @@ function FitTrackApp() {
               date={selectedDate}
               workouts={log.workouts || []}
               profile={profile}
-              onSelectDate={setSelectedDate}
+              onSelectDate={handleSelectDate}
               onAddWorkout={handleAddWorkout}
               onUpdateWorkout={handleUpdateWorkout}
               onDeleteWorkout={handleDeleteWorkout}
-              onBack={() => setTempScreen('none')}
+              onBack={handleBackToNone}
             />
           )}
 
           {tempScreen === 'account' && (
             <AccountScreen
               user={authUser}
-              onBack={() => setTempScreen('profile')}
+              onBack={handleBackToProfile}
               onRestoreComplete={handleRestoreComplete}
             />
           )}
@@ -1013,18 +1026,15 @@ function FitTrackApp() {
               onUpdateWater={handleUpdateWater}
               onNavigateToMeals={handleNavigateToMeals}
               onOpenAddFood={handleOpenAddFoodToday}
-              onOpenSupplements={() => setTempScreen('supplements')}
-              onOpenProfile={() => setTempScreen('profile')}
-              onOpenSteps={() => setTempScreen('steps')}
-              onOpenWorkouts={() => setTempScreen('workouts')}
+              onOpenSupplements={handleOpenSupplements}
+              onOpenProfile={handleOpenProfile}
+              onOpenSteps={handleOpenSteps}
+              onOpenWorkouts={handleOpenWorkouts}
               onAddWorkout={handleAddWorkout}
               onDeleteWorkout={handleDeleteWorkout}
               onUpdateWorkout={handleUpdateWorkout}
-              onOpenLogWeight={() => handleSwitchTab('progress')}
-              onUpdateProfile={async (p: UserProfile) => {
-                await saveUserProfile(p);
-                setProfile(p);
-              }}
+              onOpenLogWeight={handleOpenLogWeight}
+              onUpdateProfile={handleUpdateProfile}
             />
           )}
 
@@ -1066,7 +1076,7 @@ function FitTrackApp() {
           date={addSheetConfig.targetDate}
           initialTab={addSheetConfig.initialTab}
           initialScanBarcode={addSheetConfig.initialScanBarcode}
-          onClose={() => setAddSheetConfig((prev) => ({ ...prev, visible: false }))}
+          onClose={handleCloseAddSheet}
           onAddMeal={handleAddMeal}
           onCopyYesterdayMeals={handleCopyYesterdayMeals}
         />

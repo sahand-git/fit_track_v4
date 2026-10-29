@@ -63,7 +63,7 @@ interface Message {
 
 const COACH_HISTORY_KEY = '@fittrack_coach_history';
 
-export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
+export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -687,7 +687,8 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
       </View>
     </KeyboardAvoidingView>
   );
-}
+});
+CoachScreen.displayName = 'CoachScreen';
 
 const createStyles = (theme: ThemeType) =>
   StyleSheet.create({

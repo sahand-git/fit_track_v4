@@ -51,7 +51,7 @@ interface ProgressScreenProps {
   onUpdateWeight?: (weightKg: number) => void;
 }
 
-export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoading, onUpdateWeight }) => {
+export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoading, onUpdateWeight }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -552,7 +552,8 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
       </Modal>
     </View>
   );
-};
+});
+ProgressScreen.displayName = 'ProgressScreen';
 
 const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
