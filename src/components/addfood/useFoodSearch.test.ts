@@ -166,4 +166,55 @@ assert(meatCategoryResults.some((f) => f.id === 'f2'), 'Category filter should f
 assert(!meatCategoryResults.some((f) => f.id === 'f1'), 'Category filter should exclude rice');
 console.log('✓ Test 5 passed: Canonical category selection accurately filters catalog items.');
 
+// Test 6: Synthetic 1,000-food catalog stress test (Step 7 requirement)
+const synthetic1000Foods: FoodItem[] = Array.from({ length: 1000 }, (_, i) => ({
+  id: `synth_food_${i}`,
+  name: `Synthetic Food Item ${i}`,
+  nameAr: `طعام اصطناعي ${i}`,
+  nameCkb: `خۆراکی دەستکرد ${i}`,
+  category: i % 2 === 0 ? 'Meat & Poultry' : 'Grains & Bread',
+  calories: 100 + (i % 500),
+  protein: 10 + (i % 50),
+  carbs: 20 + (i % 60),
+  fat: 5 + (i % 20),
+  servingSize: '100g',
+  servingGrams: 100,
+  source: 'verified_database',
+}));
+
+const searchStart = performance.now();
+const searchFiltered1000 = filterFoodCatalog({
+  searchQuery: 'Food Item 99',
+  foodFilter: 'all',
+  recentFoods: [],
+  frequentFoods: [],
+  favoriteFoods: [],
+  customFoods: synthetic1000Foods,
+  barcodeCache: [],
+  t: mockT,
+});
+const searchDurationMs = performance.now() - searchStart;
+assert(searchFiltered1000.length > 0, 'Should find matching synthetic items');
+assert(searchDurationMs < 50, `Filtering 1,000 items took ${searchDurationMs.toFixed(2)}ms, must be < 50ms`);
+console.log(`✓ Test 6 passed: Synthetic 1,000-food search filtered in ${searchDurationMs.toFixed(2)}ms (< 50ms requirement).`);
+
+// Test 7: Category filtering on 1,000 synthetic foods
+const catStart = performance.now();
+const catFiltered1000 = filterFoodCatalog({
+  searchQuery: '',
+  foodFilter: 'all',
+  selectedCategory: 'Meat & Poultry',
+  recentFoods: [],
+  frequentFoods: [],
+  favoriteFoods: [],
+  customFoods: synthetic1000Foods,
+  barcodeCache: [],
+  t: mockT,
+});
+const catDurationMs = performance.now() - catStart;
+const synthCatMatches = catFiltered1000.filter((f) => f.id.startsWith('synth_food_'));
+assert.strictEqual(synthCatMatches.length, 500, 'Should find exactly 500 synthetic Meat & Poultry items');
+assert(catDurationMs < 20, `Category filtering 1,000 items took ${catDurationMs.toFixed(2)}ms, must be < 20ms`);
+console.log(`✓ Test 7 passed: Category filtering across 1,000 foods executed in ${catDurationMs.toFixed(2)}ms.`);
+
 console.log('All useFoodSearch Unit Tests PASSED Cleanly!');

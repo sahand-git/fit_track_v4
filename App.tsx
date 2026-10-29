@@ -793,28 +793,16 @@ function FitTrackApp() {
   }, []);
 
   const handleSwitchTab = useCallback((tab: Tab) => {
-    console.time(`[PERF] Tab Switch -> ${tab}`);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setTempScreen('none');
     if (tab === 'today') {
       setSelectedDate(getTodayDateString());
     }
     setActiveTab(tab);
-    requestAnimationFrame(() => {
-      try {
-        console.timeEnd(`[PERF] Tab Switch -> ${tab}`);
-      } catch {}
-    });
   }, []);
 
   const handleSelectDate = useCallback((newDate: string) => {
-    console.time(`[PERF] Date Change -> ${newDate}`);
     setSelectedDate(newDate);
-    requestAnimationFrame(() => {
-      try {
-        console.timeEnd(`[PERF] Date Change -> ${newDate}`);
-      } catch {}
-    });
   }, []);
 
   const handleOpenAddFoodToday = useCallback((
@@ -822,7 +810,6 @@ function FitTrackApp() {
     initialTab?: 'search' | 'photo' | 'describe',
     initialScanBarcode?: boolean
   ) => {
-    console.time('[PERF] Add Food Sheet -> Interactive');
     setAddSheetConfig({
       visible: true,
       targetDate: getTodayDateString(),
