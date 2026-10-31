@@ -63,6 +63,8 @@ export const ScientificReferencesModal: React.FC<ScientificReferencesModalProps>
       animationType="slide"
       transparent
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.overlay}>
         <TouchableOpacity

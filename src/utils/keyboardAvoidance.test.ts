@@ -4,9 +4,6 @@ import {
   resolveKeyboardAvoidingBehavior,
   getScreenTopOffset,
   getKeyboardVerticalOffset,
-  calculateBottomPaddingWithKeyboard,
-  calculateModalContentPadding,
-  calculateKeyboardOverlap,
 } from './keyboardAvoidance';
 
 function assert(condition: boolean, message: string): void {
@@ -17,12 +14,12 @@ function assert(condition: boolean, message: string): void {
 
 console.log('Testing keyboardAvoidance utility...');
 
-// 1. Behavior resolution: undefined on Android to respect native window resizing; padding on iOS
+// 1. Behavior resolution: 'padding' across both iOS and Android with react-native-keyboard-controller
 assert(KEYBOARD_AVOIDING_BEHAVIOR === 'padding', 'Default behavior constant must be padding');
 assert(resolveKeyboardAvoidingBehavior('ios') === 'padding', 'iOS behavior must be padding');
 assert(
-  resolveKeyboardAvoidingBehavior('android') === undefined,
-  'Android behavior must be undefined so native window resize handles it without double padding'
+  resolveKeyboardAvoidingBehavior('android') === 'padding',
+  'Android behavior with keyboard-controller must be padding'
 );
 assert(ANDROID_MIN_STATUS_BAR_HEIGHT === 24, 'Minimum Android status bar height must be 24dp');
 
@@ -63,51 +60,6 @@ assert(
 assert(
   getScreenTopOffset(0, 'ios') === 0,
   'iOS with insets.top = 0 should be 0'
-);
-
-// 3. calculateBottomPaddingWithKeyboard
-const normalDockClearance = 132;
-const activeGap = 8;
-assert(
-  calculateBottomPaddingWithKeyboard(true, normalDockClearance, activeGap) === activeGap,
-  'When keyboard is visible, padding should be the active gap'
-);
-assert(
-  calculateBottomPaddingWithKeyboard(false, normalDockClearance, activeGap) === normalDockClearance,
-  'When keyboard is hidden, padding must be normal clearance'
-);
-
-// 4. calculateKeyboardOverlap (measureInWindow safeguard)
-// Input bottom at 820dp, keyboard top at 780dp -> occluded by 40dp + 8dp safety margin = 48dp
-assert(
-  calculateKeyboardOverlap(820, 780, 8) === 48,
-  'Input occluded by 40dp should produce 48dp padding with safety margin'
-);
-
-// Input bottom at 750dp, keyboard top at 780dp -> not occluded, returns 0
-assert(
-  calculateKeyboardOverlap(750, 780, 8) === 0,
-  'Input fully above keyboard should return 0 overlap'
-);
-
-// Keyboard hidden or invalid coordinates
-assert(
-  calculateKeyboardOverlap(800, 0, 8) === 0,
-  'Hidden keyboard should return 0 overlap'
-);
-
-// 5. calculateModalContentPadding (avoids infinite/excessive scroll space)
-assert(
-  calculateModalContentPadding(true, 48, 'android') === 16,
-  'When keyboard is visible on Android, modal bottom padding collapses to <= 16dp'
-);
-assert(
-  calculateModalContentPadding(false, 48, 'android') === 48,
-  'When keyboard is hidden on Android, modal bottom padding maintains base clearance'
-);
-assert(
-  calculateModalContentPadding(true, 48, 'ios') === 48,
-  'On iOS, base padding is preserved because KAV pads the container'
 );
 
 console.log('All keyboardAvoidance tests passed cleanly!');

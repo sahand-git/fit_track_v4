@@ -8,8 +8,8 @@ import {
   TextInput,
   Alert,
   Platform,
-  KeyboardAvoidingView,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { AppText as Text } from './AppText';
 import {
   X,
@@ -176,7 +176,14 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   const pctFill = Math.min(100, progress.percent);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={[styles.backdrop, { direction: isRtl ? 'rtl' : 'ltr' }]}>
         <KeyboardAvoidingView
           behavior="padding"

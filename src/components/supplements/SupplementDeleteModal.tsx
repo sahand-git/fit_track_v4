@@ -33,6 +33,8 @@ export const SupplementDeleteModal: React.FC<SupplementDeleteModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={onCancel}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View
         style={[

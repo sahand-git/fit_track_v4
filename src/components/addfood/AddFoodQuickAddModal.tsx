@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  KeyboardAvoidingView,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { AppText as Text } from '../AppText';
 import { X, Check, Zap, AlertTriangle } from 'lucide-react-native';
 import { MealType, AppLanguage } from '../../types';
@@ -64,6 +64,8 @@ export const AddFoodQuickAddModal: React.FC<AddFoodQuickAddModalProps> = ({
       animationType="fade"
       transparent
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View
         style={[

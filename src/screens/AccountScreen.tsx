@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Check, ChevronDown, ChevronUp, Cloud, Copy, ExternalLink, LogIn, LogOut, Mail, ShieldCheck, Trash2, Wrench } from 'lucide-react-native';
 import { DirectionalIcon } from '../components/DirectionalIcon';
 import * as Clipboard from 'expo-clipboard';

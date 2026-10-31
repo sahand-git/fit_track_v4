@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View, Platform } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Activity, Footprints, HeartPulse, Minus, Plus, RefreshCw, Target } from 'lucide-react-native';
 import { DirectionalIcon } from '../components/DirectionalIcon';
 import { AppText as Text } from '../components/AppText';

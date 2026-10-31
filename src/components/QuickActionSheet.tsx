@@ -89,6 +89,8 @@ export const QuickActionSheet: React.FC<QuickActionSheetProps> = ({
       animationType="slide"
       transparent
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.overlay}>
         <TouchableOpacity

@@ -7,9 +7,9 @@ import {
   TextInput,
   ScrollView,
   Platform,
-  KeyboardAvoidingView,
   BackHandler,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 import { AppText as Text } from './AppText';
@@ -198,6 +198,8 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
       animationType="slide"
       transparent
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.overlay}>
         <TouchableOpacity

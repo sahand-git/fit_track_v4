@@ -7,10 +7,9 @@ import {
   ScrollView,
   Platform,
   BackHandler,
-  KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getKeyboardVerticalOffset, resolveKeyboardAvoidingBehavior } from '../utils/keyboardAvoidance';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
 import { Check } from 'lucide-react-native';
 import { DirectionalIcon } from './DirectionalIcon';
@@ -49,7 +48,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
     return () => sub.remove();
   }, [step]);
 
-  const insets = useSafeAreaInsets();
   const [language, setLanguage] = useState<AppLanguage>(currentLanguage || 'en');
   const t = (str: string) => translate(language, str);
   const [name, setName] = useState('');
@@ -103,8 +101,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
   return (
     <SafeAreaView style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
       <KeyboardAvoidingView
-        behavior={resolveKeyboardAvoidingBehavior(Platform.OS)}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? getKeyboardVerticalOffset(insets.top) : 0}
+        behavior="padding"
         style={{ flex: 1 }}
       >
         <ScrollView

@@ -10,10 +10,10 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
-  KeyboardAvoidingView,
   Dimensions,
   InteractionManager,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -1581,7 +1581,14 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
   return (
     <>
-      <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
+      <Modal
+        visible={visible}
+        animationType="fade"
+        transparent
+        onRequestClose={handleClose}
+        statusBarTranslucent
+        navigationBarTranslucent
+      >
         <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
           <TouchableOpacity
             style={StyleSheet.absoluteFill}

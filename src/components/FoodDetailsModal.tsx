@@ -128,7 +128,14 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={[styles.backdrop, { direction: isRtl ? 'rtl' : 'ltr' }]}>
         <View style={styles.sheet}>
           {/* Header */}

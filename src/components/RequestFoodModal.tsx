@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  KeyboardAvoidingView,
   ActivityIndicator,
   Linking,
   Share,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { AppText as Text } from './AppText';
 import { X, Send, Mail, Share2, AlertCircle, CheckCircle, Info } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';
@@ -146,6 +146,8 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <KeyboardAvoidingView
         behavior="padding"

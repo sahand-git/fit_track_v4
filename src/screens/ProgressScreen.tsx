@@ -9,8 +9,8 @@ import {
   Alert,
   Platform,
   BackHandler,
-  KeyboardAvoidingView,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
@@ -496,7 +496,14 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
       )}
 
       {/* LOG WEIGHT MODAL */}
-      <Modal visible={modalVisible} transparent animationType="fade">
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+        statusBarTranslucent
+        navigationBarTranslucent
+      >
         <View style={styles.modalBackdrop}>
           <KeyboardAvoidingView
             behavior="padding"

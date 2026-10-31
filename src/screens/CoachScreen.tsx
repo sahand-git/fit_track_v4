@@ -7,10 +7,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  KeyboardAvoidingView,
   Platform,
   Alert,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getScopedStorageKey, saveDailyAIReport } from '../storage/storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,7 +54,6 @@ import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import { isReducedMotion } from '../utils/motion';
 import { AnimatedPressable } from '../components/AnimatedPressable';
-import { getKeyboardVerticalOffset, calculateKeyboardOverlap, resolveKeyboardAvoidingBehavior } from '../utils/keyboardAvoidance';
 
 interface CoachScreenProps {
   profile: UserProfile;
@@ -96,21 +95,12 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
   const composerRef = useRef<View>(null);
   const isSendingRef = useRef(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [dynamicExtraPadding, setDynamicExtraPadding] = useState(0);
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
+      () => {
         setIsKeyboardVisible(true);
-        if (composerRef.current && e?.endCoordinates?.screenY) {
-          composerRef.current.measureInWindow((_x, y, _width, height) => {
-            const residual = calculateKeyboardOverlap(y + height, e.endCoordinates.screenY, 8);
-            if (residual > 0) {
-              setDynamicExtraPadding(residual);
-            }
-          });
-        }
         setTimeout(() => {
           scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
         }, 100);
@@ -120,7 +110,6 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => {
         setIsKeyboardVisible(false);
-        setDynamicExtraPadding(0);
       }
     );
     return () => {
@@ -130,7 +119,7 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
   }, []);
 
   const bottomPadding = isKeyboardVisible
-    ? (Platform.OS === 'android' ? 0 : theme.spacing.sm) + dynamicExtraPadding
+    ? theme.spacing.xs
     : Math.max(110, insets.bottom + 84);
 
   const totals = useMemo(
@@ -345,8 +334,7 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
 
   return (
     <KeyboardAvoidingView
-      behavior={resolveKeyboardAvoidingBehavior(Platform.OS)}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? getKeyboardVerticalOffset(insets.top, 0, Platform.OS) : 0}
+      behavior="padding"
       style={{ flex: 1 }}
     >
       <View

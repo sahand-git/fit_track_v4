@@ -71,6 +71,8 @@ export const MedicalDisclaimerModal: React.FC<MedicalDisclaimerModalProps> = ({
       onRequestClose={() => {
         if (!isFirstRun && onClose) onClose();
       }}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.overlay}>
         <TouchableOpacity

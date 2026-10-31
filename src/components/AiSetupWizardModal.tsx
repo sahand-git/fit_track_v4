@@ -4,15 +4,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  ScrollView,
   ActivityIndicator,
   Linking,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getKeyboardVerticalOffset, resolveKeyboardAvoidingBehavior } from '../utils/keyboardAvoidance';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
 import {
   Sparkles,
@@ -62,7 +59,6 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
   isSkippable = true,
 }) => {
   const language = useLanguage();
-  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
@@ -399,22 +395,24 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <SafeAreaView style={[styles.container, { direction: isRTL ? 'rtl' : 'ltr' }]}>
-        <KeyboardAvoidingView
-          behavior={resolveKeyboardAvoidingBehavior(Platform.OS)}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? getKeyboardVerticalOffset(insets.top) : 0}
-          style={{ flex: 1 }}
+        <KeyboardAwareScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          overScrollMode="never"
+          bounces={false}
+          bottomOffset={24}
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            overScrollMode="never"
-            bounces={false}
-          >
-            {formBody}
-          </ScrollView>
-        </KeyboardAvoidingView>
+          {formBody}
+        </KeyboardAwareScrollView>
       </SafeAreaView>
     </Modal>
   );

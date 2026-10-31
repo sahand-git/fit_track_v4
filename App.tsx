@@ -8,6 +8,7 @@ import {
   BackHandler,
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { AppText as Text } from './src/components/AppText';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -87,7 +88,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <FitTrackApp />
+        <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
+          <FitTrackApp />
+        </KeyboardProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
   );
