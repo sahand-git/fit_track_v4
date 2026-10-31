@@ -18,10 +18,13 @@ import {
   buildModelFallbackChain,
   DEFAULT_FALLBACK_MODELS,
   formatProviderErrorDetail,
+  getDefaultMessageForKind,
   isAQKey,
   isAQKeyRejection,
   getAQKeyExplanation,
 } from './geminiModels';
+
+export const OVERALL_REQUEST_BUDGET_MS = 25000;
 
 export {
   GeminiError,
@@ -31,6 +34,7 @@ export {
   REQUEST_TIMEOUT_MS,
   TEST_CONNECTION_TIMEOUT_MS,
   formatProviderErrorDetail,
+  getDefaultMessageForKind,
   isAQKey,
   isAQKeyRejection,
   getAQKeyExplanation,
@@ -66,6 +70,7 @@ export async function executeGeminiRequest(
   }
 
   const cleanKey = apiKey.trim();
+  const overallDeadline = Date.now() + OVERALL_REQUEST_BUDGET_MS;
   const initialModel = modelOverride || (await getActiveModel(cleanKey, false, customFetch, storage));
 
   let fallbackChain: string[];
@@ -79,22 +84,32 @@ export async function executeGeminiRequest(
 
   let lastError: GeminiError | Error | null = null;
   let hasRetried404 = false;
-  const maxTransientAttempts = 3;
+  // 1 quick retry per model (attempt 0 = initial, attempt 1 = retry), then next model
+  const maxModelAttempts = 2;
 
   for (let modelIdx = 0; modelIdx < fallbackChain.length; modelIdx++) {
     const model = fallbackChain[modelIdx];
 
-    for (let attempt = 0; attempt < maxTransientAttempts; attempt++) {
+    for (let attempt = 0; attempt < maxModelAttempts; attempt++) {
+      if (Date.now() >= overallDeadline) {
+        throw lastError || new GeminiError('timeout', {
+          message: 'Gemini request timed out. Please check your connection and try again.',
+        });
+      }
+
+      const remainingBudget = Math.max(1, overallDeadline - Date.now());
+      const timeoutMs = Math.min(REQUEST_TIMEOUT_MS, remainingBudget);
+
       const controller = new AbortController();
       let didTimeout = false;
       const timeoutId = setTimeout(() => {
         didTimeout = true;
         controller.abort();
-      }, REQUEST_TIMEOUT_MS);
+      }, timeoutMs);
 
       try {
         const response = await customFetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
           {
             method: 'POST',
             headers: {
@@ -134,16 +149,16 @@ export async function executeGeminiRequest(
           break;
         }
 
-        // Handle transient server errors (500, 502, 503, 504)
+        // Handle transient server errors (500, 502, 503, 504): 1 quick retry, then next model
         if (response.status >= 500 && response.status <= 504) {
           const rawBody = await response.text().catch(() => '');
           const serverError = parseGoogleErrorBody(response.status, rawBody, cleanKey);
           lastError = serverError;
-          if (attempt < maxTransientAttempts - 1) {
-            await customWait(750 * Math.pow(2, attempt));
+          if (attempt === 0 && Date.now() + 500 < overallDeadline) {
+            await customWait(500);
             continue;
           }
-          // Model retries exhausted -> fall back to next candidate model
+          // 1 quick retry exhausted -> advance to next model in fallbackChain
           break;
         }
 
@@ -183,12 +198,9 @@ export async function executeGeminiRequest(
           });
         }
 
-        // On fallback success, cache working model
-        if (model !== initialModel) {
-          await clearActiveModelCache(storage);
-          await safeStorageSet(ACTIVE_MODEL_STORAGE_KEY, model, storage).catch(() => {});
-          await safeStorageSet(ACTIVE_MODEL_TIMESTAMP_KEY, String(Date.now()), storage).catch(() => {});
-        }
+        // Remember the last model that worked and try it first for the next 24 h
+        await safeStorageSet(ACTIVE_MODEL_STORAGE_KEY, model, storage).catch(() => {});
+        await safeStorageSet(ACTIVE_MODEL_TIMESTAMP_KEY, String(Date.now()), storage).catch(() => {});
 
         return text;
       } catch (err: any) {
@@ -201,37 +213,40 @@ export async function executeGeminiRequest(
 
         // If it's already a GeminiError
         if (err instanceof GeminiError) {
-          if (err.kind === 'server' && attempt < maxTransientAttempts - 1) {
+          if (err.kind === 'server') {
             lastError = err;
-            await customWait(750 * Math.pow(2, attempt));
-            continue;
+            if (attempt === 0 && Date.now() + 500 < overallDeadline) {
+              await customWait(500);
+              continue;
+            }
+            break; // 1 quick retry exhausted -> next model
           }
-          if (err.kind === 'server' || err.kind === 'model_unavailable') {
+          if (err.kind === 'model_unavailable') {
             lastError = err;
             break;
           }
           throw err;
         }
 
-        // Network error during fetch (e.g., connection lost)
+        // Network error during fetch
         const netError = new GeminiError('network', {
-          message: sanitizeGeminiString(err?.message || 'Network error connecting to Gemini.', cleanKey),
+          message: sanitizeGeminiString(err?.message || getDefaultMessageForKind('network'), cleanKey),
           cause: err,
         });
 
-        if (attempt < maxTransientAttempts - 1) {
-          lastError = netError;
-          await customWait(750 * Math.pow(2, attempt));
+        lastError = netError;
+        if (attempt === 0 && Date.now() + 500 < overallDeadline) {
+          await customWait(500);
           continue;
         }
-        throw netError;
+        break; // 1 quick retry exhausted -> next model
       } finally {
         clearTimeout(timeoutId);
       }
     }
   }
 
-  throw lastError || new GeminiError('server', { message: 'Gemini request failed after retries.' });
+  throw lastError || new GeminiError('server', { message: 'Gemini is busy right now. Try again in a moment.' });
 }
 
 function isGemini3Model(modelName: string): boolean {

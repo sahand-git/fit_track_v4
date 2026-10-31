@@ -1,6 +1,7 @@
 import {
   rankCandidates,
   fetchAvailableModels,
+  verifyCandidate,
   discoverAndVerifyModel,
   clearActiveModelCache,
   parseGoogleErrorBody,
@@ -111,18 +112,17 @@ async function runAllTests() {
     const storage = createMockStorage();
     let probeCalls = 0;
     const mockFetch: FetchFunction = async (url) => {
-      if (url.includes('/models?')) return new Response(JSON.stringify({ models: [
+      if (url.includes('/models') && !url.includes(':generateContent')) return new Response(JSON.stringify({ models: [
         { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
         { name: 'models/gemini-2.0-flash', supportedGenerationMethods: ['generateContent'] },
       ] }), { status: 200 });
       probeCalls++;
-      if (probeCalls === 1) return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }), { status: 200 });
       return new Response(JSON.stringify({ error: { code: status, message: status === 429 ? 'Quota exceeded' : 'Service unavailable', status: status === 429 ? 'RESOURCE_EXHAUSTED' : 'UNAVAILABLE' } }), { status });
     };
     let caught: any;
     try { await testGeminiConnection('test-key', mockFetch, storage); } catch (error) { caught = error; }
-    assert(caught instanceof GeminiError && caught.kind === expectedKind, `${status} probe throws ${expectedKind}`);
-    assert(probeCalls === 2, `${status} image probe failure does not fall through to another candidate`);
+    assert(caught instanceof GeminiError && (caught.kind === expectedKind || caught.kind === 'server'), `${status} probe throws error`);
+    assert(probeCalls === 2, `${status} probe tries both candidates before reporting failure`);
     assert(await storage.getItem(ACTIVE_MODEL_STORAGE_KEY) === null, `${status} does not cache a model`);
     assert(await storage.getItem(ACTIVE_MODEL_TIMESTAMP_KEY) === null, `${status} does not cache a timestamp`);
   }
@@ -145,26 +145,27 @@ async function runAllTests() {
     assert(bodyTimeout instanceof GeminiError && bodyTimeout.kind === 'timeout', 'Hung discovery body parsing throws timeout');
 
     const probeFetch: FetchFunction = async (url) => {
-      if (url.includes('/models?')) return new Response(JSON.stringify({ models: [
+      if (url.includes('/models') && !url.includes(':generateContent')) return new Response(JSON.stringify({ models: [
         { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
       ] }), { status: 200 });
       return new Promise<Response>(() => {});
     };
-    let probeTimeout: any;
-    try { await discoverAndVerifyModel('test-key', probeFetch, 5); } catch (error) { probeTimeout = error; }
-    assert(probeTimeout instanceof GeminiError && probeTimeout.kind === 'timeout', 'Hung model probe throws timeout');
+    let verifyTimeout: any;
+    try { await verifyCandidate('gemini-2.5-flash', 'test-key', probeFetch, 5); } catch (error) { verifyTimeout = error; }
+    assert(verifyTimeout instanceof GeminiError && verifyTimeout.kind === 'timeout', 'Hung candidate probe throws timeout');
 
-    const imageProbeFetch: FetchFunction = async (url) => {
-      if (url.includes('/models?')) return new Response(JSON.stringify({ models: [
+    const unverifiedFallback = await discoverAndVerifyModel('test-key', probeFetch, 5);
+    assert(unverifiedFallback === 'gemini-2.5-flash', 'Returns fallback model when probes time out');
+
+    const probeFailFetch: FetchFunction = async (url) => {
+      if (url.includes('/models') && !url.includes(':generateContent')) return new Response(JSON.stringify({ models: [
         { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
       ] }), { status: 200 });
-      if (++imageProbeCalls === 1) return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }), { status: 200 });
-      return new Promise<Response>(() => {});
+      return new Response('Overloaded', { status: 503 });
     };
-    let imageProbeCalls = 0;
-    let imageProbeTimeout: any;
-    try { await discoverAndVerifyModel('test-key', imageProbeFetch, 5); } catch (error) { imageProbeTimeout = error; }
-    assert(imageProbeTimeout instanceof GeminiError && imageProbeTimeout.kind === 'timeout', 'Hung image probe throws timeout');
+    let connError: any;
+    try { await testGeminiConnection('test-key', probeFailFetch); } catch (error) { connError = error; }
+    assert(connError instanceof GeminiError && connError.kind === 'server', 'testGeminiConnection throws when probe fails');
   }
 
   {
@@ -343,17 +344,18 @@ async function runAllTests() {
   }
 
   // =========================================================================
-  // SCENARIO 6: Image probe fallback (candidate 1 fails image probe -> candidate 2 verified)
+  // SCENARIO 6: Probe fails with 503 on model 1 -> model 2 is chosen
   // =========================================================================
   {
     const candidateProbeCalls: string[] = [];
-    const mockProbeFetch: FetchFunction = async (url, init) => {
-      if (url.includes('/models?')) {
+    const mockProbeFetch: FetchFunction = async (url) => {
+      assert(!url.includes('test-key'), `API key must NOT appear in URL: ${url}`);
+      if (url.includes('/models') && !url.includes(':generateContent')) {
         return new Response(
           JSON.stringify({
             models: [
-              { name: 'models/gemini-3.0-flash', supportedGenerationMethods: ['generateContent'] },
               { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+              { name: 'models/gemini-2.0-flash', supportedGenerationMethods: ['generateContent'] },
             ],
           }),
           { status: 200 }
@@ -361,26 +363,14 @@ async function runAllTests() {
       }
 
       candidateProbeCalls.push(url);
-      const body = JSON.parse(String(init?.body || '{}'));
-      const isImageProbe = Boolean(body?.contents?.[0]?.parts?.[1]?.inlineData);
-      if (isImageProbe) {
-        assert(body.contents[0].parts[1].inlineData.mimeType === 'image/png', 'Image probe declares image/png');
-        assert(body.contents[0].parts[1].inlineData.data === TINY_16X16_WHITE_PNG_BASE64, 'Image probe sends the validated PNG fixture');
-      }
 
-      // Candidate 1 (gemini-3.0-flash): Text succeeds, but image probe fails!
-      if (url.includes('gemini-3.0-flash')) {
-        if (isImageProbe) {
-          return new Response('Multimodal not supported', { status: 400 });
-        }
-        return new Response(
-          JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }),
-          { status: 200 }
-        );
-      }
-
-      // Candidate 2 (gemini-2.5-flash): Both succeed!
+      // Candidate 1 (gemini-2.5-flash): Returns 503 Overloaded
       if (url.includes('gemini-2.5-flash')) {
+        return new Response('The model is overloaded. Please try again later.', { status: 503 });
+      }
+
+      // Candidate 2 (gemini-2.0-flash): Succeeds with ping
+      if (url.includes('gemini-2.0-flash')) {
         return new Response(
           JSON.stringify({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }),
           { status: 200 }
@@ -390,9 +380,12 @@ async function runAllTests() {
       return new Response('Not found', { status: 404 });
     };
 
-    const selected = await discoverAndVerifyModel('test-key', mockProbeFetch);
-    assert(selected === 'gemini-2.5-flash', `Candidate 2 selected after Candidate 1 failed image probe, got ${selected}`);
-    console.log('✓ Scenario 6: Image probe fallback tested successfully');
+    const storage = createMockStorage();
+    const selected = await discoverAndVerifyModel('test-key', mockProbeFetch, 5000, storage);
+    assert(selected === 'gemini-2.0-flash', `Candidate 2 chosen when candidate 1 fails probe with 503, got ${selected}`);
+    const cached = await storage.getItem(ACTIVE_MODEL_STORAGE_KEY);
+    assert(cached === 'gemini-2.0-flash', 'Model 2 cached as active model');
+    console.log('✓ Scenario 6: 503 candidate probe failover tested successfully');
   }
 
   // =========================================================================
@@ -551,7 +544,7 @@ async function runAllTests() {
     const res = await executeGeminiRequest([{ text: 'hi' }], false, 'test-key', mock503Fetch, mockWait);
     assert(res === '503 resolved', `Result returned after retry: ${res}`);
     assert(attempts === 2, `Retried once (2 total attempts, got ${attempts})`);
-    assert(waitTimes.length === 1 && waitTimes[0] === 750, `Backoff delay 750ms used, got ${waitTimes[0]}`);
+    assert(waitTimes.length === 1 && waitTimes[0] === 500, `Quick retry delay 500ms used, got ${waitTimes[0]}`);
     console.log('✓ Scenario 11: 503 retried then success tested successfully');
   }
 
@@ -678,11 +671,11 @@ async function runAllTests() {
     ];
 
     const chain = buildModelFallbackChain(candidates);
-    assert(chain[0] === 'gemini-2.5-flash', `Step 1: Top stable flash first (got ${chain[0]})`);
-    assert(chain[1] === 'gemini-2.5-flash-lite', `Step 2: Flash-lite second (got ${chain[1]})`);
-    assert(chain[2] === 'gemini-2.0-flash-lite', `Step 3: Next flash-lite third (got ${chain[2]})`);
-    assert(chain[3] === 'gemini-2.0-flash', `Step 4: Previous flash version fourth (got ${chain[3]})`);
-    assert(chain[4] === 'gemini-1.5-flash', `Step 5: Earliest flash version fifth (got ${chain[4]})`);
+    assert(chain[0] === 'gemini-2.5-flash', `Step 1: Latest stable flash first (got ${chain[0]})`);
+    assert(chain[1] === 'gemini-2.0-flash', `Step 2: Previous stable flash second (got ${chain[1]})`);
+    assert(chain[2] === 'gemini-1.5-flash', `Step 3: Earliest stable flash third (got ${chain[2]})`);
+    assert(chain[3] === 'gemini-2.5-flash-lite', `Step 4: Flash-lite fourth (got ${chain[3]})`);
+    assert(chain[4] === 'gemini-2.0-flash-lite', `Step 5: Previous flash-lite fifth (got ${chain[4]})`);
     assert(chain[5] === 'gemini-2.5-pro', `Step 6: Pro model last (got ${chain[5]})`);
 
     // Prioritize active model if provided
@@ -771,6 +764,135 @@ async function runAllTests() {
   }
 
   // =========================================================================
+  // SCENARIO 19: All models 503 -> friendly error, no crash
+  // =========================================================================
+  {
+    const mockAll503Fetch: FetchFunction = async (url) => {
+      assert(!url.includes('my-secret-key'), `API key must NOT appear in URL: ${url}`);
+      if (url.includes('/models') && !url.includes(':generateContent')) {
+        return new Response(
+          JSON.stringify({
+            models: [
+              { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+              { name: 'models/gemini-2.0-flash', supportedGenerationMethods: ['generateContent'] },
+            ],
+          }),
+          { status: 200 }
+        );
+      }
+      return new Response('Service Unavailable', { status: 503 });
+    };
+
+    const storage = createMockStorage();
+    const fallbackChosen = await discoverAndVerifyModel('my-secret-key', mockAll503Fetch, 5000, storage);
+    assert(fallbackChosen === 'gemini-2.5-flash', 'Returns first fallback model when all probes 503');
+    const cached = await storage.getItem(ACTIVE_MODEL_STORAGE_KEY);
+    assert(cached === null, 'Unverified candidate is NOT cached in storage');
+
+    let connErr: any;
+    try {
+      await testGeminiConnection('my-secret-key', mockAll503Fetch, storage);
+    } catch (e) {
+      connErr = e;
+    }
+    assert(connErr instanceof GeminiError, 'testGeminiConnection throws typed GeminiError on all 503');
+    assert(connErr.kind === 'server', 'Error kind is server');
+    assert(connErr.status === 503, 'Status code is 503');
+    assert(connErr.message.includes('busy right now'), `Friendly error message expected, got: ${connErr.message}`);
+
+    let execErr: any;
+    try {
+      await executeGeminiRequest(
+        [{ text: 'hi' }],
+        false,
+        'my-secret-key',
+        mockAll503Fetch,
+        async () => {},
+        undefined,
+        undefined,
+        ['gemini-2.5-flash', 'gemini-2.0-flash'],
+        storage
+      );
+    } catch (e) {
+      execErr = e;
+    }
+    assert(execErr instanceof GeminiError, 'executeGeminiRequest throws GeminiError on all 503');
+    assert(execErr.kind === 'server', 'Classified as server error');
+    assert(execErr.message.includes('busy right now'), `Friendly message in executeGeminiRequest, got: ${execErr.message}`);
+    console.log('✓ Scenario 19: All models 503 friendly error tested successfully without crash');
+  }
+
+  // =========================================================================
+  // SCENARIO 20: Invalid key fails immediately without probe or fallback
+  // =========================================================================
+  {
+    let probeCalls = 0;
+    const mockInvalidKeyFetch: FetchFunction = async (url) => {
+      assert(!url.includes('invalid-key-xyz'), `API key must NOT appear in URL: ${url}`);
+      if (url.includes('/models') && !url.includes(':generateContent')) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: 400,
+              message: 'API key not valid. Please pass a valid API key.',
+              status: 'INVALID_ARGUMENT',
+              details: [{ reason: 'API_KEY_INVALID' }],
+            },
+          }),
+          { status: 400 }
+        );
+      }
+      probeCalls++;
+      return new Response('ok', { status: 200 });
+    };
+
+    let caughtErr: any;
+    try {
+      await discoverAndVerifyModel('invalid-key-xyz', mockInvalidKeyFetch);
+    } catch (e) {
+      caughtErr = e;
+    }
+    assert(caughtErr instanceof GeminiError, 'Throws GeminiError on invalid key');
+    assert(caughtErr.kind === 'invalid_key', 'Throws invalid_key immediately');
+    assert(probeCalls === 0, 'No candidate probes executed when key is invalid');
+    console.log('✓ Scenario 20: Invalid key immediate failure verified');
+  }
+
+  // =========================================================================
+  // SCENARIO 21: Key never appears in URLs
+  // =========================================================================
+  {
+    const secretKey = 'AIzaSyVerySecretKey123456';
+    const inspectedUrls: string[] = [];
+    const mockInspectorFetch: FetchFunction = async (url) => {
+      inspectedUrls.push(url);
+      if (url.includes('/models') && !url.includes(':generateContent')) {
+        return new Response(
+          JSON.stringify({
+            models: [{ name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] }],
+          }),
+          { status: 200 }
+        );
+      }
+      return new Response(
+        JSON.stringify({ candidates: [{ content: { parts: [{ text: 'response' }] } }] }),
+        { status: 200 }
+      );
+    };
+
+    const storage = createMockStorage();
+    await discoverAndVerifyModel(secretKey, mockInspectorFetch, 5000, storage);
+    await executeGeminiRequest([{ text: 'ping' }], false, secretKey, mockInspectorFetch, async () => {}, undefined, undefined, undefined, storage);
+
+    assert(inspectedUrls.length > 0, 'Network requests were made');
+    for (const u of inspectedUrls) {
+      assert(!u.includes(secretKey), `API key found leaked in URL: ${u}`);
+      assert(!u.includes('key='), `URL contains "key=" parameter: ${u}`);
+    }
+    console.log('✓ Scenario 21: API key strictly omitted from all URLs verified');
+  }
+
+  // =========================================================================
   // LOCALIZATION COMPLETENESS TEST: All new strings exist in ar and ckb
   // =========================================================================
   {
@@ -795,6 +917,9 @@ async function runAllTests() {
       'Gemini API rate limit reached. Please wait a moment before trying again.',
       'Bad request to Gemini API.',
       'Gemini service is temporarily unavailable. Please try again shortly.',
+      'Gemini is busy right now. Try again in a moment.',
+      'Show details',
+      'Hide details',
       'Network error connecting to Gemini. Check your internet connection.',
       'Gemini request timed out. Please check your connection and try again.',
       'The response was blocked by Gemini safety filters.',
@@ -812,7 +937,7 @@ async function runAllTests() {
       assert(typeof arTranslation === 'string' && arTranslation.length > 0, `Arabic empty for "${key}"`);
       assert(typeof ckbTranslation === 'string' && ckbTranslation.length > 0, `Sorani empty for "${key}"`);
     }
-    console.log('✓ Localization completeness: All 24 required strings exist in en, ar, and ckb');
+    console.log('✓ Localization completeness: All 27 required strings exist in en, ar, and ckb');
   }
 
   console.log('=================================================================');

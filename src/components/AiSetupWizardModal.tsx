@@ -23,6 +23,8 @@ import {
   Eye,
   EyeOff,
   X,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react-native';
 import { DirectionalIcon } from './DirectionalIcon';
 import {
@@ -72,6 +74,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
   const [verifiedModel, setVerifiedModel] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [providerDetail, setProviderDetail] = useState<string | null>(null);
+  const [showErrorDetail, setShowErrorDetail] = useState(false);
 
   // Load existing key on open if available
   React.useEffect(() => {
@@ -102,6 +105,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
     setTestState('testing');
     setErrorMessage(null);
     setProviderDetail(null);
+    setShowErrorDetail(false);
     setVerifiedModel(null);
 
     try {
@@ -318,9 +322,29 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
                   </Text>
                 )}
                 {providerDetail && (
-                  <Text style={[styles.providerDetail, isRTL && styles.textRTL]}>
-                    {providerDetail}
-                  </Text>
+                  <View style={styles.providerDetailSection}>
+                    <TouchableOpacity
+                      style={[styles.providerDetailToggle, isRTL && styles.rowRTL]}
+                      onPress={() => setShowErrorDetail((prev) => !prev)}
+                      accessibilityRole="button"
+                      accessibilityLabel={showErrorDetail ? t('Hide details') : t('Show details')}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.providerDetailToggleText}>
+                        {showErrorDetail ? t('Hide details') : t('Show details')}
+                      </Text>
+                      {showErrorDetail ? (
+                        <ChevronUp size={12} color={theme.colors.danger} />
+                      ) : (
+                        <ChevronDown size={12} color={theme.colors.danger} />
+                      )}
+                    </TouchableOpacity>
+                    {showErrorDetail ? (
+                      <Text style={[styles.providerDetail, isRTL && styles.textRTL]}>
+                        {providerDetail}
+                      </Text>
+                    ) : null}
+                  </View>
                 )}
               </View>
             </View>
@@ -634,10 +658,27 @@ const createStyles = (theme: ThemeType) =>
     lineHeight: 16,
     marginBottom: 4,
   },
+  providerDetailSection: {
+    marginTop: 4,
+  },
+  providerDetailToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    minHeight: 28,
+  },
+  providerDetailToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.danger,
+  },
   providerDetail: {
     fontSize: 12,
     color: theme.colors.textMuted,
     lineHeight: 15,
+    marginTop: 2,
   },
   errorStudioLink: {
     flexDirection: 'row',

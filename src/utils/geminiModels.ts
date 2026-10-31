@@ -99,7 +99,7 @@ export function getDefaultMessageForKind(kind: GeminiErrorKind): string {
     case 'bad_request':
       return 'Bad request to Gemini API.';
     case 'server':
-      return 'Gemini service is temporarily unavailable. Please try again shortly.';
+      return 'Gemini is busy right now. Try again in a moment.';
     case 'network':
       return 'Network error connecting to Gemini. Check your internet connection.';
     case 'timeout':
@@ -326,13 +326,13 @@ export function getAQKeyExplanation(language: AppLanguage = 'en'): string {
 
 export const DEFAULT_FALLBACK_MODELS = [
   'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
   'gemini-2.0-flash',
+  'gemini-2.5-flash-lite',
 ];
 
 /**
  * Builds candidate model fallback chain:
- * Order: stable flash, then flash-lite, then previous flash versions, then others.
+ * Order: latest stable flash -> previous stable flash -> flash-lite -> others.
  * If activeModel is specified, it is placed first without duplicates.
  */
 export function buildModelFallbackChain(models: string[], activeModel?: string): string[] {
@@ -396,16 +396,16 @@ export function buildModelFallbackChain(models: string[], activeModel?: string):
     chain.push(stableFlash[0].name);
   }
 
-  // 2. Flash-lite models (e.g. gemini-2.5-flash-lite, gemini-2.0-flash-lite)
-  for (const lite of stableFlashLite) {
-    chain.push(lite.name);
-  }
-
-  // 3. Previous flash versions (e.g. gemini-2.0-flash, gemini-1.5-flash)
+  // 2. Previous stable flash versions (e.g. gemini-2.0-flash, gemini-1.5-flash)
   if (stableFlash.length > 1) {
     for (let i = 1; i < stableFlash.length; i++) {
       chain.push(stableFlash[i].name);
     }
+  }
+
+  // 3. Flash-lite models (e.g. gemini-2.5-flash-lite, gemini-2.0-flash-lite)
+  for (const lite of stableFlashLite) {
+    chain.push(lite.name);
   }
 
   // 4. Other models (previews, pro)
@@ -537,7 +537,6 @@ export async function fetchAvailableModels(
       throw new GeminiError('server', { message: 'Gemini model discovery exceeded the safe page limit.' });
     }
     const url = new URL('https://generativelanguage.googleapis.com/v1beta/models');
-    url.searchParams.set('key', cleanKey);
     url.searchParams.set('pageSize', String(MAX_PAGE_SIZE));
     if (pageToken) {
       url.searchParams.set('pageToken', pageToken);
@@ -582,7 +581,8 @@ export async function fetchAvailableModels(
 }
 
 /**
- * Sends a tiny text probe and a 1x1 image probe via generateContent to verify candidate model.
+ * Sends a cheap text-only ping via generateContent to verify candidate model.
+ * Note: API key is passed ONLY in x-goog-api-key header, never in the URL.
  */
 export async function verifyCandidate(
   modelName: string,
@@ -591,41 +591,44 @@ export async function verifyCandidate(
   timeoutMs = REQUEST_TIMEOUT_MS
 ): Promise<'ok' | 'incompatible'> {
   const cleanKey = apiKey.trim();
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(cleanKey)}`;
-  const post = async (parts: Record<string, unknown>[]): Promise<'ok' | 'incompatible'> => {
-    const { response, bodyText } = await fetchWithTimeout(customFetch, endpoint, {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+  const { response, bodyText } = await fetchWithTimeout(
+    customFetch,
+    endpoint,
+    {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey },
-      body: JSON.stringify({ contents: [{ parts }], generationConfig: { maxOutputTokens: 5 } }),
-    }, cleanKey, timeoutMs);
+      body: JSON.stringify({ contents: [{ parts: [{ text: 'ping' }] }], generationConfig: { maxOutputTokens: 5 } }),
+    },
+    cleanKey,
+    timeoutMs
+  );
 
-    if (!response.ok) {
-      const error = parseGoogleErrorBody(response.status, bodyText, cleanKey);
-      if (response.status === 404) return 'incompatible';
-      if (response.status === 400 && /model|modality|image|vision|multimodal|unsupported|not supported/i.test(error.providerMessage || '')) {
-        return 'incompatible';
-      }
-      throw error;
+  if (!response.ok) {
+    const error = parseGoogleErrorBody(response.status, bodyText, cleanKey);
+    if (response.status === 404) return 'incompatible';
+    if (response.status === 400 && /model|modality|unsupported|not supported/i.test(error.providerMessage || '')) {
+      return 'incompatible';
     }
+    throw error;
+  }
 
-    let json: any;
-    try { json = JSON.parse(bodyText); }
-    catch (cause) { throw new GeminiError('server', { status: response.status, message: 'Invalid response from Gemini probe.', cause }); }
-    if (!json?.candidates?.length) throw new GeminiError('empty', { status: response.status });
-    return 'ok';
-  };
-
-  const textResult = await post([{ text: 'ping' }]);
-  if (textResult === 'incompatible') return textResult;
-  return post([
-    { text: 'Describe this image in one word.' },
-    { inlineData: { mimeType: 'image/png', data: TINY_16X16_WHITE_PNG_BASE64 } },
-  ]);
+  let json: any;
+  try {
+    json = JSON.parse(bodyText);
+  } catch (cause) {
+    throw new GeminiError('server', { status: response.status, message: 'Invalid response from Gemini probe.', cause });
+  }
+  if (!json?.candidates?.length) throw new GeminiError('empty', { status: response.status });
+  return 'ok';
 }
 
 /**
  * Discovers and verifies the best compatible model for an API key.
- * Tests up to top 3 ranked candidates.
+ * Wraps each probe: on 429/5xx/timeout/network, advances to next candidate.
+ * Only auth/key errors are thrown immediately.
+ * If every probe fails transiently, returns the first model of the fallback chain
+ * without caching it as verified (the request loop will handle failover).
  */
 export async function discoverAndVerifyModel(
   apiKey: string,
@@ -633,13 +636,24 @@ export async function discoverAndVerifyModel(
   timeoutMs = REQUEST_TIMEOUT_MS,
   storage?: StorageInterface
 ): Promise<string> {
-  const models = await fetchAvailableModels(apiKey, customFetch, timeoutMs);
-  const ranked = rankCandidates(models);
-
-  if (!ranked.length) {
-    throw new GeminiError('no_compatible_model', {
-      message: 'No compatible Gemini model found for this API key.',
-    });
+  let ranked: string[] = [];
+  try {
+    const models = await fetchAvailableModels(apiKey, customFetch, timeoutMs);
+    ranked = rankCandidates(models);
+    if (!ranked.length) {
+      throw new GeminiError('no_compatible_model', {
+        message: 'No compatible Gemini model found for this API key.',
+      });
+    }
+  } catch (err: any) {
+    if (
+      err instanceof GeminiError &&
+      (err.kind === 'invalid_key' || err.kind === 'permission' || err.kind === 'no_compatible_model')
+    ) {
+      throw err;
+    }
+    // Transient discovery failure (e.g. 503, 429, network, timeout) -> fall back to default candidates
+    ranked = DEFAULT_FALLBACK_MODELS;
   }
 
   // Persist discovered candidate pool so fallback can use it
@@ -647,15 +661,25 @@ export async function discoverAndVerifyModel(
 
   const topCandidates = ranked.slice(0, 3);
   for (const candidate of topCandidates) {
-    const result = await verifyCandidate(candidate, apiKey, customFetch, timeoutMs);
-    if (result === 'ok') {
-      return candidate;
+    try {
+      const result = await verifyCandidate(candidate, apiKey, customFetch, timeoutMs);
+      if (result === 'ok') {
+        // Cache as verified
+        await safeStorageSet(ACTIVE_MODEL_STORAGE_KEY, candidate, storage).catch(() => {});
+        await safeStorageSet(ACTIVE_MODEL_TIMESTAMP_KEY, String(Date.now()), storage).catch(() => {});
+        return candidate;
+      }
+    } catch (probeErr: any) {
+      if (probeErr instanceof GeminiError && (probeErr.kind === 'invalid_key' || probeErr.kind === 'permission')) {
+        // Only throw auth/key errors immediately
+        throw probeErr;
+      }
+      // On 429/5xx/timeout/network, continue to next candidate
     }
   }
 
-  throw new GeminiError('no_compatible_model', {
-    message: 'None of the candidate Gemini models passed text and multimodal verification.',
-  });
+  // If every probe fails transiently, return the first model without caching it as verified
+  return ranked[0];
 }
 
 async function fetchWithTimeout(
@@ -775,13 +799,6 @@ export async function getActiveModel(
   }
 
   const selected = await discoverAndVerifyModel(clean, customFetch, timeoutMs, storage);
-  try {
-    await safeStorageSet(ACTIVE_MODEL_STORAGE_KEY, selected, storage);
-    await safeStorageSet(ACTIVE_MODEL_TIMESTAMP_KEY, String(Date.now()), storage);
-  } catch {
-    // Non-fatal if cache save fails
-  }
-
   return selected;
 }
 
@@ -815,6 +832,17 @@ export async function testGeminiConnection(
 
   // Force discovery and verification with 15s timeout to guarantee end-to-end functionality
   await clearActiveModelCache(storage);
-  const verifiedModel = await getActiveModel(clean, true, customFetch, storage, TEST_CONNECTION_TIMEOUT_MS);
-  return verifiedModel;
+  const selectedModel = await getActiveModel(clean, true, customFetch, storage, TEST_CONNECTION_TIMEOUT_MS);
+
+  // If candidate failed transient verification (not cached), report server unavailable
+  const cached = await safeStorageGet(ACTIVE_MODEL_STORAGE_KEY, storage);
+  if (!cached) {
+    throw new GeminiError('server', {
+      status: 503,
+      errorStatus: 'UNAVAILABLE',
+      message: 'Gemini is busy right now. Try again in a moment.',
+      providerMessage: 'The model is overloaded. Please try again later.',
+    });
+  }
+  return selectedModel;
 }

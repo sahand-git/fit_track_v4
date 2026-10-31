@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking, useWindowDimensions } from 'react-native';
 import { AppText as Text } from './AppText';
-import { Key, Check, Trash2, ExternalLink, AlertCircle, Sparkles } from 'lucide-react-native';
+import { Key, Check, Trash2, ExternalLink, AlertCircle, Sparkles, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { getStoredGeminiApiKey, setStoredGeminiApiKey, clearGeminiApiKey } from '../services/plateAnalysisService';
 import {
   testGeminiConnection,
@@ -41,6 +41,7 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [providerDetail, setProviderDetail] = useState<string | null>(null);
+  const [showErrorDetail, setShowErrorDetail] = useState(false);
   const [showWizardModal, setShowWizardModal] = useState(false);
   const { fontScale } = useWindowDimensions();
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -78,6 +79,7 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
     setActiveModel(null);
     setErrorMessage(null);
     setProviderDetail(null);
+    setShowErrorDetail(false);
   };
 
   const handleTestConnection = async () => {
@@ -87,6 +89,7 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
     setTestState('testing');
     setErrorMessage(null);
     setProviderDetail(null);
+    setShowErrorDetail(false);
     setActiveModel(null);
 
     try {
@@ -388,9 +391,29 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
                 <Text style={[styles.errorBody, isRTL && styles.textRTL]}>{errorMessage}</Text>
               )}
               {providerDetail && providerDetail !== errorMessage && (
-                <Text style={[styles.providerDetailText, isRTL && styles.textRTL]}>
-                  {providerDetail}
-                </Text>
+                <View style={styles.providerDetailSection}>
+                  <TouchableOpacity
+                    style={[styles.providerDetailToggle, isRTL && styles.rowRTL]}
+                    onPress={() => setShowErrorDetail((prev) => !prev)}
+                    accessibilityRole="button"
+                    accessibilityLabel={showErrorDetail ? t('Hide details') : t('Show details')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.providerDetailToggleText}>
+                      {showErrorDetail ? t('Hide details') : t('Show details')}
+                    </Text>
+                    {showErrorDetail ? (
+                      <ChevronUp size={12} color={theme.colors.danger} />
+                    ) : (
+                      <ChevronDown size={12} color={theme.colors.danger} />
+                    )}
+                  </TouchableOpacity>
+                  {showErrorDetail ? (
+                    <Text style={[styles.providerDetailText, isRTL && styles.textRTL]}>
+                      {providerDetail}
+                    </Text>
+                  ) : null}
+                </View>
               )}
             </View>
           </View>
@@ -731,6 +754,22 @@ const createStyles = (theme: ThemeType) =>
     color: theme.colors.dangerMuted,
     marginTop: 2,
     lineHeight: 16,
+  },
+  providerDetailSection: {
+    marginTop: 4,
+  },
+  providerDetailToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    minHeight: 28,
+  },
+  providerDetailToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.danger,
   },
   providerDetailText: {
     fontSize: 12,

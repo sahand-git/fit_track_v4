@@ -28,6 +28,8 @@ import {
   Utensils,
   MessageSquareText,
   Lightbulb,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react-native';
 import { AICoachReport, DailyLog, UserProfile } from '../types';
 import { AppText as Text } from '../components/AppText';
@@ -84,6 +86,12 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [isLoadingAudit, setIsLoadingAudit] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
+  const [auditErrorDetail, setAuditErrorDetail] = useState<string | null>(null);
+  const [showAuditDetail, setShowAuditDetail] = useState(false);
+  const [expandedMessageErrors, setExpandedMessageErrors] = useState<Record<string, boolean>>({});
+  const toggleMessageError = (id: string) => {
+    setExpandedMessageErrors((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
   const scrollViewRef = useRef<ScrollView>(null);
   const composerRef = useRef<View>(null);
   const isSendingRef = useRef(false);
@@ -218,6 +226,8 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
   const handleRunAudit = async () => {
     setIsLoadingAudit(true);
     setAuditError(null);
+    setAuditErrorDetail(null);
+    setShowAuditDetail(false);
     try {
       const generated = await generateDailyAIReport(
         profile,
@@ -236,6 +246,7 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
       const key = await getStoredGeminiApiKey().catch(() => null);
       if (isAQKeyRejection(err, key)) {
         setAuditError(getAQKeyExplanation(language));
+        setAuditErrorDetail(null);
       } else {
         const detail = formatProviderErrorDetail(err, key || undefined);
         const baseMsg =
@@ -243,8 +254,9 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
             ? t(getDefaultMessageForKind(err.kind))
             : err instanceof Error
             ? err.message
-            : t('Gemini service is temporarily unavailable. Please try again shortly.');
-        setAuditError(detail ? `${baseMsg} (${detail})` : baseMsg);
+            : t('Gemini is busy right now. Try again in a moment.');
+        setAuditError(baseMsg);
+        setAuditErrorDetail(detail);
       }
     } finally {
       setIsLoadingAudit(false);
@@ -312,7 +324,7 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
       } else if (err instanceof GeminiError) {
         friendlyMessage = t(getDefaultMessageForKind(err.kind));
       } else {
-        friendlyMessage = t('Gemini service is temporarily unavailable. Please try again shortly.');
+        friendlyMessage = t('Gemini is busy right now. Try again in a moment.');
       }
       const providerDetail = formatProviderErrorDetail(err, key || undefined);
       setMessages((current) =>
@@ -479,8 +491,33 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
 
             {auditError && (
               <View style={styles.errorCard}>
-                <AlertTriangle size={16} color={theme.colors.danger} />
-                <Text style={styles.errorText}>{auditError}</Text>
+                <View style={[styles.errorCardHeader, isRtl && styles.rowRtl]}>
+                  <AlertTriangle size={16} color={theme.colors.danger} />
+                  <Text style={styles.errorText}>{auditError}</Text>
+                </View>
+                {auditErrorDetail ? (
+                  <View style={styles.detailsToggleContainer}>
+                    <TouchableOpacity
+                      style={[styles.detailsToggleButton, isRtl && styles.rowRtl]}
+                      onPress={() => setShowAuditDetail((prev) => !prev)}
+                      accessibilityRole="button"
+                      accessibilityLabel={showAuditDetail ? t('Hide details') : t('Show details')}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.detailsToggleText}>
+                        {showAuditDetail ? t('Hide details') : t('Show details')}
+                      </Text>
+                      {showAuditDetail ? (
+                        <ChevronUp size={12} color={theme.colors.danger} />
+                      ) : (
+                        <ChevronDown size={12} color={theme.colors.danger} />
+                      )}
+                    </TouchableOpacity>
+                    {showAuditDetail ? (
+                      <Text style={styles.errorDetailText}>{auditErrorDetail}</Text>
+                    ) : null}
+                  </View>
+                ) : null}
               </View>
             )}
 
@@ -672,9 +709,29 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
                               </View>
                               <Text style={styles.errorBubbleMessage}>{message.errorMessage}</Text>
                               {message.providerDetail ? (
-                                <Text style={styles.errorBubbleProviderDetail}>
-                                  {message.providerDetail}
-                                </Text>
+                                <View style={styles.detailsToggleContainer}>
+                                  <TouchableOpacity
+                                    style={[styles.detailsToggleButton, isRtl && styles.rowRtl]}
+                                    onPress={() => toggleMessageError(message.id)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={expandedMessageErrors[message.id] ? t('Hide details') : t('Show details')}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  >
+                                    <Text style={styles.detailsToggleText}>
+                                      {expandedMessageErrors[message.id] ? t('Hide details') : t('Show details')}
+                                    </Text>
+                                    {expandedMessageErrors[message.id] ? (
+                                      <ChevronUp size={12} color={theme.colors.danger} />
+                                    ) : (
+                                      <ChevronDown size={12} color={theme.colors.danger} />
+                                    )}
+                                  </TouchableOpacity>
+                                  {expandedMessageErrors[message.id] ? (
+                                    <Text style={styles.errorBubbleProviderDetail}>
+                                      {message.providerDetail}
+                                    </Text>
+                                  ) : null}
+                                </View>
                               ) : null}
                               <TouchableOpacity
                                 style={[styles.retryButton, isRtl && styles.rowRtl]}
@@ -889,14 +946,38 @@ const createStyles = (theme: ThemeType) =>
     color: theme.colors.textInverted,
   },
   errorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
     backgroundColor: theme.colors.redLight,
     borderWidth: 1,
     borderColor: theme.colors.redBorder,
     borderRadius: theme.radius.md,
     padding: 10,
+    gap: 4,
+  },
+  errorCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  detailsToggleContainer: {
+    marginTop: 4,
+  },
+  detailsToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    minHeight: 28,
+  },
+  detailsToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.danger,
+  },
+  errorDetailText: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginTop: 2,
   },
   errorText: {
     flex: 1,
