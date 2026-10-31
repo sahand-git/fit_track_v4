@@ -11,6 +11,7 @@ import {
   BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 import { AppText as Text } from './AppText';
 import {
   X,
@@ -208,6 +209,7 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
         />
         <KeyboardAvoidingView
           behavior="padding"
+          keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top)}
           style={styles.sheetContainer}
         >
           <SaveSuccessOverlay visible={showSuccess} message={t('Workout Logged')} />

@@ -13,6 +13,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
+import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 import { formatKcal } from '../utils/formatKcal';
 import { getItemEnterAnimation, getItemExitAnimation, getListLayoutTransition } from '../utils/reanimatedMotion';
 
@@ -68,7 +69,7 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
     <KeyboardAvoidingView
       behavior="padding"
       style={{ flex: 1 }}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+      keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top, 0, Platform.OS)}
     >
       <View style={styles.container}>
       <ScrollView

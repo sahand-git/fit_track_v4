@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react-native';
+import { getScreenTopOffset } from './src/utils/keyboardAvoidance';
 import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem, LoggedDailySupplement, WorkoutEntry, AICoachReport } from './src/types';
 import {
   loadUserProfile,
@@ -857,7 +858,7 @@ function FitTrackApp() {
               styles.container,
               {
                 direction: language === 'en' ? 'ltr' : 'rtl',
-                paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0),
+                paddingTop: getScreenTopOffset(insets.top, Platform.OS),
               },
             ]}
           >
@@ -875,7 +876,7 @@ function FitTrackApp() {
         <ThemeProvider themeMode={profile.themeMode}>
           <ThemedAppLayout
             direction={language === 'en' ? 'ltr' : 'rtl'}
-            paddingTop={Math.max(insets.top, Platform.OS === 'android' ? 24 : 0)}
+            paddingTop={getScreenTopOffset(insets.top, Platform.OS)}
           >
             <ThemedStatusBar />
             <MedicalDisclaimerModal
@@ -908,7 +909,7 @@ function FitTrackApp() {
         <ThemeProvider themeMode={profile.themeMode}>
           <ThemedAppLayout
             direction={language === 'en' ? 'ltr' : 'rtl'}
-            paddingTop={Math.max(insets.top, Platform.OS === 'android' ? 24 : 0)}
+            paddingTop={getScreenTopOffset(insets.top, Platform.OS)}
           >
             <ThemedStatusBar />
             <OnboardingModal onComplete={handleSaveProfile} onLanguageChange={setAppLanguage} />
@@ -926,7 +927,7 @@ function FitTrackApp() {
       <ThemeProvider themeMode={profile.themeMode}>
         <ThemedAppLayout
           direction={language === 'en' ? 'ltr' : 'rtl'}
-          paddingTop={Math.max(insets.top, Platform.OS === 'android' ? 24 : 0)}
+          paddingTop={getScreenTopOffset(insets.top, Platform.OS)}
         >
           <ThemedStatusBar />
 

@@ -9,7 +9,8 @@ import {
   BackHandler,
   KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 import { AppText as Text } from './AppText';
 import { Check } from 'lucide-react-native';
 import { DirectionalIcon } from './DirectionalIcon';
@@ -48,6 +49,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
     return () => sub.remove();
   }, [step]);
 
+  const insets = useSafeAreaInsets();
   const [language, setLanguage] = useState<AppLanguage>(currentLanguage || 'en');
   const t = (str: string) => translate(language, str);
   const [name, setName] = useState('');
@@ -100,7 +102,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
 
   return (
     <SafeAreaView style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior="padding"
+        keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top)}
+        style={{ flex: 1 }}
+      >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Step Indicator */}
         <View style={styles.stepHeader}>

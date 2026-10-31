@@ -10,7 +10,8 @@ import {
   Modal,
   KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 import { AppText as Text } from './AppText';
 import {
   Sparkles,
@@ -50,6 +51,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
   isSkippable = true,
 }) => {
   const language = useLanguage();
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
@@ -137,7 +139,11 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
 
   const content = (
     <SafeAreaView style={[styles.container, { direction: isRTL ? 'rtl' : 'ltr' }]}>
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior="padding"
+        keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top)}
+        style={{ flex: 1 }}
+      >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Header Bar */}
         <View style={[styles.headerBar, isRTL && styles.rowRTL]}>

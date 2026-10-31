@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { formatKcal } from '../utils/formatKcal';
 import { estimateStepCalories } from '../utils/activityBudget';
+import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 import { isHealthStepServiceAvailable, syncHealthStepsForDate } from '../services/stepTrackingService';
 
 interface Props {
@@ -98,7 +99,7 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
     <KeyboardAvoidingView
       behavior="padding"
       style={{ flex: 1 }}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+      keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top, 0, Platform.OS)}
     >
       <ScrollView
         style={styles.container}

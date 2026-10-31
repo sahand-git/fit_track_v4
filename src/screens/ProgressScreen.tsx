@@ -28,6 +28,7 @@ import {
 import { DailyLog, UserProfile, WeightEntry } from '../types';
 import { loadWeightHistory, addWeightEntry, removeWeightEntry, loadLogsForDates, loadAccurateStreak } from '../storage/storage';
 import { getTodayDateString, formatDisplayDate, parseLocalDateString } from '../utils/dateUtils';
+import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { InsightsScreen } from './InsightsScreen';
@@ -499,6 +500,7 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
         <View style={styles.modalBackdrop}>
           <KeyboardAvoidingView
             behavior="padding"
+            keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top)}
             style={{ width: '100%', alignItems: 'center' }}
           >
             <View style={styles.modalCard}>
