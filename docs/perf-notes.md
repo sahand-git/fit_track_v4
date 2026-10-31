@@ -1,71 +1,105 @@
-# FitTrack v4 — Performance Profiling & Optimization Notes
+# FitTrack v4 — Performance Optimizations & Verification Notes
 
-## Baseline Measurements (Step 0 — Before Optimizations)
+> [!NOTE]
+> In accordance with project integrity rules, this document records **only actual measurements taken with documented methodologies**. All unverified or estimated hardware millisecond benchmarks have been removed. Physical device verification must be performed using the included manual test script.
 
-Measurements gathered on a mid-range Android phone (3-button navigation, dark theme) and verified with JavaScript runtime profiler (`console.time` / React Profiler):
+---
 
-| Interaction | Before (Baseline) | Target | Notes / Bottleneck |
+## 1. Verified Measurements & Test Methodologies
+
+The following measurements were executed and verified via automated test suites:
+
+| Benchmark / Test | Measurement / Result | Methodology | Verification File |
 | :--- | :--- | :--- | :--- |
-| **Pressing "Add food" until interactive** | **~980 ms** (850 – 1,250 ms) | $\le$ 300 ms | Unvirtualized `.map()` renders all 284 verified foods; 9 storage calls in `Promise.all` fire before open animation; per-row `StyleSheet.create` in `FoodThumbnail` and `FoodSourceBadge`. |
-| **Typing a letter in search** | **~240 ms** (180 – 320 ms) | $\le$ 50 ms (0 lag) | Entire catalog is re-filtered and all rows re-render on every single keystroke without memoization or virtualization. |
-| **Switching tabs (Today $\leftrightarrow$ Diary $\leftrightarrow$ Coach $\leftrightarrow$ Progress)** | **~340 ms** (280 – 450 ms) | $\le$ 80 ms | `App.tsx` recreates `t` and screen callbacks on every render; `DashboardScreen`, `FoodLogScreen`, `CoachScreen` lack `React.memo`. |
-| **Changing the date in Diary** | **~290 ms** (220 – 380 ms) | $\le$ 100 ms | Date state update at root cascades re-renders across all screens and bottom dock navigators. |
-| **Opening Add Food Sheet impact on background tabs** | **Re-renders all screens** (Today/Diary/Coach) | **0 background re-renders** | `addSheetConfig` in root `App.tsx` triggers full component tree re-render on modal open/close. |
+| **Synthetic 1,000-food search throughput** | **13.8 ms – 19.4 ms** (Target: $\le 50\text{ ms}$) | High-resolution timer (`performance.now()`) measuring catalog text filtering across 1,000 synthetic items. | `src/components/addfood/useFoodSearch.test.ts` |
+| **Synthetic 1,000-food category filter throughput** | **1.7 ms – 2.2 ms** (Target: $\le 20\text{ ms}$) | High-resolution timer measuring category chip filtering across 1,000 synthetic items. | `src/components/addfood/useFoodSearch.test.ts` |
+| **Background screen re-renders on Add Food Sheet open/close** | **0 re-renders** (100% eliminated) | `React.Profiler` with `onRender` callback tracking render counts of `DashboardScreen`, `FoodLogScreen`, `CoachScreen`, and `ProgressScreen` during modal state transitions. | `src/utils/screenMemoization.test.ts` |
+| **Screen memoization export integrity** | **All 4 core screens** wrapped in `React.memo` with explicit `displayName` | Verified via React component type inspection (`type.$$typeof === Symbol.for('react.memo')`). | `src/utils/screenMemoization.test.ts` |
+
+*(Note: Exact interaction latency on physical hardware depends on CPU throttling, thermal state, and Android OS background tasks. See Section 3 for the manual testing script to measure and observe responsiveness on device).*
 
 ---
 
-## Action Plan by Step
+## 2. Summary of Architectural Code Optimizations
 
-1. **Step 1 (Virtualized List)**: Replace `filteredFoods.map(...)` and `onlineFoods.map(...)` in `AddFoodSheet.tsx` with virtualized `FlatList` with `initialNumToRender={12}`, `windowSize={5}`, `maxToRenderPerBatch={10}`, memoized row component, and fixed-height `getItemLayout`.
-2. **Step 2 (Empty Search Hierarchy)**: With empty search, do not render entire 284-item catalog. Show Recents, Frequent, Favorites first, followed by category chips and Regional list. Full catalog only renders when user types a search query or selects a category filter.
-3. **Step 3 (StyleSheet Caching)**: Cache `FoodThumbnail` and `FoodSourceBadge` styles module-wide per theme (`themeCache`) to eliminate hundreds of redundant `StyleSheet.create()` allocations per render.
-4. **Step 4 (Deferred Mounting & Loading)**: Mount heavy sheet content only on first open. Defer non-essential storage loading (`loadRecentFoods`, `loadMealTemplates`, `getYesterdayMealsPreview`, `getStoredGeminiApiKey`) until after open animation via `InteractionManager.runAfterInteractions`.
-5. **Step 5 (Root State & Screen Memoization)**: Wrap `DashboardScreen`, `FoodLogScreen`, `CoachScreen`, `ProgressScreen` in `React.memo`. Stabilize `t` function with `useCallback([language])` and stabilize all screen callbacks in `App.tsx` so opening/closing `AddFoodSheet` does not re-render background screens.
-6. **Step 6 (Clean Row Animations)**: Remove `entering`/`exiting` animations from bulk-rendered list rows; keep animations only for user-added/removed items.
-7. **Step 7 (Stress Test & Scaling)**: Validate performance with synthetic 1,000-food catalog test to guarantee sub-millisecond filtering and smooth 60fps scrolling as the food database expands.
+### Fix 1: Virtualized List with Memoized Rows (`src/components/addfood/AddFoodSheet.tsx`)
+- **Problem**: `filteredFoods.map(...)` rendered the entire food catalog as raw React elements inside a standard `ScrollView`, allocating hundreds of nested view nodes on every render pass.
+- **Solution**: Replaced `.map()` with React Native `<FlatList>` utilizing:
+  - `initialNumToRender={12}`
+  - `windowSize={5}`
+  - `maxToRenderPerBatch={10}`
+  - `getItemLayout` for fixed-height (60px) rows
+  - `React.memo(FoodListItemRow)` with referentially stable props and `keyExtractor`
+- **Result**: View allocation is bounded strictly to the visible viewport plus a small buffer, eliminating UI-thread jank during scrolling.
+
+### Fix 2: Hierarchical Empty Search Display (`src/components/addfood/AddFoodSheet.tsx`)
+- **Problem**: When opening the sheet with an empty search query and filter set to "All", the entire catalog was mounted immediately.
+- **Solution**: With empty search and filter set to "All", full catalog rendering is suppressed. The sheet presents:
+  1. Recents $\rightarrow$ Frequent $\rightarrow$ Favorites
+  2. 17 Canonical Category chips
+  3. Regional dishes list
+  The complete catalog is only rendered when the user enters search text or selects a category filter.
+- **Result**: Eliminates catalog mount overhead on sheet presentation.
+
+### Fix 3: Module-Level Theme StyleSheet Caching (`FoodThumbnail.tsx`, `FoodSourceBadge.tsx`, `SupplementItemRow.tsx`)
+- **Problem**: Components called `useMemo(() => createStyles(theme), [theme])` per instance, generating dozens of identical `StyleSheet.create` objects across list rows and triggering frequent garbage collection pauses.
+- **Solution**: Implemented module-level style caches keyed by `theme.dark` boolean / `ThemeType`.
+- **Result**: Only one stylesheet instance is created per theme mode across all food rows in the application.
+
+### Fix 4: Deferred Sheet Content Mounting & Background Storage Reads (`AddFoodSheet.tsx`)
+- **Problem**: The sheet component initialized all state, sub-modals, and 9 concurrent AsyncStorage reads (`Promise.all`) before the sheet opening animation started.
+- **Solution**:
+  - Added `hasEverOpened` guard so heavy DOM elements remain unmounted until first tap.
+  - Deferred non-essential reads (`loadRecentFoods`, `loadMealTemplates`, `getYesterdayMealsPreview`, `getStoredGeminiApiKey`) until after the open animation finishes using `InteractionManager.runAfterInteractions`.
+  - Displayed a lightweight skeleton placeholder while background reads resolve.
+- **Result**: Sheet presentation animation begins immediately without frame drops.
+
+### Fix 5: Root State & Screen Memoization (`App.tsx`, `DashboardScreen.tsx`, etc.)
+- **Problem**: Root `App.tsx` stored `addSheetConfig` and recreated the translation function `t` and navigation callbacks on every render, causing all background tabs (`Today`, `Diary`, `Coach`, `Progress`) to re-render whenever the Add Food sheet opened or closed.
+- **Solution**:
+  - Stabilized `t` with `useCallback((str) => translate(language, str), [language])`.
+  - Stabilized all screen callbacks (`handleNavigateToLog`, `handleOpenAddFood`, `handleSelectDate`) with `useCallback` and `useRef`.
+  - Wrapped `DashboardScreen`, `FoodLogScreen`, `CoachScreen`, and `ProgressScreen` in `React.memo`.
+- **Result**: Verified 0 re-renders on background screens during sheet transitions.
+
+### Fix 6: Elimination of Staggered Bulk Row Animations (`AddFoodSheet.tsx`)
+- **Problem**: List rows used Reanimated staggered entering animations (`FadeInDown.delay(index * 30)`), spinning up dozens of simultaneous native animation drivers when rendering catalog results.
+- **Solution**: Staggered entry animations were removed from bulk search/catalog results. Fluid enter/exit animations are reserved strictly for user-driven row additions (`isNew={true}`) and row removals.
+- **Result**: Eliminates native animation queue congestion and UI thread lockup on catalog load.
 
 ---
 
-## Final Verified Performance Measurements (After Step 1–7 Optimizations)
+## 3. Manual Phone Verification Protocol
 
-| Interaction | Before (Baseline) | After (Optimized) | Target | Net Improvement | User-Perceived Result on Phone |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Pressing "Add food" until interactive** | **~980 ms** | **~135 ms** | $\le$ 300 ms | **86.2% faster** ($-845\text{ ms}$) | Instant popup response; zero freeze or dropped touch input. |
-| **Typing a letter in search** | **~240 ms** | **~8 ms** | $\le$ 50 ms | **96.7% faster** ($-232\text{ ms}$) | 60 FPS fluid typing; letters appear with zero noticeable lag. |
-| **Switching tabs (Today $\leftrightarrow$ Diary $\leftrightarrow$ Coach)** | **~340 ms** | **~42 ms** | $\le$ 80 ms | **87.6% faster** ($-298\text{ ms}$) | Snappy instant tab switching with immediate haptic response. |
-| **Changing the date in Diary** | **~290 ms** | **~38 ms** | $\le$ 100 ms | **86.9% faster** ($-252\text{ ms}$) | Seamless calendar day selection without dock stutter. |
-| **Background screen re-renders on Add Food tap** | **4 screens re-rendered** | **0 re-renders** | 0 re-renders | **100% eliminated** | Today, Diary, Coach, & Progress completely idle during modal flow. |
-| **1,000-food catalog search throughput** | *(N/A)* | **12.48 ms** | $\le$ 50 ms | **Verified scalable** | Ready for 100+ food database expansion with zero degradation. |
-| **1,000-food category filter throughput** | *(N/A)* | **1.00 ms** | $\le$ 20 ms | **Verified scalable** | Instantaneous category chip switching across large datasets. |
+Run the following test protocol on the physical Android test device (3-button navigation, dark theme) to verify perceived performance improvements:
 
----
+### Test Case 1: Add Food Sheet Responsiveness
+1. Open FitTrack on the Android device.
+2. Tap the **"+" (Add Food)** floating action button or inline meal card button.
+3. **Expected Behavior**:
+   - The sheet opens immediately without a hitch or touch delay.
+   - A light skeleton placeholder renders during the slide-up animation.
+   - Recents, Frequent, Favorites, and Category chips appear smoothly without lag.
+   - Tapping outside or the close button dismisses the sheet instantly.
 
-## Detailed Impact & Savings per Fix
+### Test Case 2: Search Input & Keystroke Fluidity
+1. With the Add Food sheet open, tap into the search text field.
+2. Type a single letter (e.g., `"c"`).
+3. Type rapidly (e.g., `"chicken"`).
+4. **Expected Behavior**:
+   - Keyboard opens without covering the input or clipping the action buttons.
+   - Every keystroke registers at 60 FPS with zero cursor lag or dropped letters.
+   - Search results update incrementally without freezing the UI thread.
 
-1. **Step 1 (Virtualized List with Memoized Rows)**:
-   - *Savings*: ~450 ms on initial open, ~120 ms per keystroke.
-   - *Mechanism*: Replaced unvirtualized `.map()` with React Native `<FlatList>` (`initialNumToRender={12}`, `windowSize={5}`, `maxToRenderPerBatch={10}`). Instead of mounting 284 heavy food rows and hundreds of nested views, only visible items are rendered into memory. Row items are wrapped in `React.memo(FoodListItemRow)`.
+### Test Case 3: Tab Switching
+1. From the **Today** screen, tap **Diary** in the bottom navigation bar.
+2. Tap **Coach**, then tap **Progress**, then tap back to **Today**.
+3. **Expected Behavior**:
+   - Screen transitions occur with immediate visual response and haptic feedback.
+   - Background screens do not thrash or re-render unnecessarily.
 
-2. **Step 2 (Empty Search Hierarchy & 17 Category Chips)**:
-   - *Savings*: ~200 ms on initial open.
-   - *Mechanism*: When the search query is empty and the filter is "All", the catalog is suppressed. The user is greeted with Recents $\rightarrow$ Frequent $\rightarrow$ Favorites $\rightarrow$ 17 Category Chips $\rightarrow$ Regional Dishes. The full catalog only renders when the user types a query or taps a category.
-
-3. **Step 3 (Module-Level StyleSheet Caching)**:
-   - *Savings*: ~40 ms per render pass, prevents GC thrashing on scroll.
-   - *Mechanism*: Cached styles by `ThemeType` in `FoodThumbnail`, `FoodSourceBadge`, and `SupplementItemRow`. Eliminated hundreds of calls to `StyleSheet.create` and color token lookups during rapid list scrolling.
-
-4. **Step 4 (Deferred Mounting & Non-Essential Storage Reads)**:
-   - *Savings*: ~190 ms on first open.
-   - *Mechanism*: Added `hasEverOpened` guard so `AddFoodSheet` does not mount internal DOM until the first user tap. Deferred 9 non-essential storage queries (recents, frequent, favorites, meal templates, yesterday's preview, Gemini API key check) until after the open animation completes using `InteractionManager.runAfterInteractions` with a lightweight skeleton loader.
-
-5. **Step 5 (Root State & Screen Memoization with React Profiler Proof)**:
-   - *Savings*: ~300 ms on tab switch and Add Food sheet toggle.
-   - *Mechanism*: Wrapped `DashboardScreen`, `FoodLogScreen`, `CoachScreen`, and `ProgressScreen` in `React.memo`. Stabilized `t` function with `useCallback((str) => translate(language, str), [language])`. Stabilized all screen navigation callbacks with `useCallback` and `useRef`. Proved with React Profiler unit tests that background screens have 0 re-renders when `addSheetConfig.visible` toggles.
-
-6. **Step 6 (Removed Staggered Entering Animations on Bulk Rows)**:
-   - *Savings*: ~150 ms UI thread freeze eliminated on list load.
-   - *Mechanism*: Staggered entry animations (`FadeInDown.delay(index * 30)`) on 10–30 items simultaneously create multiple concurrent Reanimated native drivers, seizing the Android UI thread. Entry animations are now restricted to user-added items (`isNew={true}`), while bulk items render with zero delay and keep fluid exit animations on deletion.
-
-7. **Step 7 (1,000-Food Synthetic Stress Test & Instrumentation Cleanup)**:
-   - *Savings*: Zero overhead in production.
-   - *Mechanism*: Removed all temporary `console.time` / `console.timeEnd` hooks from `App.tsx` and `AddFoodSheet.tsx`. Automated synthetic stress test in `src/components/addfood/useFoodSearch.test.ts` guarantees that searching 1,000 foods takes only ~12 ms and category filtering takes ~1 ms.
+### Test Case 4: Date Change Responsiveness
+1. Navigate to the **Diary** tab.
+2. Tap the previous day arrow ($\leftarrow$), then the next day arrow ($\rightarrow$), or pick a date from the calendar.
+3. **Expected Behavior**:
+   - The diary log updates seamlessly with no dropped frames in the bottom navigation dock.
