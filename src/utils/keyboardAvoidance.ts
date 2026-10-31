@@ -17,8 +17,15 @@
 export const KEYBOARD_AVOIDING_BEHAVIOR = 'padding' as const;
 export const ANDROID_MIN_STATUS_BAR_HEIGHT = 24;
 
-export function resolveKeyboardAvoidingBehavior(): 'padding' {
-  return KEYBOARD_AVOIDING_BEHAVIOR;
+/**
+ * Resolves KeyboardAvoidingView behavior.
+ * On Android, `app.json` sets `softwareKeyboardLayoutMode: "resize"`, so Android natively
+ * adjusts the window height when the keyboard opens. Returning `undefined` prevents
+ * KeyboardAvoidingView from applying redundant bottom padding that creates huge blank/black spaces.
+ * On iOS, returns `'padding'` so inputs lift above the keyboard.
+ */
+export function resolveKeyboardAvoidingBehavior(platform: string = 'android'): 'padding' | undefined {
+  return platform === 'ios' ? 'padding' : undefined;
 }
 
 /**
@@ -47,15 +54,33 @@ export function getKeyboardVerticalOffset(
 /**
  * Calculates container bottom padding taking keyboard visibility into account.
  * When keyboard is visible, padding collapses to a small gap (e.g. 8px) because
- * KeyboardAvoidingView provides the keyboard height offset.
+ * KeyboardAvoidingView provides the keyboard height offset on iOS or window resizing handles it on Android.
  * When keyboard is hidden, container maintains full clearance above bottom dock/insets.
  */
 export function calculateBottomPaddingWithKeyboard(
   isKeyboardVisible: boolean,
   defaultBottomClearance: number,
-  activeKeyboardPadding: number = 8
+  activeKeyboardPadding: number = 8,
+  _platform: string = 'android'
 ): number {
   return isKeyboardVisible ? activeKeyboardPadding : defaultBottomClearance;
+}
+
+/**
+ * Calculates modal content bottom padding when keyboard is open.
+ * Guarantees that on Android, where window resize is active, we do not add redundant
+ * keyboardHeight + extraOffset padding that pushes contentContainerStyle hundreds of
+ * pixels below the last button ("Save & Finish").
+ */
+export function calculateModalContentPadding(
+  isKeyboardVisible: boolean,
+  basePaddingBottom: number = 24,
+  platform: string = 'android'
+): number {
+  if (isKeyboardVisible && platform === 'android') {
+    return Math.min(basePaddingBottom, 16);
+  }
+  return basePaddingBottom;
 }
 
 /**

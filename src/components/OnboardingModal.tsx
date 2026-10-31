@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
+import { getKeyboardVerticalOffset, resolveKeyboardAvoidingBehavior } from '../utils/keyboardAvoidance';
 import { AppText as Text } from './AppText';
 import { Check } from 'lucide-react-native';
 import { DirectionalIcon } from './DirectionalIcon';
@@ -103,11 +103,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
   return (
     <SafeAreaView style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
       <KeyboardAvoidingView
-        behavior="padding"
-        keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top)}
+        behavior={resolveKeyboardAvoidingBehavior(Platform.OS)}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? getKeyboardVerticalOffset(insets.top) : 0}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          overScrollMode="never"
+          bounces={false}
+        >
         {/* Step Indicator */}
         <View style={styles.stepHeader}>
           <Text style={styles.badgeText}>{t('Welcome to FitTrack')}</Text>

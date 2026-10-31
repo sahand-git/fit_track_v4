@@ -52,7 +52,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import { isReducedMotion } from '../utils/motion';
 import { AnimatedPressable } from '../components/AnimatedPressable';
-import { getKeyboardVerticalOffset, calculateKeyboardOverlap } from '../utils/keyboardAvoidance';
+import { getKeyboardVerticalOffset, calculateKeyboardOverlap, resolveKeyboardAvoidingBehavior } from '../utils/keyboardAvoidance';
 
 interface CoachScreenProps {
   profile: UserProfile;
@@ -122,7 +122,7 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
   }, []);
 
   const bottomPadding = isKeyboardVisible
-    ? theme.spacing.sm + dynamicExtraPadding
+    ? (Platform.OS === 'android' ? 0 : theme.spacing.sm) + dynamicExtraPadding
     : Math.max(110, insets.bottom + 84);
 
   const totals = useMemo(
@@ -333,8 +333,8 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
 
   return (
     <KeyboardAvoidingView
-      behavior="padding"
-      keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top, 0, Platform.OS)}
+      behavior={resolveKeyboardAvoidingBehavior(Platform.OS)}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? getKeyboardVerticalOffset(insets.top, 0, Platform.OS) : 0}
       style={{ flex: 1 }}
     >
       <View
@@ -436,6 +436,9 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
             style={styles.auditScrollView}
             contentContainerStyle={styles.auditContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            overScrollMode="never"
+            bounces={false}
           >
             {/* Intake Overview Card */}
             <View style={styles.intakeCard}>
@@ -601,6 +604,8 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
               style={styles.messages}
               contentContainerStyle={styles.messagesContent}
               keyboardShouldPersistTaps="handled"
+              overScrollMode="never"
+              bounces={false}
               onContentSizeChange={() =>
                 scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() })
               }

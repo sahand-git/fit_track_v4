@@ -5,6 +5,7 @@ import {
   getScreenTopOffset,
   getKeyboardVerticalOffset,
   calculateBottomPaddingWithKeyboard,
+  calculateModalContentPadding,
   calculateKeyboardOverlap,
 } from './keyboardAvoidance';
 
@@ -16,9 +17,13 @@ function assert(condition: boolean, message: string): void {
 
 console.log('Testing keyboardAvoidance utility...');
 
-// 1. Behavior must be 'padding' to guarantee Android edge-to-edge avoidance
-assert(KEYBOARD_AVOIDING_BEHAVIOR === 'padding', 'Default behavior must be padding');
-assert(resolveKeyboardAvoidingBehavior() === 'padding', 'Resolved behavior must be padding');
+// 1. Behavior resolution: undefined on Android to respect native window resizing; padding on iOS
+assert(KEYBOARD_AVOIDING_BEHAVIOR === 'padding', 'Default behavior constant must be padding');
+assert(resolveKeyboardAvoidingBehavior('ios') === 'padding', 'iOS behavior must be padding');
+assert(
+  resolveKeyboardAvoidingBehavior('android') === undefined,
+  'Android behavior must be undefined so native window resize handles it without double padding'
+);
 assert(ANDROID_MIN_STATUS_BAR_HEIGHT === 24, 'Minimum Android status bar height must be 24dp');
 
 // 2. getScreenTopOffset and getKeyboardVerticalOffset
@@ -89,6 +94,20 @@ assert(
 assert(
   calculateKeyboardOverlap(800, 0, 8) === 0,
   'Hidden keyboard should return 0 overlap'
+);
+
+// 5. calculateModalContentPadding (avoids infinite/excessive scroll space)
+assert(
+  calculateModalContentPadding(true, 48, 'android') === 16,
+  'When keyboard is visible on Android, modal bottom padding collapses to <= 16dp'
+);
+assert(
+  calculateModalContentPadding(false, 48, 'android') === 48,
+  'When keyboard is hidden on Android, modal bottom padding maintains base clearance'
+);
+assert(
+  calculateModalContentPadding(true, 48, 'ios') === 48,
+  'On iOS, base padding is preserved because KAV pads the container'
 );
 
 console.log('All keyboardAvoidance tests passed cleanly!');

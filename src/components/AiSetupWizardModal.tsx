@@ -9,9 +9,10 @@ import {
   Linking,
   Modal,
   KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
+import { getKeyboardVerticalOffset, resolveKeyboardAvoidingBehavior } from '../utils/keyboardAvoidance';
 import { AppText as Text } from './AppText';
 import {
   Sparkles,
@@ -146,15 +147,9 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
     }
   };
 
-  const content = (
-    <SafeAreaView style={[styles.container, { direction: isRTL ? 'rtl' : 'ltr' }]}>
-      <KeyboardAvoidingView
-        behavior="padding"
-        keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top)}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Header Bar */}
+  const formBody = (
+    <View style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+      {/* Header Bar */}
         <View style={[styles.headerBar, isRTL && styles.rowRTL]}>
           <View style={[styles.titleGroup, isRTL && styles.rowRTL]}>
             <View style={styles.sparkleCircle}>
@@ -372,18 +367,31 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
             <DirectionalIcon name="ArrowRight" size={16} color={theme.colors.textInverted} style={{ marginStart: 8 }} />
           </TouchableOpacity>
         </View>
-      </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 
   if (!isModal) {
-    return content;
+    return formBody;
   }
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      {content}
+      <SafeAreaView style={[styles.container, { direction: isRTL ? 'rtl' : 'ltr' }]}>
+        <KeyboardAvoidingView
+          behavior={resolveKeyboardAvoidingBehavior(Platform.OS)}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? getKeyboardVerticalOffset(insets.top) : 0}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            overScrollMode="never"
+            bounces={false}
+          >
+            {formBody}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </Modal>
   );
 };
