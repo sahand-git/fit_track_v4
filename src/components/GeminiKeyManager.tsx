@@ -3,7 +3,14 @@ import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linki
 import { AppText as Text } from './AppText';
 import { Key, Check, Trash2, ExternalLink, AlertCircle, Sparkles } from 'lucide-react-native';
 import { getStoredGeminiApiKey, setStoredGeminiApiKey, clearGeminiApiKey } from '../services/plateAnalysisService';
-import { testGeminiConnection, GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
+import {
+  testGeminiConnection,
+  GeminiError,
+  getDefaultMessageForKind,
+  formatProviderErrorDetail,
+  isAQKeyRejection,
+  getAQKeyExplanation,
+} from '../utils/geminiModels';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
@@ -91,13 +98,15 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
       setTestState('failed');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
 
-      if (err instanceof GeminiError) {
+      if (isAQKeyRejection(err, keyToTest)) {
+        setErrorMessage(getAQKeyExplanation(language));
+        setProviderDetail(formatProviderErrorDetail(err, keyToTest));
+      } else if (err instanceof GeminiError) {
         setErrorMessage(t(getDefaultMessageForKind(err.kind)));
-        if (err.providerMessage && err.providerMessage.trim().length > 0) {
-          setProviderDetail(err.providerMessage);
-        }
+        setProviderDetail(formatProviderErrorDetail(err, keyToTest));
       } else {
         setErrorMessage(err?.message || t('Connection failed'));
+        setProviderDetail(formatProviderErrorDetail(err, keyToTest));
       }
     }
   };

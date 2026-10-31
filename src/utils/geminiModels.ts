@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppLanguage } from '../types';
 
 /**
  * FitTrack v4 — Gemini Model Discovery, Ranking & Error Engine
@@ -14,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const ACTIVE_MODEL_STORAGE_KEY = '@fittrack_gemini_active_model';
 export const ACTIVE_MODEL_TIMESTAMP_KEY = '@fittrack_gemini_active_model_time';
+export const CANDIDATE_MODELS_STORAGE_KEY = '@fittrack_gemini_candidate_models';
 export const MODEL_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // ~24 hours
 export const MAX_PAGE_SIZE = 1000; // Gemini API max pageSize per official docs
 export const MAX_MODEL_DISCOVERY_PAGES = 100;
@@ -51,6 +53,7 @@ export interface StorageInterface {
 export interface GeminiErrorOptions {
   message?: string;
   status?: number;
+  errorStatus?: string;
   providerMessage?: string;
   detailsReason?: string;
   cause?: unknown;
@@ -59,6 +62,7 @@ export interface GeminiErrorOptions {
 export class GeminiError extends Error {
   readonly kind: GeminiErrorKind;
   readonly status?: number;
+  readonly errorStatus?: string;
   readonly providerMessage?: string;
   readonly detailsReason?: string;
 
@@ -68,6 +72,7 @@ export class GeminiError extends Error {
     this.name = 'GeminiError';
     this.kind = kind;
     this.status = options?.status;
+    this.errorStatus = options?.errorStatus;
     this.providerMessage = options?.providerMessage;
     this.detailsReason = options?.detailsReason;
     if (options?.cause) {
@@ -106,7 +111,7 @@ export function getDefaultMessageForKind(kind: GeminiErrorKind): string {
 }
 
 /**
- * Redacts any occurrence of the API key, AIza tokens, and full HTTP/HTTPS URLs.
+ * Redacts any occurrence of the API key, AIza tokens, AQ keys, and full HTTP/HTTPS URLs.
  * Truncates output to 450 characters maximum.
  */
 export function sanitizeGeminiString(str: string, apiKey?: string): string {
@@ -117,6 +122,8 @@ export function sanitizeGeminiString(str: string, apiKey?: string): string {
   }
   return cleaned
     .replace(/AIza[0-9A-Za-z-_]+/g, '[redacted]')
+    .replace(/AQ\.[0-9A-Za-z-_.]+/g, '[redacted]')
+    .replace(/AQ[0-9A-Za-z-_]{15,}/g, '[redacted]')
     .replace(/https?:\/\/[^\s"'`<>]+/g, '[link omitted]')
     .slice(0, 450);
 }
@@ -150,6 +157,7 @@ export function parseGoogleErrorBody(status: number, rawBody: string, apiKey?: s
 
   const sanitizedProvider = sanitizeGeminiString(rawMessage, apiKey);
   const sanitizedReason = detailsReason ? sanitizeGeminiString(detailsReason, apiKey) : undefined;
+  const sanitizedErrorStatus = errorStatus ? sanitizeGeminiString(errorStatus, apiKey) : undefined;
 
   let kind: GeminiErrorKind = 'bad_request';
 
@@ -158,6 +166,7 @@ export function parseGoogleErrorBody(status: number, rawBody: string, apiKey?: s
     status === 401 ||
     sanitizedReason === 'API_KEY_INVALID' ||
     sanitizedReason === 'API_KEY_SERVICE_BLOCKED' ||
+    sanitizedReason === 'ACCESS_TOKEN_TYPE_UNSUPPORTED' ||
     /api[ _-]?key/i.test(sanitizedProvider) && /(invalid|not valid|expired|bad key)/i.test(sanitizedProvider) ||
     errorStatus === 'UNAUTHENTICATED';
 
@@ -185,10 +194,235 @@ export function parseGoogleErrorBody(status: number, rawBody: string, apiKey?: s
 
   return new GeminiError(kind, {
     status,
+    errorStatus: sanitizedErrorStatus,
     providerMessage: sanitizedProvider,
     detailsReason: sanitizedReason,
     message: sanitizedProvider ? `${getDefaultMessageForKind(kind)} (${sanitizedProvider})` : undefined,
   });
+}
+
+export function getStandardStatusName(status: number): string | undefined {
+  switch (status) {
+    case 400: return 'INVALID_ARGUMENT';
+    case 401: return 'UNAUTHENTICATED';
+    case 403: return 'PERMISSION_DENIED';
+    case 404: return 'NOT_FOUND';
+    case 429: return 'RESOURCE_EXHAUSTED';
+    case 500: return 'INTERNAL';
+    case 502: return 'BAD_GATEWAY';
+    case 503: return 'UNAVAILABLE';
+    case 504: return 'DEADLINE_EXCEEDED';
+    default: return undefined;
+  }
+}
+
+/**
+ * Formats provider error details into a clean, sanitized diagnostic string:
+ * e.g. "401 UNAUTHENTICATED · ACCESS_TOKEN_TYPE_UNSUPPORTED" or "503 UNAVAILABLE · The model is overloaded. Please try again later."
+ * Never leaks the API key or full URLs.
+ */
+export function formatProviderErrorDetail(err: unknown, apiKey?: string): string | null {
+  if (!err) return null;
+
+  if (err instanceof GeminiError) {
+    const statusCode = err.status;
+    let errorStatus = err.errorStatus;
+    if (!errorStatus && statusCode) {
+      errorStatus = getStandardStatusName(statusCode);
+    }
+
+    const header = statusCode && errorStatus
+      ? `${statusCode} ${errorStatus}`
+      : statusCode
+      ? String(statusCode)
+      : errorStatus || null;
+
+    let reason = err.detailsReason;
+    if (!reason && err.providerMessage) {
+      reason = err.providerMessage;
+    }
+
+    if (reason) {
+      const sanitizedReason = sanitizeGeminiString(reason, apiKey);
+      if (header) {
+        return `${header} · ${sanitizedReason}`;
+      }
+      return sanitizedReason;
+    }
+
+    return header;
+  }
+
+  // Non-GeminiError fallback
+  const anyErr = err as any;
+  const statusCode = anyErr?.status || anyErr?.statusCode;
+  const rawMsg = anyErr?.providerMessage || anyErr?.message || '';
+  const sanitizedMsg = sanitizeGeminiString(rawMsg, apiKey);
+  const errorStatus = typeof statusCode === 'number' ? getStandardStatusName(statusCode) : undefined;
+
+  const header = statusCode && errorStatus
+    ? `${statusCode} ${errorStatus}`
+    : statusCode
+    ? String(statusCode)
+    : errorStatus || null;
+
+  if (header && sanitizedMsg && !header.includes(sanitizedMsg)) {
+    return `${header} · ${sanitizedMsg}`;
+  }
+  return header || (sanitizedMsg ? sanitizedMsg : null);
+}
+
+/**
+ * Checks if an API key starts with "AQ." (or "AQ").
+ */
+export function isAQKey(apiKey?: string | null): boolean {
+  if (!apiKey) return false;
+  const clean = apiKey.trim();
+  return clean.startsWith('AQ.') || clean.startsWith('AQ');
+}
+
+/**
+ * Detects if an error is an AQ key rejection from Google (e.g. 401 UNAUTHENTICATED,
+ * ACCESS_TOKEN_TYPE_UNSUPPORTED, 403, or "API key not valid").
+ */
+export function isAQKeyRejection(err: unknown, apiKey?: string | null): boolean {
+  const hasAQKey = isAQKey(apiKey);
+  if (err instanceof GeminiError) {
+    if (err.detailsReason === 'ACCESS_TOKEN_TYPE_UNSUPPORTED') return true;
+    if (hasAQKey && (err.kind === 'invalid_key' || err.kind === 'permission' || err.status === 401 || err.status === 403)) {
+      return true;
+    }
+    if (hasAQKey && err.providerMessage && /(invalid|not valid|unsupported|unauthenticated)/i.test(err.providerMessage)) {
+      return true;
+    }
+  }
+
+  const anyErr = err as any;
+  if (anyErr?.detailsReason === 'ACCESS_TOKEN_TYPE_UNSUPPORTED') return true;
+  if (hasAQKey && (anyErr?.status === 401 || anyErr?.status === 403)) return true;
+  const msg = String(anyErr?.message || anyErr?.providerMessage || '');
+  if (msg.includes('ACCESS_TOKEN_TYPE_UNSUPPORTED')) return true;
+  if (hasAQKey && /(invalid|not valid|unsupported|unauthenticated|401|403)/i.test(msg)) return true;
+
+  return false;
+}
+
+/**
+ * User-friendly explanation for AQ key rejections in en/ar/ckb.
+ * Explicitly advises creating a key in AI Studio inside a new project,
+ * without stating the key is the wrong type.
+ */
+export function getAQKeyExplanation(language: AppLanguage = 'en'): string {
+  switch (language) {
+    case 'ar':
+      return 'تم رفض مفتاح Gemini هذا من قبل Google. حاول إنشاء مفتاح جديد في Google AI Studio ضمن مشروع جديد.';
+    case 'ckb':
+      return 'ئەم کلیلەی Gemini لەلایەن Google ڕەتکرایەوە. هەوڵبدە کلیلێکی نوێ لە Google AI Studio لەناو پڕۆژەیەکی نوێدا دروست بکەیت.';
+    default:
+      return 'This Gemini API key was rejected by Google. Try creating a new key in Google AI Studio inside a new project.';
+  }
+}
+
+export const DEFAULT_FALLBACK_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+];
+
+/**
+ * Builds candidate model fallback chain:
+ * Order: stable flash, then flash-lite, then previous flash versions, then others.
+ * If activeModel is specified, it is placed first without duplicates.
+ */
+export function buildModelFallbackChain(models: string[], activeModel?: string): string[] {
+  const pool = models && models.length > 0 ? models : DEFAULT_FALLBACK_MODELS;
+  const cleaned = pool.map((m) => m.replace(/^models\//, '').trim()).filter(Boolean);
+
+  const EXCLUDED_KEYWORDS = [
+    'tts', 'image', 'live', 'audio', 'embedding', 'omni', 'robotics', 'veo', 'imagen', 'lyria',
+  ];
+
+  const eligible = cleaned.filter((name) => {
+    const lower = name.toLowerCase();
+    return (
+      lower.startsWith('gemini-') &&
+      !EXCLUDED_KEYWORDS.some((kw) => lower.includes(kw)) &&
+      !/(^|[-_])computer[-_]?use($|[-_])/.test(lower) &&
+      !/(^|[-_])deep[-_]?research($|[-_])/.test(lower) &&
+      !/(^|[-_])exp(?:[-_]|$)/.test(lower)
+    );
+  });
+
+  const unique = Array.from(new Set(eligible));
+
+  interface ParsedModel {
+    name: string;
+    major: number;
+    minor: number;
+    isPreview: boolean;
+    isFlash: boolean;
+    isFlashLite: boolean;
+    isPro: boolean;
+  }
+
+  const parsedList: ParsedModel[] = unique.map((name) => {
+    const lower = name.toLowerCase();
+    const isPreview = lower.includes('preview');
+    const isFlashLite = lower.includes('flash-lite');
+    const isFlash = lower.includes('flash') && !isFlashLite;
+    const isPro = lower.includes('pro');
+    const versionMatch = lower.match(/gemini-(\d+)(?:\.(\d+))?/);
+    const major = versionMatch ? parseInt(versionMatch[1], 10) : 0;
+    const minor = versionMatch && versionMatch[2] ? parseInt(versionMatch[2], 10) : 0;
+    return { name, major, minor, isPreview, isFlash, isFlashLite, isPro };
+  });
+
+  const versionSortDesc = (a: ParsedModel, b: ParsedModel) => {
+    if (a.major !== b.major) return b.major - a.major;
+    if (a.minor !== b.minor) return b.minor - a.minor;
+    return a.name.localeCompare(b.name);
+  };
+
+  const stableFlash = parsedList.filter((p) => !p.isPreview && p.isFlash).sort(versionSortDesc);
+  const stableFlashLite = parsedList.filter((p) => !p.isPreview && p.isFlashLite).sort(versionSortDesc);
+  const previews = parsedList.filter((p) => p.isPreview).sort(versionSortDesc);
+  const others = parsedList.filter((p) => !p.isPreview && !p.isFlash && !p.isFlashLite).sort(versionSortDesc);
+
+  const chain: string[] = [];
+
+  // 1. Top stable flash (e.g. gemini-2.5-flash)
+  if (stableFlash.length > 0) {
+    chain.push(stableFlash[0].name);
+  }
+
+  // 2. Flash-lite models (e.g. gemini-2.5-flash-lite, gemini-2.0-flash-lite)
+  for (const lite of stableFlashLite) {
+    chain.push(lite.name);
+  }
+
+  // 3. Previous flash versions (e.g. gemini-2.0-flash, gemini-1.5-flash)
+  if (stableFlash.length > 1) {
+    for (let i = 1; i < stableFlash.length; i++) {
+      chain.push(stableFlash[i].name);
+    }
+  }
+
+  // 4. Other models (previews, pro)
+  for (const p of previews) {
+    chain.push(p.name);
+  }
+  for (const o of others) {
+    chain.push(o.name);
+  }
+
+  if (activeModel) {
+    const cleanActive = activeModel.replace(/^models\//, '').trim();
+    const withoutActive = chain.filter((m) => m !== cleanActive);
+    return [cleanActive, ...withoutActive];
+  }
+
+  return chain.length > 0 ? chain : DEFAULT_FALLBACK_MODELS;
 }
 
 /**
@@ -395,7 +629,8 @@ export async function verifyCandidate(
 export async function discoverAndVerifyModel(
   apiKey: string,
   customFetch: FetchFunction = fetch,
-  timeoutMs = REQUEST_TIMEOUT_MS
+  timeoutMs = REQUEST_TIMEOUT_MS,
+  storage?: StorageInterface
 ): Promise<string> {
   const models = await fetchAvailableModels(apiKey, customFetch, timeoutMs);
   const ranked = rankCandidates(models);
@@ -405,6 +640,9 @@ export async function discoverAndVerifyModel(
       message: 'No compatible Gemini model found for this API key.',
     });
   }
+
+  // Persist discovered candidate pool so fallback can use it
+  await safeStorageSet(CANDIDATE_MODELS_STORAGE_KEY, JSON.stringify(ranked), storage).catch(() => {});
 
   const topCandidates = ranked.slice(0, 3);
   for (const candidate of topCandidates) {
@@ -462,7 +700,7 @@ export const inMemoryStorage: StorageInterface = {
   removeItem: async (key: string) => { delete memoryStorage[key]; },
 };
 
-async function safeStorageGet(key: string, custom?: StorageInterface): Promise<string | null> {
+export async function safeStorageGet(key: string, custom?: StorageInterface): Promise<string | null> {
   if (custom) return custom.getItem(key);
   try {
     return await AsyncStorage.getItem(key);
@@ -471,7 +709,7 @@ async function safeStorageGet(key: string, custom?: StorageInterface): Promise<s
   }
 }
 
-async function safeStorageSet(key: string, value: string, custom?: StorageInterface): Promise<void> {
+export async function safeStorageSet(key: string, value: string, custom?: StorageInterface): Promise<void> {
   if (custom) return custom.setItem(key, value);
   try {
     await AsyncStorage.setItem(key, value);
@@ -480,13 +718,28 @@ async function safeStorageSet(key: string, value: string, custom?: StorageInterf
   }
 }
 
-async function safeStorageRemove(key: string, custom?: StorageInterface): Promise<void> {
+export async function safeStorageRemove(key: string, custom?: StorageInterface): Promise<void> {
   if (custom) return custom.removeItem(key);
   try {
     await AsyncStorage.removeItem(key);
   } catch {
     await inMemoryStorage.removeItem(key);
   }
+}
+
+export async function getCachedCandidateModels(storage?: StorageInterface): Promise<string[]> {
+  try {
+    const raw = await safeStorageGet(CANDIDATE_MODELS_STORAGE_KEY, storage);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((m: any) => String(m));
+      }
+    }
+  } catch {
+    // Non-fatal, return empty
+  }
+  return [];
 }
 
 /**
@@ -514,7 +767,7 @@ export async function getActiveModel(
     }
   }
 
-  const selected = await discoverAndVerifyModel(apiKey, customFetch);
+  const selected = await discoverAndVerifyModel(apiKey, customFetch, REQUEST_TIMEOUT_MS, storage);
   try {
     await safeStorageSet(ACTIVE_MODEL_STORAGE_KEY, selected, storage);
     await safeStorageSet(ACTIVE_MODEL_TIMESTAMP_KEY, String(Date.now()), storage);
@@ -532,6 +785,7 @@ export async function clearActiveModelCache(storage?: StorageInterface): Promise
   try {
     await safeStorageRemove(ACTIVE_MODEL_STORAGE_KEY, storage);
     await safeStorageRemove(ACTIVE_MODEL_TIMESTAMP_KEY, storage);
+    await safeStorageRemove(CANDIDATE_MODELS_STORAGE_KEY, storage);
   } catch {
     // Ignore cleanup error
   }

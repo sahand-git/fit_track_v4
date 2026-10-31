@@ -24,7 +24,15 @@ import {
   X,
 } from 'lucide-react-native';
 import { DirectionalIcon } from './DirectionalIcon';
-import { testGeminiConnection, GeminiError, getDefaultMessageForKind, sanitizeGeminiString } from '../utils/geminiModels';
+import {
+  testGeminiConnection,
+  GeminiError,
+  getDefaultMessageForKind,
+  sanitizeGeminiString,
+  formatProviderErrorDetail,
+  isAQKeyRejection,
+  getAQKeyExplanation,
+} from '../utils/geminiModels';
 import { setStoredGeminiApiKey, getStoredGeminiApiKey } from '../services/plateAnalysisService';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -104,15 +112,16 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
       setTestState('failed');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
 
-      if (err instanceof GeminiError) {
+      if (isAQKeyRejection(err, keyToTest)) {
+        setErrorMessage(getAQKeyExplanation(language));
+        setProviderDetail(formatProviderErrorDetail(err, keyToTest));
+      } else if (err instanceof GeminiError) {
         setErrorMessage(t(getDefaultMessageForKind(err.kind)));
-        if (err.providerMessage && err.providerMessage.trim().length > 0) {
-          // Sanitized: Never leak the key
-          setProviderDetail(sanitizeGeminiString(err.providerMessage, keyToTest));
-        }
+        setProviderDetail(formatProviderErrorDetail(err, keyToTest));
       } else {
         const sanitizedErr = sanitizeGeminiString(err?.message || 'Connection failed', keyToTest);
         setErrorMessage(sanitizedErr);
+        setProviderDetail(formatProviderErrorDetail(err, keyToTest));
       }
     }
   };

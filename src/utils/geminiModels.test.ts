@@ -10,12 +10,18 @@ import {
   inMemoryStorage,
   ACTIVE_MODEL_STORAGE_KEY,
   ACTIVE_MODEL_TIMESTAMP_KEY,
+  CANDIDATE_MODELS_STORAGE_KEY,
   FetchFunction,
   WaitFunction,
   REQUEST_TIMEOUT_MS,
   MAX_MODEL_DISCOVERY_PAGES,
   TINY_16X16_WHITE_PNG_BASE64,
   testGeminiConnection,
+  formatProviderErrorDetail,
+  isAQKey,
+  isAQKeyRejection,
+  getAQKeyExplanation,
+  buildModelFallbackChain,
 } from './geminiModels';
 import { executeGeminiRequest } from './geminiCore';
 import { translate } from '../i18n/strings';
@@ -645,14 +651,123 @@ async function runAllTests() {
     await clearActiveModelCache(storage);
     assert((await storage.getItem(ACTIVE_MODEL_STORAGE_KEY)) === null, 'Active model key removed');
     assert((await storage.getItem(ACTIVE_MODEL_TIMESTAMP_KEY)) === null, 'Timestamp key removed');
+    assert((await storage.getItem(CANDIDATE_MODELS_STORAGE_KEY)) === null, 'Candidate models key removed');
 
     // Also verify clearActiveModelCache clears inMemoryStorage
     await inMemoryStorage.setItem(ACTIVE_MODEL_STORAGE_KEY, 'gemini-cached-v2');
     await inMemoryStorage.setItem(ACTIVE_MODEL_TIMESTAMP_KEY, String(Date.now()));
+    await inMemoryStorage.setItem(CANDIDATE_MODELS_STORAGE_KEY, '["gemini-2.5-flash"]');
     await clearActiveModelCache();
     assert((await inMemoryStorage.getItem(ACTIVE_MODEL_STORAGE_KEY)) === null, 'clearActiveModelCache cleared model cache');
     assert((await inMemoryStorage.getItem(ACTIVE_MODEL_TIMESTAMP_KEY)) === null, 'clearActiveModelCache cleared timestamp');
+    assert((await inMemoryStorage.getItem(CANDIDATE_MODELS_STORAGE_KEY)) === null, 'clearActiveModelCache cleared candidate cache');
     console.log('✓ Scenario 15: Cache clearing verified successfully');
+  }
+
+  // =========================================================================
+  // SCENARIO 16: Fallback Order: Stable flash -> flash-lite -> previous flash
+  // =========================================================================
+  {
+    const candidates = [
+      'gemini-1.5-flash',
+      'gemini-2.0-flash',
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-2.0-flash-lite',
+      'gemini-2.5-pro',
+    ];
+
+    const chain = buildModelFallbackChain(candidates);
+    assert(chain[0] === 'gemini-2.5-flash', `Step 1: Top stable flash first (got ${chain[0]})`);
+    assert(chain[1] === 'gemini-2.5-flash-lite', `Step 2: Flash-lite second (got ${chain[1]})`);
+    assert(chain[2] === 'gemini-2.0-flash-lite', `Step 3: Next flash-lite third (got ${chain[2]})`);
+    assert(chain[3] === 'gemini-2.0-flash', `Step 4: Previous flash version fourth (got ${chain[3]})`);
+    assert(chain[4] === 'gemini-1.5-flash', `Step 5: Earliest flash version fifth (got ${chain[4]})`);
+    assert(chain[5] === 'gemini-2.5-pro', `Step 6: Pro model last (got ${chain[5]})`);
+
+    // Prioritize active model if provided
+    const withActive = buildModelFallbackChain(candidates, 'gemini-2.0-flash');
+    assert(withActive[0] === 'gemini-2.0-flash', 'Active model prioritized to index 0');
+    assert(withActive[1] === 'gemini-2.5-flash', 'Top flash follows active model');
+    console.log('✓ Scenario 16: Candidate fallback ordering verified successfully');
+  }
+
+  // =========================================================================
+  // SCENARIO 17: Format Provider Error Detail (401, 503, sanitization)
+  // =========================================================================
+  {
+    // 401 UNAUTHENTICATED · ACCESS_TOKEN_TYPE_UNSUPPORTED
+    const err401 = new GeminiError('invalid_key', {
+      status: 401,
+      errorStatus: 'UNAUTHENTICATED',
+      detailsReason: 'ACCESS_TOKEN_TYPE_UNSUPPORTED',
+      providerMessage: 'API key not valid. Please pass a valid API key.',
+    });
+    const formatted401 = formatProviderErrorDetail(err401);
+    assert(
+      formatted401 === '401 UNAUTHENTICATED · ACCESS_TOKEN_TYPE_UNSUPPORTED',
+      `Expected "401 UNAUTHENTICATED · ACCESS_TOKEN_TYPE_UNSUPPORTED", got "${formatted401}"`
+    );
+
+    // 503 UNAVAILABLE with overloaded message
+    const err503 = new GeminiError('server', {
+      status: 503,
+      errorStatus: 'UNAVAILABLE',
+      providerMessage: 'The model is overloaded. Please try again later.',
+    });
+    const formatted503 = formatProviderErrorDetail(err503);
+    assert(
+      formatted503 === '503 UNAVAILABLE · The model is overloaded. Please try again later.',
+      `Expected 503 overloaded message, got "${formatted503}"`
+    );
+
+    // 503 without errorStatus
+    const err503Bare = new GeminiError('server', { status: 503 });
+    const formatted503Bare = formatProviderErrorDetail(err503Bare);
+    assert(formatted503Bare === '503 UNAVAILABLE', `Expected "503 UNAVAILABLE", got "${formatted503Bare}"`);
+
+    // Redaction in provider detail: AQ key and URLs are NEVER leaked
+    const errLeak = new GeminiError('invalid_key', {
+      status: 401,
+      errorStatus: 'UNAUTHENTICATED',
+      providerMessage: 'Key AQ.SecretKey12345678 failed at https://generativelanguage.googleapis.com/v1beta/test',
+    });
+    const formattedLeak = formatProviderErrorDetail(errLeak, 'AQ.SecretKey12345678');
+    assert(!formattedLeak || !formattedLeak.includes('AQ.SecretKey12345678'), 'AQ key must be redacted');
+    assert(!formattedLeak || !formattedLeak.includes('https://'), 'URL must be omitted');
+    assert(Boolean(formattedLeak && formattedLeak.includes('[redacted]')), 'Replaced with [redacted]');
+    assert(Boolean(formattedLeak && formattedLeak.includes('[link omitted]')), 'Replaced with [link omitted]');
+    console.log('✓ Scenario 17: Provider error detail formatting and redaction verified successfully');
+  }
+
+  // =========================================================================
+  // SCENARIO 18: AQ Key Detection and Guidance
+  // =========================================================================
+  {
+    assert(isAQKey('AQ.abc1234567890'), 'Recognizes AQ. key');
+    assert(isAQKey('AQ1234567890'), 'Recognizes AQ key');
+    assert(!isAQKey('AIzaSyTest123'), 'Does not classify AIza key as AQ');
+    assert(!isAQKey(null), 'Handles null key');
+
+    const errAQRejection = new GeminiError('invalid_key', {
+      status: 401,
+      errorStatus: 'UNAUTHENTICATED',
+      detailsReason: 'ACCESS_TOKEN_TYPE_UNSUPPORTED',
+    });
+    assert(isAQKeyRejection(errAQRejection, 'AQ.testKey'), 'Detects AQ key rejection with status 401');
+
+    const enExplanation = getAQKeyExplanation('en');
+    const arExplanation = getAQKeyExplanation('ar');
+    const ckbExplanation = getAQKeyExplanation('ckb');
+
+    assert(
+      enExplanation === 'This Gemini API key was rejected by Google. Try creating a new key in Google AI Studio inside a new project.',
+      'English explanation correct'
+    );
+    assert(!enExplanation.toLowerCase().includes('wrong type'), 'Must not say key is wrong type');
+    assert(arExplanation.length > 0 && arExplanation.includes('Google AI Studio'), 'Arabic explanation valid');
+    assert(ckbExplanation.length > 0 && ckbExplanation.includes('Google AI Studio'), 'Kurdish Sorani explanation valid');
+    console.log('✓ Scenario 18: AQ key detection and multilingual guidance verified successfully');
   }
 
   // =========================================================================
@@ -668,6 +783,8 @@ async function runAllTests() {
       'Active model: ',
       'Check your API key permissions and billing status at Google AI Studio.',
       'Invalid Gemini API key. Please check your key in Google AI Studio.',
+      'Gemini rejected this API key. Please check your key in Google AI Studio.',
+      'This Gemini API key was rejected by Google. Try creating a new key in Google AI Studio inside a new project.',
       'Gemini rejected this API key. Please check your key in Google AI Studio.',
       'Permission denied. Ensure your API key has access to the Gemini API.',
       'The requested Gemini model is unavailable for this key.',

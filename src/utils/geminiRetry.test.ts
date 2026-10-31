@@ -100,7 +100,7 @@ async function runAsyncTests() {
   assert(fetchCountTransient === 2, `Retried once (fetch count = 2, got ${fetchCountTransient})`);
   assert(waitDelays.length === 1 && waitDelays[0] === 750, `Exponential backoff delay 750ms used, got ${waitDelays[0]}`);
 
-  // 5. Transient error exhausts max 2 retries (3 total attempts) with 750ms and 1500ms backoff
+  // 5. Transient error exhausts max 2 retries (3 total attempts) on a single model with 750ms and 1500ms backoff
   let fetchCountExhaust = 0;
   const mockFetchExhaust: FetchFunction = async () => {
     fetchCountExhaust++;
@@ -109,7 +109,16 @@ async function runAsyncTests() {
   waitDelays.length = 0;
   let threwExhaust = false;
   try {
-    await executeGeminiRequest([{ text: 'hi' }], false, 'AIzaMockKey', mockFetchExhaust, mockWait);
+    await executeGeminiRequest(
+      [{ text: 'hi' }],
+      false,
+      'AIzaMockKey',
+      mockFetchExhaust,
+      mockWait,
+      undefined,
+      'gemini-2.5-flash',
+      ['gemini-2.5-flash']
+    );
   } catch (e: any) {
     threwExhaust = true;
     assert(e instanceof GeminiError, 'Throws typed GeminiError on 500');
@@ -120,7 +129,119 @@ async function runAsyncTests() {
   assert(waitDelays.length === 2, 'Waited twice for backoff');
   assert(waitDelays[0] === 750 && waitDelays[1] === 1500, `Backoff intervals are 750ms then 1500ms, got ${waitDelays}`);
 
-  console.log('All Gemini bounded retry and sanitization tests passed successfully.');
+  // 6. On 503 / overloaded, after retries on primary model, falls back to next ranked candidate (flash-lite)
+  const calledUrls: string[] = [];
+  const mockFetchFallback: FetchFunction = async (url) => {
+    calledUrls.push(url);
+    if (url.includes('gemini-2.5-flash:generateContent')) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: 503,
+            message: 'The model is overloaded. Please try again later.',
+            status: 'UNAVAILABLE',
+          },
+        }),
+        { status: 503 }
+      );
+    }
+    if (url.includes('gemini-2.5-flash-lite:generateContent')) {
+      return new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ text: 'Success from fallback flash-lite' }] } }],
+        }),
+        { status: 200 }
+      );
+    }
+    return new Response('Not found', { status: 404 });
+  };
+
+  waitDelays.length = 0;
+  const fallbackResult = await executeGeminiRequest(
+    [{ text: 'hi' }],
+    false,
+    'AIzaMockKey',
+    mockFetchFallback,
+    mockWait,
+    undefined,
+    undefined,
+    ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash']
+  );
+
+  assert(fallbackResult === 'Success from fallback flash-lite', 'Returns success from fallback model');
+  const flashCalls = calledUrls.filter((u) => u.includes('gemini-2.5-flash:generateContent'));
+  const liteCalls = calledUrls.filter((u) => u.includes('gemini-2.5-flash-lite:generateContent'));
+  assert(flashCalls.length === 3, `Primary model attempted 3 times before fallback, got ${flashCalls.length}`);
+  assert(liteCalls.length === 1, `Fallback model called and succeeded on 1st attempt, got ${liteCalls.length}`);
+
+  // 7. On 404 model_unavailable, immediately falls back to next candidate model
+  calledUrls.length = 0;
+  const mockFetch404Fallback: FetchFunction = async (url) => {
+    calledUrls.push(url);
+    if (url.includes('gemini-2.5-flash:generateContent')) {
+      return new Response('Model not found', { status: 404 });
+    }
+    if (url.includes('gemini-2.5-flash-lite:generateContent')) {
+      return new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ text: 'Success after 404 fallback' }] } }],
+        }),
+        { status: 200 }
+      );
+    }
+    return new Response('Not found', { status: 404 });
+  };
+
+  const result404 = await executeGeminiRequest(
+    [{ text: 'hi' }],
+    false,
+    'AIzaMockKey',
+    mockFetch404Fallback,
+    mockWait,
+    undefined,
+    'gemini-2.5-flash',
+    ['gemini-2.5-flash', 'gemini-2.5-flash-lite']
+  );
+  assert(result404 === 'Success after 404 fallback', 'Succeeded after 404 candidate fallback');
+  assert(
+    calledUrls.filter((u) => u.includes('gemini-2.5-flash:generateContent')).length === 1,
+    '404 breaks immediately to fallback candidate without wasted retries'
+  );
+
+  // 8. Multi-step fallback: stable flash (fails) -> flash-lite (fails) -> previous flash version (succeeds)
+  calledUrls.length = 0;
+  const mockFetchMultiFallback: FetchFunction = async (url) => {
+    calledUrls.push(url);
+    if (url.includes('gemini-2.5-flash:generateContent') || url.includes('gemini-2.5-flash-lite:generateContent')) {
+      return new Response('Overloaded', { status: 503 });
+    }
+    if (url.includes('gemini-2.0-flash:generateContent')) {
+      return new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ text: 'Success from previous flash version' }] } }],
+        }),
+        { status: 200 }
+      );
+    }
+    return new Response('Not found', { status: 404 });
+  };
+
+  const resultMulti = await executeGeminiRequest(
+    [{ text: 'hi' }],
+    false,
+    'AIzaMockKey',
+    mockFetchMultiFallback,
+    mockWait,
+    undefined,
+    'gemini-2.5-flash',
+    ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash']
+  );
+  assert(resultMulti === 'Success from previous flash version', 'Deep fallback to previous flash version succeeded');
+  assert(calledUrls.filter((u) => u.includes('gemini-2.5-flash:generateContent')).length === 3, '2.5-flash tried 3 times');
+  assert(calledUrls.filter((u) => u.includes('gemini-2.5-flash-lite:generateContent')).length === 3, '2.5-flash-lite tried 3 times');
+  assert(calledUrls.filter((u) => u.includes('gemini-2.0-flash:generateContent')).length === 1, '2.0-flash tried 1 time and succeeded');
+
+  console.log('All Gemini bounded retry, fallback order, and sanitization tests passed successfully.');
 }
 
 runAsyncTests();

@@ -36,7 +36,13 @@ import { useLanguage } from '../i18n/I18nContext';
 import { useIsRTL } from '../hooks/useIsRTL';
 import { askNutritionCoach, getStoredGeminiApiKey } from '../services/plateAnalysisService';
 import { generateDailyAIReport } from '../services/aiReportService';
-import { GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
+import {
+  GeminiError,
+  getDefaultMessageForKind,
+  formatProviderErrorDetail,
+  isAQKeyRejection,
+  getAQKeyExplanation,
+} from '../utils/geminiModels';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { formatKcal } from '../utils/formatKcal';
 import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
@@ -60,6 +66,7 @@ interface Message {
   text: string;
   failed?: boolean;
   errorMessage?: string;
+  providerDetail?: string | null;
 }
 
 const COACH_HISTORY_KEY = '@fittrack_coach_history';
@@ -226,9 +233,19 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
         await saveDailyAIReport(log.date, generated);
       }
     } catch (err: any) {
-      setAuditError(
-        err instanceof Error ? err.message : t('Could not generate report. Please try again.')
-      );
+      const key = await getStoredGeminiApiKey().catch(() => null);
+      if (isAQKeyRejection(err, key)) {
+        setAuditError(getAQKeyExplanation(language));
+      } else {
+        const detail = formatProviderErrorDetail(err, key || undefined);
+        const baseMsg =
+          err instanceof GeminiError
+            ? t(getDefaultMessageForKind(err.kind))
+            : err instanceof Error
+            ? err.message
+            : t('Gemini service is temporarily unavailable. Please try again shortly.');
+        setAuditError(detail ? `${baseMsg} (${detail})` : baseMsg);
+      }
     } finally {
       setIsLoadingAudit(false);
     }
@@ -288,15 +305,19 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
         scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
       }, 100);
     } catch (err: any) {
+      const key = await getStoredGeminiApiKey().catch(() => null);
       let friendlyMessage: string;
-      if (err instanceof GeminiError) {
+      if (isAQKeyRejection(err, key)) {
+        friendlyMessage = getAQKeyExplanation(language);
+      } else if (err instanceof GeminiError) {
         friendlyMessage = t(getDefaultMessageForKind(err.kind));
       } else {
         friendlyMessage = t('Gemini service is temporarily unavailable. Please try again shortly.');
       }
+      const providerDetail = formatProviderErrorDetail(err, key || undefined);
       setMessages((current) =>
         current.map((m) =>
-          m.id === targetId ? { ...m, failed: true, errorMessage: friendlyMessage } : m
+          m.id === targetId ? { ...m, failed: true, errorMessage: friendlyMessage, providerDetail } : m
         )
       );
       setTimeout(() => {
@@ -645,6 +666,11 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
                                 <Text style={styles.errorBubbleTitle}>{t('Could not send message')}</Text>
                               </View>
                               <Text style={styles.errorBubbleMessage}>{message.errorMessage}</Text>
+                              {message.providerDetail ? (
+                                <Text style={styles.errorBubbleProviderDetail}>
+                                  {message.providerDetail}
+                                </Text>
+                              ) : null}
                               <TouchableOpacity
                                 style={[styles.retryButton, isRtl && styles.rowRtl]}
                                 onPress={() => send(message.text, message.id)}
@@ -1144,6 +1170,14 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 13,
     lineHeight: 18,
     color: theme.colors.textSecondary,
+  },
+  errorBubbleProviderDetail: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginTop: 2,
+    writingDirection: 'ltr',
   },
   retryButton: {
     flexDirection: 'row',
