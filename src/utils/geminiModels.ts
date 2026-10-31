@@ -19,7 +19,8 @@ export const CANDIDATE_MODELS_STORAGE_KEY = '@fittrack_gemini_candidate_models';
 export const MODEL_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // ~24 hours
 export const MAX_PAGE_SIZE = 1000; // Gemini API max pageSize per official docs
 export const MAX_MODEL_DISCOVERY_PAGES = 100;
-export const REQUEST_TIMEOUT_MS = 25000;
+export const REQUEST_TIMEOUT_MS = 30000; // 30 seconds for AI Coach & Photo analysis
+export const TEST_CONNECTION_TIMEOUT_MS = 15000; // 15 seconds for Test Connection
 
 export type FetchFunction = (url: string, init?: RequestInit) => Promise<Response>;
 export type WaitFunction = (ms: number) => Promise<void>;
@@ -327,7 +328,6 @@ export const DEFAULT_FALLBACK_MODELS = [
   'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
   'gemini-2.0-flash',
-  'gemini-1.5-flash',
 ];
 
 /**
@@ -537,6 +537,7 @@ export async function fetchAvailableModels(
       throw new GeminiError('server', { message: 'Gemini model discovery exceeded the safe page limit.' });
     }
     const url = new URL('https://generativelanguage.googleapis.com/v1beta/models');
+    url.searchParams.set('key', cleanKey);
     url.searchParams.set('pageSize', String(MAX_PAGE_SIZE));
     if (pageToken) {
       url.searchParams.set('pageToken', pageToken);
@@ -590,7 +591,7 @@ export async function verifyCandidate(
   timeoutMs = REQUEST_TIMEOUT_MS
 ): Promise<'ok' | 'incompatible'> {
   const cleanKey = apiKey.trim();
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(cleanKey)}`;
   const post = async (parts: Record<string, unknown>[]): Promise<'ok' | 'incompatible'> => {
     const { response, bodyText } = await fetchWithTimeout(customFetch, endpoint, {
       method: 'POST',
@@ -667,8 +668,10 @@ async function fetchWithTimeout(
   const controller = new AbortController();
   const timeout = Math.max(1, timeoutMs);
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let didTimeout = false;
   const timer = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
+      didTimeout = true;
       controller.abort();
       reject(new GeminiError('timeout', { message: 'Gemini request timed out. Please check your connection and try again.' }));
     }, timeout);
@@ -679,7 +682,9 @@ async function fetchWithTimeout(
         response,
         bodyText: await response.text(),
       })).catch((cause) => {
-        if (controller.signal.aborted) throw new GeminiError('timeout', { cause });
+        if (didTimeout || (cause?.name === 'AbortError' && didTimeout)) {
+          throw new GeminiError('timeout', { cause });
+        }
         throw new GeminiError('network', {
           message: sanitizeGeminiString((cause as any)?.message || getDefaultMessageForKind('network'), apiKey),
           cause,
@@ -750,8 +755,10 @@ export async function getActiveModel(
   apiKey: string,
   forceRefresh = false,
   customFetch: FetchFunction = fetch,
-  storage?: StorageInterface
+  storage?: StorageInterface,
+  timeoutMs = REQUEST_TIMEOUT_MS
 ): Promise<string> {
+  const clean = apiKey.trim();
   if (!forceRefresh) {
     try {
       const cached = await safeStorageGet(ACTIVE_MODEL_STORAGE_KEY, storage);
@@ -767,7 +774,7 @@ export async function getActiveModel(
     }
   }
 
-  const selected = await discoverAndVerifyModel(apiKey, customFetch, REQUEST_TIMEOUT_MS, storage);
+  const selected = await discoverAndVerifyModel(clean, customFetch, timeoutMs, storage);
   try {
     await safeStorageSet(ACTIVE_MODEL_STORAGE_KEY, selected, storage);
     await safeStorageSet(ACTIVE_MODEL_TIMESTAMP_KEY, String(Date.now()), storage);
@@ -793,6 +800,7 @@ export async function clearActiveModelCache(storage?: StorageInterface): Promise
 
 /**
  * Tests the Gemini API key connection, performing discovery and verification.
+ * Uses a fast 15-second timeout for rapid feedback.
  * Returns the verified active model name on success, or throws GeminiError.
  */
 export async function testGeminiConnection(
@@ -805,8 +813,8 @@ export async function testGeminiConnection(
     throw new GeminiError('invalid_key', { message: 'Enter a Gemini API key first.' });
   }
 
-  // Force discovery and verification to guarantee end-to-end functionality
+  // Force discovery and verification with 15s timeout to guarantee end-to-end functionality
   await clearActiveModelCache(storage);
-  const verifiedModel = await getActiveModel(clean, true, customFetch, storage);
+  const verifiedModel = await getActiveModel(clean, true, customFetch, storage, TEST_CONNECTION_TIMEOUT_MS);
   return verifiedModel;
 }

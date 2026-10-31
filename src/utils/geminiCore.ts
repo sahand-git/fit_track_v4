@@ -9,6 +9,7 @@ import {
   WaitFunction,
   defaultWait,
   REQUEST_TIMEOUT_MS,
+  TEST_CONNECTION_TIMEOUT_MS,
   StorageInterface,
   safeStorageSet,
   ACTIVE_MODEL_STORAGE_KEY,
@@ -28,6 +29,7 @@ export {
   FetchFunction,
   WaitFunction,
   REQUEST_TIMEOUT_MS,
+  TEST_CONNECTION_TIMEOUT_MS,
   formatProviderErrorDetail,
   isAQKey,
   isAQKeyRejection,
@@ -84,11 +86,15 @@ export async function executeGeminiRequest(
 
     for (let attempt = 0; attempt < maxTransientAttempts; attempt++) {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      let didTimeout = false;
+      const timeoutId = setTimeout(() => {
+        didTimeout = true;
+        controller.abort();
+      }, REQUEST_TIMEOUT_MS);
 
       try {
         const response = await customFetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`,
           {
             method: 'POST',
             headers: {
@@ -186,7 +192,7 @@ export async function executeGeminiRequest(
 
         return text;
       } catch (err: any) {
-        if (err.name === 'AbortError') {
+        if (didTimeout || (err?.name === 'AbortError' && didTimeout)) {
           throw new GeminiError('timeout', {
             message: 'Gemini request timed out. Please check your connection and try again.',
             cause: err,
