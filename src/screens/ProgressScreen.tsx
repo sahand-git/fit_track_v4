@@ -373,7 +373,7 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
             <View style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
               <View style={[styles.inlineRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <Text style={styles.streakCount}>{streak.currentStreak}</Text>
-                <Text style={styles.streakLabel}>{t('days streak')}</Text>
+                <Text style={styles.streakLabel}>{t(streak.currentStreak === 1 ? 'day streak' : 'days streak')}</Text>
               </View>
               <Text style={styles.streakSubtitle}>
                 {streak.loggedToday ? t('Logged today') : t('Log today to keep streak')}

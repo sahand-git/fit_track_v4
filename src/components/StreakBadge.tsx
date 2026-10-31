@@ -10,11 +10,11 @@ import Animated, {
 import { Flame } from 'lucide-react-native';
 import { AppText as Text } from './AppText';
 import { useLanguage } from '../i18n/I18nContext';
-import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import { isReducedMotion } from '../utils/motion';
 import { getSpringConfig } from '../utils/reanimatedMotion';
+import { getStreakDayUnit, getStreakAccessibilityLabel } from '../utils/streak';
 
 interface StreakBadgeProps {
   streak: number;
@@ -25,7 +25,6 @@ export const StreakBadge: React.FC<StreakBadgeProps> = ({ streak, style }) => {
   const language = useLanguage();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const t = (str: string) => translate(language, str);
 
   const scale = useSharedValue(1);
 
@@ -45,14 +44,17 @@ export const StreakBadge: React.FC<StreakBadgeProps> = ({ streak, style }) => {
     };
   });
 
+  const dayUnit = getStreakDayUnit(streak, language);
+  const accessibilityLabel = getStreakAccessibilityLabel(streak, language);
+
   return (
     <Animated.View
       style={[styles.badge, style, animatedStyle]}
-      accessibilityLabel={`${streak} ${t('day streak')}`}
+      accessibilityLabel={accessibilityLabel}
     >
       <Flame size={14} color={theme.colors.terracottaWarm} />
       <Text style={styles.text}>
-        {streak} {t('days')}
+        {streak} {dayUnit}
       </Text>
     </Animated.View>
   );

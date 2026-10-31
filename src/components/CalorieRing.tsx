@@ -14,6 +14,9 @@ import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import { isReducedMotion } from '../utils/motion';
+import { calculateCalorieRingMetrics, CalorieRingMetrics } from '../utils/calorieRingCalculations';
+
+export { calculateCalorieRingMetrics, CalorieRingMetrics };
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -63,8 +66,10 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
     };
   });
 
-  const remaining = Math.max(0, target - consumed);
-  const isOver = consumed > target;
+  const { isOver, displayedValue } = useMemo(
+    () => calculateCalorieRingMetrics(consumed, target),
+    [consumed, target]
+  );
 
   return (
     <View style={styles.wrapper}>
@@ -74,7 +79,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
         disabled={!onPress}
         activeOpacity={0.82}
         accessibilityRole="button"
-        accessibilityLabel={t('Calories')}
+        accessibilityLabel={`${t('Calories')} · ${displayedValue} ${isOver ? t('kcal over budget') : t('kcal remaining')}`}
       >
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           {/* Track */}
@@ -105,7 +110,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
         {/* Center Metrics: Natural, calm typography with count-up */}
         <View style={styles.centerContent}>
           <AnimatedCount
-            value={remaining}
+            value={displayedValue}
             style={[styles.remainingValue, isOver && { color: theme.colors.accent }]}
           />
           <Text style={styles.remainingLabel} numberOfLines={2}>
@@ -114,7 +119,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
         </View>
       </TouchableOpacity>
 
-      {/* 3-Point Calorie Ledger: Consumed | Remaining | Daily Target */}
+      {/* 3-Point Calorie Ledger: Consumed | Remaining/Over | Daily Target */}
       <View style={styles.ledgerRow}>
         <View style={styles.ledgerCol}>
           <AnimatedCount value={consumed} style={styles.ledgerVal} />
@@ -125,7 +130,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
 
         <View style={styles.ledgerCol}>
           <AnimatedCount
-            value={remaining}
+            value={displayedValue}
             style={[styles.ledgerVal, isOver && { color: theme.colors.accent }]}
           />
           <Text style={styles.ledgerLbl}>
