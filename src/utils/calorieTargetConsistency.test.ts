@@ -153,4 +153,39 @@ assert(getStreakDayUnit(20, 'ckb') === 'ڕۆژ', 'ckb: 20 -> ڕۆژ');
 assert(getStreakAccessibilityLabel(1, 'ckb') === '1 ڕۆژ لەسەریەک', 'ckb a11y: 1 ڕۆژ لەسەریەک');
 assert(getStreakAccessibilityLabel(5, 'ckb') === '5 ڕۆژ لەسەریەک', 'ckb a11y: 5 ڕۆژ لەسەریەک');
 
+// 6. Over-budget reduction from burned steps and workouts
+// User Base Target = 1800, Consumed = 2100 -> initially 300 Over
+const obProfile: UserProfile = {
+  ...getDefaultProfile(),
+  targetCalories: 1800,
+  includeWorkoutsInCalorieBudget: true,
+  bmr: 1600,
+  weightKg: 70,
+};
+const consumedCalories = 2100;
+
+// State A: 0 steps, 0 workouts -> Target: 1800, Over: 300
+const budgetA = calculateActivityBudget({ profile: obProfile, workouts: [], steps: 0 });
+const ringA = calculateCalorieRingMetrics(consumedCalories, budgetA.effectiveTarget);
+assert(budgetA.effectiveTarget === 1800, 'State A Daily Target is 1800');
+assert(ringA.isOver === true && ringA.overBy === 300, 'State A is 300 kcal over budget');
+
+// State B: Burn 100 kcal from steps (2381 steps * 0.042) -> Target: 1900, Over: 200
+const budgetB = calculateActivityBudget({ profile: obProfile, workouts: [], steps: 2381 });
+const ringB = calculateCalorieRingMetrics(consumedCalories, budgetB.effectiveTarget);
+assert(budgetB.stepCalories === 100, 'State B step calories is 100');
+assert(budgetB.effectiveTarget === 1900, 'State B Daily Target increases to 1900');
+assert(ringB.isOver === true && ringB.overBy === 200, 'State B reduces Over from 300 -> 200');
+
+// State C: Burn additional 200 kcal from workout -> Target: 2100, Over: 0
+const cycling200: WorkoutEntry = {
+  id: 'c200', name: 'Cycling', category: 'cardio', durationMinutes: 30,
+  caloriesBurned: 233, calorieSource: 'user_entered', loggedAt: '2026-10-31T10:00:00Z',
+};
+const budgetC = calculateActivityBudget({ profile: obProfile, workouts: [cycling200], steps: 2381 });
+const ringC = calculateCalorieRingMetrics(consumedCalories, budgetC.effectiveTarget);
+assert(budgetC.workoutCalories === 200, 'State C workout calories is 200');
+assert(budgetC.effectiveTarget === 2100, 'State C Daily Target increases to 2100');
+assert(ringC.isOver === false && ringC.overBy === 0 && ringC.remaining === 0, 'State C reduces Over from 200 -> 0');
+
 console.log('✓ All Calorie Target Consistency & Ring Balance Unit Tests PASSED Cleanly!');

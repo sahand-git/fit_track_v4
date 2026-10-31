@@ -1,4 +1,4 @@
-import { getLocalDateBounds, normalizeStepTotal, syncStepsForDate } from './stepTrackingCore';
+import { getLocalDateBounds, normalizeStepTotal, syncStepsForDate, estimateStepCalories, KCAL_PER_STEP_BASE } from './stepTrackingCore';
 
 function assert(value: boolean, message: string): void { if (!value) throw new Error(message); }
 
@@ -20,6 +20,16 @@ async function run() {
 
   const unavailable = await syncStepsForDate('2026-10-13', { readSteps: async () => null }, async () => { throw new Error('must not save'); }, now);
   assert(unavailable === null, 'empty provider result does not mutate saved count');
+
+  // Step-to-calorie conversion tests
+  assert(KCAL_PER_STEP_BASE >= 0.04 && KCAL_PER_STEP_BASE <= 0.045, 'KCAL_PER_STEP_BASE must be ~0.04-0.045');
+  assert(estimateStepCalories(100, 70) === 4, '100 steps at 70kg burns ~4 kcal (not 100 kcal!)');
+  assert(estimateStepCalories(1000, 70) === 42, '1000 steps at 70kg burns ~42 kcal');
+  assert(estimateStepCalories(10000, 70) === 420, '10000 steps at 70kg burns ~420 kcal');
+  assert(estimateStepCalories(100, 105) === 6, '100 steps for heavier user scales proportionally');
+  assert(estimateStepCalories(0, 70) === 0, '0 steps burns 0 kcal');
+  assert(estimateStepCalories(-50, 70) === 0, 'Negative steps clamped to 0');
+
   console.log('Step tracking service core tests passed.');
 }
 

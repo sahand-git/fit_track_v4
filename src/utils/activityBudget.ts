@@ -1,7 +1,8 @@
 import { UserProfile, WorkoutEntry } from '../types';
-import { calculateNetWorkoutBurn, calculateTargets, deduplicateWorkoutSteps } from './calculator';
+import { calculateNetWorkoutBurn, deduplicateWorkoutSteps } from './calculator';
+import { estimateStepCalories } from '../services/stepTrackingCore';
 
-const BASELINE_NON_WORKOUT_STEPS = 2500;
+export { estimateStepCalories };
 
 export interface ActivityBudget {
   model: 'fixed' | 'adaptive_net';
@@ -15,13 +16,6 @@ export interface ActivityBudget {
   steps: number;
   workoutSteps: number;
   nonWorkoutSteps: number;
-}
-
-export function estimateStepCalories(steps: number, weightKg: number): number {
-  const safeSteps = Math.max(0, Number.isFinite(steps) ? steps : 0);
-  const safeWeight = Math.max(30, Math.min(300, Number.isFinite(weightKg) ? weightKg : 70));
-  // Approximation: 0.04 kcal per step at 70 kg. This is an estimate, not a measurement.
-  return Math.round(safeSteps * 0.04 * (safeWeight / 70));
 }
 
 export function calculateActivityBudget(input: {
@@ -40,24 +34,12 @@ export function calculateActivityBudget(input: {
     profile.bmr,
   ), 0);
   const grossStepCalories = estimateStepCalories(deduplicated.nonWorkoutSteps, profile.weightKg);
-  const stepCalories = estimateStepCalories(
-    Math.max(0, deduplicated.nonWorkoutSteps - BASELINE_NON_WORKOUT_STEPS),
-    profile.weightKg,
-  );
+  const stepCalories = grossStepCalories;
   const customCal = profile.customNutrientGoals?.calories;
-  const fixedTarget = Math.max(0, Math.round(customCal ?? profile.targetCalories ?? 0));
+  const baseTarget = Math.max(0, Math.round(customCal ?? profile.targetCalories ?? 0));
   const model = profile.includeWorkoutsInCalorieBudget ? 'adaptive_net' : 'fixed';
-  // Adaptive target starts from a sedentary baseline, then adds only net logged activity.
-  // This prevents activityLevel's multiplier from counting the same activity a second time.
-  const baseTarget = model === 'adaptive_net'
-    ? (customCal !== undefined
-        ? Math.round(customCal)
-        : calculateTargets(profile.gender, profile.weightKg, profile.heightCm, profile.age, 'sedentary', profile.goal).targetCalories)
-    : fixedTarget;
   const eligibleActivityCalories = model === 'adaptive_net' ? workoutCalories + stepCalories : 0;
-  const effectiveTarget = model === 'adaptive_net'
-    ? baseTarget + eligibleActivityCalories
-    : fixedTarget;
+  const effectiveTarget = baseTarget + eligibleActivityCalories;
 
   return {
     model,

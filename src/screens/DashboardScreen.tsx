@@ -369,10 +369,10 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
                 {!profile.includeWorkoutsInCalorieBudget
                   ? `${burnedCalories} ${t('kcal burned in active workouts')} · ${t('tracked as burn, not in food budget')}`
                   : activityBudget.workoutCalories > 0 && activityBudget.stepCalories > 0
-                  ? `+${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.workoutCalories} ${t('net workout')} + ${activityBudget.stepCalories} ${t('steps')})`
+                  ? `+${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.workoutCalories} ${t('net workout')} + ${activityBudget.stepCalories} kcal · ${(log.steps || 0).toLocaleString()} ${t('steps')})`
                   : activityBudget.workoutCalories > 0
                   ? `+${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.workoutCalories} ${t('net workout')})`
-                  : `+${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.stepCalories} ${t('steps')})`}
+                  : `+${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${(log.steps || 0).toLocaleString()} ${t('steps')})`}
               </Text>
             </View>
           )}

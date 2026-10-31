@@ -37,4 +37,53 @@ const strength = calculateActivityBudget({
 });
 assert(strength.workoutSteps === 0, 'non-ambulatory workout steps are not inferred');
 
+// Over budget step and workout reduction test (Base = 1800, Consumed = 2100)
+const overBudgetProfile = {
+  ...getDefaultProfile(),
+  targetCalories: 1800,
+  includeWorkoutsInCalorieBudget: true,
+  bmr: 1600,
+  weightKg: 70,
+};
+const consumed = 2100;
+
+// Initial state (no activity): base target = 1800, consumed = 2100 -> over by 300
+const initialBudget = calculateActivityBudget({
+  profile: overBudgetProfile,
+  workouts: [],
+  steps: 0,
+});
+assert(initialBudget.baseTarget === 1800, 'Base target is 1800');
+assert(initialBudget.effectiveTarget === 1800, 'Initial effective target is 1800');
+const initialOver = consumed - initialBudget.effectiveTarget;
+assert(initialOver === 300, `Initial over budget must be 300, got ${initialOver}`);
+
+// Burning 100 kcal from steps: 2381 steps * 0.042 = 100 kcal
+const stepsBudget = calculateActivityBudget({
+  profile: overBudgetProfile,
+  workouts: [],
+  steps: 2381,
+});
+assert(stepsBudget.stepCalories === 100, `Step calories must be 100, got ${stepsBudget.stepCalories}`);
+assert(stepsBudget.effectiveTarget === 1900, `Effective target must increase to 1900, got ${stepsBudget.effectiveTarget}`);
+const stepsOver = consumed - stepsBudget.effectiveTarget;
+assert(stepsOver === 200, `Over budget must reduce from 300 to 200, got ${stepsOver}`);
+
+// Burning 200 kcal from workouts + 100 kcal from steps -> Daily Target = 2100, Over = 0
+// Workout duration 30m with bmr 1600 -> basal burn = (1600/1440)*30 = 33.3 kcal. Gross 233 kcal -> net 200 kcal
+const workout200: WorkoutEntry = {
+  id: 'w200', name: 'Cycling', category: 'cardio', durationMinutes: 30,
+  caloriesBurned: 233, calorieSource: 'user_entered', loggedAt: '2026-10-31T10:00:00Z',
+};
+const fullBudget = calculateActivityBudget({
+  profile: overBudgetProfile,
+  workouts: [workout200],
+  steps: 2381,
+});
+assert(fullBudget.workoutCalories === 200, `Workout calories must be 200, got ${fullBudget.workoutCalories}`);
+assert(fullBudget.stepCalories === 100, `Step calories must be 100, got ${fullBudget.stepCalories}`);
+assert(fullBudget.effectiveTarget === 2100, `Effective target must increase to 2100, got ${fullBudget.effectiveTarget}`);
+const fullOver = Math.max(0, consumed - fullBudget.effectiveTarget);
+assert(fullOver === 0, `Over budget must reduce to 0, got ${fullOver}`);
+
 console.log('All activity budget tests passed.');
