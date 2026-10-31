@@ -62,6 +62,42 @@ assert(
 );
 console.log('✓ sourceRef enforcement verified: auditFoodDatabase rejects verified entries without sourceRef.');
 
+// 7. Test reused FDC ID rule: unwhitelisted reuse throws error, whitelisted passes
+const testReusedFdcDatabase = [
+  {
+    id: 'food_apple_sample',
+    name: 'Sample Apple',
+    servingSize: '100g',
+    servingGrams: 100,
+    calories: 52,
+    protein: 0.3,
+    carbs: 13.8,
+    fat: 0.2,
+    category: 'Fruit',
+    source: 'verified_database' as const,
+    sourceRef: 'USDA FDC 999999',
+  },
+  {
+    id: 'food_banana_sample',
+    name: 'Sample Banana',
+    servingSize: '100g',
+    servingGrams: 100,
+    calories: 89,
+    protein: 1.1,
+    carbs: 22.8,
+    fat: 0.3,
+    category: 'Fruit',
+    source: 'verified_database' as const,
+    sourceRef: 'USDA FDC 999999',
+  },
+];
+const testReusedResult = auditFoodDatabase(12, testReusedFdcDatabase);
+assert(
+  testReusedResult.qualityErrors.some((e) => e.type === 'reused_fdc_id'),
+  'auditFoodDatabase must flag reused_fdc_id when different foods reuse same FDC ID without whitelist'
+);
+console.log('✓ Reused FDC ID audit rule verified: unwhitelisted reuse between different foods is blocked.');
+
 console.log('========================================================================');
 console.log('✓ All auditFoodDatabase unit and quality regression tests passed cleanly!');
 console.log('========================================================================');

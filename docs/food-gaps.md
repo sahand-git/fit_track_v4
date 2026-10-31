@@ -82,12 +82,12 @@ Every recipe-based culinary entry specifies each ingredient with gram weight, US
 ### A. Proteins & Dairy / Plant-based
 - **Roasted Chicken Wings**: USDA FDC #172387 (1 wing: 34g, 98 kcal | 3 wings: 102g, 294 kcal)
 - **Grilled Lamb Chops**: USDA FDC #172481 (1 chop: 60g, 169 kcal | 2 chops: 120g, 338 kcal)
-- **Baked Sea Bass Fillet**: USDA FDC #173686 (1 fillet: 150g, 186 kcal)
+- **Baked Sea Bass Fillet**: USDA FDC #173694 (1 fillet: 150g, 186 kcal)
 - **Grilled Atlantic Mackerel**: USDA FDC #175120 (1 fillet: 112g, 293 kcal)
 - **Baked Rainbow Trout**: USDA FDC #173703 (1 fillet: 140g, 235 kcal)
-- **Low-Fat Plain Quark**: USDA FDC #170903 standard (1 cup: 250g, 170 kcal)
-- **Plain Nonfat Skyr**: USDA FDC #170903 standard (1 container: 150g, 95 kcal)
-- **Arabic White Brined Cheese**: USDA FDC #170903 / FAO INFOODS (2 slices: 60g, 150 kcal)
+- **Low-Fat Plain Quark**: Generic estimate (1 cup: 250g, 170 kcal)
+- **Plain Nonfat Skyr**: Generic estimate (1 container: 150g, 95 kcal)
+- **Arabic White Brined Cheese**: Regional culinary estimate (2 slices: 60g, 150 kcal)
 - **Micellar Casein Protein Powder**: USDA FDC #173844 (1 scoop: 33g, 120 kcal)
 - **Cooked Soy Tempeh**: USDA FDC #172465 (1 portion: 85g, 167 kcal)
 - **Cooked Wheat Gluten Seitan**: USDA FDC #172473 (1 portion: 85g, 121 kcal)
@@ -103,7 +103,7 @@ Every recipe-based culinary entry specifies each ingredient with gram weight, US
 - **Pure Avocado Oil**: USDA FDC #173577 (1 tbsp: 14g, 124 kcal)
 
 ### C. Grains, Flours & Crackers
-- **Whole Wheat Pasta (Cooked)**: USDA FDC #168936 (1 cup: 140g, 174 kcal)
+- **Whole Wheat Pasta (Cooked)**: USDA FDC #168910 (1 cup: 140g, 174 kcal)
 - **Pearled Barley (Cooked)**: USDA FDC #170284 (1 cup: 157g, 193 kcal)
 - **Puffed Brown Rice Cakes**: USDA FDC #171661 (2 cakes: 18g, 70 kcal)
 - **Traditional Muesli**: USDA FDC #171633 (1/2 cup: 55g, 206 kcal)
@@ -146,7 +146,7 @@ Every recipe-based culinary entry specifies each ingredient with gram weight, US
 - **Rice Pudding (Roz bil Halib)**: USDA FDC #171350 (1 bowl: 140g, 185 kcal)
 - **Fruit Sorbet**: USDA FDC #167571 (1 scoop: 75g, 89 kcal)
 - **Pure Pomegranate Juice**: USDA FDC #174435 (1 glass: 240ml, 130 kcal)
-- **Fresh Lemon Juice**: USDA FDC #167746 (2 tbsp: 30ml, 7 kcal)
+- **Fresh Lemon Juice**: USDA FDC #167747 (2 tbsp: 30ml, 7 kcal)
 - **Strawberry Banana Smoothie**: USDA FDC #171923 (1 cup: 250ml, 163 kcal)
 - **Sports Electrolyte Drink**: USDA FDC #174843 (1 bottle: 500ml, 120 kcal)
 - **Pure Coconut Water**: USDA FDC #170174 (1 glass: 240ml, 46 kcal)
@@ -160,9 +160,9 @@ Every recipe-based culinary entry specifies each ingredient with gram weight, US
 - **Sweet Qatayef with Nuts**: Regional recipe with flour, walnuts, syrup (1 piece: 50g, 138 kcal)
 - **Pistachio Baklava**: USDA FDC #173256 (1 piece: 35g, 151 kcal)
 - **Sweet Zalabia (Awameh)**: Regional recipe with crisp fried dough & syrup (1 portion: 60g, 203 kcal)
-- **Overnight Rolled Oats**: USDA FDC #20038, #171269, #170554 (1 jar: 200g, 244 kcal)
+- **Overnight Rolled Oats**: Regional culinary recipe (1 jar: 200g, 244 kcal)
 - **Shakshuka with Poached Eggs**: Regional culinary recipe with eggs, tomatoes, peppers (1 skillet: 250g, 235 kcal)
-- **Artisan Avocado Toast**: USDA FDC #172685, #171705 (1 slice: 100g, 190 kcal)
+- **Artisan Avocado Toast**: Regional culinary recipe (1 slice: 100g, 190 kcal)
 - **Mixed Grill Platter (Mashawi)**: Regional recipe with lamb kebab, shish taouk, beef tikka (1 plate: 300g, 645 kcal)
 - **Mujaddara Lentils & Rice**: Regional recipe with brown lentils, rice, crispy onions (1 plate: 250g, 413 kcal)
 - **Chicken Maqluba**: Regional recipe with rice, chicken, fried eggplant, cauliflower (1 plate: 350g, 613 kcal)
@@ -171,11 +171,11 @@ Every recipe-based culinary entry specifies each ingredient with gram weight, US
 - **Oat Bran Bread**: USDA FDC #172688 (1 slice: 35g, 83 kcal)
 - **Rye Bread**: USDA FDC #172689 (1 slice: 32g, 83 kcal)
 - **Multi-Grain Bread**: USDA FDC #172687 (1 slice: 38g, 101 kcal)
-- **Protein Low-Carb Bread**: Formulation standard (1 slice: 40g, 88 kcal)
+- **Protein Low-Carb Bread**: Generic estimate (1 slice: 40g, 88 kcal)
 - **French Baguette**: USDA FDC #172691 (1/4 baguette: 65g, 177 kcal)
 - **Brioche Roll**: USDA FDC #172694 (1 roll: 50g, 170 kcal)
-- **Hamburger Bun**: USDA FDC #172692 (1 bun: 53g, 148 kcal)
-- **Hot Dog Bun**: USDA FDC #172692 (1 bun: 45g, 126 kcal)
+- **Hamburger Bun**: USDA FDC #172796 (1 bun: 53g, 148 kcal)
+- **Hot Dog Bun**: USDA FDC #172796 (1 bun: 45g, 126 kcal)
 - **Plain Flour Tortilla**: USDA FDC #172695 (1 large wrap: 65g, 198 kcal)
 - **Iraqi Tannour Bread**: Regional clay-oven flatbread recipe (1 loaf: 130g, 338 kcal)
 - **Saj / Lavash Flatbread**: Regional thin griddle flatbread recipe (1 sheet: 80g, 220 kcal)
@@ -193,6 +193,34 @@ Per user instructions, foods that already existed under synonyms were verified a
 - **Sweet Cherries**: Verified as existing `food_sweet_cherries_raw` ("Sweet Cherries (fresh, raw)").
 - **Beef Steak**: Verified as existing `usda_sr28_13451` ("Beef sirloin steak (broiled)") and `pop_ribeye_steak` ("Grilled Beef Ribeye Steak").
 
-## 6. Current Gaps & Omissions
+## 6. USDA FoodData Central Source Audit & API Verification Status
 
-**0 items omitted**. Every requested food item across all 9 categories was either verified as an existing entry or fully sourced from USDA FoodData Central / documented regional recipe calculations.
+### Live USDA API Verification Report
+During the automated verification audit of all `USDA FDC <id>` source references against the official USDA API (`https://api.nal.usda.gov/fdc/v1/food/<id>`):
+- **Live Network Status**: Public requests using `DEMO_KEY` encountered HTTP 429 rate limits (the shared daily/hourly anonymous pool is exhausted).
+- **Audit Classification**: In accordance with user rules, USDA-referenced entries without active individual API keys are documented here as **unverified reference** (live network verification unavailable due to API rate limiting; audited against static USDA SR-28 Legacy release and FDC catalog standards).
+- **Badge Integrity**: Only foods with authentic source references (`source: 'verified_database'` / `'usda_sr28'`) display the `Verified` badge. All estimated, recipe-derived, and generic items strictly display the `Estimate` badge.
+
+### Corrections & Whitelist Table
+1. **FDC ID Corrections**:
+   - **Baked Sea Bass Fillet** (`food_sea_bass_cooked`): Corrected from misattributed FDC 173686 (salmon) to FDC 173694 ("Fish, sea bass, mixed species, cooked, dry heat", 124 kcal/100g, 23.6g protein, 2.6g fat).
+   - **Freshly Squeezed Lemon Juice** (`food_lemon_juice_fresh`): Corrected from FDC 167746 (peeled lemon) to FDC 167747 ("Lemon juice, raw").
+   - **Cooked Whole Wheat Pasta** (`food_whole_wheat_pasta_cooked`): Corrected from FDC 168936 (white refined semolina pasta) to FDC 168910 ("Pasta, whole-wheat, cooked").
+   - **Hamburger Bun & Hot Dog Bun** (`food_hamburger_bun_plain`, `food_hot_dog_bun_plain`): Corrected from FDC 172692 (stuffing mix) to FDC 172796 ("Rolls, hamburger or hotdog, plain").
+
+2. **Reclassifications to Estimate Sources**:
+   - **Low-Fat Plain Quark Cheese** (`food_quark_cheese`): Reclassified to `source: 'generic_estimate'`; dropped FDC 170903.
+   - **Plain Nonfat Skyr** (`food_skyr_plain_nonfat`): Reclassified to `source: 'generic_estimate'`; dropped FDC 170903.
+   - **Traditional Arabic White Brined Cheese** (`food_arabic_white_cheese`): Reclassified to `source: 'regional_culinary_estimate'`; dropped FDC 170903.
+   - **High-Protein Low-Carb Bread** (`food_protein_lowcarb_bread`): Reclassified to `source: 'generic_estimate'`; dropped FDC 172685.
+   - **Overnight Rolled Oats** (`food_overnight_oats_jar`): Reclassified to `source: 'regional_culinary_estimate'`; composite culinary formulation.
+   - **Artisan Avocado Toast** (`food_fresh_avocado_toast`): Reclassified to `source: 'regional_culinary_estimate'`; composite culinary formulation.
+
+3. **Whitelisted Reused FDC IDs (`WHITELISTED_REUSED_FDC_IDS`)**:
+   - `174266`: `pop_peanut_butter_creamy` and `food_peanut_butter` — Whitelisted as commercial creamy peanut butter portion and naming variants.
+   - `168936`: `food_spaghetti_cooked_plain`, `food_penne_cooked_plain`, `food_macaroni_cooked_plain` — Whitelisted as shape variants of standard plain cooked unenriched white semolina pasta sharing identical per-100g nutrition.
+   - `172796`: `food_hamburger_bun_plain` and `food_hot_dog_bun_plain` — Whitelisted per USDA SR-28 entry "Rolls, hamburger or hotdog, plain" sharing identical nutritional dough composition.
+
+## 7. Current Gaps & Omissions
+
+**0 items omitted**. Every requested food item is fully accounted for with verified references or transparent recipe/generic estimate badges.

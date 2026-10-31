@@ -55,7 +55,8 @@ export interface QualityAuditError {
     | 'placeholder_brand'
     | 'drink_missing_unit'
     | 'non_english_name'
-    | 'verified_missing_sourceref';
+    | 'verified_missing_sourceref'
+    | 'reused_fdc_id';
   message: string;
 }
 
@@ -83,6 +84,40 @@ export interface ReviewedAuditException {
   reason: string;
   maxAllowedDiffPercentage: number;
 }
+
+export interface WhitelistedReusedFdcEntry {
+  fdcId: string;
+  reason: string;
+  allowedFoodIds: string[];
+}
+
+/**
+ * Whitelisted Reused FDC IDs
+ * Enforces rule: same FDC ID cannot be used for foods with different names unless explicitly whitelisted with a reason.
+ */
+export const WHITELISTED_REUSED_FDC_IDS: Record<string, WhitelistedReusedFdcEntry> = {
+  '174266': {
+    fdcId: '174266',
+    reason: 'Portion and naming variants of commercial creamy peanut butter (USDA FDC 174266)',
+    allowedFoodIds: ['pop_peanut_butter_creamy', 'food_peanut_butter'],
+  },
+  '168936': {
+    fdcId: '168936',
+    reason:
+      'Pasta shape variants of plain cooked unenriched white semolina pasta sharing identical per-100g nutrition profile (USDA FDC 168936)',
+    allowedFoodIds: [
+      'food_spaghetti_cooked_plain',
+      'food_penne_cooked_plain',
+      'food_macaroni_cooked_plain',
+    ],
+  },
+  '172796': {
+    fdcId: '172796',
+    reason:
+      "USDA FDC 172796 defines 'Rolls, hamburger or hotdog, plain' with identical nutritional dough composition, shaped as hamburger vs hotdog rolls",
+    allowedFoodIds: ['food_hamburger_bun_plain', 'food_hot_dog_bun_plain'],
+  },
+};
 
 /**
  * Reviewed Exception List
@@ -144,6 +179,7 @@ export function auditFoodDatabase(thresholdPercentage = 12, foods: FoodItem[] = 
   const seenIds = new Set<string>();
   const seenNames = new Map<string, string>();
   const seenBarcodes = new Map<string, string>();
+  const seenFdcMap = new Map<string, { id: string; name: string }>();
   const canonicalCategories = new Set<string>(CANONICAL_FOOD_CATEGORIES);
   const ARABIC_SCRIPT_REGEX = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/;
 
@@ -252,6 +288,38 @@ export function auditFoodDatabase(thresholdPercentage = 12, foods: FoodItem[] = 
           type: 'verified_missing_sourceref',
           message: `Food "${food.name}" (${food.id}) has source "${food.source}" but lacks a valid sourceRef (e.g. USDA FDC ID or product label reference).`,
         });
+      }
+    }
+
+    // 4c. Audit rule: same FDC ID cannot be used for foods with different names unless explicitly whitelisted with a reason
+    if (food.sourceRef && food.sourceRef.includes('USDA FDC')) {
+      const fdcMatches = food.sourceRef.match(/USDA FDC\s+(\d+)/g);
+      if (fdcMatches) {
+        for (const matchStr of fdcMatches) {
+          const numMatch = matchStr.match(/\d+/);
+          if (numMatch) {
+            const fdcId = numMatch[0];
+            const existing = seenFdcMap.get(fdcId);
+            if (existing && existing.id !== food.id && existing.name.toLowerCase() !== food.name.toLowerCase()) {
+              const whitelist = WHITELISTED_REUSED_FDC_IDS[fdcId];
+              const isWhitelisted =
+                whitelist &&
+                whitelist.allowedFoodIds.includes(existing.id) &&
+                whitelist.allowedFoodIds.includes(food.id);
+
+              if (!isWhitelisted) {
+                qualityErrors.push({
+                  id: food.id,
+                  name: food.name,
+                  type: 'reused_fdc_id',
+                  message: `Food "${food.name}" (${food.id}) reuses USDA FDC ID ${fdcId} from "${existing.name}" (${existing.id}) without explicit whitelist.`,
+                });
+              }
+            } else if (!existing) {
+              seenFdcMap.set(fdcId, { id: food.id, name: food.name });
+            }
+          }
+        }
       }
     }
 
