@@ -224,7 +224,7 @@ const createStyles = (theme: ThemeType) =>
           elevation: 10,
         },
         web: {
-          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.2)',
+          boxShadow: theme.colors.dialogShadowWeb,
         },
       }),
     },

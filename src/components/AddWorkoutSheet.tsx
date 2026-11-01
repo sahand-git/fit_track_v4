@@ -489,7 +489,7 @@ const createStyles = (theme: ThemeType) =>
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: theme.colors.backdrop,
   },
   backdrop: {
     ...StyleSheet.absoluteFill,

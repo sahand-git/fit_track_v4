@@ -288,7 +288,7 @@ const createStyles = (theme: ThemeType) =>
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(28, 33, 28, 0.45)',
+    backgroundColor: theme.colors.backdrop,
   },
   backdrop: {
     position: 'absolute',
@@ -393,7 +393,7 @@ const createStyles = (theme: ThemeType) =>
     padding: 12,
     borderRadius: theme.radius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(217, 107, 79, 0.2)',
+    borderColor: theme.colors.accentBorder,
   },
   noticeText: {
     flex: 1,

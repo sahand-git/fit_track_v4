@@ -86,8 +86,14 @@ export const theme = {
     water: '#3B6B78',            // Deep slate-cyan mineral water
     waterLight: '#EDF5F7',
     
-    // Overlay backdrop
+    // Overlay backdrop & glass surfaces
     backdrop: 'rgba(31, 36, 33, 0.45)',
+    bannerBg: '#1E3A2F',
+    overlayGlass: 'rgba(255, 255, 255, 0.14)',
+    overlayGlassBorder: 'rgba(255, 255, 255, 0.32)',
+    overlayGlassText: '#D1EBDC',
+    overlayGlassTextBright: '#F0FDF4',
+    dialogShadowWeb: '0 8px 30px rgba(0, 0, 0, 0.2)',
 
     // Pure Neutrals
     white: '#FFFFFF',
@@ -104,6 +110,9 @@ export const theme = {
     gold: '#D4AF37',
     goldLight: '#F5E6C8',
     goldDark: '#E8B86D',
+    goldBorder: '#D4AF37',
+    goldMutedBorder: '#EEDAA2',
+    goldHalo: '#F5E6C8',
 
     // Orange / Terracotta variations
     orange: '#EA580C',
@@ -355,6 +364,12 @@ export const darkTheme = {
     black: '#000000',
     shadow: '#000000',
     backdrop: 'rgba(0, 0, 0, 0.75)',
+    bannerBg: '#17261F',
+    overlayGlass: 'rgba(255, 255, 255, 0.14)',
+    overlayGlassBorder: 'rgba(255, 255, 255, 0.32)',
+    overlayGlassText: '#C7E4D4',
+    overlayGlassTextBright: '#ECFDF5',
+    dialogShadowWeb: '0 8px 30px rgba(0, 0, 0, 0.6)',
 
     // Amber / Warm Gold
     amber: '#E8A84C',
@@ -366,6 +381,9 @@ export const darkTheme = {
     gold: '#E5C058',
     goldLight: '#2E2714',
     goldDark: '#D4AF37',
+    goldBorder: '#E5C058',
+    goldMutedBorder: '#523F1C',
+    goldHalo: '#2E2714',
 
     // Orange / Terracotta
     orange: '#F97316',

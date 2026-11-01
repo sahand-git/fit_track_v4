@@ -280,7 +280,7 @@ const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: theme.colors.backdrop,
     justifyContent: 'flex-end',
   },
   backdrop: {

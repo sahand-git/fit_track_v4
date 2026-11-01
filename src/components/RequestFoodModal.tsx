@@ -324,7 +324,7 @@ const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(31, 36, 33, 0.45)',
+    backgroundColor: theme.colors.backdrop,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,

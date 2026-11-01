@@ -20,22 +20,24 @@ const files = walk('src');
 if (fs.existsSync('App.tsx')) {
   files.push('App.tsx');
 }
-let totalHexOccurrences = 0;
-// Catches 3-digit (#000), 4-digit (#0000), 6-digit (#000000), and 8-digit (#00000000) hex color string literals
-const colorRegex = /['"`](#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}))['"`]/g;
+
+let totalViolations = 0;
+// Catches 3, 4, 6, and 8-digit hex (#000, #0000, #000000, #00000000), rgb(), rgba(), hsl(), and hsla()
+const colorRegex = /['"`]((?:#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}))|(?:rgba?\s*\([^)]+\))|(?:hsla?\s*\([^)]+\)))['"`]/gi;
 
 const filesWithColors: { file: string; count: number; colors: string[] }[] = [];
 
 files.forEach((f) => {
+  // theme.ts and test files verifying scanner/theme are exempted
   if (f.endsWith('theme.ts') || f.includes('theme.test.ts')) return;
   const content = fs.readFileSync(f, 'utf8');
-  let match;
+  let match: RegExpExecArray | null;
   const matchesInFile: string[] = [];
   while ((match = colorRegex.exec(content)) !== null) {
     matchesInFile.push(match[1]);
   }
   if (matchesInFile.length > 0) {
-    totalHexOccurrences += matchesInFile.length;
+    totalViolations += matchesInFile.length;
     filesWithColors.push({
       file: f,
       count: matchesInFile.length,
@@ -44,7 +46,11 @@ files.forEach((f) => {
   }
 });
 
-console.log('Total raw hex color string literals in src/ (outside theme.ts):', totalHexOccurrences);
+console.log('Total raw hex/rgb/rgba/hsl color string literals in src/ (outside theme.ts):', totalViolations);
 filesWithColors.forEach((item) => {
   console.log(`${item.file}: ${item.count} colors -> ${item.colors.join(', ')}`);
 });
+
+if (totalViolations > 0) {
+  process.exit(1);
+}

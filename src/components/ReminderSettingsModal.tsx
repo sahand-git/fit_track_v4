@@ -716,10 +716,10 @@ const createStyles = (theme: ThemeType) =>
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: 'rgba(193, 102, 76, 0.08)',
+    backgroundColor: theme.colors.accentLight,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(193, 102, 76, 0.3)',
+    borderColor: theme.colors.accentBorder,
     padding: 12,
   },
   unsupportedTitle: {
