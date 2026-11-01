@@ -124,7 +124,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   const isRtl = useIsRTL();
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const dockClearance = dockBottom + 72;
-  const scrollBottomPadding = Math.max(160, dockClearance + 80);
+  const scrollBottomPadding = Math.max(240, dockClearance + 140);
 
   const fiberProgress = useMemo(
     () => calculateNutrientDayProgress('fiber', log.meals, log.dailySupplements, profile),
@@ -643,7 +643,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
               </View>
               {burnedCalories > 0 && (
                 <Text style={styles.workoutBurnBadge}>
-                  {burnedCalories} {t('kcal')}
+                  {t('Burned')}: ~{burnedCalories} {t('kcal')}
                 </Text>
               )}
               <AnimatedPressable
@@ -938,7 +938,8 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: 10,
+    minHeight: 52,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
@@ -961,6 +962,7 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     flex: 1,
     minWidth: 0,
     gap: 6,
+    paddingEnd: 10,
   },
   workoutItemMetaList: {
     flexDirection: 'row',
