@@ -19,8 +19,6 @@ import {
 import { CatalogSupplementItem } from '../../data/supplementCatalog';
 import { useTheme } from '../../theme/ThemeContext';
 import { ThemeType } from '../../theme';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getKeyboardVerticalOffset } from '../../utils/keyboardAvoidance';
 import { categoryLabels, timeLabels } from './supplementTypes';
 
 const COMMON_UNITS = ['mg', 'mcg', 'IU', 'g', 'ml', 'drops', 'capsules', 'tablets'];
@@ -90,7 +88,6 @@ export const SupplementModal: React.FC<SupplementModalProps> = ({
   t,
 }) => {
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <Modal
@@ -109,7 +106,6 @@ export const SupplementModal: React.FC<SupplementModalProps> = ({
       >
         <KeyboardAvoidingView
           behavior="padding"
-          keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top)}
           style={{ width: '100%', justifyContent: 'flex-end' }}
         >
           <View

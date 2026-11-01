@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View, Platform } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Activity, Footprints, HeartPulse, Minus, Plus, RefreshCw, Target } from 'lucide-react-native';
 import { DirectionalIcon } from '../components/DirectionalIcon';
@@ -12,7 +12,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { formatKcal } from '../utils/formatKcal';
 import { estimateStepCalories } from '../utils/activityBudget';
-import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 import { isHealthStepServiceAvailable, syncHealthStepsForDate } from '../services/stepTrackingService';
 
 interface Props {
@@ -100,7 +99,6 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
     <KeyboardAvoidingView
       behavior="padding"
       style={{ flex: 1 }}
-      keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top, 0, Platform.OS)}
     >
       <ScrollView
         style={styles.container}

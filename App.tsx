@@ -19,7 +19,6 @@ import {
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react-native';
-import { getScreenTopOffset } from './src/utils/keyboardAvoidance';
 import { UserProfile, DailyLog, LoggedMeal, MealType, AppLanguage, SupplementRoutineItem, LoggedDailySupplement, WorkoutEntry, AICoachReport } from './src/types';
 import {
   loadUserProfile,
@@ -80,6 +79,9 @@ import { StepsScreen } from './src/screens/StepsScreen';
 import { WorkoutsScreen } from './src/screens/WorkoutsScreen';
 import { AccountScreen } from './src/screens/AccountScreen';
 import { AuthIdentity, watchAuthState } from './src/services/authService';
+
+const getScreenTopOffset = (insetsTop: number, platform: string = Platform.OS) =>
+  Math.max(insetsTop, platform === 'android' ? 24 : 0);
 
 type Tab = 'today' | 'meals' | 'coach' | 'progress';
 type TemporaryScreen = 'none' | 'profile' | 'supplements' | 'steps' | 'workouts' | 'account';

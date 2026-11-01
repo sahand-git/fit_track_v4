@@ -28,7 +28,6 @@ import { getLastStoredCrash, ScrubbedCrashReport } from '../services/crashReport
 import { sendFeedback } from '../utils/feedback';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useLanguage } from '../i18n/I18nContext';
-import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 import { languageNames, translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
@@ -171,7 +170,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     <KeyboardAvoidingView
       behavior="padding"
       style={{ flex: 1 }}
-      keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top, 0, Platform.OS)}
     >
       <ScrollView
         style={[styles.container, { direction: currentLanguage === 'en' ? 'ltr' : 'rtl' }]}

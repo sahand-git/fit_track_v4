@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View, Platform } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,6 @@ import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
-import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 import { formatKcal } from '../utils/formatKcal';
 import { getItemEnterAnimation, getItemExitAnimation, getListLayoutTransition } from '../utils/reanimatedMotion';
 
@@ -80,7 +79,6 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
     <KeyboardAvoidingView
       behavior="padding"
       style={{ flex: 1 }}
-      keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top, 0, Platform.OS)}
     >
       <View style={styles.container}>
       <ScrollView

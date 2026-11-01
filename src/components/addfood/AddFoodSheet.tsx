@@ -20,7 +20,6 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getKeyboardVerticalOffset } from '../../utils/keyboardAvoidance';
 import { getSpringConfig } from '../../utils/reanimatedMotion';
 import { isReducedMotion } from '../../utils/motion';
 import { AppText as Text } from '../AppText';
@@ -1607,7 +1606,6 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
           />
           <KeyboardAvoidingView
             behavior="padding"
-            keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top)}
             style={{ width: '100%', height: '92%', justifyContent: 'flex-end' }}
             pointerEvents="box-none"
           >

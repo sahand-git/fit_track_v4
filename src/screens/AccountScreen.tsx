@@ -18,7 +18,6 @@ import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FIREBASE_SETUP_GUIDE_URL, PRIVACY_POLICY_URL, SUPPORT_EMAIL } from '../constants/urls';
-import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 
 interface Props { user: AuthIdentity | null; onBack: () => void; onRestoreComplete: () => void; }
 
@@ -234,7 +233,6 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
     <KeyboardAvoidingView
       style={styles.keyboardAvoidingView}
       behavior="padding"
-      keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top, 0, Platform.OS)}
     >
     <ScrollView
       style={styles.container}

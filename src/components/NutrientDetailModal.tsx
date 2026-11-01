@@ -34,7 +34,6 @@ import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 import * as Haptics from 'expo-haptics';
 
 interface NutrientDetailModalProps {
@@ -194,7 +193,6 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
       <View style={[styles.backdrop, { direction: isRtl ? 'rtl' : 'ltr' }]}>
         <KeyboardAvoidingView
           behavior="padding"
-          keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top)}
           style={{ width: '100%', justifyContent: 'flex-end' }}
         >
           <View style={[styles.sheet, { paddingBottom: insets.bottom > 0 ? insets.bottom : 0 }]}>

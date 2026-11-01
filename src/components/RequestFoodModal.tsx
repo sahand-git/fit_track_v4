@@ -22,8 +22,6 @@ import {
 } from '../services/foodRequestService';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getKeyboardVerticalOffset } from '../utils/keyboardAvoidance';
 
 export interface RequestFoodModalProps {
   visible: boolean;
@@ -39,7 +37,6 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
   initialBarcode = '',
 }) => {
   const language = useLanguage();
-  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
@@ -151,7 +148,6 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
     >
       <KeyboardAvoidingView
         behavior="padding"
-        keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top)}
         style={styles.backdrop}
       >
         <View style={styles.sheetContainer}>

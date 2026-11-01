@@ -13,8 +13,6 @@ import { X, Check, Bookmark, AlertTriangle } from 'lucide-react-native';
 import { MealType, LoggedMeal, AppLanguage } from '../../types';
 import { useTheme } from '../../theme/ThemeContext';
 import { ThemeType } from '../../theme';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getKeyboardVerticalOffset } from '../../utils/keyboardAvoidance';
 
 export interface AddFoodTemplateModalProps {
   visible: boolean;
@@ -44,7 +42,6 @@ export const AddFoodTemplateModal: React.FC<AddFoodTemplateModalProps> = ({
   t,
 }) => {
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const currentSlotMeals = currentDayMeals.filter((m) => m.mealType === selectedMeal);
 
@@ -65,7 +62,6 @@ export const AddFoodTemplateModal: React.FC<AddFoodTemplateModalProps> = ({
       >
         <KeyboardAvoidingView
           behavior="padding"
-          keyboardVerticalOffset={getKeyboardVerticalOffset(insets.top)}
           style={{ width: '100%', alignItems: 'center' }}
         >
           <View style={styles.customModalCard}>

@@ -1,7 +1,7 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   ActivityIndicator,
-  Keyboard,
+  Dimensions,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -9,7 +9,9 @@ import {
   View,
   Platform,
 } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useReanimatedKeyboardAnimation, useKeyboardHandler } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle, runOnJS } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getScopedStorageKey, saveDailyAIReport } from '../storage/storage';
@@ -30,6 +32,7 @@ import {
   Lightbulb,
   ChevronDown,
   ChevronUp,
+  X,
 } from 'lucide-react-native';
 import { AICoachReport, DailyLog, UserProfile } from '../types';
 import { AppText as Text } from '../components/AppText';
@@ -95,33 +98,66 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
   const scrollViewRef = useRef<ScrollView>(null);
   const composerRef = useRef<View>(null);
   const isSendingRef = useRef(false);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const closedSpace = Math.max(110, insets.bottom + 84);
+  const { height: keyboardHeightAnim } = useReanimatedKeyboardAnimation();
+  const [debugKeyboardHeight, setDebugKeyboardHeight] = useState(0);
+  const [showDebugOverlay, setShowDebugOverlay] = useState(false);
+  const [composerLayout, setComposerLayout] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    bottom: number;
+  } | null>(null);
 
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => {
-        setIsKeyboardVisible(true);
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
-        }, 100);
-      }
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setIsKeyboardVisible(false);
-      }
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
+  const measureComposer = useCallback(() => {
+    if (composerRef.current) {
+      composerRef.current.measureInWindow((x, y, width, height) => {
+        setComposerLayout({
+          x: Math.round(x),
+          y: Math.round(y),
+          width: Math.round(width),
+          height: Math.round(height),
+          bottom: Math.round(y + height),
+        });
+      });
+    }
   }, []);
 
-  const bottomPadding = isKeyboardVisible
-    ? theme.spacing.xs
-    : Math.max(110, insets.bottom + 84);
+  const scrollToBottom = useCallback(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
+  }, []);
+
+  useKeyboardHandler({
+    onMove: (e) => {
+      'worklet';
+      runOnJS(setDebugKeyboardHeight)(Math.round(e.height));
+    },
+    onEnd: (e) => {
+      'worklet';
+      runOnJS(setDebugKeyboardHeight)(Math.round(e.height));
+      if (e.height > 0) {
+        runOnJS(scrollToBottom)();
+        runOnJS(measureComposer)();
+      }
+    },
+  });
+
+  const composerAnimatedStyle = useAnimatedStyle(() => {
+    const currentKh = Math.abs(keyboardHeightAnim.value);
+    const overlap = Math.max(0, currentKh - closedSpace + 8);
+    return {
+      transform: [{ translateY: -overlap }],
+    };
+  }, [closedSpace]);
+
+  const listSpacerAnimatedStyle = useAnimatedStyle(() => {
+    const currentKh = Math.abs(keyboardHeightAnim.value);
+    const overlap = Math.max(0, currentKh - closedSpace + 8);
+    return {
+      height: overlap,
+    };
+  }, [closedSpace]);
 
   const totals = useMemo(
     () =>
@@ -330,29 +366,76 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
   const report = log.aiReport;
 
   return (
-    <KeyboardAvoidingView
-      behavior="padding"
-      style={{ flex: 1 }}
+    <View
+      style={[
+        styles.container,
+        { paddingBottom: closedSpace, direction: language === 'en' ? 'ltr' : 'rtl' },
+      ]}
     >
-      <View
-        style={[
-          styles.container,
-          { paddingBottom: bottomPadding, direction: language === 'en' ? 'ltr' : 'rtl' },
-        ]}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.icon}>
-            <Bot size={20} color={theme.colors.primary} />
-          </View>
-          <View style={styles.headerCopy}>
-            <Text style={styles.title}>{t('AI Coach')}</Text>
-            <Text style={styles.subtitle}>
-              {log.date === getTodayDateString()
-                ? `${formatKcal(totals.calories, t)} ${t('eaten today')}`
-                : `${formatDisplayDate(log.date, language)} · ${formatKcal(totals.calories, t)} ${t('eaten')}`}
+      {/* Temporary Debug Overlay */}
+      {showDebugOverlay && (
+        <View style={styles.debugOverlay} pointerEvents="box-none">
+          <View style={styles.debugCard}>
+            <View style={styles.debugHeaderRow}>
+              <Text style={styles.debugTitle}>Keyboard & Layout Debug</Text>
+              <TouchableOpacity
+                onPress={() => setShowDebugOverlay(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Close debug overlay"
+              >
+                <X size={16} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.debugRow}>Keyboard Height: {debugKeyboardHeight} dp</Text>
+            <Text style={styles.debugRow}>Window Height: {Math.round(Dimensions.get('window').height)} dp</Text>
+            <Text style={styles.debugRow}>
+              Insets: Top={Math.round(insets.top)} | Bottom={Math.round(insets.bottom)}
             </Text>
+            <Text style={styles.debugRow}>Closed Space: {closedSpace} dp</Text>
+            <Text style={styles.debugRow}>
+              Active Overlap: {Math.max(0, debugKeyboardHeight - closedSpace + 8)} dp
+            </Text>
+            <Text style={styles.debugRow}>
+              Composer: y={composerLayout?.y ?? 'unmeasured'} | bottom={composerLayout?.bottom ?? 'unmeasured'} | h={composerLayout?.height ?? 'unmeasured'}
+            </Text>
+            <TouchableOpacity
+              style={styles.debugRefreshBtn}
+              onPress={measureComposer}
+              accessibilityRole="button"
+              accessibilityLabel="Re-measure composer"
+            >
+              <Text style={styles.debugRefreshBtnText}>Re-measure Composer</Text>
+            </TouchableOpacity>
           </View>
+        </View>
+      )}
+
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.icon}>
+          <Bot size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.headerCopy}>
+          <TouchableOpacity
+            onLongPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+              measureComposer();
+              setShowDebugOverlay((prev) => !prev);
+            }}
+            delayLongPress={450}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('AI Coach')} - Long press for keyboard layout debug overlay`}
+          >
+            <Text style={styles.title}>{t('AI Coach')}</Text>
+          </TouchableOpacity>
+          <Text style={styles.subtitle}>
+            {log.date === getTodayDateString()
+              ? `${formatKcal(totals.calories, t)} ${t('eaten today')}`
+              : `${formatDisplayDate(log.date, language)} · ${formatKcal(totals.calories, t)} ${t('eaten')}`}
+          </Text>
+        </View>
           {currentSubView === 'chat' && messages.length > 0 && (
             <TouchableOpacity
               style={styles.clearButton}
@@ -620,7 +703,7 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
 
         {/* 2. Interactive Chat Mode */}
         {currentSubView === 'chat' && (
-          <>
+          <View style={styles.chatFlexContainer}>
             <ScrollView
               ref={scrollViewRef}
               style={styles.messages}
@@ -738,9 +821,15 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
                 ))
               )}
               {busy && <SkeletonCoachBubble />}
+              <Animated.View style={listSpacerAnimatedStyle} />
             </ScrollView>
 
-            <View ref={composerRef} collapsable={false} style={styles.composer}>
+            <Animated.View
+              ref={composerRef}
+              collapsable={false}
+              onLayout={measureComposer}
+              style={[styles.composer, composerAnimatedStyle]}
+            >
               <TextInput
                 value={input}
                 onChangeText={setInput}
@@ -768,11 +857,10 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
                   <Send size={17} color={theme.colors.textInverted} />
                 )}
               </AnimatedPressable>
-            </View>
-          </>
+            </Animated.View>
+          </View>
         )}
       </View>
-    </KeyboardAvoidingView>
   );
 });
 CoachScreen.displayName = 'CoachScreen';
@@ -783,6 +871,55 @@ const createStyles = (theme: ThemeType) =>
     flex: 1,
     backgroundColor: theme.colors.background,
     padding: theme.spacing.md,
+  },
+  chatFlexContainer: {
+    flex: 1,
+    minHeight: 0,
+  },
+  debugOverlay: {
+    position: 'absolute',
+    top: 60,
+    left: 12,
+    right: 12,
+    zIndex: 99999,
+    elevation: 99999,
+  },
+  debugCard: {
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.radius.md,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+  },
+  debugHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  debugTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.accent,
+  },
+  debugRow: {
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    color: theme.colors.textPrimary,
+    lineHeight: 18,
+  },
+  debugRefreshBtn: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: theme.radius.sm,
+  },
+  debugRefreshBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.surface,
   },
   header: {
     flexDirection: 'row',
