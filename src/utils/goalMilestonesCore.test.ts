@@ -108,13 +108,15 @@ async function runGoalMilestonesCoreTests() {
     const calorieMsg = getMilestoneDisplayMessage('calories', {}, (k) => k);
     assert(calorieMsg.isNeutralStatusOnly === true, 'Calorie milestone must be neutral status only');
     assert(!calorieMsg.message.toLowerCase().includes('congratulations'), 'No congratulations for calories');
+    assert(calorieMsg.message === "You've reached today's calorie goal.", 'Calorie copy matches');
 
     const stepsMsg = getMilestoneDisplayMessage('steps', { steps: 10000, stepGoal: 10000 }, (k) => k);
     assert(stepsMsg.isNeutralStatusOnly === false, 'Steps milestone can celebrate achievement');
-    assert(stepsMsg.message.includes('10,000 / 10,000'), 'Steps copy includes formatted counts');
+    assert(stepsMsg.message === 'Congratulations! You reached your daily step goal.', 'Steps copy matches');
 
     const waterMsg = getMilestoneDisplayMessage('water', {}, (k) => k);
     assert(waterMsg.isNeutralStatusOnly === false, 'Water milestone can congratulate hydration');
+    assert(waterMsg.message === 'Well done! You reached your daily water goal.', 'Water copy matches');
     console.log('✓ Test 5 passed: Neutral calorie copy and celebratory steps/water copy verified');
   }
 

@@ -71,6 +71,9 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
     [consumed, target]
   );
 
+  const tolerance = Math.max(25, Math.round(target * 0.02));
+  const isInTolerance = target > 0 && Math.abs(consumed - target) <= tolerance;
+
   return (
     <View style={styles.wrapper}>
       <TouchableOpacity
@@ -114,7 +117,11 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
             style={[styles.remainingValue, isOver && { color: theme.colors.accent }]}
           />
           <Text style={styles.remainingLabel} numberOfLines={2}>
-            {isOver ? t('kcal over budget') : t('kcal remaining')}
+            {isInTolerance
+              ? t("You've reached today's calorie goal.")
+              : isOver
+              ? t('kcal over budget')
+              : t('kcal remaining')}
           </Text>
         </View>
       </TouchableOpacity>

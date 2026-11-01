@@ -533,7 +533,7 @@ const createStyles = (theme: ThemeType) =>
     color: theme.colors.textSecondary,
   },
   securityNote: {
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     color: theme.colors.textMuted,
     marginTop: 4,

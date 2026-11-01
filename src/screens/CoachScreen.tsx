@@ -1135,7 +1135,7 @@ const createStyles = (theme: ThemeType) =>
     color: theme.colors.danger,
   },
   errorDetailText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -1428,7 +1428,7 @@ const createStyles = (theme: ThemeType) =>
     marginRight: 4,
   },
   notSentText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.danger,
   },
@@ -1461,7 +1461,7 @@ const createStyles = (theme: ThemeType) =>
     color: theme.colors.textSecondary,
   },
   errorBubbleProviderDetail: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textMuted,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',

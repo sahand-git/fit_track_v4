@@ -402,12 +402,12 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
               <Flame size={14} color={theme.colors.warning} />
               <Text style={styles.burnBannerText}>
                 {!profile.includeWorkoutsInCalorieBudget
-                  ? `${burnedCalories} ${t('kcal burned in active workouts')} · ${t('tracked as burn, not in food budget')}`
+                  ? `${burnedCalories} ${t('kcal burned in active workouts (est.)')} · ${t('tracked as burn, not in food budget')}`
                   : activityBudget.workoutCalories > 0 && activityBudget.stepCalories > 0
-                  ? `${t('Est. active burn:')} +${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.workoutCalories} ${t('net workout')} + ${activityBudget.stepCalories} kcal · ${(log.steps || 0).toLocaleString()} ${t('steps')})`
+                  ? `${t('Est. active burn:')} +${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.workoutCalories} ${t('net workout est.')} + ${activityBudget.stepCalories} kcal · ${(log.steps || 0).toLocaleString()} ${t('steps est.')})`
                   : activityBudget.workoutCalories > 0
-                  ? `${t('Est. active burn:')} +${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.workoutCalories} ${t('net workout')})`
-                  : `${t('Est. active burn:')} +${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${(log.steps || 0).toLocaleString()} ${t('steps')})`}
+                  ? `${t('Est. active burn:')} +${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.workoutCalories} ${t('net workout est.')})`
+                  : `${t('Est. active burn:')} +${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${(log.steps || 0).toLocaleString()} ${t('steps est.')})`}
               </Text>
             </View>
           )}

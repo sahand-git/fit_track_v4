@@ -169,21 +169,21 @@ export function getMilestoneDisplayMessage(
       return {
         type: 'calories',
         title: t('Calorie Target Reached'),
-        message: t('Your intake is within target tolerance for today.'),
+        message: t("You've reached today's calorie goal."),
         isNeutralStatusOnly: true,
       };
     case 'steps':
       return {
         type: 'steps',
         title: t('Goal reached!'),
-        message: `${t('Goal reached!')} ${(data.steps || 0).toLocaleString()} / ${(data.stepGoal || 0).toLocaleString()} ${t('steps')}`,
+        message: t('Congratulations! You reached your daily step goal.'),
         isNeutralStatusOnly: false,
       };
     case 'water':
       return {
         type: 'water',
         title: t('Hydration goal reached!'),
-        message: t('Hydration goal reached!'),
+        message: t('Well done! You reached your daily water goal.'),
         isNeutralStatusOnly: false,
       };
   }
