@@ -940,6 +940,21 @@ async function runAllTests() {
     console.log('✓ Localization completeness: All 27 required strings exist in en, ar, and ckb');
   }
 
+  // Kurdish Sorani (ckb) prefers stronger (non-lite) models first
+  {
+    const mixedModels = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.0-flash'];
+    const ckbChain = buildModelFallbackChain(mixedModels, undefined, 'ckb');
+    assert(ckbChain[0] === 'gemini-2.5-flash', `Expected first model for ckb to be gemini-2.5-flash, got ${ckbChain[0]}`);
+    assert(ckbChain[1] === 'gemini-2.0-flash', `Expected second model for ckb to be gemini-2.0-flash, got ${ckbChain[1]}`);
+    assert(ckbChain[2] === 'gemini-2.5-flash-lite', `Expected lite model to follow non-lite models, got ${ckbChain[2]}`);
+    assert(ckbChain[3] === 'gemini-2.0-flash-lite', `Expected lite model to follow non-lite models, got ${ckbChain[3]}`);
+
+    // When activeModel is lite, ckb still prefers non-lite first
+    const ckbActiveLite = buildModelFallbackChain(mixedModels, 'gemini-2.5-flash-lite', 'ckb');
+    assert(ckbActiveLite[0] === 'gemini-2.5-flash', 'For ckb, strong non-lite model is preferred even if activeModel is lite');
+    console.log('✓ Kurdish Sorani (ckb) model chain prefers strong non-lite models verified.');
+  }
+
   console.log('=================================================================');
   console.log('All 15 Gemini model discovery & error unit tests passed cleanly!');
   console.log('=================================================================');

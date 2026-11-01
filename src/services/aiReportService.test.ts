@@ -17,6 +17,7 @@ import {
   generateFallbackDailyReport,
   generateDailyAIReport,
 } from './aiReportService';
+import { askNutritionCoach } from './coachChatService';
 import { loadDailyLog, saveDailyAIReport } from '../storage/storage';
 import { validateBackup } from '../utils/backupCore';
 import { getDefaultProfile } from '../utils/calculator';
@@ -215,7 +216,213 @@ async function runAIReportTests() {
     assert(geminiReport.overallGrade === 'B+', 'Gemini grade parsed correctly');
     assert(geminiReport.headline.includes('Solid energy balance'), 'Gemini headline parsed');
 
+    // Test language script failure & retry for Kurdish (ckb)
+    let fetchCalls = 0;
+    const retryMockFetch: any = async () => {
+      fetchCalls++;
+      if (fetchCalls === 1) {
+        // Return English response on first call
+        return new Response(
+          JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: JSON.stringify({
+                        overallGrade: 'A',
+                        headline: 'Great job eating healthy',
+                        caloricBalance: '2000 kcal logged',
+                        macroBreakdown: 'Good macro split',
+                        mistakesAndBlindSpots: ['None'],
+                        actionableTomorrowFixes: ['Keep going'],
+                        customMealSuggestion: 'Chicken breast 150g',
+                        coachNote: 'Good discipline',
+                      }),
+                    },
+                  ],
+                },
+                finishReason: 'STOP',
+              },
+            ],
+          }),
+          { status: 200 }
+        );
+      }
+      // Return Kurdish response on retry
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      overallGrade: 'A',
+                      headline: 'ئەمڕۆ زۆر باش بوو لە ڕووی هاوسەنگی وزە',
+                      caloricBalance: '٢٠٠٠ کالۆری تۆمارکراوە',
+                      macroBreakdown: 'دابەشبوونی ماکرۆکان زۆر باشە',
+                      mistakesAndBlindSpots: ['هیچ کێشەیەک نەبینرا'],
+                      actionableTomorrowFixes: ['هەمان ڕێژە بەردەوام بە'],
+                      customMealSuggestion: 'سنگی مریشک ١٥٠ گرام لەگەڵ برنج',
+                      coachNote: 'دەستخۆشیت لێ دەکەین بۆ ئەم بەردەوامییە',
+                    }),
+                  },
+                ],
+              },
+              finishReason: 'STOP',
+            },
+          ],
+        }),
+        { status: 200 }
+      );
+    };
+
+    const ckbReport = await generateDailyAIReport(
+      mockProfile,
+      testLog,
+      'ckb',
+      'test-api-key',
+      retryMockFetch
+    );
+    assert(fetchCalls === 2, 'Should have retried once on script failure');
+    assert(ckbReport.language === 'ckb', 'Report language should be ckb');
+    assert(ckbReport.headline.includes('هاوسەنگی وزە'), 'Report should be in Kurdish after retry');
+
+    // Test fallback when retry also returns English
+    const englishOnlyFetch: any = async () => {
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      overallGrade: 'A',
+                      headline: 'English headline again',
+                      caloricBalance: '2000 kcal logged',
+                      macroBreakdown: 'English macro breakdown',
+                      mistakesAndBlindSpots: ['None'],
+                      actionableTomorrowFixes: ['Keep going'],
+                      customMealSuggestion: 'Chicken breast 150g',
+                      coachNote: 'Good job',
+                    }),
+                  },
+                ],
+              },
+              finishReason: 'STOP',
+            },
+          ],
+        }),
+        { status: 200 }
+      );
+    };
+
+    const ckbFallbackReport = await generateDailyAIReport(
+      mockProfile,
+      testLog,
+      'ckb',
+      'test-api-key',
+      englishOnlyFetch
+    );
+    assert(ckbFallbackReport.language === 'ckb', 'Fallback report language should be ckb');
+    assert(ckbFallbackReport.coachNote.includes('نەتوانرا وەڵام بە کوردی'), 'Fallback should notify user in coachNote');
+
     console.log('✓ generateDailyAIReport with Gemini and local fallback tested.');
+  }
+
+  // 3b. askNutritionCoach script validation & fallback tests
+  {
+    let chatCalls = 0;
+    const chatMockFetch: any = async () => {
+      chatCalls++;
+      if (chatCalls === 1) {
+        return new Response(
+          JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [{ text: 'Here is your nutrition advice in English.' }],
+                },
+                finishReason: 'STOP',
+              },
+            ],
+          }),
+          { status: 200 }
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [{ text: 'ئەمەش ئامۆژگاری خۆراکییە بە زمانی کوردی بۆ ئەمڕۆت.' }],
+              },
+              finishReason: 'STOP',
+            },
+          ],
+        }),
+        { status: 200 }
+      );
+    };
+
+    const chatReply = await askNutritionCoach(
+      'چۆن بووم ئەمڕۆ؟',
+      {
+        name: 'ئاراس',
+        goal: 'muscle_gain',
+        targetCalories: 2500,
+        calories: 2400,
+        protein: 160,
+        carbs: 250,
+        fat: 70,
+        waterGlasses: 8,
+      },
+      'ckb',
+      chatMockFetch,
+      async () => {},
+      async () => 'test-api-key'
+    );
+    assert(chatCalls === 2, 'askNutritionCoach should retry once when response is in English for ckb');
+    assert(chatReply.includes('ئامۆژگاری خۆراکییە'), 'askNutritionCoach should accept Kurdish on retry');
+
+    // When both calls return English, falls back to offline advice in Kurdish
+    const chatEnglishFetch: any = async () => {
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [{ text: 'Always English answer here.' }],
+              },
+              finishReason: 'STOP',
+            },
+          ],
+        }),
+        { status: 200 }
+      );
+    };
+
+    const offlineReply = await askNutritionCoach(
+      'چۆن بووم ئەمڕۆ؟',
+      {
+        name: 'ئاراس',
+        goal: 'muscle_gain',
+        targetCalories: 2500,
+        calories: 2400,
+        protein: 160,
+        carbs: 250,
+        fat: 70,
+        waterGlasses: 8,
+      },
+      'ckb',
+      chatEnglishFetch,
+      async () => {},
+      async () => 'test-api-key'
+    );
+    assert(offlineReply.includes('تێبینی: ئەم پێداچوونەوەیە بە شێوازی ناوخۆیی ئامادەکراوە'), 'Offline advice note should be present');
+    console.log('✓ askNutritionCoach script validation, retry, and offline fallback tested.');
   }
 
   // 4. Storage & Backup validation tests
@@ -283,6 +490,9 @@ async function runAIReportTests() {
       'protein',
       'carbs',
       'fat',
+      'Review in another language',
+      'This review was generated in a different language. Regenerate to view it in your current language.',
+      'Regenerate in',
     ];
 
     for (const key of requiredKeys) {

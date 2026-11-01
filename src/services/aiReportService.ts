@@ -2,6 +2,7 @@ import { AICoachReport, DailyLog, UserProfile, AppLanguage } from '../types';
 import { executeGeminiRequest } from '../utils/geminiCore';
 import { FetchFunction } from '../utils/geminiModels';
 import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
+import { validateReportLanguage, getLanguageSystemInstruction } from '../utils/aiLanguageValidation';
 
 /**
  * Validates and parses raw Gemini JSON response into an AICoachReport structure.
@@ -127,6 +128,7 @@ export function generateFallbackDailyReport(
       customMealSuggestion,
       coachNote,
       generatedAt: timeStr,
+      language,
     };
   }
 
@@ -257,6 +259,7 @@ export function generateFallbackDailyReport(
     customMealSuggestion,
     coachNote,
     generatedAt: timeStr,
+    language,
   };
 }
 
@@ -308,22 +311,31 @@ export async function generateDailyAIReport(
     },
   };
 
-  const languageName = language === 'ar' ? 'Arabic' : language === 'ckb' ? 'Sorani Kurdish' : 'English';
+  const systemInstruction = getLanguageSystemInstruction(language);
+  const languageTargetDescription =
+    language === 'ckb'
+      ? 'Sorani Kurdish (Central Kurdish, Arabic script; not Kurmanji; not Arabic)'
+      : language === 'ar'
+      ? 'Modern Standard Arabic (العربية)'
+      : 'English';
 
-  const prompt = `You are an AI fitness & nutrition coach, not a medical professional. Give balanced general nutrition feedback using only the supplied log; do not invent meals or diagnose conditions. Respect uncertainty and do not recommend extreme restriction.
-Return ONLY a JSON object with this exact schema, without markdown backticks or commentary:
+  const prompt = `${systemInstruction}
+
+You are an AI fitness & nutrition coach, not a medical professional. Give balanced general nutrition feedback using only the supplied log; do not invent meals or diagnose conditions. Respect uncertainty and do not recommend extreme restriction.
+
+Return ONLY a JSON object with this exact schema (keep JSON keys in English, write all string values in ${languageTargetDescription}):
 {
   "overallGrade": "A+ | A | B+ | B | C+ | C",
-  "headline": "Brief 1-line encouraging evaluation headline",
-  "caloricBalance": "Summary sentence of calories vs target",
-  "macroBreakdown": "Evaluation of protein, carb and fat balance",
-  "mistakesAndBlindSpots": ["Observation 1", "Observation 2"],
-  "actionableTomorrowFixes": ["Actionable fix 1", "Actionable fix 2"],
-  "customMealSuggestion": "A practical whole-food meal suggestion tailored to missing macros",
-  "coachNote": "An encouraging 2-sentence closing coach note"
+  "headline": "<one sentence>",
+  "caloricBalance": "<one sentence>",
+  "macroBreakdown": "<one sentence>",
+  "mistakesAndBlindSpots": ["<observation 1>", "<observation 2>"],
+  "actionableTomorrowFixes": ["<actionable fix 1>", "<actionable fix 2>"],
+  "customMealSuggestion": "<one sentence practical meal suggestion with grams>",
+  "coachNote": "<two sentence encouraging coach note>"
 }
+Keep numbers and units (e.g. kcal, g, P, C, F) standard.
 If the log is sparse or empty, state so clearly in headline and observations.
-Write all text fields in ${languageName}.
 Data: ${JSON.stringify(payload)}`;
 
   try {
@@ -331,12 +343,73 @@ Data: ${JSON.stringify(payload)}`;
       [{ text: prompt }],
       true,
       apiKey,
-      customFetch
+      customFetch,
+      undefined,
+      apiKeyGetter,
+      undefined,
+      undefined,
+      undefined,
+      systemInstruction,
+      language
     );
     const parsed = parseCoachResult(rawResult);
+    const validation = validateReportLanguage(parsed, language);
+
+    if (validation.isValid) {
+      return {
+        ...parsed,
+        generatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        language,
+      };
+    }
+
+    // Script validation failed (<70% Arabic script for ar/ckb) -> Retry ONCE with stronger prompt
+    const strongerPrompt = `${systemInstruction}
+
+CRITICAL REVISION: The previous response contained invalid script or English characters (${Math.round(validation.ratio * 100)}% Arabic script).
+You MUST write all JSON string values exclusively in ${languageTargetDescription}.
+Do not write English words in string values. Keep JSON keys in English.
+
+${prompt}`;
+
+    try {
+      const retryRaw = await executeGeminiRequest(
+        [{ text: strongerPrompt }],
+        true,
+        apiKey,
+        customFetch,
+        undefined,
+        apiKeyGetter,
+        undefined,
+        undefined,
+        undefined,
+        systemInstruction,
+        language
+      );
+      const retryParsed = parseCoachResult(retryRaw);
+      const retryValidation = validateReportLanguage(retryParsed, language);
+      if (retryValidation.isValid) {
+        return {
+          ...retryParsed,
+          generatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          language,
+        };
+      }
+    } catch {
+      // Retry failed, fall through to fallback
+    }
+
+    // Both attempts failed script validation -> fall back to local offline review in correct language
+    const fallback = generateFallbackDailyReport(profile, log, language);
     return {
-      ...parsed,
-      generatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      ...fallback,
+      language,
+      coachNote:
+        language === 'ckb'
+          ? 'تێبینی: نەتوانرا وەڵام بە کوردی لە سێرڤەرەوە دابین بکرێت. پێداچوونەوەی ناوخۆیی نیشان دراوە.'
+          : language === 'ar'
+          ? 'ملاحظة: تعذر استلام التقرير بالعربية من الخادم. تم عرض المراجعة المحلية المعتمدة.'
+          : fallback.coachNote,
     };
   } catch (err) {
     console.warn('Gemini report generation failed, falling back to local audit:', err);

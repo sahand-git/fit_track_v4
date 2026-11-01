@@ -60,7 +60,9 @@ export async function executeGeminiRequest(
   apiKeyGetter?: () => Promise<string | null>,
   modelOverride?: string,
   candidateModelsOverride?: string[],
-  storage?: StorageInterface
+  storage?: StorageInterface,
+  systemInstruction?: string,
+  language?: import('../types').AppLanguage
 ): Promise<string> {
   const apiKey = apiKeyOverride ?? (apiKeyGetter ? await apiKeyGetter() : null);
   if (!apiKey || !apiKey.trim()) {
@@ -75,11 +77,11 @@ export async function executeGeminiRequest(
 
   let fallbackChain: string[];
   if (candidateModelsOverride && candidateModelsOverride.length > 0) {
-    fallbackChain = buildModelFallbackChain(candidateModelsOverride, initialModel);
+    fallbackChain = buildModelFallbackChain(candidateModelsOverride, initialModel, language);
   } else {
     const cachedCandidates = await getCachedCandidateModels(storage);
     const pool = cachedCandidates.length > 0 ? cachedCandidates : DEFAULT_FALLBACK_MODELS;
-    fallbackChain = buildModelFallbackChain(pool, initialModel);
+    fallbackChain = buildModelFallbackChain(pool, initialModel, language);
   }
 
   let lastError: GeminiError | Error | null = null;
@@ -118,6 +120,7 @@ export async function executeGeminiRequest(
             },
             body: JSON.stringify({
               contents: [{ parts }],
+              ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {}),
               generationConfig: {
                 // Gemini 3 recommends the default temperature (1.0); do not override it.
                 ...(isGemini3Model(model) ? { thinkingConfig: { thinkingLevel: 'LOW' } } : {}),

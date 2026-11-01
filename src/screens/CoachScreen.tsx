@@ -33,8 +33,9 @@ import {
   ChevronDown,
   ChevronUp,
   X,
+  Globe,
 } from 'lucide-react-native';
-import { AICoachReport, DailyLog, UserProfile } from '../types';
+import { AICoachReport, DailyLog, UserProfile, AppLanguage } from '../types';
 import { AppText as Text } from '../components/AppText';
 import { translate } from '../i18n/strings';
 import { useLanguage } from '../i18n/I18nContext';
@@ -68,6 +69,7 @@ interface Message {
   id: string;
   role: 'user' | 'coach';
   text: string;
+  language?: AppLanguage;
   failed?: boolean;
   errorMessage?: string;
   providerDetail?: string | null;
@@ -183,7 +185,7 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
     [profile, log]
   );
 
-  const t = (value: string) => translate(language, value);
+  const t = useCallback((value: string) => translate(language, value), [language]);
 
   // Restore persisted chat history on mount
   useEffect(() => {
@@ -201,8 +203,10 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
                 id: m.id || createUniqueId('hist'),
                 role: m.role || 'user',
                 text: m.text || '',
+                language: m.language,
                 failed: Boolean(m.failed),
                 errorMessage: m.errorMessage,
+                providerDetail: m.providerDetail,
               }));
               setMessages((current) => (current.length > 0 ? [...normalized, ...current] : normalized));
             }
@@ -300,17 +304,15 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
       );
     } else {
       targetId = createUniqueId('msg');
-      setMessages((current) => [...current, { id: targetId, role: 'user', text: trimmed }]);
+      setMessages((current) => [...current, { id: targetId, role: 'user', text: trimmed, language }]);
       setInput('');
     }
 
     setBusy(true);
     try {
-      const languageName =
-        language === 'ar' ? 'Arabic' : language === 'ckb' ? 'Sorani Kurdish' : 'English';
       const activeMessages = retryMessageId
         ? messages.map((m) => (m.id === retryMessageId ? { ...m, failed: false } : m))
-        : [...messages, { id: targetId, role: 'user' as const, text: trimmed }];
+        : [...messages, { id: targetId, role: 'user' as const, text: trimmed, language }];
 
       const transcript = activeMessages
         .filter((item) => !item.failed)
@@ -331,10 +333,10 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
           burnedCalories,
           ...(workoutSummary ? { workouts: workoutSummary } : {}),
         } as any,
-        languageName
+        language
       );
       const replyId = createUniqueId('coach');
-      setMessages((current) => [...current, { id: replyId, role: 'coach', text: reply }]);
+      setMessages((current) => [...current, { id: replyId, role: 'coach', text: reply, language }]);
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
       }, 100);
@@ -362,6 +364,12 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
       isSendingRef.current = false;
     }
   };
+
+  const getLangLabel = useCallback((l: AppLanguage) => {
+    if (l === 'ar') return t('Arabic');
+    if (l === 'ckb') return t('Sorani Kurdish');
+    return t('English');
+  }, [t]);
 
   const report = log.aiReport;
 
@@ -589,8 +597,38 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
               </View>
             )}
 
-            {/* Report Content */}
-            {report ? (
+            {/* Report Content or Language Mismatch Notice */}
+            {report && (!report.language || report.language !== language) ? (
+              <View style={styles.languageMismatchCard}>
+                <View style={[styles.languageMismatchHeader, isRtl && styles.rowRtl]}>
+                  <Globe size={18} color={theme.colors.warning} />
+                  <Text style={styles.languageMismatchTitle}>
+                    {t('Review in another language')}
+                  </Text>
+                </View>
+                <Text style={styles.languageMismatchText}>
+                  {t('This review was generated in a different language. Regenerate to view it in your current language.')}
+                </Text>
+                <TouchableOpacity
+                  style={styles.regenerateLangBtn}
+                  onPress={handleRunAudit}
+                  disabled={isLoadingAudit}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('Regenerate in')} ${getLangLabel(language)}`}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  {isLoadingAudit ? (
+                    <ActivityIndicator size="small" color={theme.colors.textInverted} />
+                  ) : (
+                    <RotateCcw size={15} color={theme.colors.textInverted} />
+                  )}
+                  <Text style={styles.regenerateLangBtnText}>
+                    {`${t('Regenerate in')} ${getLangLabel(language)}`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : report ? (
               <View style={styles.reportContainer}>
                 {/* Status & Grade Banner */}
                 <View style={styles.gradeBanner}>
@@ -1106,6 +1144,49 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     color: theme.colors.danger,
     fontWeight: '500',
+  },
+  languageMismatchCard: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.warning,
+    borderRadius: theme.radius.xl,
+    padding: 16,
+    gap: 12,
+    marginTop: 10,
+    ...theme.shadow.subtle,
+  },
+  languageMismatchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  languageMismatchTitle: {
+    fontFamily: theme.fonts.serif,
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  languageMismatchText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: theme.colors.textSecondary,
+  },
+  regenerateLangBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: theme.radius.full,
+    gap: 8,
+    alignSelf: 'flex-start',
+    minHeight: 40,
+  },
+  regenerateLangBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textInverted,
   },
   reportContainer: {
     gap: 12,

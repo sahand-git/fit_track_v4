@@ -335,7 +335,7 @@ export const DEFAULT_FALLBACK_MODELS = [
  * Order: latest stable flash -> previous stable flash -> flash-lite -> others.
  * If activeModel is specified, it is placed first without duplicates.
  */
-export function buildModelFallbackChain(models: string[], activeModel?: string): string[] {
+export function buildModelFallbackChain(models: string[], activeModel?: string, language?: AppLanguage): string[] {
   const pool = models && models.length > 0 ? models : DEFAULT_FALLBACK_MODELS;
   const cleaned = pool.map((m) => m.replace(/^models\//, '').trim()).filter(Boolean);
 
@@ -414,6 +414,27 @@ export function buildModelFallbackChain(models: string[], activeModel?: string):
   }
   for (const o of others) {
     chain.push(o.name);
+  }
+
+  if (language === 'ckb') {
+    // For ckb (Sorani Kurdish), prefer stronger (non-lite) models first:
+    // Place all full flash and pro models before any flash-lite models
+    const nonLite = chain.filter((m) => !m.toLowerCase().includes('lite'));
+    const lite = chain.filter((m) => m.toLowerCase().includes('lite'));
+    const reordered = [...nonLite, ...lite];
+
+    if (activeModel) {
+      const cleanActive = activeModel.replace(/^models\//, '').trim();
+      const isActiveLite = cleanActive.toLowerCase().includes('lite');
+      if (isActiveLite && nonLite.length > 0) {
+        const remaining = reordered.filter((m) => m !== nonLite[0]);
+        return [nonLite[0], ...remaining];
+      }
+      const withoutActive = reordered.filter((m) => m !== cleanActive);
+      return [cleanActive, ...withoutActive];
+    }
+
+    return reordered.length > 0 ? reordered : DEFAULT_FALLBACK_MODELS;
   }
 
   if (activeModel) {

@@ -261,6 +261,7 @@ export interface AICoachReport {
   customMealSuggestion: string;
   coachNote: string;
   generatedAt: string;
+  language?: AppLanguage;
 }
 
 export interface DailyLog {
