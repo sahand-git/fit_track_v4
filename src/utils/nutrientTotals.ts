@@ -269,18 +269,31 @@ export function calculateNutrientDayProgress(
     for (const supp of supplements || []) {
       if (supp.taken) {
         const contrib = resolveSupplementNutrientContribution(supp);
-        if (contrib && contrib.nutrientKey === nutrientKey && contrib.amountInCanonicalUnit > 0) {
-          supplementTotal += contrib.amountInCanonicalUnit;
-          contributingItems.push({
-            id: supp.id,
-            name: supp.name,
-            mealType: 'supplement',
-            amount: contrib.amountInCanonicalUnit,
-            unit: meta.unit,
-            percentage: 0,
-            isMissing: false,
-            isSupplement: true,
-          });
+        if (contrib && contrib.nutrientKey === nutrientKey) {
+          if (contrib.isCompatibleUnit && contrib.amountInCanonicalUnit > 0) {
+            supplementTotal += contrib.amountInCanonicalUnit;
+            contributingItems.push({
+              id: supp.id,
+              name: supp.name,
+              mealType: 'supplement',
+              amount: contrib.amountInCanonicalUnit,
+              unit: meta.unit,
+              percentage: 0,
+              isMissing: false,
+              isSupplement: true,
+            });
+          } else if (!contrib.isCompatibleUnit) {
+            missingItems.push({
+              id: supp.id,
+              name: `${supp.name} (${supp.amount ?? ''} ${supp.unit ?? ''})`,
+              mealType: 'supplement',
+              amount: null,
+              unit: meta.unit,
+              percentage: 0,
+              isMissing: true,
+              isSupplement: true,
+            });
+          }
         }
       }
     }

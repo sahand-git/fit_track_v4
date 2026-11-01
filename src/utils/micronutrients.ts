@@ -183,26 +183,46 @@ export function findMatchingCatalogItem(
   return undefined;
 }
 
+export interface SupplementNutrientContribution {
+  nutrientKey: MicronutrientKey;
+  amountInCanonicalUnit: number;
+  isCompatibleUnit: boolean;
+  unitStatus: 'valid' | 'incompatible' | 'unknown';
+  doseWarning?: string;
+  unitWarning?: string;
+}
+
 /**
- * Calculates canonical nutrient intake contribution from a taken supplement.
+ * Calculates canonical nutrient intake contribution from a taken supplement,
+ * performing explicit unit conversion and plausible dose validation.
  */
 export function resolveSupplementNutrientContribution(supplement: {
   name: string;
   amount?: number;
   dose?: string;
   unit?: string;
-}): { nutrientKey: MicronutrientKey; amountInCanonicalUnit: number } | null {
+}): SupplementNutrientContribution | null {
   const catItem = findMatchingCatalogItem(supplement.name);
   if (!catItem || !catItem.nutrientKey) return null;
 
+  const nutrientKey = catItem.nutrientKey;
+  const meta = RDA_TARGETS[nutrientKey];
+  const canonicalUnit = meta.unit; // 'mg' or 'mcg'
+
   let rawAmount = supplement.amount;
-  const unit = (supplement.unit || catItem.suggestedUnit || '').trim().toLowerCase();
+  let rawUnit = (supplement.unit || '').trim();
 
   // If no numeric amount, parse from free-text dose string (e.g. "2000 IU", "500 mg")
   if ((rawAmount === undefined || isNaN(rawAmount) || rawAmount <= 0) && supplement.dose) {
     const parsed = supplement.dose.match(/(\d+(?:\.\d+)?)/);
     if (parsed) {
       rawAmount = parseFloat(parsed[1]);
+    }
+    if (!rawUnit) {
+      const unitMatch = supplement.dose.match(/(?:mg|mcg|µg|ug|g|iu)\b/i);
+      if (unitMatch) {
+        rawUnit = unitMatch[0];
+      }
     }
   }
 
@@ -211,30 +231,82 @@ export function resolveSupplementNutrientContribution(supplement: {
     rawAmount = catItem.defaultAmount ?? 0;
   }
 
+  // Fallback to catalog suggestedUnit
+  if (!rawUnit && catItem.suggestedUnit) {
+    rawUnit = catItem.suggestedUnit;
+  }
+
   if (rawAmount <= 0) return null;
 
-  // Apply unit conversion factor
-  let factor = catItem.nutrientConversionFactor ?? 1;
+  const norm = rawUnit.toLowerCase().replace(/[\s.]+/g, '');
+  let isCompatibleUnit = true;
+  let unitStatus: 'valid' | 'incompatible' | 'unknown' = 'valid';
+  let factor = 1;
+  let unitWarning: string | undefined = undefined;
 
-  // Handle unit mismatch (e.g., entered in IU vs mcg, or mg vs mcg)
-  if (catItem.nutrientKey === 'vitaminD') {
-    if (unit === 'iu') {
+  // Explicit unit conversions
+  if (norm === 'iu' || norm === 'internationalunits') {
+    if (nutrientKey === 'vitaminD') {
       factor = 0.025; // 1 IU = 0.025 mcg
-    } else if (unit === 'mcg') {
-      factor = 1;
-    }
-  } else if (catItem.nutrientKey === 'vitaminA') {
-    if (unit === 'iu') {
+    } else if (nutrientKey === 'vitaminA') {
       factor = 0.3; // 1 IU = 0.3 mcg RAE
-    } else if (unit === 'mcg') {
+    } else {
+      isCompatibleUnit = false;
+      unitStatus = 'incompatible';
+      unitWarning = 'Check unit';
+      factor = 0;
+    }
+  } else if (norm === 'mcg' || norm === 'µg' || norm === 'ug' || norm === 'microgram' || norm === 'micrograms') {
+    if (canonicalUnit === 'mcg') {
       factor = 1;
+    } else {
+      // canonical is mg
+      factor = 0.001;
+    }
+  } else if (norm === 'mg' || norm === 'milligram' || norm === 'milligrams') {
+    if (canonicalUnit === 'mg') {
+      factor = 1;
+    } else {
+      // canonical is mcg
+      factor = 1000;
+    }
+  } else if (norm === 'g' || norm === 'gram' || norm === 'grams') {
+    if (canonicalUnit === 'mg') {
+      factor = 1000;
+    } else {
+      // canonical is mcg
+      factor = 1000000;
+    }
+  } else {
+    isCompatibleUnit = false;
+    unitStatus = 'unknown';
+    unitWarning = 'Check unit';
+    factor = 0;
+  }
+
+  const canonicalAmount = isCompatibleUnit
+    ? Math.round(rawAmount * factor * 10) / 10
+    : 0;
+
+  // Plausible dose warnings (neutral wording, no medical advice)
+  let doseWarning: string | undefined = undefined;
+  if (isCompatibleUnit && canonicalAmount > 0) {
+    if (meta.upperLimit && canonicalAmount > meta.upperLimit) {
+      doseWarning = 'Higher than typical daily guidance. Verify label.';
+    } else if (nutrientKey === 'vitaminB12' && canonicalAmount > 3000) {
+      doseWarning = 'Higher than typical daily guidance. Verify label.';
+    } else if (nutrientKey === 'potassium' && canonicalAmount > 1000) {
+      doseWarning = 'Higher than typical daily guidance. Verify label.';
     }
   }
 
-  const canonicalAmount = Math.round(rawAmount * factor * 10) / 10;
   return {
-    nutrientKey: catItem.nutrientKey,
+    nutrientKey,
     amountInCanonicalUnit: canonicalAmount,
+    isCompatibleUnit,
+    unitStatus,
+    doseWarning,
+    unitWarning,
   };
 }
 
@@ -323,7 +395,7 @@ export function calculateMicronutrientIntake(
   for (const s of supplements) {
     if (s.taken) {
       const contrib = resolveSupplementNutrientContribution(s);
-      if (contrib) {
+      if (contrib && contrib.isCompatibleUnit && contrib.amountInCanonicalUnit > 0) {
         supplementTotals[contrib.nutrientKey] += contrib.amountInCanonicalUnit;
         hasSuppData[contrib.nutrientKey] = true;
       }

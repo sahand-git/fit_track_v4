@@ -5,6 +5,7 @@ import { AppText as Text } from '../AppText';
 import { Plus, Minus, Edit3, Trash2 } from 'lucide-react-native';
 import { LoggedDailySupplement } from '../../types';
 import { AnimatedCheckbox } from '../AnimatedCheckbox';
+import { resolveSupplementNutrientContribution } from '../../utils/micronutrients';
 import {
   getItemEnterAnimation,
   getItemExitAnimation,
@@ -54,6 +55,9 @@ export const SupplementItemRow: React.FC<SupplementItemRowProps> = ({
   const styles = getSupplementRowStyles(theme);
   const hasNumericAmount =
     item.amount !== undefined && item.amount > 0 && Boolean(item.unit);
+  const contrib = React.useMemo(() => {
+    return resolveSupplementNutrientContribution(item);
+  }, [item]);
 
   return (
     <Animated.View
@@ -85,6 +89,16 @@ export const SupplementItemRow: React.FC<SupplementItemRowProps> = ({
               <Text style={styles.categoryPillText}>
                 {t(categoryLabels[item.category] || item.category)}
               </Text>
+            </View>
+          )}
+          {contrib && !contrib.isCompatibleUnit && (
+            <View style={styles.warningPill}>
+              <Text style={styles.warningPillText}>{t('Check unit')}</Text>
+            </View>
+          )}
+          {contrib && contrib.isCompatibleUnit && contrib.doseWarning && (
+            <View style={styles.warningPill}>
+              <Text style={styles.warningPillText}>{t('High dose')}</Text>
             </View>
           )}
         </View>
@@ -204,6 +218,19 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     color: theme.colors.textSecondary,
     fontWeight: '500',
+  },
+  warningPill: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.amberBorder,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: theme.radius.full,
+  },
+  warningPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.amberText,
   },
   itemBottomRow: {
     flexDirection: 'row',

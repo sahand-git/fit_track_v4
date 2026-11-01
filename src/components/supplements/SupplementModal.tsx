@@ -17,6 +17,7 @@ import {
   AppLanguage,
 } from '../../types';
 import { CatalogSupplementItem } from '../../data/supplementCatalog';
+import { resolveSupplementNutrientContribution } from '../../utils/micronutrients';
 import { useTheme } from '../../theme/ThemeContext';
 import { ThemeType } from '../../theme';
 import { categoryLabels, timeLabels } from './supplementTypes';
@@ -89,6 +90,16 @@ export const SupplementModal: React.FC<SupplementModalProps> = ({
 }) => {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  const parsedAmt = parseFloat(formAmount);
+  const currentContribution = useMemo(() => {
+    if (!formName.trim() || isNaN(parsedAmt) || parsedAmt <= 0) return null;
+    return resolveSupplementNutrientContribution({
+      name: formName,
+      amount: parsedAmt,
+      unit: formUnit,
+    });
+  }, [formName, parsedAmt, formUnit]);
   return (
     <Modal
       visible={visible}
@@ -332,6 +343,22 @@ export const SupplementModal: React.FC<SupplementModalProps> = ({
                     </ScrollView>
                   </View>
                 </View>
+
+                {/* Plausible dose and unit warnings */}
+                {currentContribution && !currentContribution.isCompatibleUnit && (
+                  <View style={styles.warningNoticeBox}>
+                    <Text style={styles.warningNoticeText}>
+                      {t('Check unit')}: {t('Unit does not match typical intake')}
+                    </Text>
+                  </View>
+                )}
+                {currentContribution && currentContribution.isCompatibleUnit && currentContribution.doseWarning && (
+                  <View style={styles.warningNoticeBox}>
+                    <Text style={styles.warningNoticeText}>
+                      {t('Higher than typical daily guidance. Verify label.')}
+                    </Text>
+                  </View>
+                )}
 
                 {/* Optional Note */}
                 <View style={styles.inputGroup}>
@@ -649,6 +676,20 @@ const createStyles = (theme: ThemeType) =>
   },
   unitChipTextActive: {
     color: theme.colors.textInverted,
+  },
+  warningNoticeBox: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderColor: theme.colors.amberBorder,
+    borderWidth: 1,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    marginTop: 8,
+  },
+  warningNoticeText: {
+    fontSize: 12,
+    color: theme.colors.amberText,
+    lineHeight: 16,
   },
   targetChoiceRow: {
     flexDirection: 'row',
