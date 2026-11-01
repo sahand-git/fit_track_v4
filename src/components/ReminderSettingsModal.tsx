@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Switch,
-  Alert,
   Linking,
   Platform,
 } from 'react-native';
+import { useAppDialog } from './dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
 import {
@@ -83,6 +83,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
@@ -120,20 +121,17 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
     }
 
     if (!current.canAskAgain) {
-      Alert.alert(
-        t('Notifications Permission'),
-        t('FitTrack needs notification permission to remind you about supplements, water, and meals at your chosen times.'),
-        [
-          { text: t('Cancel'), style: 'cancel' },
-          {
-            text: t('Open Settings'),
-            onPress: () => {
-              if (Platform.OS === 'ios') Linking.openURL('app-settings:');
-              else Linking.openSettings();
-            },
-          },
-        ]
-      );
+      dialog.confirm({
+        title: t('Notifications Permission'),
+        message: t('FitTrack needs notification permission to remind you about supplements, water, and meals at your chosen times.'),
+        confirmText: t('Open Settings'),
+        cancelText: t('Cancel'),
+      }).then((ok) => {
+        if (ok) {
+          if (Platform.OS === 'ios') Linking.openURL('app-settings:');
+          else Linking.openSettings();
+        }
+      });
       return false;
     }
 
@@ -264,7 +262,10 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
       onClose();
     } catch (err) {
       console.warn('Error saving reminders:', err);
-      Alert.alert(t('Save Error'), t('Could not save reminder settings. Please try again.'));
+      dialog.notify({
+        title: t('Save Error'),
+        message: t('Could not save reminder settings. Please try again.'),
+      });
     } finally {
       setIsSaving(false);
     }

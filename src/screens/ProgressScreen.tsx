@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
-  Alert,
   Platform,
   BackHandler,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
@@ -56,6 +56,7 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const bottomPadding = Math.max(120, insets.bottom + 90);
   const t = useCallback((key: string) => translate(language, key), [language]);
@@ -182,7 +183,10 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
   const handleSaveWeight = async () => {
     const num = parseFloat(inputWeight);
     if (isNaN(num) || num < 25 || num > 350) {
-      Alert.alert(t('Invalid Weight'), t('Please enter a realistic weight between 25 and 350 kg.'));
+      dialog.notify({
+        title: t('Invalid Weight'),
+        message: t('Please enter a realistic weight between 25 and 350 kg.'),
+      });
       return;
     }
 
@@ -207,21 +211,17 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
 
   const handleDeleteEntry = async (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    Alert.alert(
-      t('Delete weight entry'),
-      t('Are you sure you want to delete this weight record?'),
-      [
-        { text: t('Cancel'), style: 'cancel' },
-        {
-          text: t('Delete'),
-          style: 'destructive',
-          onPress: async () => {
-            const updated = await removeWeightEntry(id);
-            setHistory(updated);
-          },
-        },
-      ]
-    );
+    const confirmed = await dialog.confirm({
+      title: t('Delete weight entry'),
+      message: t('Are you sure you want to delete this weight record?'),
+      confirmText: t('Delete'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (confirmed) {
+      const updated = await removeWeightEntry(id);
+      setHistory(updated);
+    }
   };
 
   return (

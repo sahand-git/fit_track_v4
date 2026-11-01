@@ -5,8 +5,8 @@ import {
   Modal,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
+import { useAppDialog } from './dialogs/AppDialogProvider';
 import { AppText as Text } from './AppText';
 import {
   Download,
@@ -47,6 +47,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
+  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
@@ -71,7 +72,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
       }, 1000);
     } catch (err: any) {
       if (!err?.message?.includes('cancel')) {
-        Alert.alert(t('Export Failed'), err?.message || t('Could not export backup.'));
+        dialog.notify({ title: t('Export Failed'), message: err?.message || t('Could not export backup.') });
       }
     } finally {
       setIsExporting(false);
@@ -88,10 +89,10 @@ export const BackupModal: React.FC<BackupModalProps> = ({
       }
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      Alert.alert(
-        t('Invalid Backup File'),
-        t('The selected file is not a valid FitTrack backup format.')
-      );
+      dialog.notify({
+        title: t('Invalid Backup File'),
+        message: t('The selected file is not a valid FitTrack backup format.'),
+      });
     } finally {
       setIsImporting(false);
     }
@@ -111,28 +112,26 @@ export const BackupModal: React.FC<BackupModalProps> = ({
       }, 950);
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      Alert.alert(
-        t('Restore Failed'),
-        err?.message || t('Could not restore backup safely. Existing data was left untouched.')
-      );
+      dialog.notify({
+        title: t('Restore Failed'),
+        message: err?.message || t('Could not restore backup safely. Existing data was left untouched.'),
+      });
     }
   };
 
   const handleApplyRestore = async (mode: 'merge' | 'replace') => {
     if (!pendingBackup) return;
     if (mode === 'replace') {
-      Alert.alert(
-        t('Replace All Data?'),
-        t('This will replace your current fitness history with this backup file. Are you sure you want to proceed?'),
-        [
-          { text: t('Cancel'), style: 'cancel' },
-          {
-            text: t('Replace'),
-            style: 'destructive',
-            onPress: () => executeRestore(mode),
-          },
-        ]
-      );
+      const confirmed = await dialog.confirm({
+        title: t('Replace All Data?'),
+        message: t('This will replace your current fitness history with this backup file. Are you sure you want to proceed?'),
+        confirmText: t('Replace'),
+        cancelText: t('Cancel'),
+        destructive: true,
+      });
+      if (confirmed) {
+        await executeRestore(mode);
+      }
       return;
     }
     await executeRestore(mode);

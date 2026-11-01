@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Alert, Linking, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { Check, ChevronDown, ChevronUp, Cloud, Copy, ExternalLink, LogIn, LogOut, Mail, ShieldCheck, Trash2, Wrench } from 'lucide-react-native';
 import { DirectionalIcon } from '../components/DirectionalIcon';
 import * as Clipboard from 'expo-clipboard';
@@ -25,6 +26,7 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
   const [mode, setMode] = useState<'login' | 'create'>('login');
@@ -102,21 +104,19 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
         if (guestSummary.weightsCount > 0) parts.push(`${guestSummary.weightsCount} ${t('weight records')}`);
 
         const itemsStr = parts.join(', ');
-        Alert.alert(
-          t("Copy this device's data into your account?"),
-          `${t('Found')} ${itemsStr} ${t("recorded on this device. Would you like to copy them into your account? Your guest data will remain safe.")}`,
-          [
-            { text: t('Start fresh'), style: 'cancel' },
-            {
-              text: t('Copy to account'),
-              style: 'default',
-              onPress: () => perform(async () => {
-                await copyGuestDataToAccount(uid);
-                onRestoreComplete();
-              }, 'Device data copied to your account.'),
-            },
-          ]
-        );
+        dialog.confirm({
+          title: t("Copy this device's data into your account?"),
+          message: `${t('Found')} ${itemsStr} ${t("recorded on this device. Would you like to copy them into your account? Your guest data will remain safe.")}`,
+          confirmText: t('Copy to account'),
+          cancelText: t('Start fresh'),
+        }).then((confirmed) => {
+          if (confirmed) {
+            perform(async () => {
+              await copyGuestDataToAccount(uid);
+              onRestoreComplete();
+            }, 'Device data copied to your account.');
+          }
+        });
       }
     } catch (copyCheckErr) {
       console.warn('Could not check guest data for copy offer:', copyCheckErr);
@@ -128,29 +128,23 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
       const backupMeta = await getCloudBackupMetadata(uid);
       if (backupMeta?.exists) {
         const dateStr = backupMeta.exportedAt ? new Date(backupMeta.exportedAt).toLocaleDateString() : '';
-        Alert.alert(
-          t('Restore cloud backup?'),
-          dateStr
+        dialog.confirm({
+          title: t('Restore cloud backup?'),
+          message: dateStr
             ? `${t('A cloud backup from')} ${dateStr} ${t('is available in your account. Would you like to restore it now?')}`
             : t('A cloud backup is available in your account. Would you like to restore it now?'),
-          [
-            {
-              text: t('Skip'),
-              style: 'cancel',
-              onPress: () => {
-                checkGuestDataOffer(uid);
-              },
-            },
-            {
-              text: t('Restore'),
-              style: 'default',
-              onPress: () => perform(async () => {
-                await restoreCloudBackup(uid);
-                onRestoreComplete();
-              }, 'Cloud backup restored'),
-            },
-          ]
-        );
+          confirmText: t('Restore'),
+          cancelText: t('Skip'),
+        }).then((confirmed) => {
+          if (confirmed) {
+            perform(async () => {
+              await restoreCloudBackup(uid);
+              onRestoreComplete();
+            }, 'Cloud backup restored');
+          } else {
+            checkGuestDataOffer(uid);
+          }
+        });
         return;
       }
     } catch (backupCheckErr) {
@@ -189,10 +183,10 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
     try {
       await Linking.openURL(PRIVACY_POLICY_URL);
     } catch {
-      Alert.alert(
-        t('Privacy Policy'),
-        t('FitTrack operates offline-first. Your nutrition, workout, and biometric data stays strictly on your device unless you explicitly opt in to Firebase Cloud Backup or Gemini AI plate analysis.')
-      );
+      dialog.notify({
+        title: t('Privacy Policy'),
+        message: t('FitTrack operates offline-first. Your nutrition, workout, and biometric data stays strictly on your device unless you explicitly opt in to Firebase Cloud Backup or Gemini AI plate analysis.'),
+      });
     }
   };
 
@@ -202,20 +196,38 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
     setMessage(`${t('Cloud backup saved')}: ${new Date(result.exportedAt).toLocaleString()}`);
   }, 'Cloud backup saved');
 
-  const restore = () => {
+  const restore = async () => {
     if (!user) return;
-    Alert.alert(t('Restore cloud backup?'), t('This replaces the fitness data stored on this device with the backup in your account. Export a local copy first if you need both.'), [
-      { text: t('Cancel'), style: 'cancel' },
-      { text: t('Restore'), style: 'destructive', onPress: () => perform(async () => { await restoreCloudBackup(user.uid); onRestoreComplete(); }, 'Cloud backup restored') },
-    ]);
+    const ok = await dialog.confirm({
+      title: t('Restore cloud backup?'),
+      message: t('This replaces the fitness data stored on this device with the backup in your account. Export a local copy first if you need both.'),
+      confirmText: t('Restore'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (ok) {
+      perform(async () => {
+        await restoreCloudBackup(user.uid);
+        onRestoreComplete();
+      }, 'Cloud backup restored');
+    }
   };
 
-  const removeAccount = () => {
+  const removeAccount = async () => {
     if (!user) return;
-    Alert.alert(t('Delete account and cloud backup?'), t('This permanently deletes your Firebase account and its cloud backup. Local records on this device remain available as guest data.'), [
-      { text: t('Cancel'), style: 'cancel' },
-      { text: t('Delete account'), style: 'destructive', onPress: () => perform(async () => { await deleteAccountAndBackup(user.uid, password); setPassword(''); }, 'Account deleted') },
-    ]);
+    const ok = await dialog.confirm({
+      title: t('Delete account and cloud backup?'),
+      message: t('This permanently deletes your Firebase account and its cloud backup. Local records on this device remain available as guest data.'),
+      confirmText: t('Delete account'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (ok) {
+      perform(async () => {
+        await deleteAccountAndBackup(user.uid, password);
+        setPassword('');
+      }, 'Account deleted');
+    }
   };
 
   return (

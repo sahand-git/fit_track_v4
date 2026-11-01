@@ -8,9 +8,9 @@ import {
   TouchableOpacity,
   View,
   Platform,
-  Alert,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getScopedStorageKey, saveDailyAIReport } from '../storage/storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -76,6 +76,7 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const isRtl = useIsRTL();
   const [currentSubView, setCurrentSubView] = useState<'audit' | 'chat'>('audit');
@@ -179,26 +180,22 @@ export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ p
       });
   }, []);
 
-  const confirmClearConversation = () => {
-    Alert.alert(
-      t('Clear conversation'),
-      t('Are you sure you want to clear your chat history?'),
-      [
-        { text: t('Cancel'), style: 'cancel' },
-        {
-          text: t('Clear'),
-          style: 'destructive',
-          onPress: async () => {
-            setMessages([]);
-            try {
-              await AsyncStorage.removeItem(getScopedStorageKey(COACH_HISTORY_KEY));
-            } catch (err) {
-              console.warn('Failed to clear coach history:', err);
-            }
-          },
-        },
-      ]
-    );
+  const confirmClearConversation = async () => {
+    const ok = await dialog.confirm({
+      title: t('Clear conversation'),
+      message: t('Are you sure you want to clear your chat history?'),
+      confirmText: t('Clear'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (ok) {
+      setMessages([]);
+      try {
+        await AsyncStorage.removeItem(getScopedStorageKey(COACH_HISTORY_KEY));
+      } catch (err) {
+        console.warn('Failed to clear coach history:', err);
+      }
+    }
   };
 
   // Persist messages whenever chat changes

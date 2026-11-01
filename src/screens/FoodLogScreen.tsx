@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   Platform,
   BackHandler,
-  Alert,
 } from 'react-native';
+import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
@@ -68,6 +68,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
+  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const t = (value: string) => translate(language, value);
@@ -154,20 +155,18 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
     setAddSheetVisible(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    Alert.alert(
-      t('Delete food item'),
-      t('Are you sure you want to delete this item?'),
-      [
-        { text: t('Cancel'), style: 'cancel' },
-        {
-          text: t('Delete'),
-          style: 'destructive',
-          onPress: () => onRemoveMeal(id),
-        },
-      ]
-    );
+    const confirmed = await dialog.confirm({
+      title: t('Delete food item'),
+      message: t('Are you sure you want to delete this item?'),
+      confirmText: t('Delete'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (confirmed) {
+      onRemoveMeal(id);
+    }
   };
 
   const handleUpdateInspectingServings = (newServings: number) => {

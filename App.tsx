@@ -4,11 +4,11 @@ import {
   View,
   TouchableOpacity,
   Platform,
-  Alert,
   BackHandler,
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { AppDialogProvider, appDialog } from './src/components/dialogs/AppDialogProvider';
 import { AppText as Text } from './src/components/AppText';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -597,7 +597,7 @@ function FitTrackApp() {
       }
     } catch (err) {
       console.error('Failed to update water:', err);
-      Alert.alert(t('Error'), t('Could not update water intake.'));
+      appDialog.notify({ title: t('Error'), message: t('Could not update water intake.') });
     }
   }, [t]);
 
@@ -611,7 +611,7 @@ function FitTrackApp() {
       await refreshStreak();
     } catch (err) {
       console.error('Failed to add meal:', err);
-      Alert.alert(t('Error'), t('Failed to save meal.'));
+      appDialog.notify({ title: t('Error'), message: t('Failed to save meal.') });
     }
   }, [refreshStreak, t]);
 
@@ -624,7 +624,7 @@ function FitTrackApp() {
       }
     } catch (err) {
       console.error('Failed to update meal:', err);
-      Alert.alert(t('Error'), t('Failed to update meal.'));
+      appDialog.notify({ title: t('Error'), message: t('Failed to update meal.') });
     }
   }, [t]);
 
@@ -638,7 +638,7 @@ function FitTrackApp() {
       await refreshStreak();
     } catch (err) {
       console.error('Failed to remove meal:', err);
-      Alert.alert(t('Error'), t('Failed to remove meal.'));
+      appDialog.notify({ title: t('Error'), message: t('Failed to remove meal.') });
     }
   }, [refreshStreak, t]);
 
@@ -669,7 +669,7 @@ function FitTrackApp() {
       setSelectedDate(getTodayDateString());
     } catch (err) {
       console.error('Error saving user profile:', err);
-      Alert.alert(t('Save Error'), t('Could not save your profile changes. Please try again.'));
+      appDialog.notify({ title: t('Save Error'), message: t('Could not save your profile changes. Please try again.') });
     }
   };
 
@@ -683,7 +683,7 @@ function FitTrackApp() {
       await reconcileNotificationLanguage(nextLanguage, supplementRoutine);
     } catch (err) {
       console.error('Error changing language:', err);
-      Alert.alert(t('Save Error'), t('Could not save language preference. Please try again.'));
+      appDialog.notify({ title: t('Save Error'), message: t('Could not save language preference. Please try again.') });
     }
   };
 
@@ -725,7 +725,7 @@ function FitTrackApp() {
       await refreshStreak();
     } catch (err) {
       console.error('Failed to add workout:', err);
-      Alert.alert(t('Error'), t('Failed to save workout.'));
+      appDialog.notify({ title: t('Error'), message: t('Failed to save workout.') });
     }
   }, [refreshStreak, t]);
 
@@ -739,7 +739,7 @@ function FitTrackApp() {
       await refreshStreak();
     } catch (err) {
       console.error('Failed to delete workout:', err);
-      Alert.alert(t('Error'), t('Failed to delete workout.'));
+      appDialog.notify({ title: t('Error'), message: t('Failed to delete workout.') });
     }
   }, [refreshStreak, t]);
 
@@ -877,30 +877,32 @@ function FitTrackApp() {
     return (
       <I18nProvider language={language}>
         <ThemeProvider themeMode={profile.themeMode}>
-          <ThemedAppLayout
-            direction={language === 'en' ? 'ltr' : 'rtl'}
-            paddingTop={getScreenTopOffset(insets.top, Platform.OS)}
-          >
-            <ThemedStatusBar />
-            <MedicalDisclaimerModal
-              visible={true}
-              onAccept={async () => {
-                try {
-                  await saveMedicalDisclaimerAccepted(true);
-                } catch (e) {
-                  console.error('Failed to save medical disclaimer acceptance:', e);
-                }
-                setProfile((prev) => ({ ...prev, hasAcceptedMedicalDisclaimer: true }));
-              }}
-              isFirstRun={true}
-              onOpenReferences={() => setReferencesModalVisible(true)}
-            />
-            <ScientificReferencesModal
-              visible={referencesModalVisible}
-              onClose={() => setReferencesModalVisible(false)}
-              onOpenDisclaimer={() => setReferencesModalVisible(false)}
-            />
-          </ThemedAppLayout>
+          <AppDialogProvider>
+            <ThemedAppLayout
+              direction={language === 'en' ? 'ltr' : 'rtl'}
+              paddingTop={getScreenTopOffset(insets.top, Platform.OS)}
+            >
+              <ThemedStatusBar />
+              <MedicalDisclaimerModal
+                visible={true}
+                onAccept={async () => {
+                  try {
+                    await saveMedicalDisclaimerAccepted(true);
+                  } catch (e) {
+                    console.error('Failed to save medical disclaimer acceptance:', e);
+                  }
+                  setProfile((prev) => ({ ...prev, hasAcceptedMedicalDisclaimer: true }));
+                }}
+                isFirstRun={true}
+                onOpenReferences={() => setReferencesModalVisible(true)}
+              />
+              <ScientificReferencesModal
+                visible={referencesModalVisible}
+                onClose={() => setReferencesModalVisible(false)}
+                onOpenDisclaimer={() => setReferencesModalVisible(false)}
+              />
+            </ThemedAppLayout>
+          </AppDialogProvider>
         </ThemeProvider>
       </I18nProvider>
     );
@@ -910,13 +912,15 @@ function FitTrackApp() {
     return (
       <I18nProvider language={language}>
         <ThemeProvider themeMode={profile.themeMode}>
-          <ThemedAppLayout
-            direction={language === 'en' ? 'ltr' : 'rtl'}
-            paddingTop={getScreenTopOffset(insets.top, Platform.OS)}
-          >
-            <ThemedStatusBar />
-            <OnboardingModal onComplete={handleSaveProfile} onLanguageChange={setAppLanguage} />
-          </ThemedAppLayout>
+          <AppDialogProvider>
+            <ThemedAppLayout
+              direction={language === 'en' ? 'ltr' : 'rtl'}
+              paddingTop={getScreenTopOffset(insets.top, Platform.OS)}
+            >
+              <ThemedStatusBar />
+              <OnboardingModal onComplete={handleSaveProfile} onLanguageChange={setAppLanguage} />
+            </ThemedAppLayout>
+          </AppDialogProvider>
         </ThemeProvider>
       </I18nProvider>
     );
@@ -928,11 +932,12 @@ function FitTrackApp() {
   return (
     <I18nProvider language={language}>
       <ThemeProvider themeMode={profile.themeMode}>
-        <ThemedAppLayout
-          direction={language === 'en' ? 'ltr' : 'rtl'}
-          paddingTop={getScreenTopOffset(insets.top, Platform.OS)}
-        >
-          <ThemedStatusBar />
+        <AppDialogProvider>
+          <ThemedAppLayout
+            direction={language === 'en' ? 'ltr' : 'rtl'}
+            paddingTop={getScreenTopOffset(insets.top, Platform.OS)}
+          >
+            <ThemedStatusBar />
 
         {/* Main Screen Body */}
         <ScreenTransitionView
@@ -1081,6 +1086,7 @@ function FitTrackApp() {
           insetsBottom={insets.bottom}
         />
       </ThemedAppLayout>
+      </AppDialogProvider>
       </ThemeProvider>
     </I18nProvider>
   );

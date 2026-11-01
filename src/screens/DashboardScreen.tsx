@@ -5,8 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
-  Alert,
 } from 'react-native';
+import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
@@ -105,6 +105,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
+  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const t = useCallback((str: string) => translate(language, str), [language]);
@@ -641,20 +642,18 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
                       </View>
                     </View>
                     <TouchableOpacity
-                      onPress={() => {
+                      onPress={async () => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                        Alert.alert(
-                          t('Delete workout'),
-                          t('Are you sure you want to delete this workout?'),
-                          [
-                            { text: t('Cancel'), style: 'cancel' },
-                            {
-                              text: t('Delete'),
-                              style: 'destructive',
-                              onPress: () => onDeleteWorkout(w.id),
-                            },
-                          ]
-                        );
+                        const confirmed = await dialog.confirm({
+                          title: t('Delete workout'),
+                          message: t('Are you sure you want to delete this workout?'),
+                          confirmText: t('Delete'),
+                          cancelText: t('Cancel'),
+                          destructive: true,
+                        });
+                        if (confirmed) {
+                          onDeleteWorkout(w.id);
+                        }
                       }}
                       style={styles.deleteWorkoutBtn}
                       accessibilityRole="button"

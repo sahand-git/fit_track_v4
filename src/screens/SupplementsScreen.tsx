@@ -4,10 +4,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
-  Alert,
   Platform,
   BackHandler,
 } from 'react-native';
+import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CheckCircle2,
@@ -85,6 +85,7 @@ export function SupplementsScreen({
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
 
@@ -382,7 +383,10 @@ export function SupplementsScreen({
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (err) {
       console.error('Failed to save supplement:', err);
-      Alert.alert(t('Save Error'), t('Could not save supplement. Please try again.'));
+      dialog.notify({
+        title: t('Save Error'),
+        message: t('Could not save supplement. Please try again.'),
+      });
     } finally {
       setIsSavingSupplement(false);
     }

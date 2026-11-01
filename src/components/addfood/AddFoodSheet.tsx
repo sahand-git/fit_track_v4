@@ -9,11 +9,11 @@ import {
   FlatList,
   ActivityIndicator,
   Platform,
-  Alert,
   Dimensions,
   InteractionManager,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useAppDialog } from '../dialogs/AppDialogProvider';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -245,6 +245,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = useCallback((str: string) => translate(language, str), [language]);
 
@@ -596,11 +597,11 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     if (!cameraPermission?.granted) {
       const res = await requestCameraPermission();
       if (!res.granted) {
-        Alert.alert(
-          t('Camera Permission Required'),
-          t('Live barcode scanning requires camera permission. You can still look up any barcode manually.'),
-          [{ text: t('OK') }]
-        );
+        dialog.notify({
+          title: t('Camera Permission Required'),
+          message: t('Live barcode scanning requires camera permission. You can still look up any barcode manually.'),
+          buttonText: t('OK'),
+        });
         return;
       }
     }
@@ -684,22 +685,18 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     );
 
     if (isIncomplete) {
-      Alert.alert(
-        t('Incomplete Nutrition Data'),
-        t('This food is missing full nutrition information. Would you like to log it anyway or customize the values first?'),
-        [
-          { text: t('Cancel'), style: 'cancel' },
-          {
-            text: t('Customize Values'),
-            onPress: () => handleCustomizeSelectedFood(),
-          },
-          {
-            text: t('Log Anyway'),
-            style: 'destructive',
-            onPress: () => doSaveMeal(),
-          },
-        ]
-      );
+      dialog.confirm({
+        title: t('Incomplete Nutrition Data'),
+        message: t('This food is missing full nutrition information. Would you like to log it anyway or customize the values first?'),
+        confirmText: t('Customize Values'),
+        cancelText: t('Log Anyway'),
+      }).then((customize) => {
+        if (customize) {
+          handleCustomizeSelectedFood();
+        } else {
+          doSaveMeal();
+        }
+      });
       return;
     }
 
@@ -800,7 +797,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       const yesterday = getPreviousDayString(date);
       const yesterdayLog = await loadDailyLog(yesterday);
       if (!yesterdayLog.meals || yesterdayLog.meals.length === 0) {
-        Alert.alert(t("Copy yesterday's meals"), t('No meals were logged yesterday.'));
+        dialog.notify({
+          title: t("Copy yesterday's meals"),
+          message: t('No meals were logged yesterday.'),
+        });
         return;
       }
       const res = await copyYesterdayMeals(date);
@@ -809,24 +809,27 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       if (res.addedCount > 0) {
-        Alert.alert(
-          t("Copy yesterday's meals"),
-          `${t('Added')} ${res.addedCount} ${res.addedCount === 1 ? t('meal added') : t('meals added')}.`
-        );
+        dialog.notify({
+          title: t("Copy yesterday's meals"),
+          message: `${t('Added')} ${res.addedCount} ${res.addedCount === 1 ? t('meal added') : t('meals added')}.`,
+        });
         setShowSuccess(true);
         setTimeout(() => {
           setShowSuccess(false);
           handleClose();
         }, 950);
       } else {
-        Alert.alert(
-          t("Copy yesterday's meals"),
-          t('Nothing new to copy.')
-        );
+        dialog.notify({
+          title: t("Copy yesterday's meals"),
+          message: t('Nothing new to copy.'),
+        });
       }
     } catch (err) {
       console.error('Failed to copy yesterday meals:', err);
-      Alert.alert(t('Error'), t('Failed to save meal.'));
+      dialog.notify({
+        title: t('Error'),
+        message: t('Failed to save meal.'),
+      });
     } finally {
       setCopyLoading(false);
     }
@@ -854,10 +857,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       const yesterdayLog = await loadDailyLog(yesterday);
       const matchingMeals = (yesterdayLog.meals || []).filter((m) => m.mealType === selectedMeal);
       if (matchingMeals.length === 0) {
-        Alert.alert(
-          getCopyMealTypeLabel(selectedMeal),
-          t('No meals were logged yesterday for this meal.')
-        );
+        dialog.notify({
+          title: getCopyMealTypeLabel(selectedMeal),
+          message: t('No meals were logged yesterday for this meal.'),
+        });
         return;
       }
       const res = await copyYesterdayMealType(date, selectedMeal);
@@ -866,24 +869,27 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       if (res.addedCount > 0) {
-        Alert.alert(
-          getCopyMealTypeLabel(selectedMeal),
-          `${t('Added')} ${res.addedCount} ${res.addedCount === 1 ? t('meal added') : t('meals added')}.`
-        );
+        dialog.notify({
+          title: getCopyMealTypeLabel(selectedMeal),
+          message: `${t('Added')} ${res.addedCount} ${res.addedCount === 1 ? t('meal added') : t('meals added')}.`,
+        });
         setShowSuccess(true);
         setTimeout(() => {
           setShowSuccess(false);
           handleClose();
         }, 950);
       } else {
-        Alert.alert(
-          getCopyMealTypeLabel(selectedMeal),
-          t('Nothing new to copy.')
-        );
+        dialog.notify({
+          title: getCopyMealTypeLabel(selectedMeal),
+          message: t('Nothing new to copy.'),
+        });
       }
     } catch (err) {
       console.error('Failed to copy yesterday meal type:', err);
-      Alert.alert(t('Error'), t('Failed to save meal.'));
+      dialog.notify({
+        title: t('Error'),
+        message: t('Failed to save meal.'),
+      });
     } finally {
       setCopyMealTypeLoading(false);
     }
@@ -922,23 +928,19 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     }, 950);
   };
 
-  const handleDeleteTemplate = (template: MealTemplate) => {
-    Alert.alert(
-      t('Delete template'),
-      t('Are you sure you want to delete this template?'),
-      [
-        { text: t('Cancel'), style: 'cancel' },
-        {
-          text: t('Delete'),
-          style: 'destructive',
-          onPress: async () => {
-            const updated = await deleteMealTemplate(template.id);
-            setMealTemplates(updated);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-          },
-        },
-      ]
-    );
+  const handleDeleteTemplate = async (template: MealTemplate) => {
+    const confirmed = await dialog.confirm({
+      title: t('Delete template'),
+      message: t('Are you sure you want to delete this template?'),
+      confirmText: t('Delete'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (confirmed) {
+      const updated = await deleteMealTemplate(template.id);
+      setMealTemplates(updated);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
   };
 
   const handleCreateTemplateFromCurrentMeals = async () => {
@@ -977,7 +979,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     if (fromCamera) {
       const camPerm = await ImagePicker.requestCameraPermissionsAsync();
       if (!camPerm.granted) {
-        Alert.alert(t('Camera Access'), t('Camera permission is required to photograph your meal.'));
+        dialog.notify({
+          title: t('Camera Access'),
+          message: t('Camera permission is required to photograph your meal.'),
+        });
         return;
       }
       res = await ImagePicker.launchCameraAsync({
@@ -988,7 +993,10 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     } else {
       const libPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!libPerm.granted) {
-        Alert.alert(t('Photo Access'), t('Gallery access is required to choose a meal photo.'));
+        dialog.notify({
+          title: t('Photo Access'),
+          message: t('Gallery access is required to choose a meal photo.'),
+        });
         return;
       }
       res = await ImagePicker.launchImageLibraryAsync({

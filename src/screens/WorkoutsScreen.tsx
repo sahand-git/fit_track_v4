@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View, Platform } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View, Platform } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Activity, Dumbbell, Plus, Search, Trash2 } from 'lucide-react-native';
 import { DirectionalIcon } from '../components/DirectionalIcon';
@@ -35,6 +36,7 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
   const addButtonBottom = Math.max(104, insets.bottom + 96);
@@ -61,10 +63,18 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
 
   const openEdit = (workout: WorkoutEntry) => { setEditing(workout); setSheetVisible(true); };
   const closeSheet = () => { setSheetVisible(false); setEditing(null); };
-  const askDelete = (workoutId: string) => Alert.alert(t('Delete workout'), t('Are you sure you want to delete this workout?'), [
-    { text: t('Cancel'), style: 'cancel' },
-    { text: t('Delete'), style: 'destructive', onPress: () => onDeleteWorkout(workoutId) },
-  ]);
+  const askDelete = async (workoutId: string) => {
+    const ok = await dialog.confirm({
+      title: t('Delete workout'),
+      message: t('Are you sure you want to delete this workout?'),
+      confirmText: t('Delete'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (ok) {
+      onDeleteWorkout(workoutId);
+    }
+  };
 
   return (
     <KeyboardAvoidingView

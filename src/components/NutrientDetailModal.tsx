@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Alert,
   Platform,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useAppDialog } from './dialogs/AppDialogProvider';
 import { AppText as Text } from './AppText';
 import {
   X,
@@ -61,6 +61,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   const language = useLanguage();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const isRtl = useIsRTL();
   const t = useCallback((key: string) => translate(language, key), [language]);
@@ -139,7 +140,10 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   const handleCommitGoal = async () => {
     const parsed = parseFloat(goalInput.trim());
     if (isNaN(parsed) || parsed <= 0) {
-      Alert.alert(t('Invalid Goal'), t('Please enter a valid positive number for your goal.'));
+      dialog.notify({
+        title: t('Invalid Goal'),
+        message: t('Please enter a valid positive number for your goal.'),
+      });
       return;
     }
 
@@ -152,7 +156,10 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
       setIsEditingGoal(false);
     } catch (err) {
       console.error('Failed to save nutrient goal:', err);
-      Alert.alert(t('Save Error'), t('Could not save your new goal. Please try again.'));
+      dialog.notify({
+        title: t('Save Error'),
+        message: t('Could not save your new goal. Please try again.'),
+      });
     } finally {
       setIsSavingGoal(false);
     }
