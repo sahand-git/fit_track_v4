@@ -15,7 +15,6 @@ import { useIsRTL } from '../hooks/useIsRTL';
 import {
   ChevronDown,
   ChevronUp,
-  AlertTriangle,
   ShieldCheck,
   Info,
 } from 'lucide-react-native';
@@ -38,22 +37,23 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
   const [expanded, setExpanded] = useState(false);
 
   const analysis = calculateMicronutrientIntake(meals, supplements);
-  const { nutrients, deficiencies, targetsMetCount } = analysis;
+  const { nutrients, targetsMetCount } = analysis;
 
-  const hasLogged = meals.length > 0 || supplements.length > 0;
-  // If user has logged meals/supplements, hide any nutrient that has no data instead of showing zeros
-  const availableKeys = React.useMemo(() => {
-    if (!hasLogged) return ORDERED_MICRONUTRIENT_KEYS;
-    const withData = ORDERED_MICRONUTRIENT_KEYS.filter((k) => nutrients[k]?.hasData);
-    return withData.length > 0 ? withData : ORDERED_MICRONUTRIENT_KEYS;
-  }, [hasLogged, nutrients]);
+  const nutrientsWithDataCount = useMemo(() => {
+    return ORDERED_MICRONUTRIENT_KEYS.filter((k) => nutrients[k]?.hasData).length;
+  }, [nutrients]);
 
-  const activeDeficiencies = React.useMemo(() => {
-    return deficiencies.filter((d) => (!hasLogged ? true : d.hasData));
-  }, [hasLogged, deficiencies]);
+  const sortedKeys = useMemo(() => {
+    return [...ORDERED_MICRONUTRIENT_KEYS].sort((a, b) => {
+      const aHas = nutrients[a]?.hasData ? 1 : 0;
+      const bHas = nutrients[b]?.hasData ? 1 : 0;
+      if (aHas !== bHas) return bHas - aHas;
+      return ORDERED_MICRONUTRIENT_KEYS.indexOf(a) - ORDERED_MICRONUTRIENT_KEYS.indexOf(b);
+    });
+  }, [nutrients]);
 
-  const displayedKeys = expanded ? availableKeys : availableKeys.slice(0, 3);
-  const hasAnyIncomplete = displayedKeys.some((k) => nutrients[k]?.isIncomplete);
+  const displayedKeys = expanded ? sortedKeys : sortedKeys.slice(0, 3);
+  const hasAnyIncomplete = displayedKeys.some((k) => !nutrients[k]?.hasData || nutrients[k]?.isIncomplete);
 
   return (
     <View style={styles.card}>
@@ -63,7 +63,7 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
           <View style={styles.iconCircle}>
             <ShieldCheck size={16} color={theme.colors.primary} />
           </View>
-          <View>
+          <View style={styles.titleContainer}>
             <Text style={styles.cardTitle}>
               {translate(language, 'Micronutrients & Daily Allowance (RDA)')}
             </Text>
@@ -76,46 +76,24 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
         {/* Met score pill */}
         <View style={styles.scoreBadge}>
           <Text style={styles.scoreBadgeText}>
-            {targetsMetCount}/9 {translate(language, 'targets met')}
+            {targetsMetCount}/{nutrientsWithDataCount} {translate(language, 'targets met')}
           </Text>
         </View>
       </View>
-
-      {/* Deficiency Alerts Banner (if any) */}
-      {activeDeficiencies.length > 0 && (
-        <View style={styles.alertBanner}>
-          <View style={[styles.alertHeader, isRtl && styles.rowRtl]}>
-            <AlertTriangle size={15} color={theme.colors.amber} style={{ marginTop: 1 }} />
-            <Text style={styles.alertTitle}>
-              {translate(language, 'Deficiency risks detected (<50% RDA):')}
-            </Text>
-          </View>
-          <View style={styles.deficiencyList}>
-            {activeDeficiencies.slice(0, 4).map((d) => (
-              <View key={d.key} style={[styles.deficiencyItem, isRtl && styles.rowRtl]}>
-                <Text style={styles.deficiencyNutrient}>
-                  • {translate(language, d.label)} ({d.percent}%):
-                </Text>
-                <Text style={styles.deficiencySources}>
-                  {' '}{translate(language, d.foodSources)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
 
       {/* Primary Highlights (Top 3 or when expanded) */}
       <View style={styles.grid}>
         {displayedKeys.map((key) => {
           const item = nutrients[key];
-          const pctWidth = Math.min(100, item.percent);
-          const barColor =
-            item.percent >= 80
-              ? theme.colors.emerald
-              : item.percent >= 50
-              ? theme.colors.amber
-              : theme.colors.crimson;
+          const hasData = item?.hasData;
+          const pctWidth = hasData ? Math.min(100, item.percent) : 0;
+          const barColor = !hasData
+            ? theme.colors.border
+            : item.percent >= 80
+            ? theme.colors.emerald
+            : item.percent >= 50
+            ? theme.colors.amber
+            : theme.colors.crimson;
 
           return (
             <TouchableOpacity
@@ -125,7 +103,9 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
               disabled={!onSelectNutrient}
               activeOpacity={0.75}
               accessibilityRole={onSelectNutrient ? 'button' : 'none'}
-              accessibilityLabel={`${translate(language, item.label)}: ${item.current} / ${item.target} ${item.unit}`}
+              accessibilityLabel={`${translate(language, item.label)}: ${
+                hasData ? `${item.current} / ${item.target} ${item.unit}` : translate(language, 'Not enough data')
+              }`}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <View style={[styles.nutrientTopRow, isRtl && styles.rowRtl]}>
@@ -133,14 +113,14 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
                   <Text style={styles.nutrientName}>
                     {translate(language, item.label)}
                   </Text>
-                  {item.isIncomplete && (
+                  {(!hasData || item.isIncomplete) && (
                     <Text style={styles.incompleteAsterisk} accessibilityLabel={translate(language, 'Incomplete data')}>
                       *
                     </Text>
                   )}
                 </View>
                 <Text style={styles.nutrientValues}>
-                  {item.current} / {item.target} {item.unit}
+                  {hasData ? `${item.current} / ${item.target} ${item.unit}` : `— / ${item.target} ${item.unit}`}
                 </Text>
               </View>
 
@@ -160,24 +140,36 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
               {/* Nutrient details sub-row */}
               <View style={[styles.nutrientBottomRow, isRtl && styles.rowRtl]}>
                 <Text style={styles.breakdownText}>
-                  {translate(language, 'Food')}: {item.foodAmount} • {translate(language, 'Supp')}: {item.supplementAmount}
+                  {hasData
+                    ? `${translate(language, 'Food')}: ${item.foodAmount} • ${translate(language, 'Supp')}: ${item.supplementAmount}`
+                    : translate(language, 'No data in logged foods')}
                 </Text>
                 <Text
                   style={[
                     styles.pctBadgeText,
                     {
-                      color:
-                        item.percent >= 80
-                          ? theme.colors.emeraldDark
-                          : item.percent >= 50
-                          ? theme.colors.amberText
-                          : theme.colors.crimsonDark,
+                      color: !hasData
+                        ? theme.colors.textMuted
+                        : item.percent >= 80
+                        ? theme.colors.emeraldDark
+                        : item.percent >= 50
+                        ? theme.colors.amberText
+                        : theme.colors.crimsonDark,
                     },
                   ]}
                 >
-                  {item.percent}% {translate(language, 'RDA')}
+                  {hasData ? `${item.percent}% ${translate(language, 'RDA')}` : `${translate(language, 'Not enough data')} *`}
                 </Text>
               </View>
+
+              {/* Soft neutral note when below 50% with >= 70% coverage */}
+              {hasData && item.percent < 50 && item.coverage >= 0.7 && (
+                <View style={[styles.estimatedLowRow, isRtl && styles.rowRtl]}>
+                  <Text style={styles.estimatedLowText}>
+                    {translate(language, 'estimated low from logged foods')}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -245,6 +237,7 @@ const createStyles = (theme: ThemeType) =>
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
+    gap: 8,
   },
   rowRtl: {
     flexDirection: 'row-reverse',
@@ -257,6 +250,9 @@ const createStyles = (theme: ThemeType) =>
   },
   titleGroupRtl: {
     flexDirection: 'row-reverse',
+  },
+  titleContainer: {
+    flex: 1,
   },
   iconCircle: {
     width: 32,
@@ -285,47 +281,12 @@ const createStyles = (theme: ThemeType) =>
     borderRadius: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    flexShrink: 0,
   },
   scoreBadgeText: {
     fontSize: 12,
     fontWeight: '700',
     color: theme.colors.primary,
-  },
-  alertBanner: {
-    backgroundColor: theme.colors.creamMuted,
-    borderColor: theme.colors.amberBorder,
-    borderWidth: 1,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  alertHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
-  },
-  alertTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.amberDark,
-  },
-  deficiencyList: {
-    gap: 4,
-  },
-  deficiencyItem: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  deficiencyNutrient: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.amberText,
-  },
-  deficiencySources: {
-    fontSize: 12,
-    color: theme.colors.amberDeep,
-    flex: 1,
   },
   grid: {
     gap: 8,
@@ -387,6 +348,17 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  estimatedLowRow: {
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.border,
+  },
+  estimatedLowText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    fontStyle: 'italic',
   },
   toggleBtn: {
     flexDirection: 'row',

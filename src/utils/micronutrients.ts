@@ -121,6 +121,7 @@ export interface MicronutrientIntake {
   percent: number;
   status: 'optimal' | 'low' | 'deficient';
   isDeficient: boolean;
+  coverage: number;
   colorToken: ThemeColorKey;
   foodSources: string;
   hasData: boolean;
@@ -358,6 +359,9 @@ export function calculateMicronutrientIntake(
     const hasData = hasFoodData[key] || hasSuppData[key];
     const isIncomplete = meals.length > 0 && missingCounts[key] > 0;
     const missingCount = missingCounts[key];
+    const coverage = meals.length > 0
+      ? (meals.length - missingCounts[key]) / meals.length
+      : (hasSuppData[key] ? 1 : 0);
 
     const intake: MicronutrientIntake = {
       key,
@@ -370,6 +374,7 @@ export function calculateMicronutrientIntake(
       percent,
       status,
       isDeficient,
+      coverage: Math.round(coverage * 100) / 100,
       colorToken: meta.colorToken,
       foodSources: meta.foodSources,
       hasData,

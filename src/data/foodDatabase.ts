@@ -32,6 +32,9 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "zinc": 0.9,
     "vitaminB12": 0.3,
     "category": "Meat & Poultry",
+    "vitaminA": 0,
+    "vitaminC": 0,
+    "vitaminD": 0.1,
     "source": "verified_database"
   },
   {
@@ -54,6 +57,8 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "vitaminB12": 0.45,
     "zinc": 0.6,
     "category": "Eggs & Dairy",
+    "vitaminC": 0,
+    "magnesium": 6,
     "source": "verified_database"
   },
   {
@@ -73,6 +78,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "potassium": 163,
     "magnesium": 11,
     "category": "Eggs & Dairy",
+    "vitaminA": 0,
+    "vitaminC": 0,
+    "vitaminD": 0,
+    "vitaminB12": 0.09,
+    "zinc": 0.03,
     "source": "verified_database"
   },
   {
@@ -114,6 +124,10 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "vitaminB12": 1.3,
     "zinc": 0.9,
     "category": "Eggs & Dairy",
+    "vitaminA": 2,
+    "vitaminC": 0,
+    "vitaminD": 0,
+    "magnesium": 19,
     "source": "verified_database"
   },
   {
@@ -131,10 +145,13 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "calcium": 11,
     "iron": 0.4,
     "potassium": 384,
-    "vitaminD": 11.0,
+    "vitaminD": 11,
     "vitaminB12": 3.2,
     "magnesium": 30,
     "category": "Fish & Seafood",
+    "vitaminA": 15,
+    "vitaminC": 0,
+    "zinc": 0.5,
     "source": "verified_database"
   },
   {
@@ -156,6 +173,9 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "vitaminB12": 2.6,
     "magnesium": 23,
     "category": "Meat & Poultry",
+    "vitaminA": 0,
+    "vitaminC": 0,
+    "vitaminD": 0.1,
     "source": "verified_database"
   },
   {
@@ -176,6 +196,10 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "vitaminB12": 2.6,
     "vitaminD": 2.4,
     "category": "Fish & Seafood",
+    "vitaminA": 18,
+    "vitaminC": 0,
+    "magnesium": 35,
+    "zinc": 0.9,
     "source": "verified_database"
   },
   {
@@ -195,6 +219,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "potassium": 55,
     "zinc": 0.8,
     "category": "Grains & Bread",
+    "vitaminA": 0,
+    "vitaminC": 0,
+    "vitaminD": 0,
+    "vitaminB12": 0,
+    "magnesium": 19,
     "source": "verified_database"
   },
   {
@@ -215,6 +244,10 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "magnesium": 55,
     "zinc": 1.2,
     "category": "Grains & Bread",
+    "vitaminA": 0,
+    "vitaminC": 0,
+    "vitaminD": 0,
+    "vitaminB12": 0,
     "source": "verified_database"
   },
   {
@@ -235,6 +268,10 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "vitaminA": 1100,
     "vitaminC": 22,
     "category": "Vegetables",
+    "vitaminD": 0,
+    "vitaminB12": 0,
+    "magnesium": 31,
+    "zinc": 0.3,
     "source": "verified_database"
   },
   {
@@ -252,7 +289,7 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "calcium": 6,
     "iron": 0.3,
     "potassium": 422,
-    "vitaminC": 10,
+    "vitaminC": 10.3,
     "magnesium": 32,
     "category": "Fruit",
     "variants": [
@@ -287,6 +324,10 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
         "servingGrams": 136
       }
     ],
+    "vitaminA": 4,
+    "vitaminD": 0,
+    "vitaminB12": 0,
+    "zinc": 0.18,
     "source": "verified_database"
   },
   {
@@ -306,6 +347,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "potassium": 195,
     "vitaminC": 8.4,
     "category": "Fruit",
+    "vitaminA": 6,
+    "vitaminD": 0,
+    "vitaminB12": 0,
+    "magnesium": 9,
+    "zinc": 0.07,
     "source": "verified_database"
   },
   {
@@ -326,6 +372,10 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "magnesium": 54,
     "zinc": 0.9,
     "category": "Nuts & Seeds",
+    "vitaminA": 0,
+    "vitaminC": 0,
+    "vitaminD": 0,
+    "vitaminB12": 0,
     "source": "verified_database"
   },
   {
@@ -376,6 +426,12 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
         "servingGrams": 100
       }
     ],
+    "vitaminA": 0,
+    "vitaminC": 0,
+    "vitaminD": 0,
+    "vitaminB12": 0,
+    "magnesium": 0,
+    "zinc": 0,
     "source": "verified_database"
   },
   {
@@ -428,6 +484,10 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
         "servingGrams": 150
       }
     ],
+    "vitaminA": 7,
+    "vitaminD": 0,
+    "vitaminB12": 0,
+    "zinc": 0.64,
     "source": "verified_database"
   },
   {
@@ -474,6 +534,12 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
         "servingGrams": 100
       }
     ],
+    "vitaminA": 0.3,
+    "vitaminC": 2.4,
+    "vitaminD": 0,
+    "vitaminB12": 0,
+    "magnesium": 21,
+    "zinc": 0.54,
     "source": "regional_culinary_estimate"
   },
   {
@@ -494,6 +560,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "vitaminB12": 0.7,
     "nutriScore": "A",
     "category": "Eggs & Dairy",
+    "vitaminA": 42,
+    "vitaminC": 0,
+    "vitaminD": 0.1,
+    "magnesium": 9,
+    "zinc": 0.6,
     "source": "generic_estimate"
   },
   {
@@ -516,6 +587,10 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "zinc": 1.6,
     "nutriScore": "A",
     "category": "Legumes",
+    "vitaminA": 0,
+    "vitaminC": 0.1,
+    "vitaminD": 0,
+    "vitaminB12": 0,
     "source": "generic_estimate"
   },
   {
@@ -571,6 +646,10 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
         "servingGrams": 100
       }
     ],
+    "vitaminA": 0,
+    "vitaminC": 0,
+    "vitaminD": 0,
+    "vitaminB12": 0,
     "source": "verified_database"
   },
   {
@@ -594,6 +673,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "magnesium": 30,
     "nutriScore": "A",
     "category": "Grains & Bread",
+    "vitaminA": 0,
+    "vitaminC": 0,
+    "vitaminD": 0,
+    "vitaminB12": 0,
+    "zinc": 0.7,
     "source": "verified_database",
     "portionUnit": "piece",
     "gramsPerUnit": 38,
@@ -673,6 +757,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
         "servingGrams": 150
       }
     ],
+    "vitaminA": 3,
+    "vitaminD": 0,
+    "vitaminB12": 0,
+    "magnesium": 6,
+    "zinc": 0.16,
     "source": "verified_database"
   },
   {
@@ -698,6 +787,10 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "zinc": 0.9,
     "nutriScore": "A",
     "category": "Nuts & Seeds",
+    "vitaminA": 0,
+    "vitaminC": 0,
+    "vitaminD": 0,
+    "vitaminB12": 0,
     "source": "verified_database"
   },
   {
@@ -722,6 +815,10 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "vitaminA": 31,
     "nutriScore": "A",
     "category": "Vegetables",
+    "vitaminD": 0,
+    "vitaminB12": 0,
+    "magnesium": 21,
+    "zinc": 0.45,
     "source": "verified_database"
   },
   {
@@ -746,6 +843,9 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "magnesium": 79,
     "nutriScore": "A",
     "category": "Vegetables",
+    "vitaminD": 0,
+    "vitaminB12": 0,
+    "zinc": 0.53,
     "source": "verified_database"
   },
   {
@@ -812,6 +912,10 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "nutriScore": "A",
     "category": "Drinks",
     "unit": "ml",
+    "vitaminC": 0,
+    "vitaminB12": 0,
+    "magnesium": 15,
+    "zinc": 0.2,
     "source": "generic_estimate"
   },
   {
@@ -833,6 +937,11 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "vitaminB12": 0.9,
     "nutriScore": "A",
     "category": "Eggs & Dairy",
+    "vitaminA": 54,
+    "vitaminC": 1,
+    "vitaminD": 0.2,
+    "magnesium": 24,
+    "zinc": 1.18,
     "source": "regional_culinary_estimate"
   },
   {
@@ -850,6 +959,12 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 490,
     "nutriScore": "A",
     "category": "Regional Dishes",
+    "vitaminA": 45,
+    "vitaminC": 12,
+    "vitaminD": 0.1,
+    "vitaminB12": 0.8,
+    "magnesium": 78,
+    "zinc": 2.1,
     "source": "regional_culinary_estimate"
   },
   {
@@ -867,6 +982,12 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 620,
     "nutriScore": "B",
     "category": "Regional Dishes",
+    "vitaminA": 18,
+    "vitaminC": 4.2,
+    "vitaminD": 0.2,
+    "vitaminB12": 3.4,
+    "magnesium": 62,
+    "zinc": 5.6,
     "source": "regional_culinary_estimate"
   },
   {
@@ -884,6 +1005,12 @@ export const VERIFIED_FOOD_DATABASE: FoodItem[] = [
     "sodium": 160,
     "nutriScore": "A",
     "category": "Vegetables",
+    "vitaminA": 210,
+    "vitaminC": 38,
+    "vitaminD": 0,
+    "vitaminB12": 0,
+    "magnesium": 32,
+    "zinc": 0.65,
     "source": "regional_culinary_estimate"
   }
 ];
