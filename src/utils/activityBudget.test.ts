@@ -86,4 +86,13 @@ assert(fullBudget.effectiveTarget === 2100, `Effective target must increase to 2
 const fullOver = Math.max(0, consumed - fullBudget.effectiveTarget);
 assert(fullOver === 0, `Over budget must reduce to 0, got ${fullOver}`);
 
+// Verify net step formula calculation for varying weights
+const stepCalc80kg = calculateActivityBudget({
+  profile: { ...overBudgetProfile, weightKg: 80 },
+  workouts: [],
+  steps: 5000,
+});
+// 5000 * 0.042 * (80/70) = 240 kcal
+assert(stepCalc80kg.stepCalories === 240, `Step calories for 80kg at 5000 steps must be 240, got ${stepCalc80kg.stepCalories}`);
+
 console.log('All activity budget tests passed.');

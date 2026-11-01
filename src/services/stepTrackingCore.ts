@@ -2,8 +2,12 @@ export const KCAL_PER_STEP_BASE = 0.042; // Standard walking burn: ~0.04 - 0.045
 
 /**
  * Estimates calories burned from walking steps based on user body weight.
- * Standard walking burns ~0.04 to 0.045 kcal per step at 70kg.
- * 100 steps burns ~4.2 kcal (rounded to 4 kcal).
+ * Net Step Formula:
+ *   stepCalories = Math.round(safeSteps * KCAL_PER_STEP_BASE * (safeWeight / 70))
+ * Standard walking burns ~0.04 to 0.045 kcal per step at 70kg baseline (~42 kcal per 1,000 steps).
+ * Scaled linearly with body mass (mechanical work W = m * g * d).
+ * In activity budgeting, safeSteps represents non-workout steps (deduplicated
+ * against ambulatory workout entries).
  */
 export function estimateStepCalories(steps: number, weightKg: number = 70): number {
   const safeSteps = Math.max(0, Number.isFinite(steps) ? steps : 0);

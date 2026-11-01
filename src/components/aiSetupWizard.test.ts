@@ -54,6 +54,7 @@ function runAiSetupWizardTests() {
       'Google Gemini powers optional AI features like photographic meal analysis, voice/text descriptions, and daily nutrition coaching.',
       'Security & Privacy Guarantee',
       'Your key stays strictly on this device in secure encrypted storage. FitTrack never uploads your key to any server or shares it with anyone.',
+      'Your key is stored securely on this device, never included in cloud backups or export files, and sent only to Google AI Studio.',
       'Get Free Key from Google AI Studio',
       'Paste your Gemini API key',
       'Key cannot be empty to test connection.',

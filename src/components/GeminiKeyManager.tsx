@@ -159,9 +159,14 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
       </View>
 
       {!compact && (
-        <Text style={[styles.description, isRTL && styles.textRTL]}>
-          {t('A Gemini API key enables text meal estimates, plate scanning, and AI Coach. Requests send your prompt and the relevant meal or goal context to Google. Google usage limits and billing apply.')}
-        </Text>
+        <>
+          <Text style={[styles.description, isRTL && styles.textRTL]}>
+            {t('A Gemini API key enables text meal estimates, plate scanning, and AI Coach. Requests send your prompt and the relevant meal or goal context to Google. Google usage limits and billing apply.')}
+          </Text>
+          <Text style={[styles.securityNote, isRTL && styles.textRTL]}>
+            {t('Your key is stored securely on this device, never included in cloud backups or export files, and sent only to Google AI Studio.')}
+          </Text>
+        </>
       )}
 
       <TouchableOpacity
@@ -526,6 +531,12 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     lineHeight: 18,
     color: theme.colors.textSecondary,
+  },
+  securityNote: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: theme.colors.textMuted,
+    marginTop: 4,
   },
   savedSection: {
     gap: 8,

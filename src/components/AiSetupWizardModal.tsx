@@ -202,7 +202,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
                 {t('Security & Privacy Guarantee')}
               </Text>
               <Text style={[styles.securityText, isRTL && styles.textRTL]}>
-                {t('Your key stays strictly on this device in secure encrypted storage. FitTrack never uploads your key to any server or shares it with anyone.')}
+                {t('Your key is stored securely on this device, never included in cloud backups or export files, and sent only to Google AI Studio.')}
               </Text>
             </View>
           </View>

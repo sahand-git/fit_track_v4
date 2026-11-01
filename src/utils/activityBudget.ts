@@ -18,6 +18,22 @@ export interface ActivityBudget {
   nonWorkoutSteps: number;
 }
 
+/**
+ * Net Step Calorie Calculation Formula:
+ * 1. Deduplication:
+ *    deduplicated = deduplicateWorkoutSteps(dailySteps, workouts)
+ *    nonWorkoutSteps = Math.max(0, dailySteps - workoutSteps)
+ *    Ambulatory steps taken during logged workouts (running, walking, etc.)
+ *    are subtracted from daily steps to avoid double-counting.
+ * 2. Net Step Expenditure:
+ *    stepCalories = estimateStepCalories(nonWorkoutSteps, weightKg)
+ *    = Math.round(nonWorkoutSteps * KCAL_PER_STEP_BASE * (weightKg / 70))
+ *    where KCAL_PER_STEP_BASE = 0.042 kcal/step at 70kg baseline (~42 kcal per 1,000 steps).
+ * 3. Activity Budget Integration:
+ *    When profile.includeWorkoutsInCalorieBudget = true,
+ *    eligibleActivityCalories = workoutCalories + stepCalories.
+ *    These calories are labeled as estimates in the UI ("Est. active burn").
+ */
 export function calculateActivityBudget(input: {
   profile: UserProfile;
   workouts: WorkoutEntry[];
