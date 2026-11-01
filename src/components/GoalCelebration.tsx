@@ -15,7 +15,7 @@ import Animated, {
   FadeOut,
   SharedValue,
 } from 'react-native-reanimated';
-import { Award, Sparkles } from 'lucide-react-native';
+import { Award, Sparkles, Target } from 'lucide-react-native';
 import { AppText as Text } from './AppText';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -37,6 +37,9 @@ interface ParticleData {
 
 interface GoalCelebrationProps {
   visible: boolean;
+  title?: string;
+  message?: string;
+  isNeutralStatusOnly?: boolean;
   onDismiss: () => void;
 }
 
@@ -85,6 +88,9 @@ const SingleParticle: React.FC<{
 
 export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
   visible,
+  title,
+  message,
+  isNeutralStatusOnly = false,
   onDismiss,
 }) => {
   const language = useLanguage();
@@ -159,8 +165,8 @@ export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
       style={styles.overlay}
       pointerEvents="box-none"
     >
-      {/* Particle emitter centered above card */}
-      {!isReducedMotion() && (
+      {/* Particle emitter centered above card (never for neutral calorie status) */}
+      {!isNeutralStatusOnly && !isReducedMotion() && (
         <View style={styles.emitterPoint} pointerEvents="none">
           {particles.map((p) => (
             <SingleParticle key={p.id} particle={p} progress={progress} />
@@ -168,26 +174,30 @@ export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
         </View>
       )}
 
-      {/* Celebratory Ledger Banner */}
+      {/* Celebratory or Neutral Status Ledger Banner */}
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={onDismiss}
         style={styles.touchArea}
         accessibilityRole="button"
-        accessibilityLabel="Dismiss celebration"
+        accessibilityLabel={title || t('Daily Goal Reached!')}
       >
         <Animated.View style={[styles.card, animatedCardStyle]}>
           <View style={styles.iconCircle}>
-            <Award size={22} color={theme.colors.surface} />
+            {isNeutralStatusOnly ? (
+              <Target size={22} color={theme.colors.surface} />
+            ) : (
+              <Award size={22} color={theme.colors.surface} />
+            )}
           </View>
 
           <View style={styles.textContainer}>
             <View style={styles.titleRow}>
-              <Text style={styles.title}>{t('Daily Goal Reached!')}</Text>
-              <Sparkles size={14} color={theme.colors.gold} />
+              <Text style={styles.title}>{title || t('Daily Goal Reached!')}</Text>
+              {!isNeutralStatusOnly && <Sparkles size={14} color={theme.colors.gold} />}
             </View>
             <Text style={styles.message}>
-              {t('You hit your calorie target for today.')}
+              {message || t('You hit your calorie target for today.')}
             </Text>
           </View>
         </Animated.View>

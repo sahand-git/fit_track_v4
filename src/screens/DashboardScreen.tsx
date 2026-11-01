@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -21,6 +21,7 @@ import {
   Dumbbell,
   Trash2,
   Footprints,
+  CheckCircle2,
 } from 'lucide-react-native';
 import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { UserProfile, DailyLog, MealType, SupplementRoutineItem, WorkoutEntry } from '../types';
@@ -32,7 +33,12 @@ import { QuickActionSheet } from '../components/QuickActionSheet';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { StreakBadge } from '../components/StreakBadge';
 import { GoalCelebration } from '../components/GoalCelebration';
-import { evaluateGoalAchievement } from '../utils/goalCelebration';
+import {
+  evaluateDailyMilestones,
+  getMilestoneDisplayMessage,
+  getGoalMilestonesStorageKey,
+  DayCelebratedMilestones,
+} from '../utils/goalMilestonesCore';
 import Animated from 'react-native-reanimated';
 import {
   getStaggeredCardEntry,
@@ -255,58 +261,86 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     [activeSupplements]
   );
 
-  const [showCelebration, setShowCelebration] = useState(false);
-  const celebratingDateRef = useRef<string | null>(null);
-  const lastCelebratedDateRef = useRef<string | null>(null);
+  const [activeMilestoneBanner, setActiveMilestoneBanner] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    isNeutralStatusOnly: boolean;
+  } | null>(null);
 
-  // Trigger celebration once per day when target is reached appropriately
+  // Trigger milestone celebration once per date when target is reached
   useEffect(() => {
-    async function checkGoalCelebration() {
-      const resolvedCalorieTarget = effectiveCalorieTarget;
-      const resolvedProteinTarget = profile.customNutrientGoals?.protein ?? profile.targetProtein;
-      const isGoalMet = evaluateGoalAchievement({
-        goal: profile.goal,
-        consumedCalories,
-        consumedProtein,
-        effectiveCalorieTarget: resolvedCalorieTarget,
-        targetProtein: resolvedProteinTarget,
-      });
-
-      if (!isGoalMet) return;
-
+    let isCancelled = false;
+    async function checkGoalMilestones() {
       const currentDate = log.date;
-      // In-memory synchronization lock prevents overlapping/duplicate runs for the same date
-      if (lastCelebratedDateRef.current === currentDate || celebratingDateRef.current === currentDate) {
-        return;
-      }
-      celebratingDateRef.current = currentDate;
-
+      const storageKey = getScopedStorageKey(getGoalMilestonesStorageKey(currentDate));
+      let celebrated: DayCelebratedMilestones = {};
       try {
-        const celebrationKey = getScopedStorageKey('@fittrack_last_celebrated_goal_date');
-        const lastCelebrated = await AsyncStorage.getItem(celebrationKey);
-        if (lastCelebrated !== currentDate) {
-          lastCelebratedDateRef.current = currentDate;
-          setShowCelebration(true);
-          await AsyncStorage.setItem(celebrationKey, currentDate);
-        } else {
-          lastCelebratedDateRef.current = currentDate;
+        const raw = await AsyncStorage.getItem(storageKey);
+        if (raw) {
+          celebrated = JSON.parse(raw);
         }
       } catch {
-        // Graceful fallback
-      } finally {
-        celebratingDateRef.current = null;
+        celebrated = {};
+      }
+
+      const evalResult = evaluateDailyMilestones({
+        date: currentDate,
+        consumedCalories,
+        calorieTarget: effectiveCalorieTarget,
+        steps: log.steps || 0,
+        stepGoal: profile.stepGoal || 8000,
+        waterGlasses: log.waterGlasses || 0,
+        waterTargetGlasses: profile.waterTargetGlasses || 8,
+        celebrated,
+      });
+
+      if (evalResult.newlyReached.length > 0 && !isCancelled) {
+        try {
+          await AsyncStorage.setItem(storageKey, JSON.stringify(evalResult.updatedCelebrated));
+        } catch (e) {
+          console.warn('Failed to save celebrated milestones:', e);
+        }
+
+        const milestoneToAnnounce =
+          evalResult.newlyReached.find((m) => m === 'steps') ||
+          evalResult.newlyReached.find((m) => m === 'water') ||
+          evalResult.newlyReached[0];
+
+        if (milestoneToAnnounce) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+          const meta = getMilestoneDisplayMessage(
+            milestoneToAnnounce,
+            {
+              steps: log.steps || 0,
+              stepGoal: profile.stepGoal || 8000,
+              calorieTolerance: evalResult.calorieTolerance,
+            },
+            t
+          );
+          setActiveMilestoneBanner({
+            visible: true,
+            title: meta.title,
+            message: meta.message,
+            isNeutralStatusOnly: meta.isNeutralStatusOnly,
+          });
+        }
       }
     }
-    checkGoalCelebration();
+
+    checkGoalMilestones();
+    return () => {
+      isCancelled = true;
+    };
   }, [
     consumedCalories,
-    consumedProtein,
     effectiveCalorieTarget,
-    profile.goal,
-    profile.targetProtein,
-    profile.customNutrientGoals?.calories,
-    profile.customNutrientGoals?.protein,
+    log.steps,
+    profile.stepGoal,
+    log.waterGlasses,
+    profile.waterTargetGlasses,
     log.date,
+    t,
   ]);
 
   const handleQuickAdd = (meal: MealType) => {
@@ -473,11 +507,37 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         {/* Steps Activity Card */}
         <Animated.View entering={getStaggeredCardEntry(4)}>
           <TouchableOpacity style={styles.stepsCard} onPress={onOpenSteps} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel={t('Steps')}>
-            <View style={styles.stepsIcon}><Footprints size={19} color={theme.colors.primary} /></View>
+            <View style={[styles.stepsIcon, (log.steps || 0) >= (profile.stepGoal || 8000) && (profile.stepGoal || 8000) > 0 && { backgroundColor: theme.colors.primaryLight }]}>
+              {(log.steps || 0) >= (profile.stepGoal || 8000) && (profile.stepGoal || 8000) > 0 ? (
+                <CheckCircle2 size={20} color={theme.colors.success} />
+              ) : (
+                <Footprints size={19} color={theme.colors.primary} />
+              )}
+            </View>
             <View style={styles.stepsInfo}>
-              <View style={styles.stepsTitleRow}><Text style={styles.stepsTitle}>{t('Steps')}</Text><Text style={styles.stepsCount}>{(log.steps || 0).toLocaleString()} / {(profile.stepGoal || 8000).toLocaleString()}</Text></View>
-              <View style={styles.stepsTrack}><View style={[styles.stepsFill, { width: `${Math.min(100, ((log.steps || 0) / (profile.stepGoal || 8000)) * 100)}%` }]} /></View>
-              <Text style={styles.stepsHint}>{t('Tap to view activity details')}</Text>
+              <View style={styles.stepsTitleRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.stepsTitle}>{t('Steps')}</Text>
+                  {(log.steps || 0) >= (profile.stepGoal || 8000) && (profile.stepGoal || 8000) > 0 && (
+                    <CheckCircle2 size={15} color={theme.colors.success} />
+                  )}
+                </View>
+                <Text style={styles.stepsCount}>{(log.steps || 0).toLocaleString()} / {(profile.stepGoal || 8000).toLocaleString()}</Text>
+              </View>
+              <View style={styles.stepsTrack}>
+                <View
+                  style={[
+                    styles.stepsFill,
+                    { width: `${Math.min(100, ((log.steps || 0) / (profile.stepGoal || 8000)) * 100)}%` },
+                    (log.steps || 0) >= (profile.stepGoal || 8000) && (profile.stepGoal || 8000) > 0 && { backgroundColor: theme.colors.success },
+                  ]}
+                />
+              </View>
+              <Text style={styles.stepsHint}>
+                {(log.steps || 0) >= (profile.stepGoal || 8000) && (profile.stepGoal || 8000) > 0
+                  ? t('Goal reached!')
+                  : t('Tap to view activity details')}
+              </Text>
             </View>
             <DirectionalIcon name="ChevronRight" size={17} color={theme.colors.textMuted} />
           </TouchableOpacity>
@@ -719,8 +779,11 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
       />
 
       <GoalCelebration
-        visible={showCelebration}
-        onDismiss={() => setShowCelebration(false)}
+        visible={Boolean(activeMilestoneBanner?.visible)}
+        title={activeMilestoneBanner?.title}
+        message={activeMilestoneBanner?.message}
+        isNeutralStatusOnly={activeMilestoneBanner?.isNeutralStatusOnly}
+        onDismiss={() => setActiveMilestoneBanner(null)}
       />
 
       <NutrientDetailModal
