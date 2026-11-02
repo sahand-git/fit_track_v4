@@ -27,6 +27,7 @@ import {
   ORDERED_NUTRIENT_KEYS,
   calculateNutrientDayProgress,
   formattedNutrientValue,
+  formatDataCompleteness,
 } from '../utils/nutrientTotals';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -282,7 +283,9 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
               <View style={[styles.progressTopRow, isRtl && styles.rowRtl]}>
                 <View style={styles.progressLeftCol}>
                   <View style={[styles.amountRow, isRtl && styles.rowRtl]}>
-                    <Text style={styles.currentAmount}>{progress.current}</Text>
+                    <Text style={styles.currentAmount}>
+                      {progress.hasData ? progress.current : '—'}
+                    </Text>
                     <Text style={styles.targetAmount}>
                       / {progress.target} {progress.unit}
                     </Text>
@@ -301,14 +304,16 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                 {/* Percentage & Status Pill */}
                 <View style={[styles.statusBadge, { backgroundColor: `${progressColor}15` }]}>
                   <Text style={[styles.statusBadgeText, { color: progressColor }]}>
-                    {progress.percent}%
+                    {progress.hasData ? `${progress.percent}%` : t('Not enough data')}
                   </Text>
                   <Text style={styles.statusSubText}>
-                    {progress.percent > 100
-                      ? t('Above target')
-                      : progress.percent === 100
-                      ? t('Target reached')
-                      : t('of daily goal')}
+                    {progress.hasData
+                      ? progress.remaining > 0
+                        ? `${progress.remaining} ${progress.unit} ${t('remaining')}`
+                        : progress.percent > 100
+                        ? t('Above target')
+                        : t('Target reached')
+                      : t('Incomplete data')}
                   </Text>
                 </View>
               </View>
@@ -324,6 +329,14 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                     },
                   ]}
                 />
+              </View>
+
+              {/* Data Completeness */}
+              <View style={[styles.completenessBanner, isRtl && styles.rowRtl]}>
+                <Info size={14} color={theme.colors.textSecondary} style={{ marginTop: 1 }} />
+                <Text style={styles.completenessBannerText}>
+                  {formatDataCompleteness(progress.foodsWithDataCount, progress.totalMealsCount, t)}
+                </Text>
               </View>
 
               {/* Incomplete Data Marker Warning (Item 3 requirement) */}
@@ -786,6 +799,19 @@ const createStyles = (theme: ThemeType) =>
   progressFill: {
     height: '100%',
     borderRadius: theme.radius.full,
+  },
+  completenessBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    marginTop: 2,
+  },
+  completenessBannerText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    flex: 1,
   },
   incompleteBanner: {
     flexDirection: 'row',

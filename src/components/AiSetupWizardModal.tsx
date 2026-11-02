@@ -202,7 +202,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
                 {t('Security & Privacy Guarantee')}
               </Text>
               <Text style={[styles.securityText, isRTL && styles.textRTL]}>
-                {t('Your key is stored securely on this device, never included in cloud backups or export files, and sent only to Google AI Studio.')}
+                {t('The key stays on this device, is not included in backups, and is only sent to Google with my AI requests.')}
               </Text>
             </View>
           </View>

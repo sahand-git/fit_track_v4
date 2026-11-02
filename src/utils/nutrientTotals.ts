@@ -88,15 +88,19 @@ export interface NutrientDayProgress {
   targetType?: DriTargetType;
   isCustomTarget: boolean;
   current: number;
+  remaining: number;
   foodAmount: number;
   supplementAmount: number;
   percent: number;
+  hasData: boolean;
   isIncomplete: boolean;
   missingCount: number;
+  foodsWithDataCount: number;
   totalMealsCount: number;
+  dataCompletenessText: string;
   contributors: NutrientContributor[];
   missingItems: NutrientContributor[];
-  status: 'optimal' | 'good' | 'low' | 'deficient' | 'exceeded';
+  status: 'optimal' | 'good' | 'low' | 'under' | 'exceeded';
   foodSources?: string;
   upperLimit?: number;
   upperLimitScope?: UpperLimitScope;
@@ -106,6 +110,24 @@ export interface NutrientDayProgress {
   disclaimer?: string;
   isMinor?: boolean;
   minorNotice?: string;
+}
+
+/**
+ * Returns formatted data completeness string: 'based on N of M logged foods with data'.
+ */
+export function formatDataCompleteness(
+  foodsWithDataCount: number,
+  totalFoodsCount: number,
+  t: (key: string) => string = (k) => k
+): string {
+  if (totalFoodsCount === 0) {
+    return t('No foods logged today');
+  }
+  const template = t('based on {n} of {m} logged foods with data');
+  if (template && template.includes('{n}') && template.includes('{m}')) {
+    return template.replace('{n}', String(foodsWithDataCount)).replace('{m}', String(totalFoodsCount));
+  }
+  return `based on ${foodsWithDataCount} of ${totalFoodsCount} logged foods with data`;
 }
 
 /**
@@ -314,11 +336,16 @@ export function calculateNutrientDayProgress(
     }
   }
 
-  // Aggregate supplements if nutrient is a micronutrient
+  // Aggregate supplements if nutrient is a micronutrient (ensure each taken supplement counted once)
   let supplementTotal = 0;
+  const seenSupplementIds = new Set<string>();
   if (ORDERED_MICRONUTRIENT_KEYS.includes(nutrientKey as unknown as typeof ORDERED_MICRONUTRIENT_KEYS[number])) {
     for (const supp of supplements || []) {
       if (supp.taken) {
+        if (supp.id) {
+          if (seenSupplementIds.has(supp.id)) continue;
+          seenSupplementIds.add(supp.id);
+        }
         const contrib = resolveSupplementNutrientContribution(supp);
         if (contrib && contrib.nutrientKey === nutrientKey) {
           if (contrib.isCompatibleUnit && contrib.amountInCanonicalUnit > 0) {
@@ -366,19 +393,23 @@ export function calculateNutrientDayProgress(
     .sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0));
 
   const percent = target > 0 ? Math.min(999, Math.round((currentTotal / target) * 100)) : 0;
+  const foodsWithDataCount = Math.max(0, validMeals.length - missingCount);
   const isIncomplete = validMeals.length > 0 && missingCount > 0;
+  const hasData = foodsWithDataCount > 0 || supplementTotal > 0;
+  const remaining = target > 0 ? Math.max(0, Math.round((target - currentTotal) * 10) / 10) : 0;
+  const dataCompletenessText = formatDataCompleteness(foodsWithDataCount, validMeals.length);
 
-  let status: 'optimal' | 'good' | 'low' | 'deficient' | 'exceeded' = 'deficient';
+  let status: 'optimal' | 'good' | 'low' | 'under' | 'exceeded' = 'under';
   if (nutrientKey === 'calories' || nutrientKey === 'sugar' || nutrientKey === 'sodium') {
     if (percent > 115) status = 'exceeded';
     else if (percent >= 80) status = 'optimal';
     else if (percent >= 50) status = 'good';
-    else status = 'low';
+    else status = 'under';
   } else {
     if (percent >= 100) status = 'optimal';
     else if (percent >= 75) status = 'good';
     else if (percent >= 50) status = 'low';
-    else status = 'deficient';
+    else status = 'under';
   }
 
   const ulEval = evaluateUpperLimit(
@@ -398,12 +429,16 @@ export function calculateNutrientDayProgress(
     targetType: meta.targetType,
     isCustomTarget,
     current: currentTotal,
+    remaining,
     foodAmount: foodTotal,
     supplementAmount: supplementTotal,
     percent,
+    hasData,
     isIncomplete,
     missingCount,
+    foodsWithDataCount,
     totalMealsCount: validMeals.length,
+    dataCompletenessText,
     contributors,
     missingItems,
     status,

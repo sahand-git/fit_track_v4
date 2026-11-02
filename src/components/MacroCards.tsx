@@ -157,7 +157,9 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           <Text style={styles.pillCombinedText} numberOfLines={2}>
             <Text style={styles.secondaryLabel}>{t('Fiber')}: </Text>
             <Text style={styles.secondaryValue}>
-              {typeof fiberConsumed === 'number' ? Math.round(fiberConsumed * 10) / 10 : 0}/{fiberTarget}g
+              {typeof fiberConsumed === 'number' && Number.isFinite(fiberConsumed)
+                ? `${Math.round(fiberConsumed * 10) / 10}/${fiberTarget}g`
+                : `—/${fiberTarget}g`}
             </Text>
             {fiberIsIncomplete && (
               <Text style={styles.incompleteAsterisk} accessibilityLabel={t('Incomplete data')}>
@@ -179,7 +181,9 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           <Text style={styles.pillCombinedText} numberOfLines={2}>
             <Text style={styles.secondaryLabel}>{t('Sugar')}: </Text>
             <Text style={styles.secondaryValue}>
-              {typeof sugarConsumed === 'number' ? Math.round(sugarConsumed * 10) / 10 : 0}/{sugarTarget}g
+              {typeof sugarConsumed === 'number' && Number.isFinite(sugarConsumed)
+                ? `${Math.round(sugarConsumed * 10) / 10}/${sugarTarget}g`
+                : `—/${sugarTarget}g`}
             </Text>
             {sugarIsIncomplete && (
               <Text style={styles.incompleteAsterisk} accessibilityLabel={t('Incomplete data')}>

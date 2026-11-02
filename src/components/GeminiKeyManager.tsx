@@ -164,7 +164,7 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
             {t('A Gemini API key enables text meal estimates, plate scanning, and AI Coach. Requests send your prompt and the relevant meal or goal context to Google. Google usage limits and billing apply.')}
           </Text>
           <Text style={[styles.securityNote, isRTL && styles.textRTL]}>
-            {t('Your key is stored securely on this device, never included in cloud backups or export files, and sent only to Google AI Studio.')}
+            {t('The key stays on this device, is not included in backups, and is only sent to Google with my AI requests.')}
           </Text>
         </>
       )}

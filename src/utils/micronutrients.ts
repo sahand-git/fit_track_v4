@@ -142,6 +142,7 @@ export interface MicronutrientIntake {
   targetType?: DriTargetType;
   unit: 'mg' | 'mcg';
   current: number;
+  remaining: number;
   foodAmount: number;
   supplementAmount: number;
   percent: number;
@@ -153,6 +154,8 @@ export interface MicronutrientIntake {
   hasData: boolean;
   isIncomplete: boolean;
   missingCount: number;
+  foodsWithDataCount: number;
+  dataCompletenessText?: string;
   upperLimit?: number;
   upperLimitScope?: UpperLimitScope;
   upperLimitWarning?: string;
@@ -425,9 +428,14 @@ export function calculateMicronutrientIntake(
     }
   }
 
-  // 2. Aggregate supplements (only taken supplements count)
+  // 2. Aggregate supplements (only taken supplements count, each counted once)
+  const seenSuppIds = new Set<string>();
   for (const s of supplements) {
     if (s.taken) {
+      if (s.id) {
+        if (seenSuppIds.has(s.id)) continue;
+        seenSuppIds.add(s.id);
+      }
       const contrib = resolveSupplementNutrientContribution(s);
       if (contrib && contrib.isCompatibleUnit && contrib.amountInCanonicalUnit > 0) {
         supplementTotals[contrib.nutrientKey] += contrib.amountInCanonicalUnit;
@@ -463,19 +471,23 @@ export function calculateMicronutrientIntake(
       status = 'low';
     }
 
-    if (!isMinor && percent >= 100) {
+    const hasData = hasFoodData[key] || hasSuppData[key];
+    if (!isMinor && hasData && percent >= 100) {
       targetsMetCount += 1;
     }
     if (!isMinor) {
       totalPctSum += Math.min(100, percent);
     }
 
-    const hasData = hasFoodData[key] || hasSuppData[key];
     const isIncomplete = meals.length > 0 && missingCounts[key] > 0;
     const missingCount = missingCounts[key];
+    const foodsWithDataCount = Math.max(0, meals.length - missingCount);
     const coverage = meals.length > 0
       ? (meals.length - missingCounts[key]) / meals.length
       : (hasSuppData[key] ? 1 : 0);
+
+    const remaining = target !== undefined && target > 0 ? Math.max(0, Math.round((target - total) * 10) / 10) : 0;
+    const dataCompletenessText = `based on ${foodsWithDataCount} of ${meals.length} logged foods with data`;
 
     const ulEval = evaluateUpperLimit(key, food, supp, profile?.age, profile?.gender);
 
@@ -486,6 +498,7 @@ export function calculateMicronutrientIntake(
       targetType: dri.targetType,
       unit: meta.unit,
       current: total,
+      remaining,
       foodAmount: food,
       supplementAmount: supp,
       percent,
@@ -497,6 +510,8 @@ export function calculateMicronutrientIntake(
       hasData,
       isIncomplete,
       missingCount,
+      foodsWithDataCount,
+      dataCompletenessText,
       upperLimit: dri.upperLimit,
       upperLimitScope: dri.upperLimitScope,
       upperLimitWarning: ulEval.warning,

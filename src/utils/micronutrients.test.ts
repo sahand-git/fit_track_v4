@@ -319,6 +319,38 @@ console.log('Testing micronutrients and RDA calculation...');
   assertEqual(result.nutrients.vitaminC.coverage, 1); // 3 out of 3 = 100% (>=70%)
   assert(result.nutrients.vitaminC.percent < 50, 'Percent should be below 50%');
   assert(result.nutrients.vitaminC.coverage >= 0.7, 'Coverage should be >= 70%');
+  assertEqual(result.nutrients.vitaminC.foodsWithDataCount, 3);
+  assertEqual(result.nutrients.vitaminC.remaining, 55); // 90 - 35 = 55 mg
+}
+
+// 12. Supplement Deduplication (No Double Counting)
+{
+  const duplicateSupps: LoggedDailySupplement[] = [
+    {
+      id: 'supp_d3_dup',
+      name: 'Vitamin D3 2000 IU',
+      amount: 2000,
+      unit: 'IU',
+      category: 'vitamin',
+      time: 'morning',
+      taken: true,
+      takenAt: '2026-10-15T08:00:00Z',
+    },
+    {
+      id: 'supp_d3_dup',
+      name: 'Vitamin D3 2000 IU',
+      amount: 2000,
+      unit: 'IU',
+      category: 'vitamin',
+      time: 'morning',
+      taken: true,
+      takenAt: '2026-10-15T08:00:00Z',
+    },
+  ];
+
+  const result = calculateMicronutrientIntake([], duplicateSupps);
+  assertEqual(result.nutrients.vitaminD.current, 50); // Counted once (50 mcg), not 100 mcg
+  assertEqual(result.nutrients.vitaminD.supplementAmount, 50);
 }
 
 console.log('All micronutrients and RDA calculation tests passed successfully.');

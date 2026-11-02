@@ -55,6 +55,7 @@ function runAiSetupWizardTests() {
       'Security & Privacy Guarantee',
       'Your key stays strictly on this device in secure encrypted storage. FitTrack never uploads your key to any server or shares it with anyone.',
       'Your key is stored securely on this device, never included in cloud backups or export files, and sent only to Google AI Studio.',
+      'The key stays on this device, is not included in backups, and is only sent to Google with my AI requests.',
       'Get Free Key from Google AI Studio',
       'Paste your Gemini API key',
       'Key cannot be empty to test connection.',

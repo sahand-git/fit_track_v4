@@ -3,6 +3,7 @@ import {
   formattedNutrientValue,
   getNutrientMetadata,
 } from './nutrientTotals';
+import { resolveMealNutrient } from './mealNutrients';
 import { LoggedMeal, LoggedDailySupplement, UserProfile } from '../types';
 
 function assert(condition: boolean, message: string) {
@@ -183,6 +184,66 @@ assert(vitDProgress.current === 50, `2000 IU Vitamin D3 = 50 mcg, got ${vitDProg
 assert(vitDProgress.contributors.length === 1, 'Supplement should be listed as contributor');
 assert(vitDProgress.contributors[0].isSupplement === true, 'Contributor marked as supplement');
 console.log('✓ Supplement contribution resolved and added to contributors ranking.');
+
+// 7. Supplement Deduplication (No Double Counting)
+console.log('Testing supplement deduplication (no double counting)...');
+const duplicateSupplements: LoggedDailySupplement[] = [
+  supplements[0],
+  { ...supplements[0] }, // exact duplicate taken entry
+];
+const dedupVitD = calculateNutrientDayProgress('vitaminD', [], duplicateSupplements, mockProfile);
+assert(dedupVitD.current === 50, `Duplicate taken supplements must only be counted once (expected 50, got ${dedupVitD.current})`);
+assert(dedupVitD.contributors.length === 1, 'Deduplicated contributors list should have length 1');
+console.log('✓ Supplement deduplication verified: duplicate taken supplements are counted exactly once.');
+
+// 8. Data Completeness & Remaining Calculation
+console.log('Testing data completeness and remaining targets...');
+const multiMeals: LoggedMeal[] = [
+  ...completeMeals, // 2 meals with fiber
+  {
+    id: 'm4',
+    foodId: 'f4',
+    name: 'Mystery Food Without Fiber',
+    mealType: 'dinner',
+    servings: 1,
+    servingSize: '100g',
+    servingGrams: 100,
+    calories: 150,
+    protein: 5,
+    carbs: 10,
+    fat: 2,
+    timestamp: new Date().toISOString(),
+  },
+];
+const progressMulti = calculateNutrientDayProgress('fiber', multiMeals, [], mockProfile);
+assert(progressMulti.foodsWithDataCount === 2, `Expected 2 foods with data, got ${progressMulti.foodsWithDataCount}`);
+assert(progressMulti.totalMealsCount === 3, `Expected 3 total meals, got ${progressMulti.totalMealsCount}`);
+assert(progressMulti.hasData === true, 'hasData must be true when 2 of 3 foods have data');
+assert(progressMulti.dataCompletenessText === 'based on 2 of 3 logged foods with data', `Got text: "${progressMulti.dataCompletenessText}"`);
+assert(progressMulti.remaining === 6, `Expected remaining 6g (target 28 - current 22), got ${progressMulti.remaining}`);
+console.log('✓ Data completeness formatting and remaining target calculations verified.');
+
+// 9. Food Details Agreement with Daily Totals
+console.log('Testing Food Details Agreement with Daily Totals...');
+const testEggMeal: LoggedMeal = {
+  id: 'egg_logged_1',
+  foodId: 'food_egg_boiled_whole',
+  name: 'Boiled Egg (Whole)',
+  mealType: 'breakfast',
+  servings: 2,
+  servingSize: '1 large egg (50g)',
+  servingGrams: 100, // 2 large eggs = 100g
+  calories: 156,
+  protein: 12.6,
+  carbs: 1.2,
+  fat: 10.6,
+  timestamp: new Date().toISOString(),
+};
+const dayEggProgress = calculateNutrientDayProgress('vitaminA', [testEggMeal], [], mockProfile);
+const directResolvedVitA = resolveMealNutrient(testEggMeal, 'vitaminA');
+assert(directResolvedVitA !== undefined && directResolvedVitA > 0, 'Direct resolve should return valid vitaminA');
+assert(dayEggProgress.current === directResolvedVitA, `Food detail direct resolution (${directResolvedVitA}) must match daily totals (${dayEggProgress.current})`);
+console.log('✓ Food detail resolution and daily totals agree 100%.');
 
 console.log('======================================================');
 console.log('All Nutrient Totals & Missing Data Unit Tests Passed Cleanly!');

@@ -16,6 +16,8 @@ import {
 } from 'lucide-react-native';
 import { LoggedMeal, FoodItem } from '../types';
 import { formattedNutrientValue } from '../utils/nutrientTotals';
+import { resolveMealNutrient } from '../utils/mealNutrients';
+import { AllNutrientKey } from '../data/nutrientRegistry';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
@@ -90,14 +92,48 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
   const currentFat = Math.round(baseFat * servings * 10) / 10;
   const currentGrams = Math.round(baseGrams * servings);
 
-  const getScaledNutrient = (key: keyof LoggedMeal): number | undefined => {
-    const raw = (item as unknown as Record<string, unknown>)[key as string];
-    if (raw === undefined || raw === null || (typeof raw === 'number' && isNaN(raw))) {
-      return undefined;
+  const simulatedMeal: LoggedMeal = (() => {
+    const isLoggedMeal = 'mealType' in item;
+    const foodId = 'foodId' in item && item.foodId ? item.foodId : item.id;
+    let scaledSnapshot: Partial<Record<AllNutrientKey, number>> | undefined;
+
+    if ('nutrientsSnapshot' in item && item.nutrientsSnapshot) {
+      scaledSnapshot = {};
+      const origServings = isLoggedMeal && typeof (item as LoggedMeal).servings === 'number' && (item as LoggedMeal).servings > 0 ? (item as LoggedMeal).servings : 1;
+      const ratio = servings / origServings;
+      for (const [k, v] of Object.entries(item.nutrientsSnapshot)) {
+        if (typeof v === 'number') {
+          scaledSnapshot[k as AllNutrientKey] = Math.round(v * ratio * 10) / 10;
+        }
+      }
     }
-    const num = Number(raw);
-    const base = 'servings' in item && item.servings > 0 ? num / item.servings : num;
-    return Math.round(base * servings * 10) / 10;
+
+    return {
+      id: item.id,
+      foodId,
+      name: item.name,
+      mealType: isLoggedMeal ? (item as LoggedMeal).mealType : 'snack',
+      servings,
+      servingSize: item.servingSize,
+      servingGrams: currentGrams,
+      calories: currentKcal,
+      protein: currentProtein,
+      carbs: currentCarbs,
+      fat: currentFat,
+      nutrientsSnapshot: scaledSnapshot,
+      timestamp: new Date().toISOString(),
+    };
+  })();
+
+  const getScaledNutrient = (key: string): number | undefined => {
+    const dynamicVal = resolveMealNutrient(simulatedMeal, key);
+    if (dynamicVal !== undefined) return dynamicVal;
+    const raw = (item as unknown as Record<string, unknown>)[key];
+    if (typeof raw === 'number' && !isNaN(raw)) {
+      const base = 'servings' in item && item.servings > 0 ? raw / item.servings : raw;
+      return Math.round(base * servings * 10) / 10;
+    }
+    return undefined;
   };
 
   const detailedNutrients = [
@@ -107,12 +143,25 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
     { label: 'Potassium', value: getScaledNutrient('potassium'), unit: 'mg' },
     { label: 'Calcium', value: getScaledNutrient('calcium'), unit: 'mg' },
     { label: 'Iron', value: getScaledNutrient('iron'), unit: 'mg' },
-    { label: 'Vitamin C', value: getScaledNutrient('vitaminC'), unit: 'mg' },
-    { label: 'Vitamin A', value: getScaledNutrient('vitaminA'), unit: 'mcg' },
-    { label: 'Vitamin D', value: getScaledNutrient('vitaminD'), unit: 'mcg' },
-    { label: 'Vitamin B12', value: getScaledNutrient('vitaminB12'), unit: 'mcg' },
     { label: 'Magnesium', value: getScaledNutrient('magnesium'), unit: 'mg' },
+    { label: 'Phosphorus', value: getScaledNutrient('phosphorus'), unit: 'mg' },
     { label: 'Zinc', value: getScaledNutrient('zinc'), unit: 'mg' },
+    { label: 'Copper', value: getScaledNutrient('copper'), unit: 'mg' },
+    { label: 'Manganese', value: getScaledNutrient('manganese'), unit: 'mg' },
+    { label: 'Selenium', value: getScaledNutrient('selenium'), unit: 'mcg' },
+    { label: 'Vitamin A', value: getScaledNutrient('vitaminA'), unit: 'mcg' },
+    { label: 'Vitamin C', value: getScaledNutrient('vitaminC'), unit: 'mg' },
+    { label: 'Vitamin D', value: getScaledNutrient('vitaminD'), unit: 'mcg' },
+    { label: 'Vitamin E', value: getScaledNutrient('vitaminE'), unit: 'mg' },
+    { label: 'Vitamin K', value: getScaledNutrient('vitaminK'), unit: 'mcg' },
+    { label: 'Thiamin', value: getScaledNutrient('thiamin'), unit: 'mg' },
+    { label: 'Riboflavin', value: getScaledNutrient('riboflavin'), unit: 'mg' },
+    { label: 'Niacin', value: getScaledNutrient('niacin'), unit: 'mg' },
+    { label: 'Vitamin B6', value: getScaledNutrient('vitaminB6'), unit: 'mg' },
+    { label: 'Folate', value: getScaledNutrient('folate'), unit: 'mcg' },
+    { label: 'Vitamin B12', value: getScaledNutrient('vitaminB12'), unit: 'mcg' },
+    { label: 'Pantothenic Acid', value: getScaledNutrient('pantothenicAcid'), unit: 'mg' },
+    { label: 'Choline', value: getScaledNutrient('choline'), unit: 'mg' },
   ];
 
   const handleMinus = () => {

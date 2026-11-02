@@ -33,7 +33,10 @@ export function resolveMealNutrient(meal: LoggedMeal, key: string): number | und
     if (profile?.nutrients) {
       const per100 = profile.nutrients[key as AllNutrientKey];
       if (typeof per100 === 'number' && !isNaN(per100)) {
-        const totalGrams = (meal.servingGrams > 0 ? meal.servingGrams : 100) * (meal.servings > 0 ? meal.servings : 1);
+        const totalGrams =
+          meal.servingGrams > 0
+            ? meal.servingGrams
+            : (meal.servings > 0 ? meal.servings * 100 : 100);
         const calculated = (per100 * totalGrams) / (profile.portionBasis || 100);
         return Math.round(calculated * 10) / 10;
       }

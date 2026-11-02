@@ -5,6 +5,7 @@ import {
   calculateMicronutrientIntake,
   ORDERED_MICRONUTRIENT_KEYS,
 } from '../utils/micronutrients';
+import { formatDataCompleteness } from '../utils/nutrientTotals';
 import { MicronutrientKey } from '../data/supplementCatalog';
 import { LoggedMeal, LoggedDailySupplement, UserProfile } from '../types';
 import { useLanguage } from '../i18n/I18nContext';
@@ -180,11 +181,22 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
                 >
                   {hasData
                     ? hasTarget
-                      ? `${item.percent}% ${item.targetType || translate(language, 'RDA')}`
+                      ? item.remaining > 0
+                        ? `${item.percent}% (${item.remaining} ${item.unit} ${translate(language, 'remaining')})`
+                        : `${item.percent}% (${translate(language, 'Target reached')})`
                       : `${item.current} ${item.unit}`
                     : `${translate(language, 'Not enough data')} *`}
                 </Text>
               </View>
+
+              {/* Data Completeness */}
+              {meals.length > 0 && (
+                <View style={[styles.completenessRow, isRtl && styles.rowRtl]}>
+                  <Text style={styles.completenessText}>
+                    {formatDataCompleteness(item.foodsWithDataCount, meals.length, (k) => translate(language, k))}
+                  </Text>
+                </View>
+              )}
 
               {/* Soft neutral note when below 50% with >= 70% coverage */}
               {hasData && hasTarget && item.percent < 50 && item.coverage >= 0.7 && (
@@ -382,6 +394,14 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  completenessRow: {
+    marginTop: 4,
+    paddingTop: 3,
+  },
+  completenessText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
   },
   estimatedLowRow: {
     marginTop: 4,
