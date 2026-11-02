@@ -260,4 +260,48 @@ for (const tq of testQueries) {
 }
 console.log(`✓ Test 8 passed: Multilingual search across English, Arabic, and Kurdish Sorani successfully verified for newly added foods.`);
 
+// Test 9: Multi-token, alias, and Arabic Taa Marbuta search
+const aliasSampleFood: FoodItem = {
+  id: 'food_test_egg_boiled',
+  name: 'Egg (hard-boiled)',
+  nameAr: 'بيضة مسلوقة',
+  nameCkb: 'هێلکەی کوڵاو',
+  aliases: ['boiled egg', 'egg boiled', 'hard boiled egg', 'بيض مسلوق'],
+  category: 'Eggs & Dairy',
+  calories: 155,
+  protein: 12.6,
+  carbs: 1.1,
+  fat: 10.6,
+  servingSize: '100g',
+  servingGrams: 100,
+  source: 'verified_database',
+};
+
+const multiTokenQueries = [
+  'boiled egg',
+  'egg boiled',
+  'hard boiled egg',
+  'بيض مسلوق',
+  'بيض مسلوقه',
+  'هێلکەی کوڵاو',
+];
+
+for (const q of multiTokenQueries) {
+  const res = filterFoodCatalog({
+    searchQuery: q,
+    foodFilter: 'all',
+    recentFoods: [],
+    frequentFoods: [],
+    favoriteFoods: [],
+    customFoods: [aliasSampleFood],
+    barcodeCache: [],
+    t: mockT,
+  });
+  assert(
+    res.some((f) => f.id === 'food_test_egg_boiled'),
+    `Multi-token search for "${q}" should find food_test_egg_boiled`
+  );
+}
+console.log('✓ Test 9 passed: Multi-token, alias, and Arabic normalizations verified.');
+
 console.log('All useFoodSearch Unit Tests PASSED Cleanly!');

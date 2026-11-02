@@ -56,7 +56,10 @@ export interface QualityAuditError {
     | 'drink_missing_unit'
     | 'non_english_name'
     | 'verified_missing_sourceref'
-    | 'reused_fdc_id';
+    | 'reused_fdc_id'
+    | 'implausible_nutrient_value'
+    | 'unit_sanity_error'
+    | 'unverified_zero_nutrient';
   message: string;
 }
 
@@ -101,14 +104,13 @@ export const WHITELISTED_REUSED_FDC_IDS: Record<string, WhitelistedReusedFdcEntr
     reason: 'Portion and naming variants of commercial creamy peanut butter (USDA FDC 174266)',
     allowedFoodIds: ['pop_peanut_butter_creamy', 'food_peanut_butter'],
   },
-  '168936': {
-    fdcId: '168936',
+  '168937': {
+    fdcId: '168937',
     reason:
-      'Pasta shape variants of plain cooked unenriched white semolina pasta sharing identical per-100g nutrition profile (USDA FDC 168936)',
+      'Pasta shape variants of plain cooked unenriched white semolina pasta sharing identical per-100g nutrition profile (USDA FDC 168937)',
     allowedFoodIds: [
       'food_spaghetti_cooked_plain',
       'food_penne_cooked_plain',
-      'food_macaroni_cooked_plain',
     ],
   },
   '172796': {
@@ -344,6 +346,69 @@ export function auditFoodDatabase(thresholdPercentage = 12, foods: FoodItem[] = 
         });
       } else {
         seenBarcodes.set(code, food.id);
+      }
+    }
+
+    // 5b. Unit sanity check
+    if (!food.servingGrams || food.servingGrams <= 0 || food.servingGrams > 5000) {
+      qualityErrors.push({
+        id: food.id,
+        name: food.name,
+        type: 'unit_sanity_error',
+        message: `Food "${food.name}" (${food.id}) has invalid servingGrams (${food.servingGrams}); must be positive and <= 5000g.`,
+      });
+    }
+
+    // 5c. Plausible nutrient ranges (per 100g)
+    const factor100 = 100 / (food.servingGrams > 0 ? food.servingGrams : 100);
+    const nutrientBounds: Record<string, { max: number; label: string }> = {
+      calories: { max: 900, label: 'kcal' },
+      protein: { max: 100, label: 'g' },
+      carbs: { max: 100, label: 'g' },
+      fat: { max: 100, label: 'g' },
+      fiber: { max: 100, label: 'g' },
+      sugar: { max: 100, label: 'g' },
+      sodium: { max: 40000, label: 'mg' },
+      potassium: { max: 20000, label: 'mg' },
+      calcium: { max: 5000, label: 'mg' },
+      iron: { max: 500, label: 'mg' },
+      magnesium: { max: 2000, label: 'mg' },
+      zinc: { max: 500, label: 'mg' },
+      vitaminA: { max: 30000, label: 'mcg' },
+      vitaminC: { max: 5000, label: 'mg' },
+      vitaminD: { max: 2000, label: 'mcg' },
+      vitaminB12: { max: 500, label: 'mcg' },
+    };
+
+    for (const [key, bound] of Object.entries(nutrientBounds)) {
+      const val = (food as any)[key];
+      if (typeof val === 'number') {
+        const per100 = val * factor100;
+        if (per100 < 0 || per100 > bound.max) {
+          qualityErrors.push({
+            id: food.id,
+            name: food.name,
+            type: 'implausible_nutrient_value',
+            message: `Food "${food.name}" (${food.id}) has implausible ${key} per 100g (${per100.toFixed(1)}${bound.label} > ${bound.max}${bound.label}).`,
+          });
+        }
+      }
+    }
+
+    // 5d. No zero where unknown (unverified / estimated foods must not have placeholder zeros for micronutrients)
+    const isLabVerified = food.source === 'verified_database' && Boolean(food.sourceRef?.startsWith('USDA'));
+    if (!isLabVerified) {
+      const minorNutrients = ['vitaminA', 'vitaminC', 'vitaminD', 'vitaminB12', 'magnesium', 'zinc'];
+      for (const mKey of minorNutrients) {
+        const mVal = (food as any)[mKey];
+        if (mVal === 0) {
+          qualityErrors.push({
+            id: food.id,
+            name: food.name,
+            type: 'unverified_zero_nutrient',
+            message: `Food "${food.name}" (${food.id}) has placeholder zero for unanalyzed nutrient ${mKey}; unmeasured values must be undefined, never 0.`,
+          });
+        }
       }
     }
 

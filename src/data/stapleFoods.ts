@@ -19,7 +19,6 @@ export const STAPLE_FOODS: FoodItem[] = [
     sugars: 0.7,
     sodium: 496,
     vitaminA: 0,
-    vitaminC: 0,
     vitaminD: 0.3,
     vitaminB12: 0.82,
     magnesium: 7,
@@ -59,7 +58,9 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 3. Halloumi Cheese (UK CoFID / USDA)
   {
     id: 'food_halloumi_cheese',
-    sourceRef: 'USDA FDC 170882',
+    sourceRef: 'regional_culinary_estimate: Traditional unripened brined curd cheese',
+    source: 'regional_culinary_estimate',
+    isEstimate: true,
     name: 'Halloumi Cheese',
     nameAr: 'جبنة حلوم',
     nameCkb: 'پەنیری حەلووم',
@@ -77,12 +78,10 @@ export const STAPLE_FOODS: FoodItem[] = [
     potassium: 40,
     iron: 0.2,
     vitaminA: 135,
-    vitaminC: 0,
     vitaminD: 0.3,
     vitaminB12: 1.4,
     magnesium: 18,
     zinc: 2.5,
-    source: 'verified_database',
     variants: [
       { id: 'var_halloumi_2slices', name: '2 thick slices (50g)', calories: 161, protein: 10.8, carbs: 1.0, fat: 13.0, servingSize: '2 thick slices (50g)', servingGrams: 50 },
       { id: 'var_halloumi_100g', name: '100g portion', calories: 321, protein: 21.5, carbs: 2.0, fat: 26.0, servingSize: '100g portion', servingGrams: 100 },
@@ -92,7 +91,9 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 4. Labneh (USDA #170903)
   {
     id: 'food_labneh_strained_yogurt',
-    sourceRef: 'USDA FDC 170884',
+    sourceRef: 'regional_culinary_estimate: Strained whole milk yogurt (labneh spread)',
+    source: 'regional_culinary_estimate',
+    isEstimate: true,
     name: 'Labneh (Strained Yogurt Spread)',
     nameAr: 'لبنة بلدية كاملة الدسم',
     nameCkb: 'لەبنەی خۆماڵی',
@@ -115,7 +116,6 @@ export const STAPLE_FOODS: FoodItem[] = [
     vitaminB12: 0.6,
     magnesium: 16,
     zinc: 0.85,
-    source: 'verified_database',
     variants: [
       { id: 'var_labneh_2tbsp', name: '2 tbsp (30g)', calories: 46, protein: 2.7, carbs: 2.1, fat: 3.0, servingSize: '2 tbsp (30g)', servingGrams: 30 },
       { id: 'var_labneh_100g', name: '100g portion', calories: 154, protein: 9.0, carbs: 7.0, fat: 10.0, servingSize: '100g portion', servingGrams: 100 },
@@ -142,8 +142,6 @@ export const STAPLE_FOODS: FoodItem[] = [
     recipeEstimate: true,
     vitaminA: 120,
     vitaminC: 24.5,
-    vitaminD: 0,
-    vitaminB12: 0,
     magnesium: 28,
     zinc: 0.55,
     source: 'regional_culinary_estimate',
@@ -235,7 +233,9 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 10. Freekeh (USDA #170288)
   {
     id: 'food_freekeh_cooked',
-    sourceRef: 'USDA FDC 170691',
+    sourceRef: 'regional_culinary_estimate: Green durum wheat, simmered in vegetable broth',
+    source: 'regional_culinary_estimate',
+    isEstimate: true,
     name: 'Freekeh (Green Durum Wheat, cooked)',
     nameAr: 'فريكة خضراء مطبوخة',
     nameCkb: 'فەريكەی سەوزی کوڵاو',
@@ -253,12 +253,7 @@ export const STAPLE_FOODS: FoodItem[] = [
     iron: 2.1,
     potassium: 250,
     magnesium: 48,
-    vitaminA: 0,
-    vitaminC: 0,
-    vitaminD: 0,
-    vitaminB12: 0,
     zinc: 1.65,
-    source: 'verified_database',
     variants: [
       { id: 'var_freekeh_cup', name: '1 cup cooked (160g)', calories: 224, protein: 8.0, carbs: 44.0, fat: 1.3, servingSize: '1 cup cooked (160g)', servingGrams: 160 },
       { id: 'var_freekeh_half_cup', name: '1/2 cup cooked (80g)', calories: 112, protein: 4.0, carbs: 22.0, fat: 0.6, servingSize: '1/2 cup cooked (80g)', servingGrams: 80 },
@@ -400,7 +395,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 15. Peach (USDA #169928)
   {
     id: 'food_peach_fresh_raw',
-    sourceRef: 'USDA FDC 169927',
+    sourceRef: 'USDA FDC 169928',
     name: 'Peach (fresh, raw)',
     nameAr: 'خوخ طازج',
     nameCkb: 'قۆخی تازە',
@@ -622,7 +617,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 22. Zucchini (USDA #170457)
   {
     id: 'food_zucchini_cooked_boiled',
-    sourceRef: 'USDA FDC 169308',
+    sourceRef: 'USDA FDC 169292',
     name: 'Cooked Zucchini (courgette, boiled)',
     nameAr: 'كوسة مطبوخة (شجر مسلوق)',
     nameCkb: 'کولەکەی سەوزی کوڵاو',
@@ -688,7 +683,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 24. Chicken Liver (USDA #171060)
   {
     id: 'food_chicken_liver_cooked',
-    sourceRef: 'USDA FDC 171060',
+    sourceRef: 'USDA FDC 171061',
     name: 'Chicken Liver (cooked, simmered)',
     nameAr: 'كبدة دجاج مطبوخة',
     nameCkb: 'جگەری مریشکی کوڵاو',
@@ -721,7 +716,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 25. Beef Liver (USDA #169451)
   {
     id: 'food_beef_liver_cooked',
-    sourceRef: 'USDA FDC 169451',
+    sourceRef: 'USDA FDC 168627',
     name: 'Beef Liver (cooked, braised)',
     nameAr: 'كبدة بقري مطبوخة',
     nameCkb: 'جگەری مانگای کوڵاو',
@@ -1073,7 +1068,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 39. Spaghetti (USDA #168937)
   {
     id: 'food_spaghetti_cooked_plain',
-    sourceRef: 'USDA FDC 168936',
+    sourceRef: 'USDA FDC 168937',
     name: 'Spaghetti Pasta (cooked plain)',
     nameAr: 'معكرونة سباغيتي مطبوخة سادة',
     nameCkb: 'سپاگێتی کوڵاوی سادە',
@@ -1106,7 +1101,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 40. Penne (USDA #168937)
   {
     id: 'food_penne_cooked_plain',
-    sourceRef: 'USDA FDC 168936',
+    sourceRef: 'USDA FDC 168937',
     name: 'Penne Pasta (cooked plain)',
     nameAr: 'معكرونة بيني مطبوخة سادة',
     nameCkb: 'پێنێی کوڵاوی سادە',
@@ -1139,7 +1134,7 @@ export const STAPLE_FOODS: FoodItem[] = [
   // 41. Macaroni (USDA #168937)
   {
     id: 'food_macaroni_cooked_plain',
-    sourceRef: 'USDA FDC 168936',
+    sourceRef: 'USDA FDC 168925',
     name: 'Elbow Macaroni (cooked plain)',
     nameAr: 'معكرونة كوع (إلبو) مطبوخة سادة',
     nameCkb: 'مەعکەرۆنی کوڵاوی سادە',

@@ -71,6 +71,8 @@ export function filterFoodCatalog({
   const normalizedQuery = normalizeSearch(searchQuery);
   if (!normalizedQuery) return sourceList;
 
+  const queryTokens = normalizedQuery.split(' ').filter(Boolean);
+
   return sourceList.filter((f) => {
     const normName = normalizeSearch(f.name);
     const normNameAr = f.nameAr ? normalizeSearch(f.nameAr) : '';
@@ -79,15 +81,21 @@ export function filterFoodCatalog({
     const normBrand = f.brand ? normalizeSearch(f.brand) : '';
     const normBarcode = f.barcode ? normalizeSearch(f.barcode) : '';
     const localizedName = normalizeSearch(t(f.name));
-    return (
-      normName.includes(normalizedQuery) ||
-      normNameAr.includes(normalizedQuery) ||
-      normNameCkb.includes(normalizedQuery) ||
-      normCategory.includes(normalizedQuery) ||
-      normBrand.includes(normalizedQuery) ||
-      normBarcode.includes(normalizedQuery) ||
-      localizedName.includes(normalizedQuery)
-    );
+    const normAliases = (f.aliases || []).map((a) => normalizeSearch(a));
+
+    const combinedSearchable = [
+      normName,
+      normNameAr,
+      normNameCkb,
+      normCategory,
+      normBrand,
+      normBarcode,
+      localizedName,
+      ...normAliases,
+    ].join(' ');
+
+    if (combinedSearchable.includes(normalizedQuery)) return true;
+    return queryTokens.every((token) => combinedSearchable.includes(token));
   });
 }
 

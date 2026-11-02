@@ -98,6 +98,76 @@ assert(
 );
 console.log('✓ Reused FDC ID audit rule verified: unwhitelisted reuse between different foods is blocked.');
 
+// 8. Test unit sanity check
+const testInvalidGramsFood = [
+  {
+    id: 'food_invalid_grams',
+    name: 'Invalid Grams Food',
+    servingSize: '0g',
+    servingGrams: 0,
+    calories: 100,
+    protein: 10,
+    carbs: 10,
+    fat: 2,
+    category: 'Fruit',
+    source: 'verified_database' as const,
+    sourceRef: 'USDA FDC 111111',
+  },
+];
+const testInvalidGramsResult = auditFoodDatabase(12, testInvalidGramsFood);
+assert(
+  testInvalidGramsResult.qualityErrors.some((e) => e.type === 'unit_sanity_error'),
+  'auditFoodDatabase must flag unit_sanity_error when servingGrams <= 0 or > 5000'
+);
+console.log('✓ Unit sanity rule verified: servingGrams <= 0 or > 5000 flagged correctly.');
+
+// 9. Test plausible nutrient bounds
+const testImplausibleNutrientFood = [
+  {
+    id: 'food_implausible_calories',
+    name: 'Implausible Nutrient Food',
+    servingSize: '100g',
+    servingGrams: 100,
+    calories: 1200, // Exceeds max 900 kcal/100g pure fat bound
+    protein: 10,
+    carbs: 10,
+    fat: 2,
+    category: 'Fruit',
+    source: 'verified_database' as const,
+    sourceRef: 'USDA FDC 222222',
+  },
+];
+const testImplausibleResult = auditFoodDatabase(12, testImplausibleNutrientFood);
+assert(
+  testImplausibleResult.qualityErrors.some((e) => e.type === 'implausible_nutrient_value'),
+  'auditFoodDatabase must flag implausible_nutrient_value when nutrient exceeds physiological bounds'
+);
+console.log('✓ Plausible nutrient bounds verified: values exceeding physiological limits per 100g flagged correctly.');
+
+// 10. Test unverified zero nutrient rule
+const testUnverifiedZeroFood = [
+  {
+    id: 'food_unverified_zero_sample',
+    name: 'Unverified Food With Zero Vitamin',
+    servingSize: '100g',
+    servingGrams: 100,
+    calories: 100,
+    protein: 10,
+    carbs: 10,
+    fat: 2,
+    category: 'Regional Dishes',
+    source: 'regional_culinary_estimate' as const,
+    sourceRef: 'regional_culinary_estimate: Custom test dish',
+    vitaminA: 0, // Placeholder zero for unanalyzed nutrient
+  },
+];
+const testUnverifiedZeroResult = auditFoodDatabase(12, testUnverifiedZeroFood);
+assert(
+  testUnverifiedZeroResult.qualityErrors.some((e) => e.type === 'unverified_zero_nutrient'),
+  'auditFoodDatabase must flag unverified_zero_nutrient when non-USDA food has placeholder zero for unanalyzed micronutrient'
+);
+console.log('✓ Unverified zero rule verified: non-USDA food with placeholder zero micronutrient is flagged.');
+
 console.log('========================================================================');
 console.log('✓ All auditFoodDatabase unit and quality regression tests passed cleanly!');
 console.log('========================================================================');

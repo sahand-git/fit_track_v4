@@ -123,6 +123,7 @@ export interface FoodItem {
   nameAr?: string;
   nameCkb?: string;
   brand?: string;
+  aliases?: string[];
   servingSize: string;
   servingGrams: number;
   unit?: 'g' | 'ml';
@@ -149,6 +150,20 @@ export interface FoodItem {
   vitaminB12?: number; // mcg
   magnesium?: number; // mg
   zinc?: number; // mg
+  vitaminE?: number; // mg
+  vitaminK?: number; // mcg
+  thiamin?: number; // mg
+  riboflavin?: number; // mg
+  niacin?: number; // mg
+  vitaminB6?: number; // mg
+  folate?: number; // mcg
+  pantothenicAcid?: number; // mg
+  choline?: number; // mg
+  phosphorus?: number; // mg
+  copper?: number; // mg
+  manganese?: number; // mg
+  selenium?: number; // mcg
+  iodine?: number; // mcg
   isEstimate?: boolean;
   isIncomplete?: boolean;
   incompleteReason?: string;
@@ -175,6 +190,7 @@ export interface LoggedMeal {
   nameAr?: string;
   nameCkb?: string;
   brand?: string;
+  aliases?: string[];
   category?: string;
   imageUrl?: string;
   mealType: MealType;

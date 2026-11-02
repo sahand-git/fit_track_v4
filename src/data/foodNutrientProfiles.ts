@@ -1,6 +1,7 @@
 import { AllNutrientKey } from './nutrientRegistry';
 import { VERIFIED_FOOD_DATABASE } from './foodDatabase';
 import { FoodItem } from '../types';
+import { FOOD_NUTRIENT_PROFILES_DATA } from './nutrientProfilesData';
 
 export type FoodState =
   | 'raw'
@@ -112,8 +113,15 @@ let _profilesCache: Map<string, FoodNutrientProfile> | null = null;
 
 function initProfilesCache(): Map<string, FoodNutrientProfile> {
   const map = new Map<string, FoodNutrientProfile>();
+  if (FOOD_NUTRIENT_PROFILES_DATA) {
+    for (const [id, profile] of Object.entries(FOOD_NUTRIENT_PROFILES_DATA)) {
+      map.set(id, profile);
+    }
+  }
   for (const food of VERIFIED_FOOD_DATABASE) {
-    map.set(food.id, buildProfileFromFoodItem(food));
+    if (!map.has(food.id)) {
+      map.set(food.id, buildProfileFromFoodItem(food));
+    }
   }
   return map;
 }
