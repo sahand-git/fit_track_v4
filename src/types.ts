@@ -157,6 +157,7 @@ export interface FoodItem {
   ingredients?: RecipeIngredient[];
   variants?: FoodVariant[];
   recipeEstimate?: boolean;
+  nutrientsSnapshot?: Partial<Record<string, number>>;
 }
 
 export interface WeightEntry {
@@ -213,6 +214,7 @@ export interface LoggedMeal {
   selectedVariantId?: string;
   variantName?: string;
   recipeEstimate?: boolean;
+  nutrientsSnapshot?: Partial<Record<string, number>>;
 }
 
 export interface CopyYesterdayResult extends DailyLog {
@@ -237,6 +239,7 @@ export interface MealTemplateItem {
   gramsPerUnit?: number;
   isEstimate?: boolean;
   source?: FoodItem['source'];
+  nutrientsSnapshot?: Partial<Record<string, number>>;
 }
 
 export interface MealTemplate {

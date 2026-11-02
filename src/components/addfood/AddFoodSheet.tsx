@@ -620,6 +620,27 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     const totalGrams = Math.round(effectiveGramsPerUnit * servingsCount);
     const baseServingGrams = activeVariant?.servingGrams ?? (selectedFood.servingGrams > 0 ? selectedFood.servingGrams : 100);
     const scaleRatio = totalGrams / baseServingGrams;
+    const needsSnapshot =
+      selectedFood.source === 'custom' ||
+      selectedFood.source === 'gemini' ||
+      selectedFood.source === 'ai_estimated' ||
+      selectedFood.source === 'open_food_facts' ||
+      !!selectedFood.barcode;
+
+    const nutrientsSnapshot = needsSnapshot ? {
+      fiber: selectedFood.fiber !== undefined ? Math.round(selectedFood.fiber * scaleRatio * 10) / 10 : undefined,
+      sugar: selectedFood.sugar !== undefined ? Math.round(selectedFood.sugar * scaleRatio * 10) / 10 : undefined,
+      sodium: selectedFood.sodium !== undefined ? Math.round(selectedFood.sodium * scaleRatio) : undefined,
+      potassium: selectedFood.potassium !== undefined ? Math.round(selectedFood.potassium * scaleRatio) : undefined,
+      calcium: selectedFood.calcium !== undefined ? Math.round(selectedFood.calcium * scaleRatio) : undefined,
+      iron: selectedFood.iron !== undefined ? Math.round(selectedFood.iron * scaleRatio * 10) / 10 : undefined,
+      vitaminC: selectedFood.vitaminC !== undefined ? Math.round(selectedFood.vitaminC * scaleRatio * 10) / 10 : undefined,
+      vitaminA: selectedFood.vitaminA !== undefined ? Math.round(selectedFood.vitaminA * scaleRatio) : undefined,
+      vitaminD: selectedFood.vitaminD !== undefined ? Math.round(selectedFood.vitaminD * scaleRatio * 10) / 10 : undefined,
+      vitaminB12: selectedFood.vitaminB12 !== undefined ? Math.round(selectedFood.vitaminB12 * scaleRatio * 10) / 10 : undefined,
+      magnesium: selectedFood.magnesium !== undefined ? Math.round(selectedFood.magnesium * scaleRatio) : undefined,
+      zinc: selectedFood.zinc !== undefined ? Math.round(selectedFood.zinc * scaleRatio * 10) / 10 : undefined,
+    } : undefined;
 
     const meal: LoggedMeal = {
       id: createUniqueId('meal'),
@@ -635,18 +656,19 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       protein: Math.round(activeProtein * scaleRatio * 10) / 10,
       carbs: Math.round(activeCarbs * scaleRatio * 10) / 10,
       fat: Math.round(activeFat * scaleRatio * 10) / 10,
-      fiber: selectedFood.fiber !== undefined ? Math.round(selectedFood.fiber * scaleRatio * 10) / 10 : undefined,
-      sugar: selectedFood.sugar !== undefined ? Math.round(selectedFood.sugar * scaleRatio * 10) / 10 : undefined,
-      sodium: selectedFood.sodium !== undefined ? Math.round(selectedFood.sodium * scaleRatio) : undefined,
-      potassium: selectedFood.potassium !== undefined ? Math.round(selectedFood.potassium * scaleRatio) : undefined,
-      calcium: selectedFood.calcium !== undefined ? Math.round(selectedFood.calcium * scaleRatio) : undefined,
-      iron: selectedFood.iron !== undefined ? Math.round(selectedFood.iron * scaleRatio * 10) / 10 : undefined,
-      vitaminC: selectedFood.vitaminC !== undefined ? Math.round(selectedFood.vitaminC * scaleRatio * 10) / 10 : undefined,
-      vitaminA: selectedFood.vitaminA !== undefined ? Math.round(selectedFood.vitaminA * scaleRatio) : undefined,
-      vitaminD: selectedFood.vitaminD !== undefined ? Math.round(selectedFood.vitaminD * scaleRatio * 10) / 10 : undefined,
-      vitaminB12: selectedFood.vitaminB12 !== undefined ? Math.round(selectedFood.vitaminB12 * scaleRatio * 10) / 10 : undefined,
-      magnesium: selectedFood.magnesium !== undefined ? Math.round(selectedFood.magnesium * scaleRatio) : undefined,
-      zinc: selectedFood.zinc !== undefined ? Math.round(selectedFood.zinc * scaleRatio * 10) / 10 : undefined,
+      nutrientsSnapshot,
+      fiber: needsSnapshot && selectedFood.fiber !== undefined ? Math.round(selectedFood.fiber * scaleRatio * 10) / 10 : undefined,
+      sugar: needsSnapshot && selectedFood.sugar !== undefined ? Math.round(selectedFood.sugar * scaleRatio * 10) / 10 : undefined,
+      sodium: needsSnapshot && selectedFood.sodium !== undefined ? Math.round(selectedFood.sodium * scaleRatio) : undefined,
+      potassium: needsSnapshot && selectedFood.potassium !== undefined ? Math.round(selectedFood.potassium * scaleRatio) : undefined,
+      calcium: needsSnapshot && selectedFood.calcium !== undefined ? Math.round(selectedFood.calcium * scaleRatio) : undefined,
+      iron: needsSnapshot && selectedFood.iron !== undefined ? Math.round(selectedFood.iron * scaleRatio * 10) / 10 : undefined,
+      vitaminC: needsSnapshot && selectedFood.vitaminC !== undefined ? Math.round(selectedFood.vitaminC * scaleRatio * 10) / 10 : undefined,
+      vitaminA: needsSnapshot && selectedFood.vitaminA !== undefined ? Math.round(selectedFood.vitaminA * scaleRatio) : undefined,
+      vitaminD: needsSnapshot && selectedFood.vitaminD !== undefined ? Math.round(selectedFood.vitaminD * scaleRatio * 10) / 10 : undefined,
+      vitaminB12: needsSnapshot && selectedFood.vitaminB12 !== undefined ? Math.round(selectedFood.vitaminB12 * scaleRatio * 10) / 10 : undefined,
+      magnesium: needsSnapshot && selectedFood.magnesium !== undefined ? Math.round(selectedFood.magnesium * scaleRatio) : undefined,
+      zinc: needsSnapshot && selectedFood.zinc !== undefined ? Math.round(selectedFood.zinc * scaleRatio * 10) / 10 : undefined,
       barcode: selectedFood.barcode,
       source: selectedFood.source ?? (selectedFood.barcode ? 'open_food_facts' : undefined),
       isEstimate: selectedFood.isEstimate,

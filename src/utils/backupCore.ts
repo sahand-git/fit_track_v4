@@ -71,6 +71,18 @@ const shape = <T extends object>(
 // Portion Unit Choice
 const portionUnitChoice = choice('g', 'piece', 'spoon', 'glass', 'samoon', 'bowl', 'plate', 'serving');
 
+// Nutrient Snapshot Validator (Phase 2 compact nutrient snapshots)
+const nutrientSnapshotShape: Validator<Partial<Record<string, number>>> = (v) => {
+  const rec = record(v);
+  const result: Record<string, number> = {};
+  for (const [key, val] of Object.entries(rec)) {
+    if (typeof val === 'number' && Number.isFinite(val) && val >= 0) {
+      result[key] = val;
+    }
+  }
+  return result;
+};
+
 // Nutrients & Food Meal
 const mealShape = shape<LoggedMeal>({
   id: str,
@@ -107,6 +119,7 @@ const mealShape = shape<LoggedMeal>({
   isEstimate: optional(bool),
   portionUnit: optional(portionUnitChoice),
   gramsPerUnit: optional(num),
+  nutrientsSnapshot: optional(nutrientSnapshotShape),
 });
 
 // Exercise & Workout
@@ -284,6 +297,7 @@ const foodItemShape = shape<FoodItem>({
   isEstimate: optional(bool),
   portionUnit: optional(portionUnitChoice),
   gramsPerUnit: optional(num),
+  nutrientsSnapshot: optional(nutrientSnapshotShape),
 });
 
 // Meal Template
@@ -302,6 +316,7 @@ const mealTemplateItemShape = shape<MealTemplateItem>({
   gramsPerUnit: optional(num),
   isEstimate: optional(bool),
   source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate', 'generic_estimate', 'gemini')),
+  nutrientsSnapshot: optional(nutrientSnapshotShape),
 });
 
 const mealTemplateShape = shape<MealTemplate>({

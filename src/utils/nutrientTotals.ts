@@ -1,4 +1,5 @@
 import { LoggedMeal, LoggedDailySupplement, UserProfile } from '../types';
+import { resolveMealNutrient } from './mealNutrients';
 import {
   RDA_TARGETS,
   ORDERED_MICRONUTRIENT_KEYS,
@@ -232,7 +233,7 @@ export function calculateNutrientDayProgress(
   const missingItems: NutrientContributor[] = [];
 
   for (const meal of validMeals) {
-    const rawVal = (meal as unknown as Record<string, unknown>)[nutrientKey];
+    const rawVal = resolveMealNutrient(meal, nutrientKey);
     const isMissing = rawVal === undefined || rawVal === null || (typeof rawVal === 'number' && isNaN(rawVal));
 
     if (isMissing) {

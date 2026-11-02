@@ -1,4 +1,5 @@
 import { LoggedMeal, LoggedDailySupplement } from '../types';
+import { resolveMealNutrient } from './mealNutrients';
 import {
   COMMON_SUPPLEMENT_CATALOG,
   MicronutrientKey,
@@ -381,7 +382,7 @@ export function calculateMicronutrientIntake(
   // 1. Aggregate meals
   for (const meal of meals) {
     for (const key of ORDERED_MICRONUTRIENT_KEYS) {
-      const val = meal[key];
+      const val = resolveMealNutrient(meal, key);
       if (val !== undefined && val !== null && !isNaN(val)) {
         hasFoodData[key] = true;
         if (val > 0) foodTotals[key] += val;
