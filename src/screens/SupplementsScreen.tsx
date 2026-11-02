@@ -704,6 +704,7 @@ export function SupplementsScreen({
       <RDAAnalysisCard
         meals={meals}
         supplements={activeItems}
+        profile={profile}
         onSelectNutrient={(key) => setSelectedNutrientForDetail(key)}
       />
 

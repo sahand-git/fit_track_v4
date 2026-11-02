@@ -350,11 +350,19 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                   <Info size={15} color={theme.colors.textSecondary} />
                   <Text style={styles.upperLimitTitle}>
                     {t('Reference Upper Limit')}: {progress.upperLimit} {progress.unit}
+                    {progress.upperLimitScope === 'supplements_only' ? ` (${t('Supplements only')})` : ''}
                   </Text>
                 </View>
                 <Text style={styles.upperLimitText}>
-                  {t('Dietary reference guidance for general informational reference, not medical advice.')}
+                  {progress.upperLimitDescription
+                    ? t(progress.upperLimitDescription)
+                    : t('Dietary reference guidance for general informational reference, not medical advice.')}
                 </Text>
+                {progress.upperLimitWarning && (
+                  <Text style={styles.upperLimitWarningText}>
+                    {t(progress.upperLimitWarning)}
+                  </Text>
+                )}
               </View>
             )}
 
@@ -366,6 +374,10 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                   <Text style={styles.goalSubtitle}>
                     {progress.isCustomTarget
                       ? t('Custom goal set by you')
+                      : progress.isMinor
+                      ? t('Adolescent (<19): Adult DRIs not shown.')
+                      : progress.targetType
+                      ? `${progress.targetType} (${t('National Academies DRI')})`
                       : t('Standard recommended allowance')}
                   </Text>
                 </View>
@@ -577,6 +589,20 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                 <Text style={styles.sourcesContent}>{translate(language, progress.foodSources)}</Text>
               </View>
             )}
+
+            {/* National Academies DRI & Medical Disclaimer */}
+            <View style={styles.disclaimerCard}>
+              <View style={[styles.disclaimerHeader, isRtl && styles.rowRtl]}>
+                <Info size={14} color={theme.colors.textMuted} />
+                <Text style={styles.disclaimerTitle}>
+                  {t('Dietary Reference Intakes (DRIs)')}
+                </Text>
+              </View>
+              <Text style={styles.disclaimerText}>
+                {progress.citation ? `${progress.citation}. ` : ''}
+                {t(progress.disclaimer || 'Formulated for healthy adults 19+. Pregnancy, lactation, and medical conditions are not handled. Upper limits are safety ceilings, not goals.')}
+              </Text>
+            </View>
           </ScrollView>
         </View>
         </KeyboardAvoidingView>
@@ -800,6 +826,36 @@ const createStyles = (theme: ThemeType) =>
     color: theme.colors.textPrimary,
   },
   upperLimitText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    lineHeight: 16,
+  },
+  upperLimitWarningText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.amberText,
+    marginTop: 2,
+  },
+  disclaimerCard: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.lg,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 4,
+    marginTop: theme.spacing.sm,
+  },
+  disclaimerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  disclaimerTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+  },
+  disclaimerText: {
     fontSize: 12,
     color: theme.colors.textMuted,
     lineHeight: 16,

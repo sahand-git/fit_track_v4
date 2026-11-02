@@ -1103,6 +1103,10 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'eaten today': 'مستهلكة اليوم',
     'eaten': 'مستهلكة',
     'Change key': 'تغيير المفتاح',
+    'Supplements only': 'المكملات فقط',
+    'Adolescent (<19): Adult DRIs not shown.': 'مراهق (<19): لا يتم عرض المعايير المرجعية للبالغين.',
+    'National Academies DRI': 'معايير الأكاديميات الوطنية (DRI)',
+    'Dietary Reference Intakes (DRIs)': 'المدخولات الغذائية المرجعية (DRIs)',
   },
   ckb: {
     'Account': 'هەژمار',
@@ -2198,6 +2202,10 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'eaten today': 'ئەمڕۆ خوراوە',
     'eaten': 'خوراوە',
     'Change key': 'گۆڕینی کلیل',
+    'Supplements only': 'تەنها تەواوکەرەکان',
+    'Adolescent (<19): Adult DRIs not shown.': 'هەرزەکار (<19): ئاستی پێشنیارکراوی گەورەساڵان پێشان نادرێت.',
+    'National Academies DRI': 'ڕێنمایی ئەکادیمیا نیشتمانییەکان (DRI)',
+    'Dietary Reference Intakes (DRIs)': 'ئاستە ئاماژەپێکراوەکانی خۆراک (DRIs)',
   },
 };
 

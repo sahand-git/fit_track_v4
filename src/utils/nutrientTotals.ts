@@ -5,6 +5,12 @@ import {
   ORDERED_MICRONUTRIENT_KEYS,
   resolveSupplementNutrientContribution,
 } from './micronutrients';
+import {
+  getDriTarget,
+  evaluateUpperLimit,
+  UpperLimitScope,
+  DriTargetType,
+} from '../data/driTargets';
 import type { ThemeColorKey } from '../theme';
 
 export type SupportedNutrientKey =
@@ -50,9 +56,16 @@ export interface NutrientMetadata {
   unit: 'kcal' | 'g' | 'mg' | 'mcg';
   colorToken: ThemeColorKey;
   defaultTarget: number;
+  targetType?: DriTargetType;
   description: string;
   foodSources?: string;
   upperLimit?: number;
+  upperLimitScope?: UpperLimitScope;
+  upperLimitDescription?: string;
+  citation?: string;
+  disclaimer?: string;
+  isMinor?: boolean;
+  minorNotice?: string;
 }
 
 export interface NutrientContributor {
@@ -72,6 +85,7 @@ export interface NutrientDayProgress {
   unit: string;
   colorToken: ThemeColorKey;
   target: number;
+  targetType?: DriTargetType;
   isCustomTarget: boolean;
   current: number;
   foodAmount: number;
@@ -85,6 +99,13 @@ export interface NutrientDayProgress {
   status: 'optimal' | 'good' | 'low' | 'deficient' | 'exceeded';
   foodSources?: string;
   upperLimit?: number;
+  upperLimitScope?: UpperLimitScope;
+  upperLimitDescription?: string;
+  upperLimitWarning?: string;
+  citation?: string;
+  disclaimer?: string;
+  isMinor?: boolean;
+  minorNotice?: string;
 }
 
 /**
@@ -135,16 +156,23 @@ export function getNutrientMetadata(
         description: 'Essential for hormone production and fat-soluble vitamin absorption.',
         foodSources: 'Olive oil, avocados, nuts, seeds, fatty fish, eggs.',
       };
-    case 'fiber':
+    case 'fiber': {
+      const dri = getDriTarget('fiber', profile?.age, profile?.gender);
       return {
         key: 'fiber',
         label: 'Fiber',
         unit: 'g',
         colorToken: 'emerald',
-        defaultTarget: 28, // Standard FDA / Dietary Guidelines for 2,000 kcal
+        defaultTarget: 28, // Standard FDA / Dietary Guidelines reference for 2,000 kcal
+        targetType: 'AI',
         description: 'Promotes gut microbiome health, satiety, and digestive regularity.',
         foodSources: 'Oats, chia seeds, lentils, beans, berries, apples, broccoli.',
+        citation: dri.citation,
+        disclaimer: dri.disclaimer,
+        isMinor: !dri.isAdult,
+        minorNotice: !dri.isAdult ? dri.disclaimer : undefined,
       };
+    }
     case 'sugar':
       return {
         key: 'sugar',
@@ -155,20 +183,31 @@ export function getNutrientMetadata(
         description: 'Simple carbohydrates. Monitoring aids insulin sensitivity and steady energy.',
         foodSources: 'Fruits, dairy, honey, dried fruit, natural sweeteners.',
         upperLimit: 50,
+        upperLimitScope: 'all_sources',
       };
-    case 'sodium':
+    case 'sodium': {
+      const dri = getDriTarget('sodium', profile?.age, profile?.gender);
       return {
         key: 'sodium',
         label: 'Sodium',
         unit: 'mg',
         colorToken: 'nutrientSodium',
-        defaultTarget: 2300, // Dietary Guidelines recommendation
+        defaultTarget: dri.target ?? 2300,
+        targetType: dri.targetType,
         description: 'Electrolyte regulating fluid balance, nerve signals, and muscle contraction.',
         foodSources: 'Table salt, olives, cured meats, cheeses, savory broths.',
-        upperLimit: 2300,
+        upperLimit: dri.upperLimit ?? 2300,
+        upperLimitScope: dri.upperLimitScope ?? 'all_sources',
+        upperLimitDescription: dri.upperLimitDescription,
+        citation: dri.citation,
+        disclaimer: dri.disclaimer,
+        isMinor: !dri.isAdult,
+        minorNotice: !dri.isAdult ? dri.disclaimer : undefined,
       };
+    }
     default: {
-      // 9 Micronutrients from RDA_TARGETS
+      // 9 Micronutrients from RDA_TARGETS & National Academies DRIs
+      const dri = getDriTarget(key, profile?.age, profile?.gender);
       const rda = RDA_TARGETS[key as keyof typeof RDA_TARGETS];
       if (rda) {
         return {
@@ -176,10 +215,17 @@ export function getNutrientMetadata(
           label: rda.label,
           unit: rda.unit,
           colorToken: rda.colorToken,
-          defaultTarget: rda.target,
-          description: `Recommended Dietary Allowance (RDA) established by dietary health authorities.`,
+          defaultTarget: dri.target ?? rda.target,
+          targetType: dri.targetType ?? rda.targetType,
+          description: `Recommended Dietary Allowance (RDA) established by the National Academies (IOM/NASEM).`,
           foodSources: rda.foodSources,
-          upperLimit: rda.upperLimit,
+          upperLimit: dri.upperLimit ?? rda.upperLimit,
+          upperLimitScope: dri.upperLimitScope ?? rda.upperLimitScope,
+          upperLimitDescription: dri.upperLimitDescription,
+          citation: dri.citation,
+          disclaimer: dri.disclaimer,
+          isMinor: !dri.isAdult,
+          minorNotice: !dri.isAdult ? dri.disclaimer : undefined,
         };
       }
       return {
@@ -222,9 +268,13 @@ export function calculateNutrientDayProgress(
 ): NutrientDayProgress {
   const meta = getNutrientMetadata(nutrientKey, profile);
   const customTarget = profile?.customNutrientGoals?.[nutrientKey];
-  const target =
-    typeof customTarget === 'number' && customTarget > 0 ? customTarget : meta.defaultTarget;
+  const isMinor = meta.isMinor ?? false;
   const isCustomTarget = typeof customTarget === 'number' && customTarget > 0;
+  const target = isCustomTarget
+    ? customTarget
+    : isMinor
+    ? 0
+    : meta.defaultTarget;
 
   const validMeals = meals || [];
   let foodTotal = 0;
@@ -331,12 +381,21 @@ export function calculateNutrientDayProgress(
     else status = 'deficient';
   }
 
+  const ulEval = evaluateUpperLimit(
+    nutrientKey,
+    foodTotal,
+    supplementTotal,
+    profile?.age,
+    profile?.gender
+  );
+
   return {
     key: nutrientKey,
     label: meta.label,
     unit: meta.unit,
     colorToken: meta.colorToken,
     target,
+    targetType: meta.targetType,
     isCustomTarget,
     current: currentTotal,
     foodAmount: foodTotal,
@@ -350,5 +409,12 @@ export function calculateNutrientDayProgress(
     status,
     foodSources: meta.foodSources,
     upperLimit: meta.upperLimit,
+    upperLimitScope: meta.upperLimitScope,
+    upperLimitDescription: meta.upperLimitDescription,
+    upperLimitWarning: ulEval.warning,
+    citation: meta.citation,
+    disclaimer: meta.disclaimer,
+    isMinor,
+    minorNotice: isMinor ? meta.minorNotice : undefined,
   };
 }

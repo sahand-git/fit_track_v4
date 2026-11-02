@@ -6,7 +6,7 @@ import {
   ORDERED_MICRONUTRIENT_KEYS,
 } from '../utils/micronutrients';
 import { MicronutrientKey } from '../data/supplementCatalog';
-import { LoggedMeal, LoggedDailySupplement } from '../types';
+import { LoggedMeal, LoggedDailySupplement, UserProfile } from '../types';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
@@ -17,17 +17,20 @@ import {
   ChevronUp,
   ShieldCheck,
   Info,
+  AlertTriangle,
 } from 'lucide-react-native';
 
 interface RDAAnalysisCardProps {
   meals?: LoggedMeal[];
   supplements?: LoggedDailySupplement[];
+  profile?: UserProfile;
   onSelectNutrient?: (key: MicronutrientKey) => void;
 }
 
 export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
   meals = [],
   supplements = [],
+  profile,
   onSelectNutrient,
 }) => {
   const language = useLanguage();
@@ -36,8 +39,8 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
   const isRtl = useIsRTL();
   const [expanded, setExpanded] = useState(false);
 
-  const analysis = calculateMicronutrientIntake(meals, supplements);
-  const { nutrients, targetsMetCount } = analysis;
+  const analysis = calculateMicronutrientIntake(meals, supplements, profile);
+  const { nutrients, targetsMetCount, isMinor } = analysis;
 
   const nutrientsWithDataCount = useMemo(() => {
     return ORDERED_MICRONUTRIENT_KEYS.filter((k) => nutrients[k]?.hasData).length;
@@ -68,7 +71,9 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
               {translate(language, 'Micronutrients & Daily Allowance (RDA)')}
             </Text>
             <Text style={styles.cardSubtitle}>
-              {translate(language, 'Estimated intake from meals & taken supplements')}
+              {isMinor
+                ? translate(language, 'Adolescent (<19): Adult DRIs not shown. Tracking raw intake.')
+                : translate(language, 'Estimated intake from meals & taken supplements')}
             </Text>
           </View>
         </View>
@@ -76,7 +81,9 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
         {/* Met score pill */}
         <View style={styles.scoreBadge}>
           <Text style={styles.scoreBadgeText}>
-            {targetsMetCount}/{nutrientsWithDataCount} {translate(language, 'targets met')}
+            {isMinor
+              ? translate(language, 'Minor (<19)')
+              : `${targetsMetCount}/${nutrientsWithDataCount} ${translate(language, 'targets met')}`}
           </Text>
         </View>
       </View>
@@ -86,8 +93,9 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
         {displayedKeys.map((key) => {
           const item = nutrients[key];
           const hasData = item?.hasData;
-          const pctWidth = hasData ? Math.min(100, item.percent) : 0;
-          const barColor = !hasData
+          const hasTarget = typeof item.target === 'number' && item.target > 0;
+          const pctWidth = hasData && hasTarget ? Math.min(100, item.percent) : 0;
+          const barColor = !hasData || !hasTarget
             ? theme.colors.border
             : item.percent >= 80
             ? theme.colors.emerald
@@ -104,7 +112,11 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
               activeOpacity={0.75}
               accessibilityRole={onSelectNutrient ? 'button' : 'none'}
               accessibilityLabel={`${translate(language, item.label)}: ${
-                hasData ? `${item.current} / ${item.target} ${item.unit}` : translate(language, 'Not enough data')
+                hasData
+                  ? hasTarget
+                    ? `${item.current} / ${item.target} ${item.unit}`
+                    : `${item.current} ${item.unit}`
+                  : translate(language, 'Not enough data')
               }`}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
@@ -120,22 +132,30 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
                   )}
                 </View>
                 <Text style={styles.nutrientValues}>
-                  {hasData ? `${item.current} / ${item.target} ${item.unit}` : `— / ${item.target} ${item.unit}`}
+                  {hasData
+                    ? hasTarget
+                      ? `${item.current} / ${item.target} ${item.unit}`
+                      : `${item.current} ${item.unit}`
+                    : hasTarget
+                    ? `— / ${item.target} ${item.unit}`
+                    : `— ${item.unit}`}
                 </Text>
               </View>
 
-              {/* Progress track */}
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${pctWidth}%`,
-                      backgroundColor: barColor,
-                    },
-                  ]}
-                />
-              </View>
+              {/* Progress track (omitted or flat if no target) */}
+              {hasTarget && (
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${pctWidth}%`,
+                        backgroundColor: barColor,
+                      },
+                    ]}
+                  />
+                </View>
+              )}
 
               {/* Nutrient details sub-row */}
               <View style={[styles.nutrientBottomRow, isRtl && styles.rowRtl]}>
@@ -148,7 +168,7 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
                   style={[
                     styles.pctBadgeText,
                     {
-                      color: !hasData
+                      color: !hasData || !hasTarget
                         ? theme.colors.textMuted
                         : item.percent >= 80
                         ? theme.colors.emeraldDark
@@ -158,15 +178,29 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
                     },
                   ]}
                 >
-                  {hasData ? `${item.percent}% ${translate(language, 'RDA')}` : `${translate(language, 'Not enough data')} *`}
+                  {hasData
+                    ? hasTarget
+                      ? `${item.percent}% ${item.targetType || translate(language, 'RDA')}`
+                      : `${item.current} ${item.unit}`
+                    : `${translate(language, 'Not enough data')} *`}
                 </Text>
               </View>
 
               {/* Soft neutral note when below 50% with >= 70% coverage */}
-              {hasData && item.percent < 50 && item.coverage >= 0.7 && (
+              {hasData && hasTarget && item.percent < 50 && item.coverage >= 0.7 && (
                 <View style={[styles.estimatedLowRow, isRtl && styles.rowRtl]}>
                   <Text style={styles.estimatedLowText}>
                     {translate(language, 'estimated low from logged foods')}
+                  </Text>
+                </View>
+              )}
+
+              {/* Upper Limit Warning */}
+              {item.upperLimitWarning && (
+                <View style={[styles.ulWarningRow, isRtl && styles.rowRtl]}>
+                  <AlertTriangle size={12} color={theme.colors.amberText} />
+                  <Text style={styles.ulWarningText}>
+                    {translate(language, item.upperLimitWarning)}
                   </Text>
                 </View>
               )}
@@ -214,7 +248,7 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
         <Text style={styles.footnoteText}>
           {translate(
             language,
-            'NIH/IOM adult Recommended Dietary Allowances. For wellness tracking only.'
+            'National Academies DRIs for healthy adults 19+. Pregnancy, lactation, and medical conditions not handled. Upper limits are safety ceilings, not goals.'
           )}
         </Text>
       </View>
@@ -359,6 +393,20 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     color: theme.colors.textMuted,
     fontStyle: 'italic',
+  },
+  ulWarningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.border,
+  },
+  ulWarningText: {
+    fontSize: 12,
+    color: theme.colors.amberText,
+    flex: 1,
   },
   toggleBtn: {
     flexDirection: 'row',

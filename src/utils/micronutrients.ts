@@ -1,10 +1,16 @@
-import { LoggedMeal, LoggedDailySupplement } from '../types';
+import { LoggedMeal, LoggedDailySupplement, UserProfile } from '../types';
 import { resolveMealNutrient } from './mealNutrients';
 import {
   COMMON_SUPPLEMENT_CATALOG,
   MicronutrientKey,
   CatalogSupplementItem,
 } from '../data/supplementCatalog';
+import {
+  getDriTarget,
+  evaluateUpperLimit,
+  UpperLimitScope,
+  DriTargetType,
+} from '../data/driTargets';
 import type { ThemeColorKey } from '../theme';
 
 export interface RDAMetadata {
@@ -15,6 +21,8 @@ export interface RDAMetadata {
   colorToken: ThemeColorKey;
   foodSources: string;
   upperLimit?: number;
+  upperLimitScope?: UpperLimitScope;
+  targetType?: DriTargetType;
 }
 
 export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
@@ -26,6 +34,8 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     colorToken: 'nutrientVitaminA',
     foodSources: 'Carrots, sweet potatoes, spinach, liver, eggs',
     upperLimit: 3000,
+    upperLimitScope: 'synthetic_only',
+    targetType: 'RDA',
   },
   vitaminC: {
     key: 'vitaminC',
@@ -35,6 +45,8 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     colorToken: 'nutrientVitaminC',
     foodSources: 'Citrus, strawberries, bell peppers, broccoli',
     upperLimit: 2000,
+    upperLimitScope: 'all_sources',
+    targetType: 'RDA',
   },
   vitaminD: {
     key: 'vitaminD',
@@ -44,6 +56,8 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     colorToken: 'nutrientVitaminD',
     foodSources: 'Sunlight, fatty fish, fortified dairy, eggs',
     upperLimit: 100,
+    upperLimitScope: 'all_sources',
+    targetType: 'RDA',
   },
   vitaminB12: {
     key: 'vitaminB12',
@@ -52,6 +66,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     unit: 'mcg',
     colorToken: 'nutrientVitaminB12',
     foodSources: 'Meat, fish, poultry, eggs, dairy, fortified yeast',
+    targetType: 'RDA',
   },
   calcium: {
     key: 'calcium',
@@ -61,6 +76,8 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     colorToken: 'nutrientCalcium',
     foodSources: 'Dairy, fortified plant milk, tofu, chia seeds, leafy greens',
     upperLimit: 2500,
+    upperLimitScope: 'all_sources',
+    targetType: 'RDA',
   },
   iron: {
     key: 'iron',
@@ -70,6 +87,8 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     colorToken: 'nutrientIron',
     foodSources: 'Red meat, lentils, beans, spinach, pumpkin seeds',
     upperLimit: 45,
+    upperLimitScope: 'all_sources',
+    targetType: 'RDA',
   },
   potassium: {
     key: 'potassium',
@@ -78,6 +97,7 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     unit: 'mg',
     colorToken: 'nutrientPotassium',
     foodSources: 'Bananas, potatoes, spinach, avocados, yogurt',
+    targetType: 'AI',
   },
   magnesium: {
     key: 'magnesium',
@@ -87,6 +107,8 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     colorToken: 'nutrientMagnesium',
     foodSources: 'Pumpkin seeds, almonds, spinach, black beans, dark chocolate',
     upperLimit: 350,
+    upperLimitScope: 'supplements_only',
+    targetType: 'RDA',
   },
   zinc: {
     key: 'zinc',
@@ -96,6 +118,8 @@ export const RDA_TARGETS: Record<MicronutrientKey, RDAMetadata> = {
     colorToken: 'nutrientZinc',
     foodSources: 'Oysters, beef, pumpkin seeds, lentils, chickpeas',
     upperLimit: 40,
+    upperLimitScope: 'all_sources',
+    targetType: 'RDA',
   },
 };
 
@@ -114,7 +138,8 @@ export const ORDERED_MICRONUTRIENT_KEYS: MicronutrientKey[] = [
 export interface MicronutrientIntake {
   key: MicronutrientKey;
   label: string;
-  target: number;
+  target?: number;
+  targetType?: DriTargetType;
   unit: 'mg' | 'mcg';
   current: number;
   foodAmount: number;
@@ -128,6 +153,10 @@ export interface MicronutrientIntake {
   hasData: boolean;
   isIncomplete: boolean;
   missingCount: number;
+  upperLimit?: number;
+  upperLimitScope?: UpperLimitScope;
+  upperLimitWarning?: string;
+  isMinor?: boolean;
 }
 
 export interface MicronutrientAnalysis {
@@ -135,6 +164,9 @@ export interface MicronutrientAnalysis {
   deficiencies: MicronutrientIntake[];
   targetsMetCount: number;
   overallScore: number;
+  isMinor?: boolean;
+  minorNotice?: string;
+  disclaimer?: string;
 }
 
 /**
@@ -313,11 +345,12 @@ export function resolveSupplementNutrientContribution(supplement: {
 
 /**
  * Calculates aggregated daily micronutrient intake from logged meals and taken supplements,
- * comparing against NIH/IOM Recommended Dietary Allowances (RDA).
+ * comparing against National Academies (IOM/NASEM) Dietary Reference Intakes (DRIs).
  */
 export function calculateMicronutrientIntake(
   meals: LoggedMeal[] = [],
-  supplements: LoggedDailySupplement[] = []
+  supplements: LoggedDailySupplement[] = [],
+  profile?: UserProfile
 ): MicronutrientAnalysis {
   const foodTotals: Record<MicronutrientKey, number> = {
     vitaminA: 0,
@@ -409,13 +442,19 @@ export function calculateMicronutrientIntake(
   let targetsMetCount = 0;
   let totalPctSum = 0;
 
+  const isMinor = typeof profile?.age === 'number' && !isNaN(profile.age) && profile.age < 19;
+
   for (const key of ORDERED_MICRONUTRIENT_KEYS) {
+    const dri = getDriTarget(key, profile?.age, profile?.gender);
     const meta = RDA_TARGETS[key];
     const food = Math.round(foodTotals[key] * 10) / 10;
     const supp = Math.round(supplementTotals[key] * 10) / 10;
     const total = Math.round((food + supp) * 10) / 10;
-    const percent = Math.min(999, Math.round((total / meta.target) * 100));
-    const isDeficient = percent < 50;
+
+    // For minors (< 19), no adult targets are evaluated
+    const target = isMinor ? undefined : (dri.target ?? meta.target);
+    const percent = target !== undefined && target > 0 ? Math.min(999, Math.round((total / target) * 100)) : 0;
+    const isDeficient = !isMinor && percent < 50;
 
     let status: 'optimal' | 'low' | 'deficient' = 'deficient';
     if (percent >= 80) {
@@ -424,10 +463,12 @@ export function calculateMicronutrientIntake(
       status = 'low';
     }
 
-    if (percent >= 100) {
+    if (!isMinor && percent >= 100) {
       targetsMetCount += 1;
     }
-    totalPctSum += Math.min(100, percent);
+    if (!isMinor) {
+      totalPctSum += Math.min(100, percent);
+    }
 
     const hasData = hasFoodData[key] || hasSuppData[key];
     const isIncomplete = meals.length > 0 && missingCounts[key] > 0;
@@ -436,10 +477,13 @@ export function calculateMicronutrientIntake(
       ? (meals.length - missingCounts[key]) / meals.length
       : (hasSuppData[key] ? 1 : 0);
 
+    const ulEval = evaluateUpperLimit(key, food, supp, profile?.age, profile?.gender);
+
     const intake: MicronutrientIntake = {
       key,
       label: meta.label,
-      target: meta.target,
+      target,
+      targetType: dri.targetType,
       unit: meta.unit,
       current: total,
       foodAmount: food,
@@ -453,6 +497,10 @@ export function calculateMicronutrientIntake(
       hasData,
       isIncomplete,
       missingCount,
+      upperLimit: dri.upperLimit,
+      upperLimitScope: dri.upperLimitScope,
+      upperLimitWarning: ulEval.warning,
+      isMinor,
     };
 
     nutrients[key] = intake;
@@ -464,12 +512,17 @@ export function calculateMicronutrientIntake(
   // Sort deficiencies from lowest percentage upwards
   deficiencies.sort((a, b) => a.percent - b.percent);
 
-  const overallScore = Math.round(totalPctSum / ORDERED_MICRONUTRIENT_KEYS.length);
+  const overallScore = isMinor ? 0 : Math.round(totalPctSum / ORDERED_MICRONUTRIENT_KEYS.length);
 
   return {
     nutrients: nutrients as Record<MicronutrientKey, MicronutrientIntake>,
-    deficiencies,
+    deficiencies: isMinor ? [] : deficiencies,
     targetsMetCount,
     overallScore,
+    isMinor,
+    minorNotice: isMinor
+      ? 'Dietary Reference Intakes (DRIs) are formulated for adults 19+. Adolescent and pediatric targets are not displayed.'
+      : undefined,
+    disclaimer: 'Formulated for healthy adults 19+. Pregnancy, lactation, and medical conditions are not handled.',
   };
 }
