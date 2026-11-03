@@ -1128,6 +1128,9 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Snack': 'وجبة خفيفة',
     'Collapse': 'طي',
     'Expand': 'توسيع',
+    'Show all': 'عرض الكل',
+    'Show less': 'عرض أقل',
+    'Enter barcode manually': 'إدخال الباركود يدوياً',
   },
   ckb: {
     'Account': 'هەژمار',
@@ -2248,6 +2251,9 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Snack': 'سووکەژەم',
     'Collapse': 'داخستن',
     'Expand': 'کردنەوە',
+    'Show all': 'پێشاندانی هەمووی',
+    'Show less': 'کەمتر پێشان بدە',
+    'Enter barcode manually': 'داغڵکردنی بارکۆد بە دەست',
   },
 };
 
