@@ -473,6 +473,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         date={selectedDate}
         onClose={() => setAddSheetVisible(false)}
         onAddMeal={handleAddMeal}
+        onRemoveMeal={onRemoveMeal}
         onCopyYesterdayMeals={onCopyYesterdayMeals}
       />
 

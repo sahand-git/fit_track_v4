@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -53,7 +53,6 @@ import {
   PlateAnalysisResult,
 } from '../../services/plateAnalysisService';
 import { shouldResetFoodSelection, resolveSelectedVariantId } from './addFoodSelectionGuard';
-import { SaveSuccessOverlay } from '../SaveSuccessOverlay';
 import { FoodThumbnail } from '../FoodThumbnail';
 import { RequestFoodModal } from '../RequestFoodModal';
 import { useLanguage } from '../../i18n/I18nContext';
@@ -90,6 +89,7 @@ import {
   saveMealTemplate,
   deleteMealTemplate,
   createTemplateFromMeals,
+  removeMealFromDay,
 } from '../../storage/storage';
 import { FoodSourceBadge } from '../FoodSourceBadge';
 import { getLocalizedFoodName } from '../../utils/foodLocalization';
@@ -97,6 +97,21 @@ import { createUniqueId } from '../../utils/idUtils';
 import { useTheme } from '../../theme/ThemeContext';
 import { ThemeType } from '../../theme';
 import * as Haptics from 'expo-haptics';
+import { AddFoodToast } from './AddFoodToast';
+import { AddFoodSessionTray } from './AddFoodSessionTray';
+import {
+  SessionItem,
+  AddFoodSessionState,
+  createInitialSessionState,
+  addSessionItems,
+  removeSessionItem,
+  removeSessionBatch,
+  dismissSessionToast,
+  toggleSessionTrayExpanded,
+  canProcessAddTap,
+  formatAddedToastMessage,
+  formatBatchAddedToastMessage,
+} from './addFoodSessionCore';
 
 export interface AddFoodSheetProps {
   visible: boolean;
@@ -106,6 +121,7 @@ export interface AddFoodSheetProps {
   initialTab?: TabMode;
   initialScanBarcode?: boolean;
   onAddMeal: (meal: LoggedMeal, targetDate: string) => void;
+  onRemoveMeal?: (mealId: string, targetDate?: string) => Promise<void> | void;
   onCopyYesterdayMeals?: (targetDate: string) => Promise<void>;
 }
 
@@ -231,7 +247,7 @@ const FoodListItemRow = React.memo<FoodListItemRowProps>(
 );
 FoodListItemRow.displayName = 'FoodListItemRow';
 
-export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
+const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
   visible,
   onClose,
   mealType,
@@ -239,6 +255,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   initialTab,
   initialScanBarcode,
   onAddMeal,
+  onRemoveMeal,
   onCopyYesterdayMeals,
 }) => {
   const language = useLanguage();
@@ -367,7 +384,8 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   const [describeLoading, setDescribeLoading] = useState(false);
   const [describeError, setDescribeError] = useState<string | null>(null);
   const [describeResult, setDescribeResult] = useState<PlateAnalysisResult | null>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [sessionState, setSessionState] = useState<AddFoodSessionState>(createInitialSessionState);
+  const lastAddTapRef = useRef<number>(0);
 
   const isToday = date === getTodayDateString();
   const isFuture = date > getTodayDateString();
@@ -381,6 +399,7 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     setPrevMealType(currentMealType);
     if (currentVisible) {
       setSelectedMeal(mealType || getDefaultMealType());
+      setSessionState(createInitialSessionState());
       if (initialTab) {
         setActiveTab(initialTab);
       }
@@ -389,6 +408,20 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       }
     }
   }
+
+  const getMealLabel = useCallback((meal: MealType): string => {
+    switch (meal) {
+      case 'breakfast':
+        return t('Breakfast');
+      case 'lunch':
+        return t('Lunch');
+      case 'dinner':
+        return t('Dinner');
+      case 'snack':
+      default:
+        return t('Snack');
+    }
+  }, [t]);
 
   const loadCollections = useCallback(() => {
     let isMounted = true;
@@ -422,6 +455,40 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       isMounted = false;
     };
   }, [date, selectedMeal]);
+
+  const handleUndoSession = useCallback(async () => {
+    if (!sessionState.toast || sessionState.toast.itemIds.length === 0) return;
+    const idsToUndo = sessionState.toast.itemIds;
+    try {
+      for (const id of idsToUndo) {
+        if (onRemoveMeal) {
+          await onRemoveMeal(id, date);
+        } else {
+          await removeMealFromDay(date, id);
+        }
+      }
+      setSessionState((prev) => removeSessionBatch(prev, idsToUndo));
+      loadCollections();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    } catch (err) {
+      console.error('Failed to undo session item:', err);
+    }
+  }, [sessionState.toast, onRemoveMeal, date, loadCollections]);
+
+  const handleRemoveSessionItem = useCallback(async (itemId: string) => {
+    try {
+      if (onRemoveMeal) {
+        await onRemoveMeal(itemId, date);
+      } else {
+        await removeMealFromDay(date, itemId);
+      }
+      setSessionState((prev) => removeSessionItem(prev, itemId));
+      loadCollections();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    } catch (err) {
+      console.error('Failed to remove session item:', err);
+    }
+  }, [onRemoveMeal, date, loadCollections]);
 
   useEffect(() => {
     if (!visible) return;
@@ -547,6 +614,12 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
   const handleQuickAddSave = () => {
     if (isFuture) return;
+    const now = Date.now();
+    if (!canProcessAddTap(lastAddTapRef.current, now, 700)) {
+      return;
+    }
+    lastAddTapRef.current = now;
+
     const cal = parseInt(quickAddCalories, 10);
     if (isNaN(cal) || cal <= 0) {
       setQuickAddError(t('Please enter valid numbers for calories and macros.'));
@@ -585,11 +658,19 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     setQuickAddCarbs('');
     setQuickAddFat('');
     setQuickAddError(null);
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      handleClose();
-    }, 950);
+
+    const sessionItem: SessionItem = {
+      id: meal.id,
+      foodId: meal.foodId,
+      name: meal.name,
+      portion: meal.servingSize || '100g',
+      calories: meal.calories,
+      mealType: selectedMeal,
+      timestamp: meal.timestamp,
+    };
+    const toastMsg = formatAddedToastMessage(meal.name, getMealLabel(selectedMeal), t);
+    setSessionState((prev) => addSessionItems(prev, [sessionItem], toastMsg, now));
+    loadCollections();
   };
 
   const handleStartLiveBarcodeScan = async () => {
@@ -610,6 +691,11 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
   const doSaveMeal = () => {
     if (!selectedFood || isFuture) return;
+    const now = Date.now();
+    if (!canProcessAddTap(lastAddTapRef.current, now, 700)) {
+      return;
+    }
+    lastAddTapRef.current = now;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
     const activeCalories = activeVariant ? activeVariant.calories : selectedFood.calories;
@@ -690,11 +776,25 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
     if (selectedFood.source === 'open_food_facts' || selectedFood.barcode) {
       upsertBarcodeCacheItem(selectedFood).catch(() => {});
     }
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      handleClose();
-    }, 950);
+    loadCollections();
+
+    const sessionItem: SessionItem = {
+      id: meal.id,
+      foodId: meal.foodId,
+      name: meal.name,
+      portion: `${meal.servings} × ${meal.servingSize || 'serving'}`,
+      calories: meal.calories,
+      mealType: selectedMeal,
+      timestamp: meal.timestamp,
+    };
+    const toastMsg = formatAddedToastMessage(meal.name, getMealLabel(selectedMeal), t);
+    setSessionState((prev) => addSessionItems(prev, [sessionItem], toastMsg, now));
+
+    // Clear only selected food state, keeping search query, filter, category, and list scroll
+    setSelectedFood(null);
+    setSelectedVariantId(null);
+    setServingsCount(1);
+    setShowIngredients(false);
   };
 
   const handleSaveSelectedFood = () => {
@@ -830,15 +930,19 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       if (res.addedCount > 0) {
-        dialog.notify({
-          title: t("Copy yesterday's meals"),
-          message: `${t('Added')} ${res.addedCount} ${res.addedCount === 1 ? t('meal added') : t('meals added')}.`,
-        });
-        setShowSuccess(true);
-        setTimeout(() => {
-          setShowSuccess(false);
-          handleClose();
-        }, 950);
+        const newMeals = (res.meals || []).slice(-res.addedCount);
+        const sessionItems: SessionItem[] = newMeals.map((m) => ({
+          id: m.id,
+          foodId: m.foodId,
+          name: m.name,
+          portion: `${m.servings} × ${m.servingSize || 'serving'}`,
+          calories: m.calories,
+          mealType: m.mealType,
+          timestamp: m.timestamp,
+        }));
+        const toastMsg = formatBatchAddedToastMessage(res.addedCount, t);
+        setSessionState((prev) => addSessionItems(prev, sessionItems, toastMsg));
+        loadCollections();
       } else {
         dialog.notify({
           title: t("Copy yesterday's meals"),
@@ -890,15 +994,19 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       if (res.addedCount > 0) {
-        dialog.notify({
-          title: getCopyMealTypeLabel(selectedMeal),
-          message: `${t('Added')} ${res.addedCount} ${res.addedCount === 1 ? t('meal added') : t('meals added')}.`,
-        });
-        setShowSuccess(true);
-        setTimeout(() => {
-          setShowSuccess(false);
-          handleClose();
-        }, 950);
+        const newMeals = (res.meals || []).slice(-res.addedCount);
+        const sessionItems: SessionItem[] = newMeals.map((m) => ({
+          id: m.id,
+          foodId: m.foodId,
+          name: m.name,
+          portion: `${m.servings} × ${m.servingSize || 'serving'}`,
+          calories: m.calories,
+          mealType: m.mealType,
+          timestamp: m.timestamp,
+        }));
+        const toastMsg = formatBatchAddedToastMessage(res.addedCount, t);
+        setSessionState((prev) => addSessionItems(prev, sessionItems, toastMsg));
+        loadCollections();
       } else {
         dialog.notify({
           title: getCopyMealTypeLabel(selectedMeal),
@@ -918,7 +1026,14 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
 
   const handleLogTemplate = (template: MealTemplate) => {
     if (isFuture) return;
+    const now = Date.now();
+    if (!canProcessAddTap(lastAddTapRef.current, now, 700)) {
+      return;
+    }
+    lastAddTapRef.current = now;
+
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    const sessionItems: SessionItem[] = [];
     template.items.forEach((item) => {
       const meal: LoggedMeal = {
         id: createUniqueId('meal'),
@@ -941,12 +1056,20 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
         timestamp: new Date().toISOString(),
       };
       onAddMeal(meal, date);
+      sessionItems.push({
+        id: meal.id,
+        foodId: meal.foodId,
+        name: meal.name,
+        portion: `${meal.servings} × ${meal.servingSize || 'serving'}`,
+        calories: meal.calories,
+        mealType: selectedMeal,
+        timestamp: meal.timestamp,
+      });
     });
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      handleClose();
-    }, 950);
+
+    const toastMsg = formatBatchAddedToastMessage(template.items.length, t);
+    setSessionState((prev) => addSessionItems(prev, sessionItems, toastMsg, now));
+    loadCollections();
   };
 
   const handleDeleteTemplate = async (template: MealTemplate) => {
@@ -1074,15 +1197,46 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
   // --- AI LOG CALLBACKS ---
   const handleLogAiItem = (meal: LoggedMeal) => {
     onAddMeal(meal, date);
+    const sessionItem: SessionItem = {
+      id: meal.id,
+      foodId: meal.foodId,
+      name: meal.name,
+      portion: `${meal.servings} × ${meal.servingSize || 'serving'}`,
+      calories: meal.calories,
+      mealType: meal.mealType,
+      timestamp: meal.timestamp,
+    };
+    const toastMsg = formatAddedToastMessage(meal.name, getMealLabel(meal.mealType), t);
+    setSessionState((prev) => addSessionItems(prev, [sessionItem], toastMsg));
+    loadCollections();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
   };
 
   const handleLogAllAiItems = (meals: LoggedMeal[]) => {
-    meals.forEach((m) => onAddMeal(m, date));
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      handleClose();
-    }, 950);
+    const sessionItems: SessionItem[] = [];
+    meals.forEach((m) => {
+      onAddMeal(m, date);
+      sessionItems.push({
+        id: m.id,
+        foodId: m.foodId,
+        name: m.name,
+        portion: `${m.servings} × ${m.servingSize || 'serving'}`,
+        calories: m.calories,
+        mealType: m.mealType,
+        timestamp: m.timestamp,
+      });
+    });
+
+    const toastMsg = formatBatchAddedToastMessage(meals.length, t);
+    setSessionState((prev) => addSessionItems(prev, sessionItems, toastMsg));
+    loadCollections();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+
+    // Reset input state so another photo or description can follow immediately
+    setPhotoResult(null);
+    setPhotoUri(null);
+    setDescribeResult(null);
+    setDescribeText('');
   };
 
   // Filtered Food Search with Arabic/Sorani variant normalization (memoized)
@@ -1638,7 +1792,6 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
                 { height: '100%', paddingBottom: Math.max(theme.spacing.md, insets.bottom + 12) },
               ]}
             >
-              <SaveSuccessOverlay visible={showSuccess} message={t('Food Logged')} />
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
@@ -2221,6 +2374,25 @@ export const AddFoodSheet: React.FC<AddFoodSheetProps> = ({
               t={t}
             />
           )}
+
+          {/* Bottom Session Tray: summary, expandable items drawer, and primary Done button */}
+          <AddFoodSessionTray
+            items={sessionState.items}
+            isExpanded={sessionState.isTrayExpanded}
+            onToggleExpanded={() => setSessionState((prev) => toggleSessionTrayExpanded(prev))}
+            onRemoveItem={handleRemoveSessionItem}
+            onDone={handleClose}
+            t={t}
+          />
+
+          {/* Non-blocking confirmation toast with Undo */}
+          <AddFoodToast
+            visible={sessionState.toast?.visible ?? false}
+            message={sessionState.toast?.message ?? ''}
+            onUndo={handleUndoSession}
+            onDismiss={() => setSessionState((prev) => dismissSessionToast(prev))}
+            t={t}
+          />
         </Animated.View>
       </KeyboardAvoidingView>
     </View>
@@ -2851,3 +3023,6 @@ const createStyles = (theme: ThemeType) =>
     color: theme.colors.orangeDeep,
   },
   });
+
+export const AddFoodSheet = React.memo<AddFoodSheetProps>(AddFoodSheetComponent);
+AddFoodSheet.displayName = 'AddFoodSheet';

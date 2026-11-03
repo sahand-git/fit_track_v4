@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -87,6 +87,7 @@ interface DashboardScreenProps {
   onUpdateWorkout?: (workout: WorkoutEntry, date: string) => void;
   onOpenLogWeight?: () => void;
   onUpdateProfile?: (profile: UserProfile) => Promise<void> | void;
+  isAddFoodSheetOpen?: boolean;
 }
 
 export const DashboardScreen = React.memo<DashboardScreenProps>(({
@@ -108,6 +109,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   onUpdateWorkout,
   onOpenLogWeight,
   onUpdateProfile,
+  isAddFoodSheetOpen = false,
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
@@ -120,6 +122,15 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   const [quickActionVisible, setQuickActionVisible] = useState(false);
   const [heroWidth, setHeroWidth] = useState(0);
   const [selectedNutrientForDetail, setSelectedNutrientForDetail] = useState<SupportedNutrientKey | string | null>(null);
+  const pendingMilestoneRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!isAddFoodSheetOpen && pendingMilestoneRef.current) {
+      const run = pendingMilestoneRef.current;
+      pendingMilestoneRef.current = null;
+      run();
+    }
+  }, [isAddFoodSheetOpen]);
 
   const isRtl = useIsRTL();
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
@@ -308,22 +319,30 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           evalResult.newlyReached[0];
 
         if (milestoneToAnnounce) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-          const meta = getMilestoneDisplayMessage(
-            milestoneToAnnounce,
-            {
-              steps: log.steps || 0,
-              stepGoal: profile.stepGoal || 8000,
-              calorieTolerance: evalResult.calorieTolerance,
-            },
-            t
-          );
-          setActiveMilestoneBanner({
-            visible: true,
-            title: meta.title,
-            message: meta.message,
-            isNeutralStatusOnly: meta.isNeutralStatusOnly,
-          });
+          const triggerAnnounce = () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+            const meta = getMilestoneDisplayMessage(
+              milestoneToAnnounce,
+              {
+                steps: log.steps || 0,
+                stepGoal: profile.stepGoal || 8000,
+                calorieTolerance: evalResult.calorieTolerance,
+              },
+              t
+            );
+            setActiveMilestoneBanner({
+              visible: true,
+              title: meta.title,
+              message: meta.message,
+              isNeutralStatusOnly: meta.isNeutralStatusOnly,
+            });
+          };
+
+          if (isAddFoodSheetOpen) {
+            pendingMilestoneRef.current = triggerAnnounce;
+          } else {
+            triggerAnnounce();
+          }
         }
       }
     }
@@ -340,6 +359,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     log.waterGlasses,
     profile.waterTargetGlasses,
     log.date,
+    isAddFoodSheetOpen,
     t,
   ]);
 

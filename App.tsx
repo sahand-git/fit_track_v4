@@ -1033,6 +1033,7 @@ function FitTrackApp() {
               onUpdateWorkout={handleUpdateWorkout}
               onOpenLogWeight={handleOpenLogWeight}
               onUpdateProfile={handleUpdateProfile}
+              isAddFoodSheetOpen={addSheetConfig.visible}
             />
           )}
 
@@ -1076,6 +1077,7 @@ function FitTrackApp() {
           initialScanBarcode={addSheetConfig.initialScanBarcode}
           onClose={handleCloseAddSheet}
           onAddMeal={handleAddMeal}
+          onRemoveMeal={handleRemoveMeal}
           onCopyYesterdayMeals={handleCopyYesterdayMeals}
         />
 
