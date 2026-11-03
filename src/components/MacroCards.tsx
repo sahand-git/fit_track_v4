@@ -28,8 +28,10 @@ interface MacroCardsProps {
   fatConsumed: number;
   fiberConsumed?: number;
   fiberTarget?: number;
+  fiberHasTarget?: boolean;
   sugarConsumed?: number;
   sugarTarget?: number;
+  sugarHasTarget?: boolean;
   fiberIsIncomplete?: boolean;
   sugarIsIncomplete?: boolean;
   onSelectNutrient?: (nutrientKey: string) => void;
@@ -78,8 +80,10 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
   fatConsumed,
   fiberConsumed,
   fiberTarget = 28,
+  fiberHasTarget = true,
   sugarConsumed,
   sugarTarget = 50,
+  sugarHasTarget = true,
   fiberIsIncomplete = false,
   sugarIsIncomplete = false,
   onSelectNutrient,
@@ -152,14 +156,24 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
-          accessibilityLabel={t('Fiber')}
+          accessibilityLabel={`${t('Fiber')}: ${
+            typeof fiberConsumed === 'number' && Number.isFinite(fiberConsumed)
+              ? fiberHasTarget
+                ? `${Math.round(fiberConsumed * 10) / 10} / ${fiberTarget}g`
+                : `${Math.round(fiberConsumed * 10) / 10}g`
+              : t('Not enough data')
+          }`}
         >
           <Text style={styles.pillCombinedText} numberOfLines={2}>
             <Text style={styles.secondaryLabel}>{t('Fiber')}: </Text>
             <Text style={styles.secondaryValue}>
               {typeof fiberConsumed === 'number' && Number.isFinite(fiberConsumed)
-                ? `${Math.round(fiberConsumed * 10) / 10}/${fiberTarget}g`
-                : `—/${fiberTarget}g`}
+                ? fiberHasTarget
+                  ? `${Math.round(fiberConsumed * 10) / 10}/${fiberTarget}g`
+                  : `${Math.round(fiberConsumed * 10) / 10}g`
+                : fiberHasTarget
+                ? `—/${fiberTarget}g`
+                : '—g'}
             </Text>
             {fiberIsIncomplete && (
               <Text style={styles.incompleteAsterisk} accessibilityLabel={t('Incomplete data')}>
@@ -176,14 +190,24 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
-          accessibilityLabel={t('Sugar')}
+          accessibilityLabel={`${t('Sugar')}: ${
+            typeof sugarConsumed === 'number' && Number.isFinite(sugarConsumed)
+              ? sugarHasTarget
+                ? `${Math.round(sugarConsumed * 10) / 10} / ${sugarTarget}g`
+                : `${Math.round(sugarConsumed * 10) / 10}g`
+              : t('Not enough data')
+          }`}
         >
           <Text style={styles.pillCombinedText} numberOfLines={2}>
             <Text style={styles.secondaryLabel}>{t('Sugar')}: </Text>
             <Text style={styles.secondaryValue}>
               {typeof sugarConsumed === 'number' && Number.isFinite(sugarConsumed)
-                ? `${Math.round(sugarConsumed * 10) / 10}/${sugarTarget}g`
-                : `—/${sugarTarget}g`}
+                ? sugarHasTarget
+                  ? `${Math.round(sugarConsumed * 10) / 10}/${sugarTarget}g`
+                  : `${Math.round(sugarConsumed * 10) / 10}g`
+                : sugarHasTarget
+                ? `—/${sugarTarget}g`
+                : '—g'}
             </Text>
             {sugarIsIncomplete && (
               <Text style={styles.incompleteAsterisk} accessibilityLabel={t('Incomplete data')}>

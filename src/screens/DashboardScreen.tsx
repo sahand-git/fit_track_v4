@@ -446,9 +446,11 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
             fatConsumed={consumedFat}
             fiberConsumed={fiberProgress.current}
             fiberTarget={fiberProgress.target}
+            fiberHasTarget={fiberProgress.hasTarget}
             fiberIsIncomplete={fiberProgress.isIncomplete}
             sugarConsumed={sugarProgress.current}
             sugarTarget={sugarProgress.target}
+            sugarHasTarget={sugarProgress.hasTarget}
             sugarIsIncomplete={sugarProgress.isIncomplete}
             onSelectNutrient={(key) => setSelectedNutrientForDetail(key)}
           />

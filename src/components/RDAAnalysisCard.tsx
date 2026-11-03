@@ -349,11 +349,14 @@ const createStyles = (theme: ThemeType) =>
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 6,
+    flexWrap: 'wrap',
+    gap: 4,
   },
   nameGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 1,
   },
   incompleteAsterisk: {
     fontSize: 12,
@@ -369,6 +372,7 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     color: theme.colors.textSecondary,
+    flexShrink: 1,
   },
   progressTrack: {
     height: 6,
@@ -385,15 +389,19 @@ const createStyles = (theme: ThemeType) =>
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
   },
   breakdownText: {
     fontSize: 12,
     color: theme.colors.textMuted,
+    flexShrink: 1,
   },
   pctBadgeText: {
     fontSize: 12,
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    flexShrink: 1,
   },
   completenessRow: {
     marginTop: 4,

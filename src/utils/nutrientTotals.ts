@@ -56,7 +56,7 @@ export interface NutrientMetadata {
   unit: 'kcal' | 'g' | 'mg' | 'mcg';
   colorToken: ThemeColorKey;
   defaultTarget: number;
-  targetType?: DriTargetType;
+  targetType?: DriTargetType | 'CDRR' | 'Limit' | string;
   description: string;
   foodSources?: string;
   upperLimit?: number;
@@ -66,6 +66,9 @@ export interface NutrientMetadata {
   disclaimer?: string;
   isMinor?: boolean;
   minorNotice?: string;
+  hasTarget?: boolean;
+  noTargetReason?: string;
+  isLimitNutrient?: boolean;
 }
 
 export interface NutrientContributor {
@@ -85,7 +88,10 @@ export interface NutrientDayProgress {
   unit: string;
   colorToken: ThemeColorKey;
   target: number;
-  targetType?: DriTargetType;
+  hasTarget: boolean;
+  noTargetReason?: string;
+  isLimitNutrient?: boolean;
+  targetType?: DriTargetType | 'CDRR' | 'Limit' | string;
   isCustomTarget: boolean;
   current: number;
   remaining: number;
@@ -195,18 +201,24 @@ export function getNutrientMetadata(
         minorNotice: !dri.isAdult ? dri.disclaimer : undefined,
       };
     }
-    case 'sugar':
+    case 'sugar': {
+      const isMinor = typeof profile?.age === 'number' && !isNaN(profile.age) && profile.age < 19;
       return {
         key: 'sugar',
         label: 'Sugar',
         unit: 'g',
         colorToken: 'nutrientSugar',
         defaultTarget: 50, // Dietary reference upper limit
+        targetType: 'Limit',
+        isLimitNutrient: true,
         description: 'Simple carbohydrates. Monitoring aids insulin sensitivity and steady energy.',
         foodSources: 'Fruits, dairy, honey, dried fruit, natural sweeteners.',
         upperLimit: 50,
         upperLimitScope: 'all_sources',
+        isMinor,
+        minorNotice: isMinor ? 'Dietary reference guidance for minors (<19) not displayed.' : undefined,
       };
+    }
     case 'sodium': {
       const dri = getDriTarget('sodium', profile?.age, profile?.gender);
       return {
@@ -214,8 +226,9 @@ export function getNutrientMetadata(
         label: 'Sodium',
         unit: 'mg',
         colorToken: 'nutrientSodium',
-        defaultTarget: dri.target ?? 2300,
-        targetType: dri.targetType,
+        defaultTarget: dri.upperLimit ?? 2300,
+        targetType: 'CDRR',
+        isLimitNutrient: true,
         description: 'Electrolyte regulating fluid balance, nerve signals, and muscle contraction.',
         foodSources: 'Table salt, olives, cured meats, cheeses, savory broths.',
         upperLimit: dri.upperLimit ?? 2300,
@@ -292,11 +305,25 @@ export function calculateNutrientDayProgress(
   const customTarget = profile?.customNutrientGoals?.[nutrientKey];
   const isMinor = meta.isMinor ?? false;
   const isCustomTarget = typeof customTarget === 'number' && customTarget > 0;
-  const target = isCustomTarget
-    ? customTarget
+  const isLimitNutrient = Boolean(meta.isLimitNutrient || nutrientKey === 'sodium' || nutrientKey === 'sugar');
+
+  // Determine hasTarget:
+  // For minors (<19), no adult targets exist unless user sets a custom goal.
+  const hasTarget = isCustomTarget
+    ? true
     : isMinor
-    ? 0
-    : meta.defaultTarget;
+    ? false
+    : meta.defaultTarget > 0;
+
+  const noTargetReason = hasTarget
+    ? undefined
+    : isMinor
+    ? 'No daily target for under 19'
+    : 'No daily target';
+
+  const target = hasTarget
+    ? (isCustomTarget ? customTarget : meta.defaultTarget)
+    : 0;
 
   const validMeals = meals || [];
   let foodTotal = 0;
@@ -392,11 +419,13 @@ export function calculateNutrientDayProgress(
     }))
     .sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0));
 
-  const percent = target > 0 ? Math.min(999, Math.round((currentTotal / target) * 100)) : 0;
+  const percent = hasTarget && target > 0 ? Math.min(999, Math.round((currentTotal / target) * 100)) : 0;
   const foodsWithDataCount = Math.max(0, validMeals.length - missingCount);
   const isIncomplete = validMeals.length > 0 && missingCount > 0;
   const hasData = foodsWithDataCount > 0 || supplementTotal > 0;
-  const remaining = target > 0 ? Math.max(0, Math.round((target - currentTotal) * 10) / 10) : 0;
+  const remaining = hasTarget && target > 0 && !isLimitNutrient
+    ? Math.max(0, Math.round((target - currentTotal) * 10) / 10)
+    : 0;
   const dataCompletenessText = formatDataCompleteness(foodsWithDataCount, validMeals.length);
 
   let status: 'optimal' | 'good' | 'low' | 'under' | 'exceeded' = 'under';
@@ -426,6 +455,9 @@ export function calculateNutrientDayProgress(
     unit: meta.unit,
     colorToken: meta.colorToken,
     target,
+    hasTarget,
+    noTargetReason,
+    isLimitNutrient,
     targetType: meta.targetType,
     isCustomTarget,
     current: currentTotal,
@@ -452,4 +484,36 @@ export function calculateNutrientDayProgress(
     isMinor,
     minorNotice: isMinor ? meta.minorNotice : undefined,
   };
+}
+
+export const calculateNutrientProgress = calculateNutrientDayProgress;
+
+/**
+ * Formats intake breakdown into clear wording without nested brackets:
+ * e.g. "870.3 mg from foods · no data for 2 foods" or
+ *      "870.3 mg from foods · 20 mg from supplements · no data for 2 foods"
+ */
+export function formatIntakeBreakdown(
+  progress: Pick<NutrientDayProgress, 'foodAmount' | 'supplementAmount' | 'missingCount' | 'unit' | 'totalMealsCount'>,
+  t: (key: string) => string = (k) => k
+): string {
+  const parts: string[] = [];
+
+  // Food amount part
+  if (progress.foodAmount > 0 || (progress.totalMealsCount > 0 && progress.missingCount < progress.totalMealsCount)) {
+    parts.push(`${progress.foodAmount} ${progress.unit} ${t('from foods')}`);
+  }
+
+  // Supplement amount part
+  if (progress.supplementAmount > 0) {
+    parts.push(`${progress.supplementAmount} ${progress.unit} ${t('from supplements')}`);
+  }
+
+  // Missing data part
+  if (progress.missingCount > 0) {
+    const foodWord = progress.missingCount === 1 ? t('food') : t('foods');
+    parts.push(`${t('no data for')} ${progress.missingCount} ${foodWord}`);
+  }
+
+  return parts.join(' · ');
 }

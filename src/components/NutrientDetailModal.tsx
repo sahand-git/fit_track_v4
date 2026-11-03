@@ -28,6 +28,7 @@ import {
   calculateNutrientDayProgress,
   formattedNutrientValue,
   formatDataCompleteness,
+  formatIntakeBreakdown,
 } from '../utils/nutrientTotals';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -98,37 +99,13 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   }, [activeKey, meals, supplements, profile]);
 
   const intakeBreakdown = useMemo(() => {
-    const hasSupplements = progress.supplementAmount > 0;
-    const hasMissing = progress.missingCount > 0;
-    if (!hasSupplements && !hasMissing) return '';
-
-    let foodText = '';
-    if (hasMissing && progress.foodAmount === 0) {
-      foodText = `${t('no data for')} ${progress.missingCount} ${progress.missingCount > 1 ? t('foods') : t('food')}`;
-    } else if (hasMissing && progress.foodAmount > 0) {
-      foodText = `${progress.foodAmount} ${t('food')} (${t('no data for')} ${progress.missingCount})`;
-    } else if (progress.totalMealsCount > 0) {
-      foodText = `${progress.foodAmount} ${t('food')}`;
-    }
-
-    const suppText = hasSupplements ? `${progress.supplementAmount} ${t('from supplements')}` : '';
-
-    if (foodText && suppText) {
-      return ` (${foodText} + ${suppText})`;
-    }
-    if (foodText && hasMissing) {
-      return ` (${foodText})`;
-    }
-    if (suppText) {
-      return ` (${suppText})`;
-    }
-    return '';
+    return formatIntakeBreakdown(progress, t);
   }, [progress, t]);
 
   const progressColor = theme.colors[progress.colorToken] || theme.colors.primary;
 
   const handleStartEdit = () => {
-    setGoalInput(String(progress.target));
+    setGoalInput(progress.target > 0 ? String(progress.target) : '');
     setIsEditingGoal(true);
   };
 
@@ -286,28 +263,44 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                     <Text style={styles.currentAmount}>
                       {progress.hasData ? progress.current : '—'}
                     </Text>
-                    <Text style={styles.targetAmount}>
-                      / {progress.target} {progress.unit}
-                    </Text>
+                    {progress.hasTarget && (
+                      <Text style={styles.targetAmount}>
+                        / {progress.target} {progress.unit}
+                      </Text>
+                    )}
                     {progress.isIncomplete && (
                       <Text style={styles.asteriskIndicator} accessibilityLabel={t('Incomplete data')}>
                         *
                       </Text>
                     )}
                   </View>
-                  <Text style={styles.currentLabel}>
-                    {t('Today’s Intake')}
-                    {intakeBreakdown}
-                  </Text>
+                  <Text style={styles.currentLabel}>{t('Today’s Intake')}</Text>
+                  {intakeBreakdown ? (
+                    <Text style={styles.breakdownSubText}>{intakeBreakdown}</Text>
+                  ) : null}
                 </View>
 
                 {/* Percentage & Status Pill */}
                 <View style={[styles.statusBadge, { backgroundColor: `${progressColor}15` }]}>
                   <Text style={[styles.statusBadgeText, { color: progressColor }]}>
-                    {progress.hasData ? `${progress.percent}%` : t('Not enough data')}
+                    {!progress.hasTarget
+                      ? t('No Target')
+                      : progress.isLimitNutrient
+                      ? progress.current <= progress.target
+                        ? t('Within reference limit')
+                        : t('Above reference limit')
+                      : progress.hasData
+                      ? `${progress.percent}%`
+                      : t('Not enough data')}
                   </Text>
                   <Text style={styles.statusSubText}>
-                    {progress.hasData
+                    {!progress.hasTarget
+                      ? t(progress.noTargetReason || 'No daily target for under 19')
+                      : progress.isLimitNutrient
+                      ? progress.current <= progress.target
+                        ? `${Math.round((progress.target - progress.current) * 10) / 10} ${progress.unit} ${t('below limit')}`
+                        : `${Math.round((progress.current - progress.target) * 10) / 10} ${progress.unit} ${t('above limit')}`
+                      : progress.hasData
                       ? progress.remaining > 0
                         ? `${progress.remaining} ${progress.unit} ${t('remaining')}`
                         : progress.percent > 100
@@ -318,18 +311,20 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                 </View>
               </View>
 
-              {/* Progress Bar Track */}
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${pctFill}%`,
-                      backgroundColor: progressColor,
-                    },
-                  ]}
-                />
-              </View>
+              {/* Progress Bar Track (Omitted if no target) */}
+              {progress.hasTarget && (
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${pctFill}%`,
+                        backgroundColor: progressColor,
+                      },
+                    ]}
+                  />
+                </View>
+              )}
 
               {/* Data Completeness */}
               <View style={[styles.completenessBanner, isRtl && styles.rowRtl]}>
@@ -469,7 +464,9 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
               ) : (
                 <View style={[styles.goalStaticRow, isRtl && styles.rowRtl]}>
                   <Text style={styles.goalStaticValue}>
-                    {progress.target} {progress.unit} {t('per day')}
+                    {progress.hasTarget
+                      ? `${progress.target} ${progress.unit} ${t('per day')}`
+                      : t(progress.noTargetReason || 'No daily target for under 19')}
                   </Text>
                   {progress.isCustomTarget && (
                     <TouchableOpacity
@@ -741,25 +738,29 @@ const createStyles = (theme: ThemeType) =>
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: 12,
+    flexWrap: 'wrap',
   },
   progressLeftCol: {
     flex: 1,
-    minWidth: 0,
+    minWidth: 160,
   },
   amountRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 4,
+    flexWrap: 'wrap',
   },
   currentAmount: {
     fontSize: 32,
     fontWeight: '800',
     color: theme.colors.textPrimary,
+    flexShrink: 1,
   },
   targetAmount: {
     fontSize: 15,
     fontWeight: '600',
     color: theme.colors.textMuted,
+    flexShrink: 1,
   },
   asteriskIndicator: {
     fontSize: 22,
@@ -771,7 +772,12 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
-    flexWrap: 'wrap',
+  },
+  breakdownSubText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 3,
+    lineHeight: 16,
   },
   statusBadge: {
     flexShrink: 0,
@@ -779,6 +785,7 @@ const createStyles = (theme: ThemeType) =>
     paddingVertical: 8,
     borderRadius: theme.radius.md,
     alignItems: 'flex-end',
+    maxWidth: '100%',
   },
   statusBadgeText: {
     fontSize: 18,

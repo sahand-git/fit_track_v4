@@ -139,6 +139,9 @@ export interface MicronutrientIntake {
   key: MicronutrientKey;
   label: string;
   target?: number;
+  hasTarget: boolean;
+  noTargetReason?: string;
+  isLimitNutrient?: boolean;
   targetType?: DriTargetType;
   unit: 'mg' | 'mcg';
   current: number;
@@ -459,10 +462,14 @@ export function calculateMicronutrientIntake(
     const supp = Math.round(supplementTotals[key] * 10) / 10;
     const total = Math.round((food + supp) * 10) / 10;
 
-    // For minors (< 19), no adult targets are evaluated
-    const target = isMinor ? undefined : (dri.target ?? meta.target);
-    const percent = target !== undefined && target > 0 ? Math.min(999, Math.round((total / target) * 100)) : 0;
-    const isDeficient = !isMinor && percent < 50;
+    // Custom target or standard DRI target (for minors <19, no adult DRIs unless custom target set)
+    const customTarget = profile?.customNutrientGoals?.[key];
+    const isCustomTarget = typeof customTarget === 'number' && customTarget > 0;
+    const hasTarget = isCustomTarget ? true : !isMinor && typeof (dri.target ?? meta.target) === 'number';
+    const noTargetReason = hasTarget ? undefined : isMinor ? 'No daily target for under 19' : 'No daily target';
+    const target = hasTarget ? (isCustomTarget ? customTarget : (dri.target ?? meta.target)) : undefined;
+    const percent = hasTarget && target !== undefined && target > 0 ? Math.min(999, Math.round((total / target) * 100)) : 0;
+    const isDeficient = !isMinor && hasTarget && percent < 50;
 
     let status: 'optimal' | 'low' | 'deficient' = 'deficient';
     if (percent >= 80) {
@@ -472,10 +479,10 @@ export function calculateMicronutrientIntake(
     }
 
     const hasData = hasFoodData[key] || hasSuppData[key];
-    if (!isMinor && hasData && percent >= 100) {
+    if (hasTarget && hasData && percent >= 100) {
       targetsMetCount += 1;
     }
-    if (!isMinor) {
+    if (hasTarget) {
       totalPctSum += Math.min(100, percent);
     }
 
@@ -486,7 +493,7 @@ export function calculateMicronutrientIntake(
       ? (meals.length - missingCounts[key]) / meals.length
       : (hasSuppData[key] ? 1 : 0);
 
-    const remaining = target !== undefined && target > 0 ? Math.max(0, Math.round((target - total) * 10) / 10) : 0;
+    const remaining = hasTarget && target !== undefined && target > 0 ? Math.max(0, Math.round((target - total) * 10) / 10) : 0;
     const dataCompletenessText = `based on ${foodsWithDataCount} of ${meals.length} logged foods with data`;
 
     const ulEval = evaluateUpperLimit(key, food, supp, profile?.age, profile?.gender);
@@ -495,6 +502,9 @@ export function calculateMicronutrientIntake(
       key,
       label: meta.label,
       target,
+      hasTarget,
+      noTargetReason,
+      isLimitNutrient: false,
       targetType: dri.targetType,
       unit: meta.unit,
       current: total,
