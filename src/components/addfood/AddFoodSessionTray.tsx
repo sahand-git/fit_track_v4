@@ -58,30 +58,7 @@ export const AddFoodSessionTray: React.FC<AddFoodSessionTrayProps> = ({
   };
 
   if (items.length === 0) {
-    return (
-      <View
-        style={[
-          styles.emptyFloatingContainer,
-          {
-            bottom: Math.max(theme.spacing.sm, (bottomInset ?? 0) + 8),
-            right: isRTL ? undefined : theme.spacing.md,
-            left: isRTL ? theme.spacing.md : undefined,
-          },
-        ]}
-        pointerEvents="box-none"
-      >
-        <TouchableOpacity
-          style={[styles.floatingDoneButton, isRTL && styles.floatingDoneButtonRTL]}
-          onPress={onDone}
-          accessibilityRole="button"
-          accessibilityLabel={t('Done')}
-          activeOpacity={0.85}
-        >
-          <Check size={16} color={theme.colors.textInverted} strokeWidth={2.5} />
-          <Text style={styles.doneButtonText}>{t('Done')}</Text>
-        </TouchableOpacity>
-      </View>
-    );
+    return null;
   }
 
   return (
@@ -167,26 +144,6 @@ export const AddFoodSessionTray: React.FC<AddFoodSessionTrayProps> = ({
 
 const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
-    emptyFloatingContainer: {
-      position: 'absolute',
-      zIndex: 30,
-    },
-    floatingDoneButton: {
-      minHeight: 44,
-      minWidth: 88,
-      paddingHorizontal: theme.spacing.md + 4,
-      backgroundColor: theme.colors.primary,
-      borderRadius: theme.radius.full,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      ...theme.shadow.floating,
-      elevation: 6,
-    },
-    floatingDoneButtonRTL: {
-      flexDirection: 'row-reverse',
-    },
     wrapper: {
       marginHorizontal: -theme.spacing.md,
       backgroundColor: theme.colors.surfaceElevated || theme.colors.surface,

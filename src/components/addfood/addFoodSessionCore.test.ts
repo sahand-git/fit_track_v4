@@ -230,47 +230,49 @@ console.log('Testing Layout Clearance, Bottom Insets & Responsive Boundaries...'
 
 interface EmptyLayoutGeometry {
   isTrayEmpty: true;
-  buttonHeight: number;
-  buttonBottom: number;
-  buttonTop: number;
+  rendersTray: false;
+  rendersDoneButton: false;
   listScrollPadding: number;
-  clearanceAboveButton: number;
   hasFooterBlock: false;
 }
 
 interface FilledLayoutGeometry {
   isTrayEmpty: false;
+  rendersTray: true;
+  rendersDoneButton: true;
   buttonHeight: number;
   trayPaddingBottom: number;
   listScrollPadding: number;
+  clearanceAboveTray: number;
   hasFooterBlock: true;
 }
 
 function computeEmptyLayoutGeometry(bottomInset: number): EmptyLayoutGeometry {
-  const BUTTON_HEIGHT = 44; // WCAG 44px min touch target
-  const buttonBottom = Math.max(8, bottomInset + 8);
-  const buttonTop = buttonBottom + BUTTON_HEIGHT;
-  const listScrollPadding = Math.max(76, bottomInset + 64);
-  const clearanceAboveButton = listScrollPadding - buttonTop;
+  const listScrollPadding = Math.max(16, bottomInset + 12);
 
   return {
     isTrayEmpty: true,
-    buttonHeight: BUTTON_HEIGHT,
-    buttonBottom,
-    buttonTop,
+    rendersTray: false,
+    rendersDoneButton: false,
     listScrollPadding,
-    clearanceAboveButton,
     hasFooterBlock: false,
   };
 }
 
 function computeFilledLayoutGeometry(bottomInset: number): FilledLayoutGeometry {
-  const BUTTON_HEIGHT = 44;
+  const BUTTON_HEIGHT = 44; // WCAG 44px min touch target
+  const trayPaddingBottom = Math.max(4, bottomInset + 4);
+  const listScrollPadding = Math.max(68, bottomInset + 56);
+  const clearanceAboveTray = listScrollPadding - (BUTTON_HEIGHT + trayPaddingBottom);
+
   return {
     isTrayEmpty: false,
+    rendersTray: true,
+    rendersDoneButton: true,
     buttonHeight: BUTTON_HEIGHT,
-    trayPaddingBottom: Math.max(4, bottomInset + 4),
-    listScrollPadding: 24,
+    trayPaddingBottom,
+    listScrollPadding,
+    clearanceAboveTray,
     hasFooterBlock: true,
   };
 }
@@ -279,20 +281,20 @@ function computeFilledLayoutGeometry(bottomInset: number): FilledLayoutGeometry 
 const insetsToTest = [0, 16, 24, 34, 48];
 for (const inset of insetsToTest) {
   const emptyGeom = computeEmptyLayoutGeometry(inset);
+  assert(emptyGeom.rendersTray === false, `Empty session must NOT render tray (inset ${inset})`);
+  assert(emptyGeom.rendersDoneButton === false, `Empty session must NOT render Done button (inset ${inset})`);
   assert(emptyGeom.hasFooterBlock === false, `Empty session must NOT create full-width footer block (inset ${inset})`);
-  assert(emptyGeom.buttonHeight >= 44, `Done button touch target must be at least 44px (got ${emptyGeom.buttonHeight})`);
-  assert(
-    emptyGeom.clearanceAboveButton > 0,
-    `Scroll padding must ensure last item ends completely above Done button (inset ${inset}, clearance ${emptyGeom.clearanceAboveButton}px)`
-  );
-  assert(
-    emptyGeom.buttonBottom >= inset,
-    `Done button must respect system navigation inset (buttonBottom: ${emptyGeom.buttonBottom}, inset: ${inset})`
-  );
+  assert(emptyGeom.listScrollPadding >= inset, `Empty list padding must respect navigation inset (inset ${inset})`);
 
   const filledGeom = computeFilledLayoutGeometry(inset);
-  assert(filledGeom.hasFooterBlock === true, 'Session with items must show docked session tray');
+  assert(filledGeom.rendersTray === true, 'Session with items must show docked session tray');
+  assert(filledGeom.rendersDoneButton === true, 'Session with items must provide Done button');
+  assert(filledGeom.buttonHeight >= 44, `Done button touch target must be at least 44px (got ${filledGeom.buttonHeight})`);
   assert(filledGeom.trayPaddingBottom >= inset, 'Docked tray must respect system navigation inset');
+  assert(
+    filledGeom.clearanceAboveTray > 0,
+    `Scroll padding must ensure last item ends completely above docked tray (inset ${inset}, clearance ${filledGeom.clearanceAboveTray}px)`
+  );
 }
 console.log('✓ Inset math & positive scroll clearance verified across all device safe area bounds.');
 
@@ -307,15 +309,7 @@ assert(doneEn === 'Done', `English 'Done' string expected, got ${doneEn}`);
 assert(Boolean(doneAr && doneAr.length > 0), `Arabic translation for 'Done' must exist (got ${doneAr})`);
 assert(Boolean(doneCkb && doneCkb.length > 0), `Kurdish Sorani translation for 'Done' must exist (got ${doneCkb})`);
 
-// On narrow screen (320px width - e.g. iPhone SE / small Android)
-const screenWidth = 320;
-const horizontalPadding = 16 * 2;
-const availableWidth = screenWidth - horizontalPadding; // 288px
-const floatingDoneBtnWidth = 92;
-const openListWidth = availableWidth - floatingDoneBtnWidth;
-assert(openListWidth >= 190, `Narrow screen must preserve at least 190px open width beside floating Done (got ${openListWidth}px)`);
-
-console.log('✓ Narrow screen geometry & multilingual Done labels (en/ar/ckb) verified.');
+console.log('✓ Multilingual Done labels (en/ar/ckb) verified for filled session tray.');
 
 console.log('======================================================');
 console.log('All AddFoodSessionCore Unit & Regression Tests PASSED!');

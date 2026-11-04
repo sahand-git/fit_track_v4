@@ -2274,8 +2274,8 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                         {
                           paddingBottom:
                             sessionState.items.length > 0
-                              ? 24
-                              : Math.max(76, insets.bottom + 64),
+                              ? Math.max(68, insets.bottom + 56)
+                              : Math.max(theme.spacing.md, insets.bottom + 12),
                         },
                       ]}
                       keyboardShouldPersistTaps="handled"
@@ -2364,8 +2364,8 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                         {
                           paddingBottom:
                             sessionState.items.length > 0
-                              ? 24
-                              : Math.max(76, insets.bottom + 64),
+                              ? Math.max(68, insets.bottom + 56)
+                              : Math.max(theme.spacing.md, insets.bottom + 12),
                         },
                       ]}
                       ListHeaderComponent={renderListHeader}
