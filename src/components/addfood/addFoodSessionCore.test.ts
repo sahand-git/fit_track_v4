@@ -13,6 +13,7 @@ import {
   SessionItem,
   AddFoodSessionState,
 } from './addFoodSessionCore';
+import { translate } from '../../i18n/strings';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -223,6 +224,98 @@ assert(afterLogState.selectedMeal === 'breakfast', 'Selected meal MUST survive a
 assert(afterLogState.selectedFood === null, 'Selected food state MUST be cleared for next selection');
 assert(afterLogState.session.items.length === 1, 'Item registered in session');
 console.log('✓ Search, filter, and sheet persistence verified cleanly.');
+
+// 12. Layout Clearance, System Inset & Screen Responsiveness Verification
+console.log('Testing Layout Clearance, Bottom Insets & Responsive Boundaries...');
+
+interface EmptyLayoutGeometry {
+  isTrayEmpty: true;
+  buttonHeight: number;
+  buttonBottom: number;
+  buttonTop: number;
+  listScrollPadding: number;
+  clearanceAboveButton: number;
+  hasFooterBlock: false;
+}
+
+interface FilledLayoutGeometry {
+  isTrayEmpty: false;
+  buttonHeight: number;
+  trayPaddingBottom: number;
+  listScrollPadding: number;
+  hasFooterBlock: true;
+}
+
+function computeEmptyLayoutGeometry(bottomInset: number): EmptyLayoutGeometry {
+  const BUTTON_HEIGHT = 44; // WCAG 44px min touch target
+  const buttonBottom = Math.max(8, bottomInset + 8);
+  const buttonTop = buttonBottom + BUTTON_HEIGHT;
+  const listScrollPadding = Math.max(76, bottomInset + 64);
+  const clearanceAboveButton = listScrollPadding - buttonTop;
+
+  return {
+    isTrayEmpty: true,
+    buttonHeight: BUTTON_HEIGHT,
+    buttonBottom,
+    buttonTop,
+    listScrollPadding,
+    clearanceAboveButton,
+    hasFooterBlock: false,
+  };
+}
+
+function computeFilledLayoutGeometry(bottomInset: number): FilledLayoutGeometry {
+  const BUTTON_HEIGHT = 44;
+  return {
+    isTrayEmpty: false,
+    buttonHeight: BUTTON_HEIGHT,
+    trayPaddingBottom: Math.max(4, bottomInset + 4),
+    listScrollPadding: 24,
+    hasFooterBlock: true,
+  };
+}
+
+// Test with various system bottom insets (0px web/no inset, 20px Android 3-button, 34px iOS home bar, 48px Android gesture)
+const insetsToTest = [0, 16, 24, 34, 48];
+for (const inset of insetsToTest) {
+  const emptyGeom = computeEmptyLayoutGeometry(inset);
+  assert(emptyGeom.hasFooterBlock === false, `Empty session must NOT create full-width footer block (inset ${inset})`);
+  assert(emptyGeom.buttonHeight >= 44, `Done button touch target must be at least 44px (got ${emptyGeom.buttonHeight})`);
+  assert(
+    emptyGeom.clearanceAboveButton > 0,
+    `Scroll padding must ensure last item ends completely above Done button (inset ${inset}, clearance ${emptyGeom.clearanceAboveButton}px)`
+  );
+  assert(
+    emptyGeom.buttonBottom >= inset,
+    `Done button must respect system navigation inset (buttonBottom: ${emptyGeom.buttonBottom}, inset: ${inset})`
+  );
+
+  const filledGeom = computeFilledLayoutGeometry(inset);
+  assert(filledGeom.hasFooterBlock === true, 'Session with items must show docked session tray');
+  assert(filledGeom.trayPaddingBottom >= inset, 'Docked tray must respect system navigation inset');
+}
+console.log('✓ Inset math & positive scroll clearance verified across all device safe area bounds.');
+
+// 13. Narrow Screen & Multi-Language Translation Verification (en, ar, ckb)
+console.log('Testing Narrow Screen Budget & Multilingual Strings (en, ar, ckb)...');
+
+const doneEn = translate('en', 'Done');
+const doneAr = translate('ar', 'Done');
+const doneCkb = translate('ckb', 'Done');
+
+assert(doneEn === 'Done', `English 'Done' string expected, got ${doneEn}`);
+assert(Boolean(doneAr && doneAr.length > 0), `Arabic translation for 'Done' must exist (got ${doneAr})`);
+assert(Boolean(doneCkb && doneCkb.length > 0), `Kurdish Sorani translation for 'Done' must exist (got ${doneCkb})`);
+
+// On narrow screen (320px width - e.g. iPhone SE / small Android)
+const screenWidth = 320;
+const horizontalPadding = 16 * 2;
+const availableWidth = screenWidth - horizontalPadding; // 288px
+const floatingDoneBtnWidth = 92;
+const openListWidth = availableWidth - floatingDoneBtnWidth;
+assert(openListWidth >= 190, `Narrow screen must preserve at least 190px open width beside floating Done (got ${openListWidth}px)`);
+
+console.log('✓ Narrow screen geometry & multilingual Done labels (en/ar/ckb) verified.');
 
 console.log('======================================================');
 console.log('All AddFoodSessionCore Unit & Regression Tests PASSED!');

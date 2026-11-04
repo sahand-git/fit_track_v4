@@ -1836,7 +1836,7 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
               style={[
                 styles.sheetContainer,
                 animatedSheetStyle,
-                { height: '100%', paddingBottom: Math.max(theme.spacing.md, insets.bottom + 12) },
+                { height: '100%', paddingBottom: 0 },
               ]}
             >
           {/* Header */}
@@ -2271,7 +2271,12 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                     <ScrollView
                       contentContainerStyle={[
                         styles.foodListScroll,
-                        { paddingBottom: Math.max(48, insets.bottom + 36) },
+                        {
+                          paddingBottom:
+                            sessionState.items.length > 0
+                              ? 24
+                              : Math.max(76, insets.bottom + 64),
+                        },
                       ]}
                       keyboardShouldPersistTaps="handled"
                     >
@@ -2356,7 +2361,12 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                       keyboardShouldPersistTaps="handled"
                       contentContainerStyle={[
                         styles.foodListScroll,
-                        { paddingBottom: Math.max(48, insets.bottom + 36) },
+                        {
+                          paddingBottom:
+                            sessionState.items.length > 0
+                              ? 24
+                              : Math.max(76, insets.bottom + 64),
+                        },
                       ]}
                       ListHeaderComponent={renderListHeader}
                       ListEmptyComponent={renderEmptyState}
@@ -2414,6 +2424,8 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
             onToggleExpanded={() => setSessionState((prev) => toggleSessionTrayExpanded(prev))}
             onRemoveItem={handleRemoveSessionItem}
             onDone={handleClose}
+            bottomInset={insets.bottom}
+            isRTL={language === 'ar' || language === 'ckb'}
             t={t}
           />
 
@@ -2423,6 +2435,8 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
             message={sessionState.toast?.message ?? ''}
             onUndo={handleUndoSession}
             onDismiss={() => setSessionState((prev) => dismissSessionToast(prev))}
+            bottomInset={insets.bottom}
+            isRTL={language === 'ar' || language === 'ckb'}
             t={t}
           />
         </Animated.View>
@@ -2511,11 +2525,14 @@ const createStyles = (theme: ThemeType) =>
     borderTopLeftRadius: theme.radius.xl,
     borderTopRightRadius: theme.radius.xl,
     height: '92%',
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    paddingBottom: 0,
     gap: 12,
     width: '100%',
     maxWidth: Platform.OS === 'web' ? 480 : undefined,
     alignSelf: 'center',
+    overflow: 'hidden',
     ...theme.shadow.floating,
   },
   header: {

@@ -25,6 +25,8 @@ export interface AddFoodToastProps {
   onUndo: () => void;
   onDismiss: () => void;
   durationMs?: number;
+  bottomInset?: number;
+  isRTL?: boolean;
   t: (key: string) => string;
 }
 
@@ -34,6 +36,8 @@ export const AddFoodToast: React.FC<AddFoodToastProps> = ({
   onUndo,
   onDismiss,
   durationMs = 5000,
+  bottomInset,
+  isRTL = false,
   t,
 }) => {
   const { theme } = useTheme();
@@ -78,17 +82,32 @@ export const AddFoodToast: React.FC<AddFoodToastProps> = ({
 
   return (
     <Animated.View
-      style={[styles.container, animatedStyle]}
+      style={[
+        styles.container,
+        { bottom: Math.max(68, (bottomInset ?? 0) + 60) },
+        animatedStyle,
+      ]}
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
       pointerEvents="box-none"
     >
-      <View style={styles.content}>
-        <View style={styles.iconCircle}>
+      <View style={[styles.content, isRTL && styles.rowRTL]}>
+        <View
+          style={[
+            styles.iconCircle,
+            isRTL ? { marginRight: 0, marginLeft: theme.spacing.sm } : undefined,
+          ]}
+        >
           <Check size={16} color={theme.colors.surface} strokeWidth={2.5} />
         </View>
 
-        <Text style={styles.messageText} numberOfLines={2}>
+        <Text
+          style={[
+            styles.messageText,
+            isRTL ? { paddingRight: 0, paddingLeft: theme.spacing.xs, textAlign: 'right' } : undefined,
+          ]}
+          numberOfLines={2}
+        >
           {message}
         </Text>
 
@@ -115,6 +134,9 @@ const createStyles = (theme: ThemeType) =>
       right: theme.spacing.md,
       zIndex: 9999,
       alignItems: 'center',
+    },
+    rowRTL: {
+      flexDirection: 'row-reverse',
     },
     content: {
       flexDirection: 'row',

@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { ChevronUp, ChevronDown, Trash2 } from 'lucide-react-native';
+import { ChevronUp, ChevronDown, Trash2, Check } from 'lucide-react-native';
 import { AppText as Text } from '../AppText';
 import { useTheme } from '../../theme/ThemeContext';
 import { ThemeType } from '../../theme';
@@ -22,6 +22,8 @@ export interface AddFoodSessionTrayProps {
   onToggleExpanded: () => void;
   onRemoveItem: (id: string) => void;
   onDone: () => void;
+  bottomInset?: number;
+  isRTL?: boolean;
   t: (key: string) => string;
 }
 
@@ -31,6 +33,8 @@ export const AddFoodSessionTray: React.FC<AddFoodSessionTrayProps> = ({
   onToggleExpanded,
   onRemoveItem,
   onDone,
+  bottomInset,
+  isRTL = false,
   t,
 }) => {
   const { theme } = useTheme();
@@ -55,14 +59,25 @@ export const AddFoodSessionTray: React.FC<AddFoodSessionTrayProps> = ({
 
   if (items.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
+      <View
+        style={[
+          styles.emptyFloatingContainer,
+          {
+            bottom: Math.max(theme.spacing.sm, (bottomInset ?? 0) + 8),
+            right: isRTL ? undefined : theme.spacing.md,
+            left: isRTL ? theme.spacing.md : undefined,
+          },
+        ]}
+        pointerEvents="box-none"
+      >
         <TouchableOpacity
-          style={styles.doneButton}
+          style={[styles.floatingDoneButton, isRTL && styles.floatingDoneButtonRTL]}
           onPress={onDone}
           accessibilityRole="button"
           accessibilityLabel={t('Done')}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
+          <Check size={16} color={theme.colors.textInverted} strokeWidth={2.5} />
           <Text style={styles.doneButtonText}>{t('Done')}</Text>
         </TouchableOpacity>
       </View>
@@ -70,10 +85,17 @@ export const AddFoodSessionTray: React.FC<AddFoodSessionTrayProps> = ({
   }
 
   return (
-    <View style={styles.wrapper}>
+    <View
+      style={[
+        styles.wrapper,
+        {
+          paddingBottom: Math.max(theme.spacing.xs, (bottomInset ?? 0) + 4),
+        },
+      ]}
+    >
       {isExpanded && (
         <View style={styles.expandedDrawer}>
-          <View style={styles.drawerHeader}>
+          <View style={[styles.drawerHeader, isRTL && styles.rowRTL]}>
             <Text style={styles.drawerTitle}>{t('Foods added this session')}</Text>
           </View>
           <ScrollView
@@ -82,8 +104,8 @@ export const AddFoodSessionTray: React.FC<AddFoodSessionTrayProps> = ({
             showsVerticalScrollIndicator={true}
           >
             {items.map((item) => (
-              <View key={item.id} style={styles.itemRow}>
-                <View style={styles.itemMeta}>
+              <View key={item.id} style={[styles.itemRow, isRTL && styles.rowRTL]}>
+                <View style={[styles.itemMeta, isRTL && styles.itemMetaRTL]}>
                   <Text style={styles.itemName} numberOfLines={1}>
                     {item.name}
                   </Text>
@@ -92,7 +114,7 @@ export const AddFoodSessionTray: React.FC<AddFoodSessionTrayProps> = ({
                   </Text>
                 </View>
 
-                <Text style={styles.itemCalories}>
+                <Text style={[styles.itemCalories, isRTL && styles.itemCaloriesRTL]}>
                   {item.calories} {t('kcal')}
                 </Text>
 
@@ -112,9 +134,9 @@ export const AddFoodSessionTray: React.FC<AddFoodSessionTrayProps> = ({
       )}
 
       {/* Main Bar */}
-      <View style={styles.trayBar}>
+      <View style={[styles.trayBar, isRTL && styles.rowRTL]}>
         <TouchableOpacity
-          style={styles.summaryButton}
+          style={[styles.summaryButton, isRTL && styles.rowRTL]}
           onPress={onToggleExpanded}
           accessibilityRole="button"
           accessibilityLabel={`${summaryText}. ${isExpanded ? t('Collapse') : t('Expand')}`}
@@ -129,12 +151,13 @@ export const AddFoodSessionTray: React.FC<AddFoodSessionTrayProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.doneButton}
+          style={[styles.doneButton, isRTL && styles.doneButtonRTL]}
           onPress={onDone}
           accessibilityRole="button"
           accessibilityLabel={t('Done')}
           activeOpacity={0.8}
         >
+          <Check size={16} color={theme.colors.textInverted} strokeWidth={2.5} />
           <Text style={styles.doneButtonText}>{t('Done')}</Text>
         </TouchableOpacity>
       </View>
@@ -144,15 +167,28 @@ export const AddFoodSessionTray: React.FC<AddFoodSessionTrayProps> = ({
 
 const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
-    emptyContainer: {
-      paddingHorizontal: theme.spacing.md,
-      paddingVertical: theme.spacing.sm,
-      backgroundColor: theme.colors.surface,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: theme.colors.border,
-      alignItems: 'flex-end',
+    emptyFloatingContainer: {
+      position: 'absolute',
+      zIndex: 30,
+    },
+    floatingDoneButton: {
+      minHeight: 44,
+      minWidth: 88,
+      paddingHorizontal: theme.spacing.md + 4,
+      backgroundColor: theme.colors.primary,
+      borderRadius: theme.radius.full,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      ...theme.shadow.floating,
+      elevation: 6,
+    },
+    floatingDoneButtonRTL: {
+      flexDirection: 'row-reverse',
     },
     wrapper: {
+      marginHorizontal: -theme.spacing.md,
       backgroundColor: theme.colors.surfaceElevated || theme.colors.surface,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: theme.colors.border,
@@ -161,6 +197,9 @@ const createStyles = (theme: ThemeType) =>
       shadowOpacity: 0.08,
       shadowRadius: 6,
       elevation: 4,
+    },
+    rowRTL: {
+      flexDirection: 'row-reverse',
     },
     expandedDrawer: {
       maxHeight: 220,
@@ -198,6 +237,11 @@ const createStyles = (theme: ThemeType) =>
       flex: 1,
       paddingRight: theme.spacing.sm,
     },
+    itemMetaRTL: {
+      paddingRight: 0,
+      paddingLeft: theme.spacing.sm,
+      alignItems: 'flex-end',
+    },
     itemName: {
       fontSize: 14,
       fontWeight: '600',
@@ -213,6 +257,10 @@ const createStyles = (theme: ThemeType) =>
       fontWeight: '700',
       color: theme.colors.textPrimary,
       marginRight: theme.spacing.sm,
+    },
+    itemCaloriesRTL: {
+      marginRight: 0,
+      marginLeft: theme.spacing.sm,
     },
     removeButton: {
       minHeight: 44,
@@ -247,8 +295,13 @@ const createStyles = (theme: ThemeType) =>
       paddingHorizontal: theme.spacing.lg,
       backgroundColor: theme.colors.primary,
       borderRadius: theme.radius.full,
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      gap: 6,
+    },
+    doneButtonRTL: {
+      flexDirection: 'row-reverse',
     },
     doneButtonText: {
       fontSize: 14,

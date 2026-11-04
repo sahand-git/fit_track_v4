@@ -57,7 +57,7 @@ export const AddFoodAiPhotoSection: React.FC<AddFoodAiPhotoSectionProps> = ({
     <ScrollView
       contentContainerStyle={[
         styles.tabContentScroll,
-        { paddingBottom: Math.max(48, bottomInset + 36) },
+        { paddingBottom: Math.max(76, bottomInset + 64) },
       ]}
       keyboardShouldPersistTaps="handled"
     >
