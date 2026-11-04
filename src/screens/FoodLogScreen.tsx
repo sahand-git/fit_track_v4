@@ -245,16 +245,16 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
     <View style={styles.container}>
       {/* Calm Calendar Navigation */}
       <View style={styles.dateHeader}>
-        <TouchableOpacity
+        <AnimatedPressable
           style={styles.dateNavBtn}
           onPress={handlePrevDay}
           accessibilityLabel={t('Previous day')}
           accessibilityRole="button"
         >
           <DirectionalIcon name="ChevronLeft" size={20} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
+        </AnimatedPressable>
 
-        <TouchableOpacity
+        <AnimatedPressable
           style={styles.datePickButton}
           onPress={() => setCalendarVisible(true)}
           accessibilityLabel={t('Choose date')}
@@ -262,9 +262,9 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         >
           <CalendarDays size={17} color={theme.colors.primary} />
           <Text style={styles.dateTitle}>{formatDisplayDate(selectedDate, language)}</Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
 
-        <TouchableOpacity
+        <AnimatedPressable
           style={[styles.dateNavBtn, selectedDate >= getTodayDateString() && styles.disabledButton]}
           onPress={handleNextDay}
           disabled={selectedDate >= getTodayDateString()}
@@ -272,7 +272,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
           accessibilityRole="button"
         >
           <DirectionalIcon name="ChevronRight" size={20} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
 
       {/* Past Date Banner */}
@@ -341,7 +341,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
                 </View>
 
                 {!isFuture && (
-                  <TouchableOpacity
+                  <AnimatedPressable
                     style={styles.addFoodBtn}
                     onPress={() => openAddSheet(cat.key)}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -350,17 +350,16 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
                   >
                     <Plus size={14} color={theme.colors.primary} />
                     <Text style={styles.addFoodBtnText}>{t('Add')}</Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 )}
               </View>
 
               {/* Items List */}
               {categoryMeals.length === 0 ? (
-                <TouchableOpacity
+                <AnimatedPressable
                   style={styles.emptyPromptBox}
                   onPress={() => openAddSheet(cat.key)}
                   disabled={isFuture}
-                  activeOpacity={0.6}
                   accessibilityRole="button"
                   accessibilityLabel={`${t('No meals logged yet.')} ${t('Add food')}`}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -368,7 +367,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
                   <Text style={styles.emptyPromptText}>
                     {t('No meals logged yet.')}
                   </Text>
-                </TouchableOpacity>
+                </AnimatedPressable>
               ) : (
                 <View style={styles.foodListContainer}>
                   {categoryMeals.map((item, idx) => {
@@ -376,7 +375,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
                     const isLast = idx === categoryMeals.length - 1;
                     return (
                       <AnimatedFoodRow key={item.id} isNew={userAddedMealIds.has(item.id)} delay={0}>
-                        <TouchableOpacity
+                        <AnimatedPressable
                           style={[
                             styles.foodRow,
                             isRtl && styles.rowRtl,
@@ -388,7 +387,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                             setInspectingMeal(item);
                           }}
-                          activeOpacity={0.7}
+                          minScale={0.98}
                           accessibilityRole="button"
                           accessibilityLabel={`${item.name}, ${formatKcal(item.calories, t)}`}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -421,7 +420,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
                               <Trash2 size={15} color={theme.colors.danger} />
                             </TouchableOpacity>
                           </View>
-                        </TouchableOpacity>
+                        </AnimatedPressable>
                       </AnimatedFoodRow>
                     );
                   })}

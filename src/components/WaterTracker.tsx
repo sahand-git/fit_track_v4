@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import {
   View,
-  TouchableOpacity,
   StyleSheet
 } from 'react-native';
 import { AppText as Text } from './AppText';
@@ -12,6 +11,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { useAppDialog } from './dialogs/AppDialogProvider';
+import { AnimatedPressable } from './AnimatedPressable';
 
 interface WaterTrackerProps {
   glasses: number;
@@ -75,11 +75,22 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
               ? `${glasses} ${t('of')} ${target} ${t('glasses')} (${currentLiters}L / ${targetLiters}L) · ${t('Goal reached!')}`
               : `${glasses} ${t('of')} ${target} ${t('glasses')} (${currentLiters}L / ${targetLiters}L)`}
           </Text>
+          {target > 0 && (
+            <View style={styles.waterTrack}>
+              <View
+                style={[
+                  styles.waterFill,
+                  { width: `${Math.min(100, (glasses / target) * 100)}%` },
+                  isGoalReached && { backgroundColor: theme.colors.emerald },
+                ]}
+              />
+            </View>
+          )}
         </View>
       </View>
 
       <View style={styles.stepper}>
-        <TouchableOpacity
+        <AnimatedPressable
           style={[styles.btn, glasses === 0 && styles.btnDisabled]}
           onPress={handleSubtract}
           disabled={glasses === 0}
@@ -88,9 +99,9 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Minus size={15} color={glasses === 0 ? theme.colors.textMuted : theme.colors.textPrimary} />
-        </TouchableOpacity>
+        </AnimatedPressable>
 
-        <TouchableOpacity
+        <AnimatedPressable
           style={[styles.btn, isGoalReached ? styles.btnAddGoalReached : styles.btnAdd]}
           onPress={handleAdd}
           accessibilityLabel={t('Add 1 glass of water')}
@@ -98,7 +109,7 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Plus size={15} color={isGoalReached ? theme.colors.textPrimary : theme.colors.textInverted} />
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
     </View>
   );
@@ -175,6 +186,19 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   },
   subtitleGoalReached: {
     color: theme.colors.textPrimary,
+  },
+  waterTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.surfaceSubtle,
+    overflow: 'hidden',
+    marginTop: 6,
+    width: '100%',
+  },
+  waterFill: {
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: theme.colors.water,
   },
   stepper: {
     flexDirection: 'row',

@@ -74,6 +74,9 @@ import { translate } from './src/i18n/strings';
 import { ThemeType } from './src/theme';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import * as Haptics from 'expo-haptics';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { getSpringConfig } from './src/utils/reanimatedMotion';
+import { isReducedMotion } from './src/utils/motion';
 
 import { StepsScreen } from './src/screens/StepsScreen';
 import { WorkoutsScreen } from './src/screens/WorkoutsScreen';
@@ -163,6 +166,115 @@ interface ThemedBottomNavProps {
   insetsBottom: number;
 }
 
+interface AnimatedBottomNavItemProps {
+  label: string;
+  isActive: boolean;
+  activeTheme: ThemeType;
+  onPress: () => void;
+  accessibilityLabel: string;
+  icon: (color: string) => React.ReactNode;
+}
+
+const AnimatedBottomNavItem: React.FC<AnimatedBottomNavItemProps> = ({
+  label,
+  isActive,
+  activeTheme,
+  onPress,
+  accessibilityLabel,
+  icon,
+}) => {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    if (!isReducedMotion()) {
+      // eslint-disable-next-line react-hooks/immutability
+      scale.value = withSpring(0.92, getSpringConfig('tactile'));
+    }
+  };
+
+  const handlePressOut = () => {
+    if (!isReducedMotion()) {
+      // eslint-disable-next-line react-hooks/immutability
+      scale.value = withSpring(1, getSpringConfig('pop'));
+    }
+  };
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    onPress();
+  };
+
+  const color = isActive ? activeTheme.colors.primary : activeTheme.colors.textMuted;
+
+  return (
+    <TouchableOpacity
+      style={navItemStyles.navBtn}
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={0.85}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+    >
+      <Animated.View
+        style={[
+          navItemStyles.navPill,
+          isActive && {
+            backgroundColor: activeTheme.colors.primaryLight,
+            borderColor: activeTheme.colors.primaryBorder,
+            borderWidth: StyleSheet.hairlineWidth,
+          },
+          animatedStyle,
+        ]}
+      >
+        {icon(color)}
+        <Text
+          style={[
+            navItemStyles.navLabel,
+            {
+              fontFamily: activeTheme.fonts.sans,
+              color,
+              fontWeight: isActive ? '600' : '500',
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
+
+const navItemStyles = StyleSheet.create({
+  navBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+  },
+  navPill: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 22,
+    minWidth: 58,
+  },
+  navLabel: {
+    fontSize: 11,
+    marginTop: 3,
+    textAlign: 'center',
+  },
+});
+
 const ThemedBottomNav: React.FC<ThemedBottomNavProps> = ({
   activeTab,
   tempScreen,
@@ -199,95 +311,40 @@ const ThemedBottomNav: React.FC<ThemedBottomNavProps> = ({
         ]}
       >
         <View style={styles.bottomNav}>
-        {/* 1. Today */}
-        <TouchableOpacity
-          style={styles.navBtn}
-          onPress={() => onSwitchTab('today')}
-          activeOpacity={0.7}
-          accessibilityLabel={t('Today')}
-          accessibilityRole="button"
-        >
-          <LayoutDashboard
-            size={20}
-            color={isHighlightToday ? activeTheme.colors.primary : activeTheme.colors.textMuted}
+          <AnimatedBottomNavItem
+            label={t('Today')}
+            isActive={isHighlightToday}
+            activeTheme={activeTheme}
+            onPress={() => onSwitchTab('today')}
+            accessibilityLabel={t('Today')}
+            icon={(color) => <LayoutDashboard size={20} color={color} />}
           />
-          <Text
-            style={[
-              styles.navLabel,
-              isHighlightToday && styles.navLabelActive,
-            ]}
-          >
-            {t('Today')}
-          </Text>
-        </TouchableOpacity>
-
-        {/* 2. Diary */}
-        <TouchableOpacity
-          style={styles.navBtn}
-          onPress={() => onSwitchTab('meals')}
-          activeOpacity={0.7}
-          accessibilityLabel={t('Diary')}
-          accessibilityRole="button"
-        >
-          <UtensilsCrossed
-            size={20}
-            color={tempScreen === 'none' && activeTab === 'meals' ? activeTheme.colors.primary : activeTheme.colors.textMuted}
+          <AnimatedBottomNavItem
+            label={t('Diary')}
+            isActive={tempScreen === 'none' && activeTab === 'meals'}
+            activeTheme={activeTheme}
+            onPress={() => onSwitchTab('meals')}
+            accessibilityLabel={t('Diary')}
+            icon={(color) => <UtensilsCrossed size={20} color={color} />}
           />
-          <Text
-            style={[
-              styles.navLabel,
-              tempScreen === 'none' && activeTab === 'meals' && styles.navLabelActive,
-            ]}
-          >
-            {t('Diary')}
-          </Text>
-        </TouchableOpacity>
-
-        {/* 3. Coach */}
-        <TouchableOpacity
-          style={styles.navBtn}
-          onPress={() => onSwitchTab('coach')}
-          activeOpacity={0.7}
-          accessibilityLabel={t('Coach')}
-          accessibilityRole="button"
-        >
-          <Bot
-            size={20}
-            color={tempScreen === 'none' && activeTab === 'coach' ? activeTheme.colors.primary : activeTheme.colors.textMuted}
+          <AnimatedBottomNavItem
+            label={t('Coach')}
+            isActive={tempScreen === 'none' && activeTab === 'coach'}
+            activeTheme={activeTheme}
+            onPress={() => onSwitchTab('coach')}
+            accessibilityLabel={t('Coach')}
+            icon={(color) => <Bot size={20} color={color} />}
           />
-          <Text
-            style={[
-              styles.navLabel,
-              tempScreen === 'none' && activeTab === 'coach' && styles.navLabelActive,
-            ]}
-          >
-            {t('Coach')}
-          </Text>
-        </TouchableOpacity>
-
-        {/* 4. Progress */}
-        <TouchableOpacity
-          style={styles.navBtn}
-          onPress={() => onSwitchTab('progress')}
-          activeOpacity={0.7}
-          accessibilityLabel={t('Progress')}
-          accessibilityRole="button"
-        >
-          <TrendingUp
-            size={20}
-            color={tempScreen === 'none' && activeTab === 'progress' ? activeTheme.colors.primary : activeTheme.colors.textMuted}
+          <AnimatedBottomNavItem
+            label={t('Progress')}
+            isActive={tempScreen === 'none' && activeTab === 'progress'}
+            activeTheme={activeTheme}
+            onPress={() => onSwitchTab('progress')}
+            accessibilityLabel={t('Progress')}
+            icon={(color) => <TrendingUp size={20} color={color} />}
           />
-          <Text
-            style={[
-              styles.navLabel,
-              tempScreen === 'none' && activeTab === 'progress' && styles.navLabelActive,
-            ]}
-          >
-            {t('Progress')}
-          </Text>
-        </TouchableOpacity>
+        </View>
       </View>
-    </View>
     </>
   );
 };
@@ -304,37 +361,23 @@ const createNavStyles = (activeTheme: ThemeType) =>
       position: 'absolute',
       left: 14,
       right: 14,
+      maxWidth: 500,
+      alignSelf: 'center',
     },
     bottomNav: {
       flexDirection: 'row',
       backgroundColor: activeTheme.colors.surface,
-      borderRadius: activeTheme.radius.xl,
+      borderRadius: 28,
       borderWidth: 1,
       borderColor: activeTheme.colors.border,
-      paddingVertical: 8,
+      paddingVertical: 6,
       paddingHorizontal: 8,
       justifyContent: 'space-around',
       alignItems: 'center',
       ...activeTheme.shadow.floating,
-    },
-    navBtn: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: 44,
-      paddingVertical: 4,
-      paddingHorizontal: 6,
-    },
-    navLabel: {
-      fontFamily: activeTheme.fonts.sans,
-      fontSize: 11,
-      fontWeight: '500',
-      color: activeTheme.colors.textMuted,
-      marginTop: 3,
-    },
-    navLabelActive: {
-      color: activeTheme.colors.primary,
-      fontWeight: '600',
+      shadowOpacity: 0.1,
+      shadowRadius: 16,
+      elevation: 6,
     },
   });
 

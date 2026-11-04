@@ -390,16 +390,15 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
             </View>
           </View>
 
-          <TouchableOpacity
+          <AnimatedPressable
             style={styles.profileBtn}
             onPress={onOpenProfile}
-            activeOpacity={0.8}
             accessibilityLabel={t('Profile & Goals')}
             accessibilityRole="button"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <User size={18} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
+          </AnimatedPressable>
         </View>
 
         {/* Hero Calorie Budget Focus */}
@@ -481,11 +480,11 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
               const isLast = index === mealTypes.length - 1;
 
               return (
-                <TouchableOpacity
+                <AnimatedPressable
                   key={m.key}
                   style={[styles.mealRow, isLast && styles.mealRowLast]}
                   onPress={() => handleQuickAdd(m.key)}
-                  activeOpacity={0.7}
+                  minScale={0.98}
                   accessibilityLabel={`${t('Add to')} ${m.label}`}
                   accessibilityRole="button"
                 >
@@ -511,7 +510,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
                       </View>
                     </View>
                   </View>
-                </TouchableOpacity>
+                </AnimatedPressable>
               );
             })}
           </View>
@@ -528,7 +527,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
 
         {/* Steps Activity Card */}
         <Animated.View entering={getStaggeredCardEntry(4)}>
-          <TouchableOpacity style={styles.stepsCard} onPress={onOpenSteps} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel={t('Steps')}>
+          <AnimatedPressable style={styles.stepsCard} onPress={onOpenSteps} minScale={0.98} accessibilityRole="button" accessibilityLabel={t('Steps')}>
             <View style={[styles.stepsIcon, (log.steps || 0) >= (profile.stepGoal || 8000) && (profile.stepGoal || 8000) > 0 && { backgroundColor: theme.colors.primaryLight }]}>
               {(log.steps || 0) >= (profile.stepGoal || 8000) && (profile.stepGoal || 8000) > 0 ? (
                 <CheckCircle2 size={20} color={theme.colors.success} />
@@ -562,17 +561,17 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
               </Text>
             </View>
             <DirectionalIcon name="ChevronRight" size={17} color={theme.colors.textMuted} />
-          </TouchableOpacity>
+          </AnimatedPressable>
         </Animated.View>
 
         {/* Vitamins & Supplements Section (Clean, dedicated checklist) */}
         <Animated.View entering={getStaggeredCardEntry(5)} style={styles.supplementsContainer}>
           {activeSupplements.length === 0 ? (
             /* Slim row if routine/daily log is empty */
-            <TouchableOpacity
+            <AnimatedPressable
               style={styles.slimRoutineRow}
               onPress={onOpenSupplements}
-              activeOpacity={0.7}
+              minScale={0.98}
               accessibilityRole="button"
               accessibilityLabel={t('Track vitamins & supplements')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -584,7 +583,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
                 <Text style={styles.slimRoutineText}>{t('Track vitamins & supplements')}</Text>
               </View>
               <DirectionalIcon name="ChevronRight" size={16} color={theme.colors.textMuted} />
-            </TouchableOpacity>
+            </AnimatedPressable>
           ) : (
             /* Checklists with small Manage link if items exist */
             <View style={styles.routineCard}>
@@ -765,16 +764,16 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
             },
           ]}
         >
-          <TouchableOpacity
+          <AnimatedPressable
             style={styles.floatingAddBtn}
             onPress={handleOpenFloatingAddFood}
-            activeOpacity={0.88}
+            minScale={0.94}
             accessibilityLabel={t('Add food')}
             accessibilityRole="button"
           >
             <Plus size={18} color={theme.colors.textInverted} strokeWidth={2.4} />
             <Text style={styles.floatingAddBtnText}>{t('Add food')}</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         </View>
       )}
 
@@ -828,9 +827,16 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     flex: 1,
   },
   stepsCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14,
-    marginTop: 12, backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg,
-    borderWidth: 1, borderColor: theme.colors.border, ...theme.shadow.subtle,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    marginTop: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadow.subtle,
   },
   stepsIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.primaryLight },
   stepsInfo: { flex: 1, gap: 6 },
@@ -890,7 +896,7 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: 14,
+    padding: 16,
     ...theme.shadow.subtle,
   },
   workoutHeader: {
@@ -1090,8 +1096,8 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: 14,
-    gap: 10,
+    padding: 16,
+    gap: 12,
     ...theme.shadow.subtle,
   },
   routineHeader: {
@@ -1257,13 +1263,13 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     justifyContent: 'center',
   },
   floatingAddBtn: {
-    minHeight: 44,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    gap: 8,
     backgroundColor: theme.colors.primary,
     paddingVertical: 12,
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     borderRadius: theme.radius.full,
     ...theme.shadow.floating,
   },
