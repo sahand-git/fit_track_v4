@@ -103,6 +103,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   }, [progress, t]);
 
   const progressColor = theme.colors[progress.colorToken] || theme.colors.primary;
+  const isNumericPercent = progress.hasTarget && !progress.isLimitNutrient && progress.hasData;
 
   const handleStartEdit = () => {
     setGoalInput(progress.target > 0 ? String(progress.target) : '');
@@ -281,8 +282,21 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                 </View>
 
                 {/* Percentage & Status Pill */}
-                <View style={[styles.statusBadge, { backgroundColor: `${progressColor}15` }]}>
-                  <Text style={[styles.statusBadgeText, { color: progressColor }]}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    isRtl && styles.statusBadgeRtl,
+                    { backgroundColor: `${progressColor}15` },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      isNumericPercent ? styles.statusBadgeTextNumeric : styles.statusBadgeTextLong,
+                      { color: progressColor },
+                      isRtl && styles.statusBadgeTextRtl,
+                    ]}
+                  >
                     {!progress.hasTarget
                       ? t('No Target')
                       : progress.isLimitNutrient
@@ -293,7 +307,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                       ? `${progress.percent}%`
                       : t('Not enough data')}
                   </Text>
-                  <Text style={styles.statusSubText}>
+                  <Text style={[styles.statusSubText, isRtl && styles.statusSubTextRtl]}>
                     {!progress.hasTarget
                       ? t(progress.noTargetReason || 'No daily target for under 19')
                       : progress.isLimitNutrient
@@ -377,13 +391,15 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             {/* Goal Management Card (Item 2 requirement: edit the goal stored safely) */}
             <View style={styles.goalCard}>
               <View style={[styles.goalHeaderRow, isRtl && styles.rowRtl]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.goalSectionTitle}>{t('Daily Goal')}</Text>
-                  <Text style={styles.goalSubtitle}>
+                <View style={{ flex: 1, minWidth: 140 }}>
+                  <Text style={[styles.goalSectionTitle, isRtl && styles.textRtl]}>{t('Daily Goal')}</Text>
+                  <Text style={[styles.goalSubtitle, isRtl && styles.textRtl]}>
                     {progress.isCustomTarget
                       ? t('Custom goal set by you')
                       : progress.isMinor
                       ? t('Adolescent (<19): Adult DRIs not shown.')
+                      : progress.isGeneralAdultTarget
+                      ? `${progress.targetType || 'DRI'} · ${t('General adult reference target')}`
                       : progress.targetType
                       ? `${progress.targetType} (${t('National Academies DRI')})`
                       : t('Standard recommended allowance')}
@@ -402,6 +418,17 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                   </TouchableOpacity>
                 )}
               </View>
+
+              {progress.isGeneralAdultTarget && !progress.isCustomTarget && progress.hasTarget && (
+                <View style={[styles.generalAdultNotice, isRtl && styles.rowRtl]}>
+                  <Info size={14} color={theme.colors.primary} style={{ marginTop: 2, flexShrink: 0 }} />
+                  <Text style={[styles.generalAdultNoticeText, isRtl && styles.textRtl]}>
+                    {t(
+                      'General adult reference values are applied when gender is not specified or is other. These values may differ from sex-specific recommendations.'
+                    )}
+                  </Text>
+                </View>
+              )}
 
               {isEditingGoal ? (
                 <View style={styles.goalEditForm}>
@@ -590,13 +617,24 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             )}
 
             {/* Dietary Sources & Science Info */}
-            {progress.foodSources && (
+            {(progress.description || progress.foodSources) && (
               <View style={styles.sourcesCard}>
-                <View style={[styles.sourcesHeader, isRtl && styles.rowRtl]}>
-                  <Sparkles size={15} color={theme.colors.primary} />
-                  <Text style={styles.sourcesTitle}>{t('Natural Dietary Sources')}</Text>
-                </View>
-                <Text style={styles.sourcesContent}>{translate(language, progress.foodSources)}</Text>
+                {progress.description && (
+                  <View style={progress.foodSources ? styles.descriptionContainer : undefined}>
+                    <Text style={[styles.descriptionText, isRtl && styles.textRtl]}>
+                      {translate(language, progress.description)}
+                    </Text>
+                  </View>
+                )}
+                {progress.foodSources && (
+                  <>
+                    <View style={[styles.sourcesHeader, isRtl && styles.rowRtl]}>
+                      <Sparkles size={15} color={theme.colors.primary} />
+                      <Text style={[styles.sourcesTitle, isRtl && styles.textRtl]}>{t('Natural Dietary Sources')}</Text>
+                    </View>
+                    <Text style={[styles.sourcesContent, isRtl && styles.textRtl]}>{translate(language, progress.foodSources)}</Text>
+                  </>
+                )}
               </View>
             )}
 
@@ -604,14 +642,21 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             <View style={styles.disclaimerCard}>
               <View style={[styles.disclaimerHeader, isRtl && styles.rowRtl]}>
                 <Info size={14} color={theme.colors.textMuted} />
-                <Text style={styles.disclaimerTitle}>
+                <Text style={[styles.disclaimerTitle, isRtl && styles.textRtl]}>
                   {t('Dietary Reference Intakes (DRIs)')}
                 </Text>
               </View>
-              <Text style={styles.disclaimerText}>
+              <Text style={[styles.disclaimerText, isRtl && styles.textRtl]}>
                 {progress.citation ? `${progress.citation}. ` : ''}
                 {t(progress.disclaimer || 'Formulated for healthy adults 19+. Pregnancy, lactation, and medical conditions are not handled. Upper limits are safety ceilings, not goals.')}
               </Text>
+              {progress.isGeneralAdultTarget && !progress.isCustomTarget && (
+                <Text style={[styles.disclaimerText, isRtl && styles.textRtl, { marginTop: 6 }]}>
+                  {t(
+                    'Note: General adult reference values are applied for unspecified or non-binary gender, which may use the higher recommended intake among adult sex categories.'
+                  )}
+                </Text>
+              )}
             </View>
           </ScrollView>
         </View>
@@ -728,21 +773,21 @@ const createStyles = (theme: ThemeType) =>
   progressCard: {
     backgroundColor: theme.colors.surfaceSubtle,
     borderRadius: theme.radius.lg,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    gap: 14,
+    gap: 12,
   },
   progressTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
     flexWrap: 'wrap',
   },
   progressLeftCol: {
     flex: 1,
-    minWidth: 160,
+    minWidth: 120,
   },
   amountRow: {
     flexDirection: 'row',
@@ -751,19 +796,19 @@ const createStyles = (theme: ThemeType) =>
     flexWrap: 'wrap',
   },
   currentAmount: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: theme.colors.textPrimary,
     flexShrink: 1,
   },
   targetAmount: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: theme.colors.textMuted,
     flexShrink: 1,
   },
   asteriskIndicator: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: theme.colors.amberText,
     marginLeft: 2,
@@ -780,22 +825,41 @@ const createStyles = (theme: ThemeType) =>
     lineHeight: 16,
   },
   statusBadge: {
-    flexShrink: 0,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    flexShrink: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: theme.radius.md,
     alignItems: 'flex-end',
     maxWidth: '100%',
   },
+  statusBadgeRtl: {
+    alignItems: 'flex-start',
+  },
   statusBadgeText: {
-    fontSize: 18,
+    // Dynamic color applied inline
+  },
+  statusBadgeTextNumeric: {
+    fontSize: 20,
     fontWeight: '800',
   },
+  statusBadgeTextLong: {
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+  statusBadgeTextRtl: {
+    textAlign: 'left',
+  },
   statusSubText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: theme.colors.textMuted,
-    marginTop: 1,
+    marginTop: 2,
+    lineHeight: 15,
+    textAlign: 'right',
+  },
+  statusSubTextRtl: {
+    textAlign: 'left',
   },
   progressTrack: {
     height: 8,
@@ -852,6 +916,7 @@ const createStyles = (theme: ThemeType) =>
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexWrap: 'wrap',
   },
   upperLimitTitle: {
     fontSize: 13,
@@ -904,7 +969,26 @@ const createStyles = (theme: ThemeType) =>
   goalHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  generalAdultNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: theme.colors.surfaceSubtle,
+    padding: 10,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginTop: 8,
+  },
+  generalAdultNoticeText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 17,
+    flex: 1,
   },
   goalSectionTitle: {
     fontSize: 14,
@@ -1181,6 +1265,17 @@ const createStyles = (theme: ThemeType) =>
     borderWidth: 1,
     borderColor: theme.colors.border,
     gap: 6,
+  },
+  descriptionContainer: {
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    marginBottom: 4,
+  },
+  descriptionText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
   },
   sourcesHeader: {
     flexDirection: 'row',

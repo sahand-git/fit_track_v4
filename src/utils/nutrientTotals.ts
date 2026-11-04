@@ -69,6 +69,8 @@ export interface NutrientMetadata {
   hasTarget?: boolean;
   noTargetReason?: string;
   isLimitNutrient?: boolean;
+  isGeneralAdultTarget?: boolean;
+  genderApplied?: 'male' | 'female' | 'general_adult';
 }
 
 export interface NutrientContributor {
@@ -91,6 +93,8 @@ export interface NutrientDayProgress {
   hasTarget: boolean;
   noTargetReason?: string;
   isLimitNutrient?: boolean;
+  isGeneralAdultTarget?: boolean;
+  genderApplied?: 'male' | 'female' | 'general_adult';
   targetType?: DriTargetType | 'CDRR' | 'Limit' | string;
   isCustomTarget: boolean;
   current: number;
@@ -107,6 +111,7 @@ export interface NutrientDayProgress {
   contributors: NutrientContributor[];
   missingItems: NutrientContributor[];
   status: 'optimal' | 'good' | 'low' | 'under' | 'exceeded';
+  description?: string;
   foodSources?: string;
   upperLimit?: number;
   upperLimitScope?: UpperLimitScope;
@@ -205,16 +210,22 @@ export function getNutrientMetadata(
       const isMinor = typeof profile?.age === 'number' && !isNaN(profile.age) && profile.age < 19;
       return {
         key: 'sugar',
-        label: 'Sugar',
+        label: 'Total Sugar',
         unit: 'g',
         colorToken: 'nutrientSugar',
-        defaultTarget: 50, // Dietary reference upper limit
+        defaultTarget: 50, // Dietary reference upper limit for total sugars
         targetType: 'Limit',
         isLimitNutrient: true,
-        description: 'Simple carbohydrates. Monitoring aids insulin sensitivity and steady energy.',
+        description:
+          'Total sugars from all logged foods, including natural sugars in fruit and dairy. Added sugar is not tracked separately in this database.',
         foodSources: 'Fruits, dairy, honey, dried fruit, natural sweeteners.',
         upperLimit: 50,
         upperLimitScope: 'all_sources',
+        upperLimitDescription:
+          'Daily reference limit for total sugar from all food sources. Does not separate added from natural sugars.',
+        citation: 'Dietary reference guidance (total sugars daily limit)',
+        disclaimer:
+          'Applies to total sugars from all food sources (including naturally occurring sugars in fruits and dairy). Reliable added-sugar data is not separately available across all foods.',
         isMinor,
         minorNotice: isMinor ? 'Dietary reference guidance for minors (<19) not displayed.' : undefined,
       };
@@ -314,6 +325,11 @@ export function calculateNutrientDayProgress(
     : isMinor
     ? false
     : meta.defaultTarget > 0;
+
+  const normalizedGender: 'male' | 'female' | 'general_adult' =
+    profile?.gender === 'male' || profile?.gender === 'female' ? profile.gender : 'general_adult';
+  const isGeneralAdultTarget =
+    !isMinor && normalizedGender === 'general_adult' && !isCustomTarget && hasTarget;
 
   const noTargetReason = hasTarget
     ? undefined
@@ -458,6 +474,8 @@ export function calculateNutrientDayProgress(
     hasTarget,
     noTargetReason,
     isLimitNutrient,
+    isGeneralAdultTarget,
+    genderApplied: normalizedGender,
     targetType: meta.targetType,
     isCustomTarget,
     current: currentTotal,
@@ -474,6 +492,7 @@ export function calculateNutrientDayProgress(
     contributors,
     missingItems,
     status,
+    description: meta.description,
     foodSources: meta.foodSources,
     upperLimit: meta.upperLimit,
     upperLimitScope: meta.upperLimitScope,

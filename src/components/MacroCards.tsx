@@ -190,7 +190,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
-          accessibilityLabel={`${t('Sugar')}: ${
+          accessibilityLabel={`${t('Total Sugar')}: ${
             typeof sugarConsumed === 'number' && Number.isFinite(sugarConsumed)
               ? sugarHasTarget
                 ? `${Math.round(sugarConsumed * 10) / 10} / ${sugarTarget}g`
@@ -199,7 +199,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           }`}
         >
           <Text style={styles.pillCombinedText} numberOfLines={2}>
-            <Text style={styles.secondaryLabel}>{t('Sugar')}: </Text>
+            <Text style={styles.secondaryLabel}>{t('Total Sugar')}: </Text>
             <Text style={styles.secondaryValue}>
               {typeof sugarConsumed === 'number' && Number.isFinite(sugarConsumed)
                 ? sugarHasTarget

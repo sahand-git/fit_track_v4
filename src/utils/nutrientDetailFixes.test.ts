@@ -139,8 +139,90 @@ assert.strictEqual(sodiumProgress.target, 2300, 'Adult sodium limit target is 23
 assert.strictEqual(sodiumProgress.remaining, 0, 'Sodium remaining MUST be 0 (never show remaining toward limit)');
 
 const sugarProgress = calculateNutrientDayProgress('sugar', [sampleMeal], [], profileAge19);
+assert.strictEqual(sugarProgress.label, 'Total Sugar', 'Sugar is clearly labeled as Total Sugar');
 assert.strictEqual(sugarProgress.isLimitNutrient, true, 'Sugar is marked as isLimitNutrient');
 assert.strictEqual(sugarProgress.remaining, 0, 'Sugar remaining MUST be 0');
+assert.strictEqual(sugarProgress.target, 50, 'Sugar upper limit reference is 50g');
+assert.ok(
+  sugarProgress.description?.includes('Total sugars') && sugarProgress.description?.includes('natural sugars'),
+  'Sugar description clearly explains total sugars including natural sugars'
+);
+assert.ok(
+  sugarProgress.disclaimer?.includes('Reliable added-sugar data is not separately available'),
+  'Sugar disclaimer honestly handles lack of separate added sugar data'
+);
+assert.strictEqual(
+  translate('ar', 'Total Sugar'),
+  'إجمالي السكر',
+  'Arabic translation for Total Sugar is correct'
+);
+assert.strictEqual(
+  translate('ckb', 'Total Sugar'),
+  'کۆی شەکر',
+  'Kurdish translation for Total Sugar is correct'
+);
+
+// -----------------------------------------------------------------------------
+// 3b. General Adult Target Explanations for Gender "other" or Unspecified
+// -----------------------------------------------------------------------------
+console.log('Testing general adult target explanation for gender "other" or missing...');
+
+const profileAdultOtherGender: UserProfile = { ...profileAge19, gender: 'other' };
+const profileAdultNoGender: UserProfile = { ...profileAge19, gender: undefined as unknown as 'female' };
+const profileAdultMale: UserProfile = { ...profileAge19, gender: 'male' };
+const profileAdultFemale: UserProfile = { ...profileAge19, gender: 'female' };
+
+const progressOther = calculateNutrientDayProgress('iron', [sampleMeal], [], profileAdultOtherGender);
+assert.strictEqual(progressOther.isGeneralAdultTarget, true, 'Gender "other" triggers isGeneralAdultTarget');
+assert.strictEqual(progressOther.genderApplied, 'general_adult', 'genderApplied is general_adult');
+
+const progressNoGender = calculateNutrientDayProgress('iron', [sampleMeal], [], profileAdultNoGender);
+assert.strictEqual(progressNoGender.isGeneralAdultTarget, true, 'Missing gender triggers isGeneralAdultTarget');
+assert.strictEqual(progressNoGender.genderApplied, 'general_adult', 'genderApplied is general_adult');
+
+const progressMale = calculateNutrientDayProgress('iron', [sampleMeal], [], profileAdultMale);
+assert.strictEqual(progressMale.isGeneralAdultTarget, false, 'Male gender does NOT trigger isGeneralAdultTarget');
+assert.strictEqual(progressMale.genderApplied, 'male', 'genderApplied is male');
+
+const progressFemale = calculateNutrientDayProgress('iron', [sampleMeal], [], profileAdultFemale);
+assert.strictEqual(progressFemale.isGeneralAdultTarget, false, 'Female gender does NOT trigger isGeneralAdultTarget');
+assert.strictEqual(progressFemale.genderApplied, 'female', 'genderApplied is female');
+
+// Minors should never be flagged as general adult target
+const progressMinorOther = calculateNutrientDayProgress('iron', [sampleMeal], [], { ...profileAge15, gender: 'other' });
+assert.strictEqual(progressMinorOther.isGeneralAdultTarget, false, 'Minors do not have isGeneralAdultTarget');
+
+// Custom targets should not be flagged as general adult target
+const progressCustomOther = calculateNutrientDayProgress('iron', [sampleMeal], [], {
+  ...profileAdultOtherGender,
+  customNutrientGoals: { iron: 30 },
+});
+assert.strictEqual(progressCustomOther.isGeneralAdultTarget, false, 'Custom targets do not have isGeneralAdultTarget');
+
+// Check localization of general adult notice strings
+assert.ok(translate('en', 'General adult reference target').length > 0);
+assert.strictEqual(
+  translate('ar', 'General adult reference target'),
+  'الهدف المرجعي العام للبالغين',
+  'Arabic translation for General adult reference target'
+);
+assert.strictEqual(
+  translate('ckb', 'General adult reference target'),
+  'ئامانجی گشتی بۆ پێگەیشتوان',
+  'Kurdish translation for General adult reference target'
+);
+assert.ok(
+  translate(
+    'ar',
+    'General adult reference values are applied when gender is not specified or is other. These values may differ from sex-specific recommendations.'
+  ).includes('القيم المرجعية العامة للبالغين')
+);
+assert.ok(
+  translate(
+    'ckb',
+    'General adult reference values are applied when gender is not specified or is other. These values may differ from sex-specific recommendations.'
+  ).includes('بەهاکانی ئاماژەی گشتیی پێگەیشتوان')
+);
 
 // -----------------------------------------------------------------------------
 // 4. Intake Breakdown Formatter (no nested brackets)

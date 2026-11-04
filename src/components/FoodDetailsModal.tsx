@@ -138,7 +138,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
 
   const detailedNutrients = [
     { label: 'Fiber', value: getScaledNutrient('fiber'), unit: 'g' },
-    { label: 'Sugar', value: getScaledNutrient('sugar'), unit: 'g' },
+    { label: 'Total Sugar', value: getScaledNutrient('sugar'), unit: 'g' },
     { label: 'Sodium', value: getScaledNutrient('sodium'), unit: 'mg' },
     { label: 'Potassium', value: getScaledNutrient('potassium'), unit: 'mg' },
     { label: 'Calcium', value: getScaledNutrient('calcium'), unit: 'mg' },
