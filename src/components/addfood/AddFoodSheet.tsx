@@ -1820,16 +1820,9 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
         navigationBarTranslucent
       >
         <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={handleClose}
-            accessibilityLabel={t('Close')}
-            accessibilityRole="button"
-          />
           <KeyboardAvoidingView
             behavior="padding"
-            style={{ width: '100%', height: '92%', justifyContent: 'flex-end' }}
+            style={{ width: '100%', height: '100%' }}
             pointerEvents="box-none"
           >
             <Animated.View
@@ -1839,21 +1832,26 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                 { height: '100%', paddingBottom: 0 },
               ]}
             >
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.headerContext}>
-                {isToday ? t('Today') : formatDisplayDate(date, language)}
-              </Text>
-              <Text style={styles.headerTitle}>{headerTitle}</Text>
+          {/* Compact Top Bar */}
+          <View style={[styles.header, { paddingTop: Math.max(insets.top, 8) }]}>
+            <View style={{ flex: 1, minWidth: 0, justifyContent: 'center' }}>
+              <View style={styles.headerTitleRow}>
+                <Text style={styles.headerTitle} numberOfLines={1}>{headerTitle}</Text>
+                <View style={styles.headerContextBadge}>
+                  <Text style={styles.headerContext}>
+                    {isToday ? t('Today') : formatDisplayDate(date, language)}
+                  </Text>
+                </View>
+              </View>
             </View>
             <TouchableOpacity
               onPress={handleClose}
               style={styles.closeBtn}
               accessibilityLabel={t('Close')}
               accessibilityRole="button"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <X size={20} color={theme.colors.textSecondary} />
+              <X size={18} color={theme.colors.textPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -1866,6 +1864,7 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                 onPress={() => setSelectedMeal(m.key)}
                 accessibilityRole="button"
                 accessibilityLabel={m.label}
+                hitSlop={{ top: 6, bottom: 6 }}
               >
                 <Text
                   style={[
@@ -1889,6 +1888,7 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
               }}
               accessibilityRole="button"
               accessibilityLabel={t('Search')}
+              hitSlop={{ top: 6, bottom: 6 }}
             >
               <Search
                 size={14}
@@ -1899,7 +1899,7 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                   styles.segmentText,
                   activeTab === 'search' && styles.segmentTextActive,
                 ]}
-                numberOfLines={2}
+                numberOfLines={1}
               >
                 {t('Search')}
               </Text>
@@ -1913,8 +1913,9 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
               }}
               accessibilityRole="button"
               accessibilityLabel={t('Analyze meal photo')}
+              hitSlop={{ top: 6, bottom: 6 }}
             >
-              <Sparkles
+              <CameraIcon
                 size={14}
                 color={activeTab === 'photo' ? theme.colors.primary : theme.colors.textMuted}
               />
@@ -1923,7 +1924,7 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                   styles.segmentText,
                   activeTab === 'photo' && styles.segmentTextActive,
                 ]}
-                numberOfLines={2}
+                numberOfLines={1}
               >
                 {t('Analyze meal photo')}
               </Text>
@@ -1937,6 +1938,7 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
               }}
               accessibilityRole="button"
               accessibilityLabel={t('Describe with AI')}
+              hitSlop={{ top: 6, bottom: 6 }}
             >
               <Sparkles
                 size={14}
@@ -1947,7 +1949,7 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                   styles.segmentText,
                   activeTab === 'describe' && styles.segmentTextActive,
                 ]}
-                numberOfLines={2}
+                numberOfLines={1}
               >
                 {t('Describe with AI')}
               </Text>
@@ -1971,7 +1973,7 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                 />
               ) : (
                 <>
-                  {/* Search Bar + Barcode Scanner Trigger */}
+                  {/* Integrated Search Bar + Inline Barcode Trigger */}
                   <View style={styles.searchBarRow}>
                     <View style={styles.searchBar}>
                       <Search size={16} color={theme.colors.textMuted} />
@@ -1999,24 +2001,25 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                           }}
                           accessibilityRole="button"
                           accessibilityLabel={t('Clear search')}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
                           <X size={15} color={theme.colors.textMuted} />
                         </TouchableOpacity>
                       )}
+                      <TouchableOpacity
+                        style={[styles.inlineBarcodeBtn, showManualBarcode && styles.inlineBarcodeBtnActive]}
+                        onPress={handleStartLiveBarcodeScan}
+                        onLongPress={() => setShowManualBarcode((prev) => !prev)}
+                        accessibilityLabel={t('Scan barcode')}
+                        accessibilityRole="button"
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <BarcodeIcon
+                          size={18}
+                          color={showManualBarcode ? theme.colors.textInverted : theme.colors.primary}
+                        />
+                      </TouchableOpacity>
                     </View>
-
-                    <TouchableOpacity
-                      style={[styles.barcodeIconBtn, showManualBarcode && styles.barcodeIconBtnActive]}
-                      onPress={() => setShowManualBarcode((prev) => !prev)}
-                      onLongPress={handleStartLiveBarcodeScan}
-                      accessibilityLabel={showManualBarcode ? t('Close') : t('Enter barcode manually')}
-                      accessibilityRole="button"
-                    >
-                      <BarcodeIcon
-                        size={19}
-                        color={showManualBarcode ? theme.colors.textInverted : theme.colors.primary}
-                      />
-                    </TouchableOpacity>
                   </View>
 
                   {/* Manual Barcode Input Fallback Drawer (Expanded on Demand) */}
@@ -2207,63 +2210,64 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                       </TouchableOpacity>
                     </ScrollView>
 
-                    {/* Category Chips Row (Always visible horizontal row under filter chips) */}
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.categoryChipsScroll}
-                    >
-                      <TouchableOpacity
-                        style={[
-                          styles.categoryChip,
-                          (!selectedCategory || selectedCategory === 'all') && styles.categoryChipActive,
-                        ]}
-                        onPress={() => setSelectedCategory('all')}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('All')}
+                    {/* Category Chips Row (Collapsed when searching or viewing templates) */}
+                    {searchQuery.trim().length === 0 && foodFilter !== 'templates' && (
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.categoryChipsScroll}
                       >
-                        <Text style={styles.categoryChipEmoji}>🍽️</Text>
-                        <Text
+                        <TouchableOpacity
                           style={[
-                            styles.categoryChipText,
-                            (!selectedCategory || selectedCategory === 'all') && styles.categoryChipTextActive,
+                            styles.categoryChip,
+                            (!selectedCategory || selectedCategory === 'all') && styles.categoryChipActive,
                           ]}
+                          onPress={() => setSelectedCategory('all')}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('All')}
+                          hitSlop={{ top: 6, bottom: 6 }}
                         >
-                          {t('All')}
-                        </Text>
-                      </TouchableOpacity>
-
-                      {CANONICAL_FOOD_CATEGORIES.map((cat) => {
-                        const isCatActive = selectedCategory === cat;
-                        return (
-                          <TouchableOpacity
-                            key={cat}
+                          <Text style={styles.categoryChipEmoji}>🍽️</Text>
+                          <Text
                             style={[
-                              styles.categoryChip,
-                              isCatActive && styles.categoryChipActive,
+                              styles.categoryChipText,
+                              (!selectedCategory || selectedCategory === 'all') && styles.categoryChipTextActive,
                             ]}
-                            onPress={() => {
-                              if (foodFilter === 'templates') {
-                                setFoodFilter('all');
-                              }
-                              setSelectedCategory(isCatActive ? 'all' : cat);
-                            }}
-                            accessibilityRole="button"
-                            accessibilityLabel={t(cat)}
                           >
-                            <Text style={styles.categoryChipEmoji}>{CATEGORY_DEFAULT_EMOJI[cat]}</Text>
-                            <Text
+                            {t('All')}
+                          </Text>
+                        </TouchableOpacity>
+
+                        {CANONICAL_FOOD_CATEGORIES.map((cat) => {
+                          const isCatActive = selectedCategory === cat;
+                          return (
+                            <TouchableOpacity
+                              key={cat}
                               style={[
-                                styles.categoryChipText,
-                                isCatActive && styles.categoryChipTextActive,
+                                styles.categoryChip,
+                                isCatActive && styles.categoryChipActive,
                               ]}
+                              onPress={() => {
+                                setSelectedCategory(isCatActive ? 'all' : cat);
+                              }}
+                              accessibilityRole="button"
+                              accessibilityLabel={t(cat)}
+                              hitSlop={{ top: 6, bottom: 6 }}
                             >
-                              {t(cat)}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </ScrollView>
+                              <Text style={styles.categoryChipEmoji}>{CATEGORY_DEFAULT_EMOJI[cat]}</Text>
+                              <Text
+                                style={[
+                                  styles.categoryChipText,
+                                  isCatActive && styles.categoryChipTextActive,
+                                ]}
+                              >
+                                {t(cat)}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    )}
                   </View>
 
                   {/* Foods List / Meal Templates List */}
@@ -2517,18 +2521,16 @@ const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: theme.colors.backdrop,
+    backgroundColor: theme.colors.background,
     justifyContent: 'flex-end',
   },
   sheetContainer: {
     backgroundColor: theme.colors.background,
-    borderTopLeftRadius: theme.radius.xl,
-    borderTopRightRadius: theme.radius.xl,
-    height: '92%',
+    height: '100%',
     paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
+    paddingTop: 0,
     paddingBottom: 0,
-    gap: 12,
+    gap: 8,
     width: '100%',
     maxWidth: Platform.OS === 'web' ? 480 : undefined,
     alignSelf: 'center',
@@ -2539,12 +2541,24 @@ const createStyles = (theme: ThemeType) =>
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 4,
+    paddingBottom: 2,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  headerContextBadge: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   headerContext: {
     fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
     color: theme.colors.textSecondary,
     fontWeight: '600',
   },
@@ -2660,6 +2674,18 @@ const createStyles = (theme: ThemeType) =>
   barcodeIconBtnActive: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
+  },
+  inlineBarcodeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginStart: 4,
+  },
+  inlineBarcodeBtnActive: {
+    backgroundColor: theme.colors.primary,
   },
   manualBarcodeExpandContainer: {
     backgroundColor: theme.colors.surfaceSubtle,
@@ -2866,8 +2892,8 @@ const createStyles = (theme: ThemeType) =>
     borderColor: theme.colors.border,
   },
   categoryChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primaryBorder,
   },
   categoryChipText: {
     fontSize: 12,
@@ -2875,7 +2901,8 @@ const createStyles = (theme: ThemeType) =>
     color: theme.colors.textSecondary,
   },
   categoryChipTextActive: {
-    color: theme.colors.textInverted,
+    color: theme.colors.primary,
+    fontWeight: '700',
   },
   categoryChipEmoji: {
     fontSize: 13,

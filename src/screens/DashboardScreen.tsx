@@ -13,6 +13,7 @@ import {
   Plus,
   Utensils,
   Coffee,
+  Sun,
   Moon,
   Apple,
   User,
@@ -112,7 +113,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   isAddFoodSheetOpen = false,
 }) => {
   const language = useLanguage();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
@@ -123,6 +124,21 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   const [heroWidth, setHeroWidth] = useState(0);
   const [selectedNutrientForDetail, setSelectedNutrientForDetail] = useState<SupportedNutrientKey | string | null>(null);
   const pendingMilestoneRef = useRef<(() => void) | null>(null);
+  const celebratedMilestonesRef = useRef<Record<string, DayCelebratedMilestones>>({});
+
+  const handleToggleTheme = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const nextMode = isDark ? 'light' : 'dark';
+    const updated: UserProfile = {
+      ...profile,
+      themeMode: nextMode,
+    };
+    if (onUpdateProfile) {
+      await onUpdateProfile(updated);
+    } else {
+      await saveUserProfile(updated);
+    }
+  }, [isDark, profile, onUpdateProfile]);
 
   useEffect(() => {
     if (!isAddFoodSheetOpen && pendingMilestoneRef.current) {
@@ -285,14 +301,14 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     async function checkGoalMilestones() {
       const currentDate = log.date;
       const storageKey = getScopedStorageKey(getGoalMilestonesStorageKey(currentDate));
-      let celebrated: DayCelebratedMilestones = {};
+      let celebrated: DayCelebratedMilestones = { ...(celebratedMilestonesRef.current[currentDate] || {}) };
       try {
         const raw = await AsyncStorage.getItem(storageKey);
         if (raw) {
-          celebrated = JSON.parse(raw);
+          celebrated = { ...JSON.parse(raw), ...celebrated };
         }
       } catch {
-        celebrated = {};
+        // keep memory cache
       }
 
       const evalResult = evaluateDailyMilestones({
@@ -307,6 +323,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
       });
 
       if (evalResult.newlyReached.length > 0 && !isCancelled) {
+        celebratedMilestonesRef.current[currentDate] = evalResult.updatedCelebrated;
         try {
           await AsyncStorage.setItem(storageKey, JSON.stringify(evalResult.updatedCelebrated));
         } catch (e) {
@@ -390,15 +407,31 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
             </View>
           </View>
 
-          <AnimatedPressable
-            style={styles.profileBtn}
-            onPress={onOpenProfile}
-            accessibilityLabel={t('Profile & Goals')}
-            accessibilityRole="button"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <User size={18} color={theme.colors.textPrimary} />
-          </AnimatedPressable>
+          <View style={styles.headerActions}>
+            <AnimatedPressable
+              style={styles.profileBtn}
+              onPress={handleToggleTheme}
+              accessibilityLabel={isDark ? t('Switch to light theme') : t('Switch to dark theme')}
+              accessibilityRole="button"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              {isDark ? (
+                <Sun size={18} color={theme.colors.amber || theme.colors.textPrimary} />
+              ) : (
+                <Moon size={18} color={theme.colors.textPrimary} />
+              )}
+            </AnimatedPressable>
+
+            <AnimatedPressable
+              style={styles.profileBtn}
+              onPress={onOpenProfile}
+              accessibilityLabel={t('Profile & Goals')}
+              accessibilityRole="button"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <User size={18} color={theme.colors.textPrimary} />
+            </AnimatedPressable>
+          </View>
         </View>
 
         {/* Hero Calorie Budget Focus */}
@@ -1019,6 +1052,11 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
     paddingHorizontal: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   profileBtn: {
     width: 38,

@@ -39,7 +39,9 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
   const [healthTotal, setHealthTotal] = useState<number | null>(null);
   const [error, setError] = useState('');
   const isFuture = date > getTodayDateString();
-  const progress = Math.min(1, goal > 0 ? steps / goal : 0);
+  const rawRatio = goal > 0 ? steps / goal : 0;
+  const progress = Math.min(1, rawRatio);
+  const percentageDisplay = Math.round(rawRatio * 100);
   const estimated = useMemo(() => {
     const strideMeters = Math.max(0.45, Math.min(0.9, (heightCm / 100) * 0.415));
     return {
@@ -121,7 +123,7 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
         <Text style={styles.stepNumber}>{steps.toLocaleString(language === 'en' ? 'en' : language === 'ar' ? 'ar' : 'ckb')}</Text>
         <Text style={styles.muted}>{t('steps today')}</Text>
         <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress * 100}%` }]} /></View>
-        <Text style={styles.goalText}>{Math.round(progress * 100)}% · {t('Daily goal')} {goal.toLocaleString()} {t('steps')}</Text>
+        <Text style={styles.goalText}>{percentageDisplay}% · {t('Daily goal')} {goal.toLocaleString()} {t('steps')}</Text>
       </View>
 
       <View style={styles.stats}>

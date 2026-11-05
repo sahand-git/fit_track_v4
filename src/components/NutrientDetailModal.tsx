@@ -851,11 +851,11 @@ const createStyles = (theme: ThemeType) =>
     textAlign: 'left',
   },
   statusSubText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textMuted,
     marginTop: 2,
-    lineHeight: 15,
+    lineHeight: 16,
     textAlign: 'right',
   },
   statusSubTextRtl: {

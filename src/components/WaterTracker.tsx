@@ -3,6 +3,14 @@ import {
   View,
   StyleSheet
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withTiming,
+  withSpring,
+  Easing,
+} from 'react-native-reanimated';
 import { AppText as Text } from './AppText';
 import { Droplet, Plus, Minus, Check } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';
@@ -12,6 +20,8 @@ import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { useAppDialog } from './dialogs/AppDialogProvider';
 import { AnimatedPressable } from './AnimatedPressable';
+import { isReducedMotion } from '../utils/motion';
+import { getSpringConfig } from '../utils/reanimatedMotion';
 
 interface WaterTrackerProps {
   glasses: number;
@@ -34,6 +44,11 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
   const targetLiters = ((target * 250) / 1000).toFixed(1);
   const isGoalReached = target > 0 && glasses >= target;
 
+  const dropletScale = useSharedValue(1);
+  const dropletAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: dropletScale.value }],
+  }));
+
   const handleAdd = async () => {
     if (target > 0 && glasses >= Math.round(target * 1.5)) {
       const confirmed = await dialog.confirm({
@@ -45,6 +60,13 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
       if (!confirmed) return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (!isReducedMotion()) {
+      // eslint-disable-next-line react-hooks/immutability
+      dropletScale.value = withSequence(
+        withTiming(1.18, { duration: 80, easing: Easing.out(Easing.cubic) }),
+        withSpring(1.0, getSpringConfig('pop'))
+      );
+    }
     onUpdate(1);
   };
 
@@ -57,9 +79,9 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
   return (
     <View style={[styles.container, isGoalReached && styles.containerGoalReached]}>
       <View style={styles.left}>
-        <View style={[styles.iconCircle, isGoalReached && styles.iconCircleGoalReached]}>
+        <Animated.View style={[styles.iconCircle, isGoalReached && styles.iconCircleGoalReached, dropletAnimatedStyle]}>
           <Droplet size={18} color={isGoalReached ? theme.colors.emeraldDark : theme.colors.water} />
-        </View>
+        </Animated.View>
         <View style={styles.textContainer}>
           <View style={styles.titleRow}>
             <Text style={styles.title}>{t('Water Intake')}</Text>

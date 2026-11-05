@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { AppText as Text } from '../AppText';
 import {
   X,
@@ -251,7 +252,10 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
         <View style={styles.stepper}>
           <TouchableOpacity
             style={styles.stepBtn}
-            onPress={() => onServingsChange((c) => Math.max(0.5, c - 0.5))}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              onServingsChange((c) => Math.max(0.5, c - 0.5));
+            }}
             accessibilityRole="button"
             accessibilityLabel={t('Decrease')}
           >
@@ -260,7 +264,10 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
           <Text style={styles.stepVal}>{servingsCount}</Text>
           <TouchableOpacity
             style={styles.stepBtn}
-            onPress={() => onServingsChange((c) => c + 0.5)}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              onServingsChange((c) => c + 0.5);
+            }}
             accessibilityRole="button"
             accessibilityLabel={t('Increase')}
           >
@@ -280,7 +287,10 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.confirmAddBtn, { flex: 1, marginTop: 0 }]}
-          onPress={onConfirm}
+          onPress={() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+            onConfirm();
+          }}
           accessibilityRole="button"
           accessibilityLabel={t('Log to Diary')}
         >

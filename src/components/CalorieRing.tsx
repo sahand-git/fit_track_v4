@@ -117,10 +117,10 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
             style={[styles.remainingValue, isOver && { color: theme.colors.accent }]}
           />
           <Text style={styles.remainingLabel} numberOfLines={2}>
-            {isInTolerance
-              ? t("You've reached today's calorie goal.")
-              : isOver
+            {isOver
               ? t('kcal over budget')
+              : isInTolerance
+              ? t("You've reached today's calorie goal.")
               : t('kcal remaining')}
           </Text>
         </View>
