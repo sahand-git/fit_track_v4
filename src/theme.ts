@@ -151,6 +151,19 @@ export const theme = {
       fontWeight: '600' as const,
       lineHeight: 16,
     },
+    micro: {
+      fontFamily: sansFont,
+      fontSize: 10,
+      fontWeight: '600' as const,
+      lineHeight: 14,
+    },
+    statHero: {
+      fontFamily: serifFont,
+      fontSize: 28,
+      fontWeight: '700' as const,
+      letterSpacing: -0.5,
+      lineHeight: 34,
+    },
   },
 
   radius: {

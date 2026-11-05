@@ -13,20 +13,17 @@ import * as Haptics from 'expo-haptics';
 
 interface WaterTrackerProps {
   glasses: number;
-  target: number;
+  target?: number;
   onUpdate: (delta: number) => void;
 }
 
 export const WaterTracker: React.FC<WaterTrackerProps> = ({
-  glasses,
-  target,
+  glasses = 0,
+  target = 8,
   onUpdate,
 }) => {
   const language = useLanguage();
-  const t = (key: string) => translate(language, key);
-
-  const currentLiters = ((glasses * 250) / 1000).toFixed(1);
-  const targetLiters = ((target * 250) / 1000).toFixed(1);
+  const t = (str: string) => translate(language, str);
 
   const handleAdd = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -34,16 +31,20 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
   };
 
   const handleSubtract = () => {
-    if (glasses <= 0) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    onUpdate(-1);
+    if (glasses > 0) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      onUpdate(-1);
+    }
   };
+
+  const currentLiters = (glasses * 0.25).toFixed(1);
+  const targetLiters = (target * 0.25).toFixed(1);
 
   return (
     <View style={styles.container}>
       <View style={styles.left}>
         <View style={styles.iconCircle}>
-          <Droplet size={18} color={theme.colors.water} />
+          <Droplet size={18} color={theme.colors.water} fill={theme.colors.water} />
         </View>
         <View>
           <Text style={styles.title}>{t('Water Intake')}</Text>
@@ -60,8 +61,9 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
           disabled={glasses === 0}
           accessibilityLabel={t('Remove 1 glass of water')}
           accessibilityRole="button"
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
-          <Minus size={15} color={glasses === 0 ? theme.colors.textMuted : theme.colors.textPrimary} />
+          <Minus size={16} color={glasses === 0 ? theme.colors.textMuted : theme.colors.textPrimary} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -69,8 +71,9 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
           onPress={handleAdd}
           accessibilityLabel={t('Add 1 glass of water')}
           accessibilityRole="button"
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
-          <Plus size={15} color={theme.colors.textInverted} />
+          <Plus size={16} color={theme.colors.textInverted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -83,9 +86,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
+    padding: 16,
     borderRadius: theme.radius.lg,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 14,
     borderWidth: 1,
     borderColor: theme.colors.border,
     marginVertical: 6,
@@ -97,20 +99,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: theme.colors.waterLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    fontSize: 14,
+    fontSize: theme.typography.bodyMedium.fontSize,
     fontWeight: '600',
     color: theme.colors.textPrimary,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: theme.typography.callout.fontSize,
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
@@ -120,9 +122,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   btn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: theme.colors.surfaceSubtle,
     alignItems: 'center',
     justifyContent: 'center',

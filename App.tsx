@@ -62,6 +62,7 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { SupplementsScreen } from './src/screens/SupplementsScreen';
 import { CoachScreen } from './src/screens/CoachScreen';
 import { AddFoodSheet } from './src/components/addfood/AddFoodSheet';
+import { AddFoodScreen } from './src/screens/AddFoodScreen';
 import { MedicalDisclaimerModal } from './src/components/MedicalDisclaimerModal';
 import { ScientificReferencesModal } from './src/components/ScientificReferencesModal';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
@@ -79,7 +80,7 @@ import { AuthIdentity, watchAuthState } from './src/services/authService';
 import { setAccountStorageNamespace } from './src/storage/storage';
 
 type Tab = 'today' | 'meals' | 'coach' | 'progress';
-type TemporaryScreen = 'none' | 'profile' | 'supplements' | 'steps' | 'workouts' | 'account';
+type TemporaryScreen = 'none' | 'profile' | 'supplements' | 'steps' | 'workouts' | 'account' | 'add-food';
 
 export default function App() {
   return (
@@ -488,11 +489,12 @@ function FitTrackApp() {
   ) => {
     setAddSheetConfig({
       visible: true,
-      targetDate: getTodayDateString(),
+      targetDate: selectedDateRef.current || getTodayDateString(),
       mealType,
       initialTab,
       initialScanBarcode,
     });
+    setTempScreen('add-food');
   };
 
   if (initError) {
@@ -667,6 +669,21 @@ function FitTrackApp() {
             />
           )}
 
+          {tempScreen === 'add-food' && (
+            <AddFoodScreen
+              date={addSheetConfig.targetDate}
+              mealType={addSheetConfig.mealType}
+              initialTab={addSheetConfig.initialTab}
+              initialScanBarcode={addSheetConfig.initialScanBarcode}
+              onClose={() => {
+                setTempScreen('none');
+                setAddSheetConfig((prev) => ({ ...prev, visible: false }));
+              }}
+              onAddMeal={handleAddMeal}
+              onCopyYesterdayMeals={handleCopyYesterdayMeals}
+            />
+          )}
+
           {/* Tab 1: Today */}
           {tempScreen === 'none' && activeTab === 'today' && (
             <DashboardScreen
@@ -706,6 +723,7 @@ function FitTrackApp() {
               onRemoveMeal={handleRemoveMeal}
               initialMealType={initialMealForAdd}
               onCopyYesterdayMeals={handleCopyYesterdayMeals}
+              onOpenAddFood={(mealType) => handleOpenAddFoodToday(mealType)}
             />
           )}
 
@@ -737,6 +755,7 @@ function FitTrackApp() {
         />
 
         {/* Bottom Navigation Dock: Exactly 4 Tabs */}
+        {tempScreen === 'none' && (
         <View
           style={[
             styles.dockContainer,
@@ -835,6 +854,7 @@ function FitTrackApp() {
             </TouchableOpacity>
           </View>
         </View>
+        )}
       </View>
     </I18nProvider>
   );

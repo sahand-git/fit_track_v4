@@ -42,6 +42,7 @@ interface FoodLogScreenProps {
   onRemoveMeal: (mealId: string) => void;
   initialMealType?: MealType;
   onCopyYesterdayMeals?: (targetDate: string) => Promise<void>;
+  onOpenAddFood?: (mealType: MealType, targetDate: string) => void;
 }
 
 export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
@@ -54,6 +55,7 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   onRemoveMeal,
   initialMealType = 'breakfast',
   onCopyYesterdayMeals,
+  onOpenAddFood,
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
@@ -122,8 +124,12 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   const openAddSheet = (mealType: MealType) => {
     if (isFuture) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setActiveMealType(mealType);
-    setAddSheetVisible(true);
+    if (onOpenAddFood) {
+      onOpenAddFood(mealType, selectedDate);
+    } else {
+      setActiveMealType(mealType);
+      setAddSheetVisible(true);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -450,9 +456,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   dateNavBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -552,8 +558,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    minHeight: 44,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.primaryLight,
   },
