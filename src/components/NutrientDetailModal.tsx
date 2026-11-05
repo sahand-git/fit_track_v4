@@ -502,6 +502,14 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                 <Text style={styles.sourcesContent}>{translate(language, progress.foodSources)}</Text>
               </View>
             )}
+
+            {/* Gender RDA Callout */}
+            <View style={[styles.genderRdaCallout, isRtl && styles.rowRtl]}>
+              <Info size={14} color={theme.colors.secondary} />
+              <Text style={styles.genderRdaText}>
+                {t('RDA targets default to the higher dietary reference intake across biological sexes to ensure nutritional adequacy unless customized.')}
+              </Text>
+            </View>
           </ScrollView>
         </View>
         </KeyboardAvoidingView>
@@ -1001,5 +1009,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textSecondary,
     lineHeight: 18,
+  },
+  genderRdaCallout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.md,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  genderRdaText: {
+    flex: 1,
+    fontSize: theme.typography.caption.fontSize,
+    color: theme.colors.textSecondary,
+    lineHeight: 17,
   },
 });

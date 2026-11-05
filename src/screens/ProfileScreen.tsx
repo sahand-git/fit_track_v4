@@ -171,6 +171,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           style={styles.backRow}
           accessibilityLabel={t('Back')}
           accessibilityRole="button"
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <ArrowLeft size={18} color={theme.colors.textPrimary} />
           <Text style={styles.backText}>{t('Back')}</Text>
@@ -644,9 +645,17 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   backRow: {
+    minHeight: 44,
+    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     marginBottom: 4,
   },
   backText: {
@@ -830,12 +839,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   optionRow: {
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.md,
-    padding: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },

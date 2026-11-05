@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Activity, ArrowLeft, Footprints, HeartPulse, Minus, Plus, RefreshCw, Target } from 'lucide-react-native';
 import { AppText as Text } from '../components/AppText';
 import { useLanguage } from '../i18n/I18nContext';
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heightCm, onSetSteps, onAddSteps, onSetGoal, onBack }) => {
+  const insets = useSafeAreaInsets();
   const language = useLanguage();
   const t = (value: string) => translate(language, value);
   const [stepInput, setStepInput] = useState(String(steps));
@@ -88,7 +90,7 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel={t('Back')} style={styles.back}>
           <ArrowLeft size={20} color={theme.colors.textPrimary} />
@@ -208,7 +210,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: 20, paddingBottom: 140, gap: 16 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  back: { padding: 10, borderRadius: 24, backgroundColor: theme.colors.surface },
+  back: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surfaceSubtle, borderWidth: 1, borderColor: theme.colors.border },
   eyebrow: { fontSize: 12, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 1 },
   title: { fontFamily: theme.fonts.serif, fontSize: 30, color: theme.colors.textPrimary },
   hero: { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 24, padding: 24, alignItems: 'center', ...theme.shadow.subtle },
@@ -226,7 +228,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 18, padding: 18, gap: 12 },
   cardTitle: { fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontWeight: '700', fontSize: 20 },
   entryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 4 },
-  roundBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  roundBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   input: { minWidth: 110, flex: 1, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, textAlign: 'center', fontSize: 17, color: theme.colors.textPrimary, backgroundColor: theme.colors.background },
   primaryButton: { backgroundColor: theme.colors.primary, borderRadius: 14, padding: 14, alignItems: 'center' },
   primaryButtonText: { color: theme.colors.textInverted, fontWeight: '700', fontSize: 15 },

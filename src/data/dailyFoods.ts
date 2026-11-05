@@ -722,6 +722,22 @@ export const DAILY_FOODS: FoodItem[] = [
     "sodium": 2
   },
   {
+    "id": "usda_sr28_09176",
+    "name": "Mango (raw)",
+    "brand": "USDA SR28 · NDB 09176",
+    "servingSize": "100g edible portion",
+    "servingGrams": 100,
+    "category": "Fruits",
+    "source": "verified_database",
+    "calories": 60,
+    "protein": 0.82,
+    "fat": 0.38,
+    "carbs": 14.98,
+    "fiber": 1.6,
+    "sugars": 13.66,
+    "sodium": 1
+  },
+  {
     "id": "usda_sr28_12155",
     "name": "Walnuts",
     "brand": "USDA SR28 · NDB 12155",

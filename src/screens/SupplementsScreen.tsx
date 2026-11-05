@@ -776,6 +776,7 @@ export function SupplementsScreen({
                         accessibilityLabel={t(item.taken ? 'Taken' : 'Mark as taken')}
                         accessibilityRole="checkbox"
                         accessibilityState={{ checked: item.taken, disabled: isFuture }}
+                        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                       >
                         <AnimatedCheckbox checked={item.taken} size={22} />
                       </TouchableOpacity>
@@ -1730,7 +1731,10 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   checkbox: {
-    padding: 2,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   itemContent: {
     flex: 1,

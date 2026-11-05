@@ -360,7 +360,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
           {/* Streak Card */}
           <View style={[styles.streakCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <View style={styles.streakFlameCircle}>
-              <Flame size={20} color="#D97706" />
+              <Flame size={20} color={theme.colors.accent} />
             </View>
             <View style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
               <View style={[styles.inlineRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
@@ -727,9 +727,12 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   rangePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    minHeight: 38,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: theme.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rangePillActive: {
     backgroundColor: theme.colors.primary,
@@ -749,12 +752,15 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   filterChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    minHeight: 38,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterChipActive: {
     backgroundColor: theme.colors.primary,
@@ -784,11 +790,11 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.warningLight,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: theme.colors.accentBorder,
   },
   streakCount: {
     fontSize: 20,

@@ -440,10 +440,10 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
 
                 {/* Tomorrow Action Plan */}
                 {report.actionableTomorrowFixes && report.actionableTomorrowFixes.length > 0 && (
-                  <View style={[styles.reportCard, { backgroundColor: '#F0FDF4' }]}>
+                  <View style={[styles.reportCard, { backgroundColor: theme.colors.secondaryLight, borderColor: theme.colors.secondaryBorder }]}>
                     <View style={styles.cardHeaderRow}>
-                      <CheckCircle2 size={18} color="#16A34A" />
-                      <Text style={[styles.cardSectionTitle, { color: '#166534' }]}>
+                      <CheckCircle2 size={18} color={theme.colors.primary} />
+                      <Text style={[styles.cardSectionTitle, { color: theme.colors.primary }]}>
                         {t('Action Plan for Tomorrow')}
                       </Text>
                     </View>
@@ -451,7 +451,7 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                       {report.actionableTomorrowFixes.map((fix, idx) => (
                         <View key={idx} style={styles.numberedItemRow}>
                           <Text style={styles.itemNumber}>#{idx + 1}</Text>
-                          <Text style={[styles.listItemText, { color: '#14532D' }]}>{fix}</Text>
+                          <Text style={[styles.listItemText, { color: theme.colors.textPrimary }]}>{fix}</Text>
                         </View>
                       ))}
                     </View>
@@ -460,14 +460,14 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
 
                 {/* Custom Meal Idea */}
                 {report.customMealSuggestion && (
-                  <View style={[styles.reportCard, { backgroundColor: '#FFFBEB' }]}>
+                  <View style={[styles.reportCard, { backgroundColor: theme.colors.warningLight, borderColor: theme.colors.accentBorder }]}>
                     <View style={styles.cardHeaderRow}>
-                      <Utensils size={18} color="#D97706" />
-                      <Text style={[styles.cardSectionTitle, { color: '#B45309' }]}>
+                      <Utensils size={18} color={theme.colors.warning} />
+                      <Text style={[styles.cardSectionTitle, { color: theme.colors.warning }]}>
                         {t('Meal idea for selected day')}
                       </Text>
                     </View>
-                    <Text style={[styles.cardBodyText, { color: '#78350F' }]}>
+                    <Text style={[styles.cardBodyText, { color: theme.colors.textPrimary }]}>
                       {report.customMealSuggestion}
                     </Text>
                   </View>
@@ -521,23 +521,49 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                       'Ask about your meals, daily targets, or practical ways to build a balanced routine.'
                     )}
                   </Text>
-                  <TouchableOpacity
-                    style={styles.reviewButton}
-                    onPress={() =>
-                      send(
-                        t(
-                          'Give me a brief review of my nutrition log today, with one practical suggestion.'
+                  <View style={styles.starterPillsRow}>
+                    <TouchableOpacity
+                      style={styles.reviewButton}
+                      onPress={() =>
+                        send(
+                          t(
+                            'Give me a brief review of my nutrition log today, with one practical suggestion.'
+                          )
                         )
-                      )
-                    }
-                    disabled={busy}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Get a daily review')}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Sparkles size={15} color={theme.colors.primary} />
-                    <Text style={styles.reviewText}>{t('Get a daily review')}</Text>
-                  </TouchableOpacity>
+                      }
+                      disabled={busy}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Get a daily review')}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Sparkles size={15} color={theme.colors.primary} />
+                      <Text style={styles.reviewText}>{t('Get a daily review')}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.reviewButton}
+                      onPress={() => send(t("Review today's protein"))}
+                      disabled={busy}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("Review today's protein")}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Sparkles size={15} color={theme.colors.primary} />
+                      <Text style={styles.reviewText}>{t("Review today's protein")}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.reviewButton}
+                      onPress={() => send(t('Plan a recovery dinner'))}
+                      disabled={busy}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Plan a recovery dinner')}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Sparkles size={15} color={theme.colors.primary} />
+                      <Text style={styles.reviewText}>{t('Plan a recovery dinner')}</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ) : (
                 messages.map((message, index) => (
@@ -583,6 +609,7 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                 disabled={!input.trim() || busy}
                 accessibilityLabel={t('Send')}
                 accessibilityRole="button"
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
                 {busy ? (
                   <ActivityIndicator size="small" color={theme.colors.textInverted} />
@@ -754,15 +781,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: theme.colors.dangerLight,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     padding: 10,
   },
   errorText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: theme.typography.caption.fontSize,
     color: theme.colors.danger,
     fontWeight: '500',
   },
@@ -789,16 +816,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   gradeLabel: {
-    fontSize: 9,
+    fontSize: theme.typography.micro.fontSize,
     fontWeight: '700',
     textTransform: 'uppercase',
     color: 'rgba(255, 255, 255, 0.7)',
   },
   gradeValue: {
     fontFamily: theme.fonts.serif,
-    fontSize: 24,
+    fontSize: theme.typography.title1.fontSize,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: theme.colors.textInverted,
     marginTop: -2,
   },
   gradeDetails: {
@@ -807,17 +834,17 @@ const styles = StyleSheet.create({
   },
   gradeHeadline: {
     fontFamily: theme.fonts.serif,
-    fontSize: 14,
+    fontSize: theme.typography.body.fontSize,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.colors.textInverted,
     lineHeight: 19,
   },
   gradeCaloric: {
-    fontSize: 12,
+    fontSize: theme.typography.caption.fontSize,
     color: 'rgba(255, 255, 255, 0.85)',
   },
   gradeTimestamp: {
-    fontSize: 10,
+    fontSize: theme.typography.micro.fontSize,
     color: 'rgba(255, 255, 255, 0.6)',
     marginTop: 2,
   },
@@ -836,14 +863,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardSectionTitle: {
-    fontSize: 12,
+    fontSize: theme.typography.caption.fontSize,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     color: theme.colors.textPrimary,
   },
   cardBodyText: {
-    fontSize: 13,
+    fontSize: theme.typography.callout.fontSize,
     lineHeight: 19,
     color: theme.colors.textSecondary,
   },
@@ -875,12 +902,12 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
     padding: 8,
     borderWidth: 1,
-    borderColor: 'rgba(22, 163, 74, 0.15)',
+    borderColor: theme.colors.secondaryBorder,
   },
   itemNumber: {
-    fontSize: 12,
+    fontSize: theme.typography.caption.fontSize,
     fontWeight: '800',
-    color: '#16A34A',
+    color: theme.colors.primary,
     minWidth: 20,
   },
   listItemText: {
@@ -944,23 +971,31 @@ const styles = StyleSheet.create({
   },
   welcomeCopy: {
     color: theme.colors.textMuted,
-    fontSize: 13,
+    fontSize: theme.typography.callout.fontSize,
     lineHeight: 19,
     textAlign: 'center',
   },
+  starterPillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+    marginTop: 8,
+  },
   reviewButton: {
-    marginTop: 6,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 7,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.primaryLight,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     paddingVertical: 10,
   },
   reviewText: {
     color: theme.colors.primary,
-    fontSize: 13,
+    fontSize: theme.typography.callout.fontSize,
     fontWeight: '700',
   },
   bubble: {
@@ -981,17 +1016,17 @@ const styles = StyleSheet.create({
   },
   userText: {
     color: theme.colors.textInverted,
-    fontSize: 14,
+    fontSize: theme.typography.body.fontSize,
     lineHeight: 20,
   },
   coachText: {
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: theme.typography.body.fontSize,
     lineHeight: 20,
   },
   error: {
     color: theme.colors.danger,
-    fontSize: 12,
+    fontSize: theme.typography.caption.fontSize,
     paddingHorizontal: 4,
   },
   composer: {
@@ -1011,14 +1046,14 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: 9,
     paddingVertical: 8,
-    fontSize: 14,
+    fontSize: theme.typography.body.fontSize,
     color: theme.colors.textPrimary,
     textAlignVertical: 'top',
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.primary,

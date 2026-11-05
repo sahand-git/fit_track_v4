@@ -148,8 +148,8 @@ export function getNutrientMetadata(
         unit: 'g',
         color: '#EC4899',
         defaultTarget: 50, // Dietary reference upper limit
-        description: 'Simple carbohydrates. Monitoring aids insulin sensitivity and steady energy.',
-        foodSources: 'Fruits, dairy, honey, dried fruit, natural sweeteners.',
+        description: 'Daily upper recommendation (WHO) applies to added and free sugars. Naturally occurring sugars from whole fresh fruits and unflavored milk provide valuable micronutrients and fiber without the same glycemic stress.',
+        foodSources: 'Whole fruits, dairy, natural honey, whole dates.',
       };
     case 'sodium':
       return {
