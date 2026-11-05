@@ -1151,6 +1151,8 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Daily reference limit for total sugar from all food sources. Does not separate added from natural sugars.': 'الحد المرجعي اليومي لإجمالي السكر من جميع المصادر الغذائية. لا يفصل بين السكريات المضافة والطبيعية.',
     'Applies to total sugars from all food sources (including naturally occurring sugars in fruits and dairy). Reliable added-sugar data is not separately available across all foods.': 'ينطبق على إجمالي السكريات من جميع المصادر الغذائية (بما في ذلك السكريات الطبيعية في الفواكه ومنتجات الألبان). بيانات السكر المضاف الموثوقة غير متوفرة بشكل منفصل لجميع الأطعمة.',
     'Dietary reference guidance (total sugars daily limit)': 'إرشادات مرجعية غذائية (الحد اليومي لإجمالي السكريات)',
+    'Tap + to log your first meal': 'اضغط على + لتسجيل أول وجبة',
+    'More options': 'خيارات إضافية',
   },
   ckb: {
     'Account': 'هەژمار',
@@ -2294,6 +2296,8 @@ export const translations: Record<Exclude<AppLanguage, 'en'>, Translation> = {
     'Daily reference limit for total sugar from all food sources. Does not separate added from natural sugars.': 'سنووری دیاریکراوی ڕۆژانە بۆ کۆی شەکر لە هەموو سەرچاوە خۆراکییەکان. جیاوازی ناکات لە نێوان شەکری زیادکراو و شەکری سروشتی.',
     'Applies to total sugars from all food sources (including naturally occurring sugars in fruits and dairy). Reliable added-sugar data is not separately available across all foods.': 'پێوەستە بە کۆی شەکر لە هەموو سەرچاوە خۆراکییەکانەوە (لەوانە شەکری سروشتی لە میوە و بەرهەمە شیرییەکاندا). زانیاری باوەڕپێکراوی شەکری زیادکراو بە جیا لە هەموو خۆراکەکاندا بەردەست نییە.',
     'Dietary reference guidance (total sugars daily limit)': 'ڕێنمایی سەرچاوەی خۆراکی (سنووری ڕۆژانەی کۆی شەکرەکان)',
+    'Tap + to log your first meal': 'داگرتنی + بۆ تۆمارکردنی یەکەم ژەم',
+    'More options': 'بژاردەی زیاتر',
   },
 };
 

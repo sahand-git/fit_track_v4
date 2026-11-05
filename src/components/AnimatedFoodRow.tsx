@@ -23,12 +23,11 @@ export const AnimatedFoodRow: React.FC<AnimatedFoodRowProps> = ({
   isNew = false,
   ...rest
 }) => {
-  const enterAnim =
-    !isNew || isReducedMotion()
-      ? undefined
-      : FadeInDown.duration(MOTION.duration.base)
-          .delay(delay)
-          .easing(MOTION.easing.outCubic);
+  const enterAnim = isReducedMotion()
+    ? undefined
+    : FadeInDown.duration(isNew ? MOTION.duration.base : 240)
+        .delay(Math.min(delay, 240))
+        .easing(MOTION.easing.outCubic);
 
   const exitAnim = isReducedMotion()
     ? undefined

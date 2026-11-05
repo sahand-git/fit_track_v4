@@ -12,7 +12,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
   Plus,
-  Trash2,
   CalendarDays,
   Calendar as CalendarIcon,
   Coffee,
@@ -26,9 +25,8 @@ import { CalendarPickerModal } from '../components/CalendarPickerModal';
 import { AddFoodSheet } from '../components/addfood/AddFoodSheet';
 import { AnimatedFoodRow } from '../components/AnimatedFoodRow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
-import { FoodThumbnail } from '../components/FoodThumbnail';
-import { FoodSourceBadge } from '../components/FoodSourceBadge';
-import { getLocalizedFoodName } from '../utils/foodLocalization';
+import { FoodLogSwipeableRow } from '../components/FoodLogSwipeableRow';
+import { MacroSummaryBar } from '../components/MacroSummaryBar';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -88,7 +86,6 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
   );
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
-  const floatingBottom = dockBottom + 66;
 
   const [addSheetVisible, setAddSheetVisible] = useState(false);
   const [activeMealType, setActiveMealType] = useState<MealType>(initialMealType);
@@ -215,18 +212,38 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
     setInspectingMeal(null);
   };
 
-  const getMealIcon = (mealType: MealType) => {
+  const getMealHeaderIcon = (mealType: MealType) => {
     switch (mealType) {
       case 'breakfast':
-        return <Coffee size={14} color={theme.colors.secondary} />;
+        return (
+          <View style={[styles.categoryIconCircle, { backgroundColor: theme.colors.amberLight }]}>
+            <Coffee size={16} color={theme.colors.amberDark} />
+          </View>
+        );
       case 'lunch':
-        return <Utensils size={14} color={theme.colors.secondary} />;
+        return (
+          <View style={[styles.categoryIconCircle, { backgroundColor: theme.colors.emeraldLight }]}>
+            <Utensils size={16} color={theme.colors.emeraldDark} />
+          </View>
+        );
       case 'dinner':
-        return <Moon size={14} color={theme.colors.secondary} />;
+        return (
+          <View style={[styles.categoryIconCircle, { backgroundColor: theme.colors.waterLight }]}>
+            <Moon size={16} color={theme.colors.water} />
+          </View>
+        );
       case 'snack':
-        return <Apple size={14} color={theme.colors.secondary} />;
+        return (
+          <View style={[styles.categoryIconCircle, { backgroundColor: theme.colors.terracottaWarmLight }]}>
+            <Apple size={16} color={theme.colors.terracottaDark} />
+          </View>
+        );
       default:
-        return <Utensils size={14} color={theme.colors.secondary} />;
+        return (
+          <View style={[styles.categoryIconCircle, { backgroundColor: theme.colors.surfaceSubtle }]}>
+            <Utensils size={16} color={theme.colors.primary} />
+          </View>
+        );
     }
   };
 
@@ -243,10 +260,10 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
 
   return (
     <View style={styles.container}>
-      {/* Calm Calendar Navigation */}
+      {/* Calm Calendar Navigation — True Horizontal Center */}
       <View style={styles.dateHeader}>
         <AnimatedPressable
-          style={styles.dateNavBtn}
+          style={[styles.dateNavBtn, styles.dateNavBtnLeft]}
           onPress={handlePrevDay}
           accessibilityLabel={t('Previous day')}
           accessibilityRole="button"
@@ -260,12 +277,16 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
           accessibilityLabel={t('Choose date')}
           accessibilityRole="button"
         >
-          <CalendarDays size={17} color={theme.colors.primary} />
+          <CalendarDays size={18} color={theme.colors.primary} />
           <Text style={styles.dateTitle}>{formatDisplayDate(selectedDate, language)}</Text>
         </AnimatedPressable>
 
         <AnimatedPressable
-          style={[styles.dateNavBtn, selectedDate >= getTodayDateString() && styles.disabledButton]}
+          style={[
+            styles.dateNavBtn,
+            styles.dateNavBtnRight,
+            selectedDate >= getTodayDateString() && styles.disabledButton,
+          ]}
           onPress={handleNextDay}
           disabled={selectedDate >= getTodayDateString()}
           accessibilityLabel={t('Next day')}
@@ -293,33 +314,22 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         </TouchableOpacity>
       )}
 
-      {/* Understated Daily Summary Strip */}
-      <View style={styles.summaryBar}>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>{totalKcal}</Text>
-          <Text style={styles.summaryLabel}>
-            {effectiveCalorieTarget ? `/ ${effectiveCalorieTarget} kcal` : 'kcal'}
-          </Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>{totalProtein}g</Text>
-          <Text style={styles.summaryLabel}>{t('Protein')}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>{totalCarbs}g</Text>
-          <Text style={styles.summaryLabel}>{t('Carbs')}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>{totalFat}g</Text>
-          <Text style={styles.summaryLabel}>{t('Fat')}</Text>
-        </View>
-      </View>
+      {/* Macro Summary Bar with Circular Progress Ring & Horizontal Macro Bars */}
+      <MacroSummaryBar
+        totalKcal={totalKcal}
+        effectiveCalorieTarget={effectiveCalorieTarget}
+        totalProtein={totalProtein}
+        targetProtein={profile?.targetProtein ?? 130}
+        totalCarbs={totalCarbs}
+        targetCarbs={profile?.targetCarbs ?? 220}
+        totalFat={totalFat}
+        targetFat={profile?.targetFat ?? 65}
+        theme={theme}
+        t={t}
+      />
 
       {/* Meal Groups Scroll List */}
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: floatingBottom + 70 }]}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: dockBottom + 28 }]}>
         {mealCategories.map((cat) => {
           const categoryMeals = log.meals.filter((m) => m.mealType === cat.key);
           const categoryKcal = categoryMeals.reduce((s, m) => s + m.calories, 0);
@@ -328,10 +338,8 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
             <View key={cat.key} style={styles.mealSection}>
               {/* Category Header */}
               <View style={styles.mealSectionHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                  <View style={styles.categoryIconCircle}>
-                    {getMealIcon(cat.key)}
-                  </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                  {getMealHeaderIcon(cat.key)}
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.categoryTitle}>{cat.label}</Text>
                     {categoryKcal > 0 && (
@@ -361,101 +369,44 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
                   onPress={() => openAddSheet(cat.key)}
                   disabled={isFuture}
                   accessibilityRole="button"
-                  accessibilityLabel={`${t('No meals logged yet.')} ${t('Add food')}`}
+                  accessibilityLabel={`${t('Tap + to log your first meal')} ${t('Add food')}`}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
+                  <View style={styles.emptyPlateBadge}>
+                    <Utensils size={18} color={theme.colors.primary} />
+                  </View>
                   <Text style={styles.emptyPromptText}>
-                    {t('No meals logged yet.')}
+                    {t('Tap + to log your first meal')}
                   </Text>
+                  {!isFuture && (
+                    <View style={styles.emptyAddActionPill}>
+                      <Plus size={13} color={theme.colors.primary} strokeWidth={2.4} />
+                      <Text style={styles.emptyAddActionText}>{t('Add food')}</Text>
+                    </View>
+                  )}
                 </AnimatedPressable>
               ) : (
                 <View style={styles.foodListContainer}>
-                  {categoryMeals.map((item, idx) => {
-                    const isFirst = idx === 0;
-                    const isLast = idx === categoryMeals.length - 1;
-                    return (
-                      <AnimatedFoodRow key={item.id} isNew={userAddedMealIds.has(item.id)} delay={0}>
-                        <AnimatedPressable
-                          style={[
-                            styles.foodRow,
-                            isRtl && styles.rowRtl,
-                            idx > 0 && styles.foodRowBorder,
-                            isFirst && styles.foodRowFirst,
-                            isLast && styles.foodRowLast,
-                          ]}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                            setInspectingMeal(item);
-                          }}
-                          minScale={0.98}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${item.name}, ${formatKcal(item.calories, t)}`}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <FoodThumbnail name={item.name} category={item.category} imageUrl={item.imageUrl} size="small" style={{ marginEnd: 12 }} />
-                          <View style={styles.foodInfo}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                              <Text style={styles.foodName}>{getLocalizedFoodName(item, language)}</Text>
-                              {item.source && <FoodSourceBadge source={item.source} sourceRef={item.sourceRef} size="small" />}
-                            </View>
-                            <Text style={styles.foodPortion}>
-                              {item.servings} × {item.servingSize}
-                            </Text>
-                            <Text style={styles.foodMacros}>
-                              P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g
-                            </Text>
-                          </View>
-
-                          <View style={[styles.foodRight, isRtl && styles.foodRightRtl]}>
-                            <Text style={styles.foodKcal}>{formatKcal(item.calories, t)}</Text>
-                            <TouchableOpacity
-                              style={styles.deleteBtn}
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                handleDelete(item.id);
-                              }}
-                              accessibilityLabel={`${t('Delete')} ${item.name}`}
-                              accessibilityRole="button"
-                            >
-                              <Trash2 size={15} color={theme.colors.danger} />
-                            </TouchableOpacity>
-                          </View>
-                        </AnimatedPressable>
-                      </AnimatedFoodRow>
-                    );
-                  })}
+                  {categoryMeals.map((item, idx) => (
+                    <AnimatedFoodRow key={item.id} isNew={userAddedMealIds.has(item.id)} delay={idx * 30}>
+                      <FoodLogSwipeableRow
+                        item={item}
+                        language={language}
+                        t={t}
+                        theme={theme}
+                        isRtl={isRtl}
+                        onInspect={setInspectingMeal}
+                        onDelete={handleDelete}
+                        idx={idx}
+                      />
+                    </AnimatedFoodRow>
+                  ))}
                 </View>
               )}
             </View>
           );
         })}
       </ScrollView>
-
-      {/* Floating "+ Add food" Action Button */}
-      {!isFuture && (
-        <AnimatedPressable
-          style={[
-            styles.floatingAddBtn,
-            {
-              bottom: floatingBottom,
-              ...(language === 'en' ? { right: 18 } : { left: 18 }),
-            },
-          ]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-            const currentHour = new Date().getHours();
-            const defaultMeal: MealType =
-              currentHour < 11 ? 'breakfast' : currentHour < 16 ? 'lunch' : currentHour < 21 ? 'dinner' : 'snack';
-            openAddSheet(defaultMeal);
-          }}
-          activeOpacity={0.88}
-          accessibilityLabel={t('Add food')}
-          accessibilityRole="button"
-        >
-          <Plus size={18} color={theme.colors.textInverted} strokeWidth={2.4} />
-          <Text style={styles.floatingAddBtnText}>{t('Add food')}</Text>
-        </AnimatedPressable>
-      )}
 
       {/* Calendar Picker Modal */}
       <CalendarPickerModal
@@ -501,14 +452,15 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   dateHeader: {
+    height: 52,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
+    position: 'relative',
   },
   dateNavBtn: {
     width: 36,
@@ -517,6 +469,16 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  dateNavBtnLeft: {
+    position: 'absolute',
+    left: theme.spacing.md,
+    zIndex: 2,
+  },
+  dateNavBtnRight: {
+    position: 'absolute',
+    right: theme.spacing.md,
+    zIndex: 2,
+  },
   disabledButton: {
     opacity: 0.3,
   },
@@ -524,7 +486,7 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    paddingHorizontal: 5,
+    paddingHorizontal: 8,
     paddingVertical: 4,
   },
   dateTitle: {
@@ -553,61 +515,27 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     fontWeight: '700',
     textDecorationLine: 'underline',
   },
-  summaryBar: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.surface,
-    paddingVertical: 12,
-    paddingHorizontal: theme.spacing.md,
-    justifyContent: 'space-around',
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  summaryItem: {
-    alignItems: 'center',
-  },
-  summaryValue: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 15,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  summaryLabel: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  divider: {
-    width: 1,
-    height: '60%',
-    alignSelf: 'center',
-    backgroundColor: theme.colors.border,
-  },
   scrollContent: {
     paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-    paddingBottom: 160,
-    gap: 16,
+    paddingTop: 8,
+    gap: 12,
   },
   mealSection: {
-    gap: 8,
+    gap: 4,
   },
   mealSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 4,
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   categoryIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   categoryTitle: {
     fontFamily: theme.fonts.serif,
@@ -616,8 +544,10 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   categoryKcal: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
+    fontFamily: theme.fonts.sans,
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
     marginTop: 1,
   },
   addFoodBtn: {
@@ -641,97 +571,47 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   },
   emptyPromptBox: {
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: theme.colors.borderStrong,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  emptyPromptText: {
-    fontSize: 13,
-    color: theme.colors.textMuted,
-  },
-  foodListContainer: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    gap: 8,
     ...theme.shadow.subtle,
   },
-  foodRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  emptyPlateBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: theme.spacing.md,
+    justifyContent: 'center',
   },
-  foodRowFirst: {
-    borderTopLeftRadius: theme.radius.md,
-    borderTopRightRadius: theme.radius.md,
-  },
-  foodRowLast: {
-    borderBottomLeftRadius: theme.radius.md,
-    borderBottomRightRadius: theme.radius.md,
-  },
-  rowRtl: {
-    flexDirection: 'row-reverse',
-  },
-  foodRowBorder: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  foodInfo: {
-    flex: 1,
-    marginEnd: 8,
-  },
-  foodName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  foodPortion: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  foodMacros: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  foodRight: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  foodRightRtl: {
-    alignItems: 'flex-start',
-  },
-  foodKcal: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  deleteBtn: {
-    padding: 2,
-  },
-  floatingAddBtn: {
-    position: 'absolute',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: theme.radius.full,
-    ...theme.shadow.floating,
-    zIndex: 10,
-    elevation: 6,
-  },
-  floatingAddBtnText: {
+  emptyPromptText: {
     fontFamily: theme.fonts.sans,
     fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+  },
+  emptyAddActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: theme.colors.primaryLight,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: theme.radius.full,
+    marginTop: 2,
+  },
+  emptyAddActionText: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
     fontWeight: '700',
-    color: theme.colors.textInverted,
+    color: theme.colors.primary,
+  },
+  foodListContainer: {
+    gap: 2,
   },
 });

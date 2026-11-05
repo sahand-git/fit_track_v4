@@ -227,7 +227,7 @@ const AnimatedBottomNavItem: React.FC<AnimatedBottomNavItemProps> = ({
           isActive && {
             backgroundColor: activeTheme.colors.primaryLight,
             borderColor: activeTheme.colors.primaryBorder,
-            borderWidth: StyleSheet.hairlineWidth,
+            borderWidth: 1,
           },
           animatedStyle,
         ]}
@@ -239,7 +239,7 @@ const AnimatedBottomNavItem: React.FC<AnimatedBottomNavItemProps> = ({
             {
               fontFamily: activeTheme.fonts.sans,
               color,
-              fontWeight: isActive ? '600' : '500',
+              fontWeight: isActive ? '700' : '500',
             },
           ]}
           numberOfLines={1}
@@ -265,11 +265,11 @@ const navItemStyles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 22,
+    borderRadius: 20,
     minWidth: 58,
   },
   navLabel: {
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 3,
     textAlign: 'center',
   },
@@ -366,18 +366,18 @@ const createNavStyles = (activeTheme: ThemeType) =>
     },
     bottomNav: {
       flexDirection: 'row',
-      backgroundColor: activeTheme.colors.surface,
+      backgroundColor: activeTheme.colors.surfaceElevated,
       borderRadius: 28,
       borderWidth: 1,
-      borderColor: activeTheme.colors.border,
+      borderColor: activeTheme.colors.borderStrong,
       paddingVertical: 6,
       paddingHorizontal: 8,
       justifyContent: 'space-around',
       alignItems: 'center',
       ...activeTheme.shadow.floating,
-      shadowOpacity: 0.1,
-      shadowRadius: 16,
-      elevation: 6,
+      shadowOpacity: 0.14,
+      shadowRadius: 20,
+      elevation: 8,
     },
   });
 

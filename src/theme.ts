@@ -310,28 +310,28 @@ export const darkTheme = {
   ...theme,
   colors: {
     ...theme.colors,
-    // Canvas & Surfaces — Editorial deep charcoal slate
-    background: '#121514',
-    surface: '#1B211E',
-    surfaceSubtle: '#242C28',
-    surfaceElevated: '#212925',
+    // Canvas & Surfaces — Rich dark charcoal slate
+    background: '#1A1A2E',
+    surface: '#22243A',
+    surfaceSubtle: '#2A2D45',
+    surfaceElevated: '#262940',
 
     // Dividers & Outlines
-    border: '#2E3933',
-    borderStrong: '#3D4C44',
-    borderFocus: '#82B29A',
+    border: '#353A54',
+    borderStrong: '#464C6E',
+    borderFocus: '#2ECC71',
 
     // Typography
-    textPrimary: '#F3EFE6',      // Warm ivory contrast > 12:1
-    textSecondary: '#A9B7AE',    // Contrast > 5.5:1
-    textMuted: '#7D8E84',        // Contrast > 4.5:1
-    textInverted: '#121514',
+    textPrimary: '#F4F6FB',      // Crisp contrast > 14:1
+    textSecondary: '#A8B2D1',    // Contrast > 6.5:1
+    textMuted: '#7A86A8',        // Contrast > 4.5:1
+    textInverted: '#1A1A2E',
 
-    // Primary Brand
-    primary: '#6B9E83',          // Soft forest sage (high contrast on dark)
-    primaryHover: '#82B29A',
-    primaryLight: '#1C2922',
-    primaryBorder: '#365142',
+    // Primary Brand — Vibrant Emerald Green
+    primary: '#2ECC71',          // Vibrant emerald green
+    primaryHover: '#27AE60',
+    primaryLight: '#163A27',
+    primaryBorder: '#235C3A',
 
     // Secondary
     secondary: '#92A89A',
@@ -348,10 +348,10 @@ export const darkTheme = {
     dangerLight: '#2F1A1A',
     warning: '#E8A84C',
     warningLight: '#2F2312',
-    success: '#6B9E83',
+    success: '#2ECC71',
 
-    macroProtein: '#6B9E83',
-    macroProteinLight: '#1C2922',
+    macroProtein: '#2ECC71',
+    macroProteinLight: '#163A27',
     macroCarbs: '#E0856B',
     macroCarbsLight: '#2C1E1B',
     macroFat: '#92A89A',
@@ -364,11 +364,11 @@ export const darkTheme = {
     black: '#000000',
     shadow: '#000000',
     backdrop: 'rgba(0, 0, 0, 0.75)',
-    bannerBg: '#17261F',
+    bannerBg: '#17262E',
     overlayGlass: 'rgba(255, 255, 255, 0.14)',
     overlayGlassBorder: 'rgba(255, 255, 255, 0.32)',
-    overlayGlassText: '#C7E4D4',
-    overlayGlassTextBright: '#ECFDF5',
+    overlayGlassText: '#D1EBDC',
+    overlayGlassTextBright: '#F0FDF4',
     dialogShadowWeb: '0 8px 30px rgba(0, 0, 0, 0.6)',
 
     // Amber / Warm Gold

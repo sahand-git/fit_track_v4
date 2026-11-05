@@ -61,12 +61,10 @@ export function getFoodSourceBadgeInfo(
       }
       return { label: tr('Verified'), type: 'verified', isEstimate: false };
     case 'generic_estimate':
-      return { label: tr('Estimate'), type: 'estimate', isEstimate: true };
     case 'regional_culinary_estimate':
-      return { label: tr('Recipe Estimate'), type: 'estimate', isEstimate: true };
     case 'ai_estimated':
     case 'gemini':
-      return { label: tr('AI Estimate'), type: 'estimate', isEstimate: true };
+      return { label: tr('Estimate'), type: 'estimate', isEstimate: true };
     case 'open_food_facts':
       return { label: tr('Open Food Facts'), type: 'off', isEstimate: false };
     case 'custom':

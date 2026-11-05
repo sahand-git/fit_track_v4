@@ -35,7 +35,7 @@ function getThumbnailStyles(theme: ThemeType): ReturnType<typeof createStyles> {
 
 const SIZE_DIMENSIONS = {
   small: { width: 36, height: 36, borderRadius: 10, fontSize: 18 },
-  medium: { width: 44, height: 44, borderRadius: 12, fontSize: 22 },
+  medium: { width: 48, height: 48, borderRadius: 14, fontSize: 26 },
   large: { width: 64, height: 64, borderRadius: 16, fontSize: 32 },
 } as const;
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { AppText as Text } from './AppText';
+import { Info } from 'lucide-react-native';
 import { FoodItem } from '../types';
 import { getFoodSourceBadgeInfo, FoodSourceBadgeType } from '../utils/foodSource';
 import { useLanguage } from '../i18n/I18nContext';
@@ -77,6 +78,13 @@ export const FoodSourceBadge: React.FC<FoodSourceBadgeProps> = ({
 
   return (
     <View style={badgeStyle} accessibilityLabel={info.label}>
+      {info.isEstimate && (
+        <Info
+          size={isSmall ? 10 : 12}
+          color={theme.colors.water}
+          style={{ marginEnd: 3 }}
+        />
+      )}
       <Text style={textStyle}>{info.label}</Text>
     </View>
   );
@@ -113,12 +121,11 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     lineHeight: 16,
   },
   estimateBadge: {
-    backgroundColor: theme.colors.terracottaLightWash,
-    borderColor: theme.colors.terracottaWashBorder,
-    borderStyle: 'dashed',
+    backgroundColor: theme.colors.waterLight,
+    borderColor: theme.colors.water,
   },
   estimateText: {
-    color: theme.colors.terracottaBadge,
+    color: theme.colors.water,
   },
   type_verified: {
     backgroundColor: theme.colors.primaryLight,
@@ -128,12 +135,11 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     color: theme.colors.primary,
   },
   type_estimate: {
-    backgroundColor: theme.colors.terracottaLightWash,
-    borderColor: theme.colors.terracottaWashBorder,
-    borderStyle: 'dashed',
+    backgroundColor: theme.colors.waterLight,
+    borderColor: theme.colors.water,
   },
   text_estimate: {
-    color: theme.colors.terracottaBadge,
+    color: theme.colors.water,
   },
   type_off: {
     backgroundColor: theme.colors.graySubtle,
