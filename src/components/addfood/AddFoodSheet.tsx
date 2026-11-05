@@ -22,6 +22,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSpringConfig } from '../../utils/reanimatedMotion';
 import { isReducedMotion } from '../../utils/motion';
+import { DirectionalIcon } from '../DirectionalIcon';
 import { AppText as Text } from '../AppText';
 import {
   X,
@@ -164,6 +165,27 @@ const FoodListItemRow = React.memo<FoodListItemRowProps>(
     styles,
     isOnlineItem = false,
   }) => {
+    const scale = useSharedValue(1);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [{ scale: scale.get() }],
+    }));
+
+    const handlePressIn = useCallback(() => {
+      if (isReducedMotion()) return;
+      scale.set(withSpring(0.975, getSpringConfig('tactile')));
+    }, [scale]);
+
+    const handlePressOut = useCallback(() => {
+      if (isReducedMotion()) return;
+      scale.set(withSpring(1, getSpringConfig('tactile')));
+    }, [scale]);
+
+    const handlePress = useCallback(() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      onSelect(item);
+    }, [item, onSelect]);
+
     const displayName = getLocalizedFoodName(item, language);
     const servingStr = item.portionUnit
       ? `1 ${t(item.portionUnit)} (${item.gramsPerUnit ?? item.servingGrams}g)`
@@ -173,17 +195,20 @@ const FoodListItemRow = React.memo<FoodListItemRowProps>(
     const foodAccessibilityLabel = `${displayName}, ${item.brand ? `${item.brand}, ` : ''}${servingStr}, ${kcalStr}, ${macrosStr}`;
 
     return (
-      <View
+      <Animated.View
         style={[
           styles.foodListItem,
           isOnlineItem && styles.foodListItemSimple,
           isSelected && styles.foodListItemActive,
+          animatedStyle,
         ]}
       >
         <TouchableOpacity
           style={styles.foodListItemMain}
-          onPress={() => onSelect(item)}
-          activeOpacity={0.7}
+          onPress={handlePress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel={foodAccessibilityLabel}
         >
@@ -194,9 +219,9 @@ const FoodListItemRow = React.memo<FoodListItemRowProps>(
             size="small"
             style={{ marginEnd: 12 }}
           />
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <Text style={styles.itemTitle}>{displayName}</Text>
+              <Text style={styles.itemTitle} numberOfLines={1}>{displayName}</Text>
               <FoodSourceBadge
                 source={item.source || (item.recipeEstimate ? 'regional_culinary_estimate' : item.isEstimate ? 'generic_estimate' : undefined)}
                 sourceRef={item.sourceRef}
@@ -208,13 +233,29 @@ const FoodListItemRow = React.memo<FoodListItemRowProps>(
                 </View>
               )}
             </View>
-            <Text style={styles.itemSub}>
-              {item.brand ? `${item.brand} • ` : ''}
-              {servingStr} • P: {item.protein}g C: {item.carbs}g F: {item.fat}g
+            <Text style={styles.itemSub} numberOfLines={1}>
+              {item.brand ? `${item.brand} · ` : ''}{servingStr}
             </Text>
+            <View style={styles.macroPillRow}>
+              <View style={styles.macroPillProtein}>
+                <View style={styles.macroDotProtein} />
+                <Text style={styles.macroPillTextProtein}>{item.protein}g P</Text>
+              </View>
+              <View style={styles.macroPillCarbs}>
+                <View style={styles.macroDotCarbs} />
+                <Text style={styles.macroPillTextCarbs}>{item.carbs}g C</Text>
+              </View>
+              <View style={styles.macroPillFat}>
+                <View style={styles.macroDotFat} />
+                <Text style={styles.macroPillTextFat}>{item.fat}g F</Text>
+              </View>
+            </View>
           </View>
           <View style={styles.itemRightCol}>
-            <Text style={styles.itemKcal}>{kcalStr}</Text>
+            <View style={styles.itemKcalBadge}>
+              <Text style={styles.itemKcalVal}>{Math.round(item.calories)}</Text>
+              <Text style={styles.itemKcalUnit}>{t('kcal')}</Text>
+            </View>
           </View>
         </TouchableOpacity>
         {!isOnlineItem && onToggleFavorite && (
@@ -232,7 +273,7 @@ const FoodListItemRow = React.memo<FoodListItemRowProps>(
             />
           </TouchableOpacity>
         )}
-      </View>
+      </Animated.View>
     );
   },
   (prev, next) =>
@@ -1878,84 +1919,6 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
             ))}
           </View>
 
-          {/* Segmented Control */}
-          <View style={styles.segmentedControl}>
-            <TouchableOpacity
-              style={[styles.segmentBtn, activeTab === 'search' && styles.segmentBtnActive]}
-              onPress={() => {
-                setActiveTab('search');
-                setIsScanningBarcode(false);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={t('Search')}
-              hitSlop={{ top: 6, bottom: 6 }}
-            >
-              <Search
-                size={14}
-                color={activeTab === 'search' ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.segmentText,
-                  activeTab === 'search' && styles.segmentTextActive,
-                ]}
-                numberOfLines={1}
-              >
-                {t('Search')}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.segmentBtn, activeTab === 'photo' && styles.segmentBtnActive]}
-              onPress={() => {
-                setActiveTab('photo');
-                setIsScanningBarcode(false);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={t('Analyze meal photo')}
-              hitSlop={{ top: 6, bottom: 6 }}
-            >
-              <CameraIcon
-                size={14}
-                color={activeTab === 'photo' ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.segmentText,
-                  activeTab === 'photo' && styles.segmentTextActive,
-                ]}
-                numberOfLines={1}
-              >
-                {t('Analyze meal photo')}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.segmentBtn, activeTab === 'describe' && styles.segmentBtnActive]}
-              onPress={() => {
-                setActiveTab('describe');
-                setIsScanningBarcode(false);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={t('Describe with AI')}
-              hitSlop={{ top: 6, bottom: 6 }}
-            >
-              <Sparkles
-                size={14}
-                color={activeTab === 'describe' ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.segmentText,
-                  activeTab === 'describe' && styles.segmentTextActive,
-                ]}
-                numberOfLines={1}
-              >
-                {t('Describe with AI')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
           {/* TAB 1: SEARCH & BARCODE */}
           {activeTab === 'search' && (
             <View style={{ flex: 1 }}>
@@ -1973,7 +1936,7 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                 />
               ) : (
                 <>
-                  {/* Integrated Search Bar + Inline Barcode Trigger */}
+                  {/* Streamlined Search Bar with Inline Camera & Barcode Triggers */}
                   <View style={styles.searchBarRow}>
                     <View style={styles.searchBar}>
                       <Search size={16} color={theme.colors.textMuted} />
@@ -2007,7 +1970,19 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                         </TouchableOpacity>
                       )}
                       <TouchableOpacity
-                        style={[styles.inlineBarcodeBtn, showManualBarcode && styles.inlineBarcodeBtnActive]}
+                        style={styles.inlineActionBtn}
+                        onPress={() => {
+                          setActiveTab('photo');
+                          setIsScanningBarcode(false);
+                        }}
+                        accessibilityLabel={t('Analyze meal photo')}
+                        accessibilityRole="button"
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <CameraIcon size={17} color={theme.colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.inlineActionBtn, showManualBarcode && styles.inlineActionBtnActive]}
                         onPress={handleStartLiveBarcodeScan}
                         onLongPress={() => setShowManualBarcode((prev) => !prev)}
                         accessibilityLabel={t('Scan barcode')}
@@ -2015,11 +1990,110 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <BarcodeIcon
-                          size={18}
+                          size={17}
                           color={showManualBarcode ? theme.colors.textInverted : theme.colors.primary}
                         />
                       </TouchableOpacity>
                     </View>
+                  </View>
+
+                  {/* Sleek Quick Feature Actions Pill Bar */}
+                  <View style={{ paddingTop: 4 }}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.quickActionsPillRow}
+                    >
+                      <TouchableOpacity
+                        style={styles.quickPillBtn}
+                        onPress={() => {
+                          setActiveTab('describe');
+                          setIsScanningBarcode(false);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Describe with AI')}
+                        hitSlop={{ top: 6, bottom: 6 }}
+                      >
+                        <Sparkles size={13} color={theme.colors.primary} />
+                        <Text style={styles.quickPillText}>{t('Describe with AI')}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.quickPillBtn, foodFilter === 'templates' && styles.quickPillBtnActive]}
+                        onPress={() => setFoodFilter(foodFilter === 'templates' ? 'all' : 'templates')}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Templates')}
+                        hitSlop={{ top: 6, bottom: 6 }}
+                      >
+                        <Bookmark
+                          size={13}
+                          color={foodFilter === 'templates' ? theme.colors.textInverted : theme.colors.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.quickPillText,
+                            foodFilter === 'templates' && styles.quickPillTextActive,
+                          ]}
+                        >
+                          {t('Templates')} {mealTemplates.length > 0 ? `(${mealTemplates.length})` : ''}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.quickPillBtn}
+                        onPress={() => {
+                          setQuickAddName('');
+                          setQuickAddCalories('');
+                          setQuickAddProtein('');
+                          setQuickAddCarbs('');
+                          setQuickAddFat('');
+                          setQuickAddError(null);
+                          setQuickAddModalVisible(true);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Quick Add')}
+                        hitSlop={{ top: 6, bottom: 6 }}
+                      >
+                        <Zap size={13} color={theme.colors.accent} />
+                        <Text style={styles.quickPillText}>{t('Quick Add')}</Text>
+                      </TouchableOpacity>
+
+                      {onCopyYesterdayMeals && (
+                        <TouchableOpacity
+                          style={styles.quickPillBtn}
+                          onPress={handleCopyYesterday}
+                          disabled={copyLoading || isFuture}
+                          accessibilityRole="button"
+                          accessibilityLabel={t("Copy yesterday's meals")}
+                          hitSlop={{ top: 6, bottom: 6 }}
+                        >
+                          <Copy size={13} color={theme.colors.secondary} />
+                          <Text style={styles.quickPillText}>
+                            {t("Copy yesterday's meals")}
+                            {yesterdayAllPreview.count > 0 ? ` (${yesterdayAllPreview.count})` : ''}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+
+                      <TouchableOpacity
+                        style={styles.quickPillBtn}
+                        onPress={() => {
+                          setCustomName('');
+                          setCustomCalories('');
+                          setCustomProtein('');
+                          setCustomCarbs('');
+                          setCustomFat('');
+                          setCustomError(null);
+                          setCustomModalVisible(true);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Custom Food')}
+                        hitSlop={{ top: 6, bottom: 6 }}
+                      >
+                        <Plus size={13} color={theme.colors.primary} />
+                        <Text style={styles.quickPillText}>{t('Custom Food')}</Text>
+                      </TouchableOpacity>
+                    </ScrollView>
                   </View>
 
                   {/* Manual Barcode Input Fallback Drawer (Expanded on Demand) */}
@@ -2384,41 +2458,71 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
 
           {/* TAB 2: AI MEAL PHOTO */}
           {activeTab === 'photo' && (
-            <AddFoodAiPhotoSection
-              hasApiKey={hasApiKey}
-              onKeyChanged={checkApiKey}
-              onPickPhoto={handlePickPhoto}
-              photoUri={photoUri}
-              photoLoading={photoLoading}
-              photoError={photoError}
-              photoResult={photoResult}
-              selectedMeal={selectedMeal}
-              targetDate={date}
-              onLogAiItem={handleLogAiItem}
-              onLogAllAiItems={handleLogAllAiItems}
-              bottomInset={insets.bottom}
-              t={t}
-            />
+            <View style={{ flex: 1 }}>
+              <View style={styles.tabBackHeader}>
+                <TouchableOpacity
+                  style={styles.tabBackBtn}
+                  onPress={() => setActiveTab('search')}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Back')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <DirectionalIcon name="ArrowLeft" size={16} color={theme.colors.primary} />
+                  <Text style={styles.tabBackBtnText}>{t('Back')}</Text>
+                </TouchableOpacity>
+                <Text style={styles.tabBackTitle}>{t('Analyze meal photo')}</Text>
+              </View>
+              <AddFoodAiPhotoSection
+                hasApiKey={hasApiKey}
+                onKeyChanged={checkApiKey}
+                onPickPhoto={handlePickPhoto}
+                photoUri={photoUri}
+                photoLoading={photoLoading}
+                photoError={photoError}
+                photoResult={photoResult}
+                selectedMeal={selectedMeal}
+                targetDate={date}
+                onLogAiItem={handleLogAiItem}
+                onLogAllAiItems={handleLogAllAiItems}
+                bottomInset={insets.bottom}
+                t={t}
+              />
+            </View>
           )}
 
           {/* TAB 3: AI DESCRIBE */}
           {activeTab === 'describe' && (
-            <AddFoodAiDescribeSection
-              hasApiKey={hasApiKey}
-              onKeyChanged={checkApiKey}
-              describeText={describeText}
-              onDescribeTextChange={setDescribeText}
-              describeLoading={describeLoading}
-              describeError={describeError}
-              onEstimateDescribe={handleEstimateDescribe}
-              describeResult={describeResult}
-              selectedMeal={selectedMeal}
-              targetDate={date}
-              onLogAiItem={handleLogAiItem}
-              onLogAllAiItems={handleLogAllAiItems}
-              bottomInset={insets.bottom}
-              t={t}
-            />
+            <View style={{ flex: 1 }}>
+              <View style={styles.tabBackHeader}>
+                <TouchableOpacity
+                  style={styles.tabBackBtn}
+                  onPress={() => setActiveTab('search')}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Back')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <DirectionalIcon name="ArrowLeft" size={16} color={theme.colors.primary} />
+                  <Text style={styles.tabBackBtnText}>{t('Back')}</Text>
+                </TouchableOpacity>
+                <Text style={styles.tabBackTitle}>{t('Describe with AI')}</Text>
+              </View>
+              <AddFoodAiDescribeSection
+                hasApiKey={hasApiKey}
+                onKeyChanged={checkApiKey}
+                describeText={describeText}
+                onDescribeTextChange={setDescribeText}
+                describeLoading={describeLoading}
+                describeError={describeError}
+                onEstimateDescribe={handleEstimateDescribe}
+                describeResult={describeResult}
+                selectedMeal={selectedMeal}
+                targetDate={date}
+                onLogAiItem={handleLogAiItem}
+                onLogAllAiItems={handleLogAllAiItems}
+                bottomInset={insets.bottom}
+                t={t}
+              />
+            </View>
           )}
 
           {/* Bottom Session Tray: summary, expandable items drawer, and primary Done button */}
@@ -2649,11 +2753,13 @@ const createStyles = (theme: ThemeType) =>
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    minHeight: 46,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    ...theme.shadow.subtle,
   },
   searchInput: {
     flex: 1,
@@ -2664,7 +2770,7 @@ const createStyles = (theme: ThemeType) =>
   barcodeIconBtn: {
     width: 44,
     height: 44,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.full,
     backgroundColor: theme.colors.primaryLight,
     borderWidth: 1,
     borderColor: theme.colors.primaryBorder,
@@ -2675,17 +2781,77 @@ const createStyles = (theme: ThemeType) =>
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
-  inlineBarcodeBtn: {
+  inlineActionBtn: {
     width: 34,
     height: 34,
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.full,
     backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginStart: 4,
   },
-  inlineBarcodeBtnActive: {
+  inlineActionBtnActive: {
     backgroundColor: theme.colors.primary,
+  },
+  quickActionsPillRow: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  quickPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    minHeight: 44,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  quickPillBtnActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  quickPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  quickPillTextActive: {
+    color: theme.colors.textInverted,
+  },
+  tabBackHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    marginBottom: 8,
+  },
+  tabBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minHeight: 44,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceSubtle,
+  },
+  tabBackBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
+  tabBackTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    flex: 1,
   },
   manualBarcodeExpandContainer: {
     backgroundColor: theme.colors.surfaceSubtle,
@@ -2715,7 +2881,7 @@ const createStyles = (theme: ThemeType) =>
     paddingVertical: 6,
     paddingHorizontal: 10,
     minHeight: 44,
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.primaryBorder,
@@ -2746,10 +2912,11 @@ const createStyles = (theme: ThemeType) =>
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
     overflow: 'hidden',
+    ...theme.shadow.subtle,
   },
   foodListItemSimple: {
     padding: 12,
@@ -2767,14 +2934,102 @@ const createStyles = (theme: ThemeType) =>
     paddingEnd: 8,
   },
   itemTitle: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: theme.colors.textPrimary,
   },
   itemSub: {
     fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
+    marginBottom: 4,
+  },
+  macroPillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+    flexWrap: 'wrap',
+  },
+  macroPillProtein: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.primaryLight,
+  },
+  macroDotProtein: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: theme.colors.primary,
+  },
+  macroPillTextProtein: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
+  macroPillCarbs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.accentLight,
+  },
+  macroDotCarbs: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: theme.colors.accent,
+  },
+  macroPillTextCarbs: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.accent,
+  },
+  macroPillFat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.secondaryLight,
+  },
+  macroDotFat: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: theme.colors.secondary,
+  },
+  macroPillTextFat: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.secondary,
+  },
+  itemKcalBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  itemKcalVal: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  itemKcalUnit: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.textMuted,
   },
   itemKcal: {
     fontSize: 13,
@@ -2792,11 +3047,11 @@ const createStyles = (theme: ThemeType) =>
     paddingVertical: 2,
   },
   filterChip: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 6,
     minHeight: 44,
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -2825,8 +3080,8 @@ const createStyles = (theme: ThemeType) =>
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 7,
-    paddingHorizontal: 8,
-    borderRadius: theme.radius.md,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,

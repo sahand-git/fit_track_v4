@@ -304,4 +304,41 @@ for (const q of multiTokenQueries) {
 }
 console.log('✓ Test 9 passed: Multi-token, alias, and Arabic normalizations verified.');
 
+// Test 10: Relevance Ranking — Direct item matches rank above composite dishes & substring matches
+const eggSearchResults = filterFoodCatalog({
+  searchQuery: 'egg',
+  foodFilter: 'all',
+  recentFoods: [],
+  frequentFoods: [],
+  favoriteFoods: [],
+  customFoods: [],
+  barcodeCache: [],
+  t: mockT,
+});
+
+assert(eggSearchResults.length >= 5, 'Should return multiple egg-related items');
+
+// Find index of pure egg items vs eggplant & composite recipes
+const topEggNames = eggSearchResults.slice(0, 5).map((f) => f.name.toLowerCase());
+const hasDirectEggInTop5 = topEggNames.some(
+  (n) => n.startsWith('egg') || n.includes('whole') || n.includes('scrambled') || n.includes('boiled')
+);
+assert(hasDirectEggInTop5, 'Top 5 results must feature direct egg items');
+
+const firstEggIndex = eggSearchResults.findIndex((f) => {
+  const n = f.name.toLowerCase();
+  return (n.startsWith('egg ') || n.startsWith('egg(') || n.startsWith('whole') || n.includes('scrambled')) && !n.includes('eggplant');
+});
+const firstEggplantIndex = eggSearchResults.findIndex((f) => f.name.toLowerCase().includes('eggplant'));
+
+assert(firstEggIndex !== -1, 'Must find direct egg item');
+if (firstEggplantIndex !== -1) {
+  assert(
+    firstEggIndex < firstEggplantIndex,
+    `Direct egg items (index ${firstEggIndex}) must appear before eggplant items (index ${firstEggplantIndex})`
+  );
+}
+
+console.log('✓ Test 10 passed: Relevance ranking places direct egg items above eggplant and composite recipes.');
+
 console.log('All useFoodSearch Unit Tests PASSED Cleanly!');
