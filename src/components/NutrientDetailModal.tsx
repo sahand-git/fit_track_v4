@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Alert,
   Platform,
-  KeyboardAvoidingView,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useAppDialog } from './dialogs/AppDialogProvider';
 import { AppText as Text } from './AppText';
 import {
   X,
@@ -27,10 +27,15 @@ import {
   ORDERED_NUTRIENT_KEYS,
   calculateNutrientDayProgress,
   formattedNutrientValue,
+  formatDataCompleteness,
+  formatIntakeBreakdown,
 } from '../utils/nutrientTotals';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 interface NutrientDetailModalProps {
@@ -55,8 +60,12 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   onResetGoal,
 }) => {
   const language = useLanguage();
-  const isRtl = language === 'ar' || language === 'ckb';
-  const t = (key: string) => translate(language, key);
+  const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const dialog = useAppDialog();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const isRtl = useIsRTL();
+  const t = useCallback((key: string) => translate(language, key), [language]);
 
   const [activeKey, setActiveKey] = useState<SupportedNutrientKey>(() => {
     return (ORDERED_NUTRIENT_KEYS.includes(initialNutrientKey as SupportedNutrientKey)
@@ -89,8 +98,15 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
     return calculateNutrientDayProgress(activeKey, meals, supplements, profile);
   }, [activeKey, meals, supplements, profile]);
 
+  const intakeBreakdown = useMemo(() => {
+    return formatIntakeBreakdown(progress, t);
+  }, [progress, t]);
+
+  const progressColor = theme.colors[progress.colorToken] || theme.colors.primary;
+  const isNumericPercent = progress.hasTarget && !progress.isLimitNutrient && progress.hasData;
+
   const handleStartEdit = () => {
-    setGoalInput(String(progress.target));
+    setGoalInput(progress.target > 0 ? String(progress.target) : '');
     setIsEditingGoal(true);
   };
 
@@ -102,7 +118,10 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   const handleCommitGoal = async () => {
     const parsed = parseFloat(goalInput.trim());
     if (isNaN(parsed) || parsed <= 0) {
-      Alert.alert(t('Invalid Goal'), t('Please enter a valid positive number for your goal.'));
+      dialog.notify({
+        title: t('Invalid Goal'),
+        message: t('Please enter a valid positive number for your goal.'),
+      });
       return;
     }
 
@@ -115,7 +134,10 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
       setIsEditingGoal(false);
     } catch (err) {
       console.error('Failed to save nutrient goal:', err);
-      Alert.alert(t('Save Error'), t('Could not save your new goal. Please try again.'));
+      dialog.notify({
+        title: t('Save Error'),
+        message: t('Could not save your new goal. Please try again.'),
+      });
     } finally {
       setIsSavingGoal(false);
     }
@@ -139,20 +161,27 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   const pctFill = Math.min(100, progress.percent);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={[styles.backdrop, { direction: isRtl ? 'rtl' : 'ltr' }]}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           style={{ width: '100%', justifyContent: 'flex-end' }}
         >
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { paddingBottom: insets.bottom > 0 ? insets.bottom : 0 }]}>
           {/* Header */}
           <View style={[styles.header, isRtl && styles.rowRtl]}>
             <View style={{ flex: 1 }}>
               <View style={[styles.titleRow, isRtl && styles.rowRtl]}>
                 <Text style={styles.sheetTitle}>{t(progress.label)}</Text>
-                <View style={[styles.unitPill, { backgroundColor: `${progress.color}20` }]}>
-                  <Text style={[styles.unitText, { color: progress.color }]}>{progress.unit}</Text>
+                <View style={[styles.unitPill, { backgroundColor: `${progressColor}20` }]}>
+                  <Text style={[styles.unitText, { color: progressColor }]}>{progress.unit}</Text>
                 </View>
               </View>
               <Text style={styles.sheetSub}>
@@ -163,6 +192,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             <TouchableOpacity
               onPress={onClose}
               style={styles.closeBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityLabel={t('Close')}
               accessibilityRole="button"
             >
@@ -180,13 +210,14 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
               {ORDERED_NUTRIENT_KEYS.map((key) => {
                 const isActive = key === activeKey;
                 const tabMeta = calculateNutrientDayProgress(key, meals, supplements, profile);
+                const tabColor = theme.colors[tabMeta.colorToken] || theme.colors.primary;
                 return (
                   <TouchableOpacity
                     key={key}
                     style={[
                       styles.tabPill,
                       isActive && styles.tabPillActive,
-                      isActive && { borderColor: tabMeta.color },
+                      isActive && { borderColor: tabColor },
                     ]}
                     onPress={() => {
                       Haptics.selectionAsync().catch(() => {});
@@ -202,7 +233,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                       style={[
                         styles.tabText,
                         isActive && styles.tabTextActive,
-                        isActive && { color: tabMeta.color },
+                        isActive && { color: tabColor },
                       ]}
                     >
                       {t(tabMeta.label)}
@@ -218,58 +249,109 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             </ScrollView>
           </View>
 
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.content,
+              { paddingBottom: Math.max(40, insets.bottom + 28) },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Primary Progress Card */}
             <View style={styles.progressCard}>
               <View style={[styles.progressTopRow, isRtl && styles.rowRtl]}>
-                <View>
+                <View style={styles.progressLeftCol}>
                   <View style={[styles.amountRow, isRtl && styles.rowRtl]}>
-                    <Text style={styles.currentAmount}>{progress.current}</Text>
-                    <Text style={styles.targetAmount}>
-                      / {progress.target} {progress.unit}
+                    <Text style={styles.currentAmount}>
+                      {progress.hasData ? progress.current : '—'}
                     </Text>
+                    {progress.hasTarget && (
+                      <Text style={styles.targetAmount}>
+                        / {progress.target} {progress.unit}
+                      </Text>
+                    )}
                     {progress.isIncomplete && (
                       <Text style={styles.asteriskIndicator} accessibilityLabel={t('Incomplete data')}>
                         *
                       </Text>
                     )}
                   </View>
-                  <Text style={styles.currentLabel}>
-                    {t('Today’s Intake')}
-                    {progress.supplementAmount > 0
-                      ? ` (${progress.foodAmount} ${t('food')} + ${progress.supplementAmount} ${t('supplements')})`
-                      : ''}
-                  </Text>
+                  <Text style={styles.currentLabel}>{t('Today’s Intake')}</Text>
+                  {intakeBreakdown ? (
+                    <Text style={styles.breakdownSubText}>{intakeBreakdown}</Text>
+                  ) : null}
                 </View>
 
                 {/* Percentage & Status Pill */}
-                <View style={[styles.statusBadge, { backgroundColor: `${progress.color}15` }]}>
-                  <Text style={[styles.statusBadgeText, { color: progress.color }]}>
-                    {progress.percent}%
+                <View
+                  style={[
+                    styles.statusBadge,
+                    isRtl && styles.statusBadgeRtl,
+                    { backgroundColor: `${progressColor}15` },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      isNumericPercent ? styles.statusBadgeTextNumeric : styles.statusBadgeTextLong,
+                      { color: progressColor },
+                      isRtl && styles.statusBadgeTextRtl,
+                    ]}
+                  >
+                    {!progress.hasTarget
+                      ? t('No Target')
+                      : progress.isLimitNutrient
+                      ? progress.current <= progress.target
+                        ? t('Within reference limit')
+                        : t('Above reference limit')
+                      : progress.hasData
+                      ? `${progress.percent}%`
+                      : t('Not enough data')}
                   </Text>
-                  <Text style={styles.statusSubText}>
-                    {progress.percent >= 100 ? t('Target reached') : t('of daily goal')}
+                  <Text style={[styles.statusSubText, isRtl && styles.statusSubTextRtl]}>
+                    {!progress.hasTarget
+                      ? t(progress.noTargetReason || 'No daily target for under 19')
+                      : progress.isLimitNutrient
+                      ? progress.current <= progress.target
+                        ? `${Math.round((progress.target - progress.current) * 10) / 10} ${progress.unit} ${t('below limit')}`
+                        : `${Math.round((progress.current - progress.target) * 10) / 10} ${progress.unit} ${t('above limit')}`
+                      : progress.hasData
+                      ? progress.remaining > 0
+                        ? `${progress.remaining} ${progress.unit} ${t('remaining')}`
+                        : progress.percent > 100
+                        ? t('Above target')
+                        : t('Target reached')
+                      : t('Incomplete data')}
                   </Text>
                 </View>
               </View>
 
-              {/* Progress Bar Track */}
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${pctFill}%`,
-                      backgroundColor: progress.color,
-                    },
-                  ]}
-                />
+              {/* Progress Bar Track (Omitted if no target) */}
+              {progress.hasTarget && (
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${pctFill}%`,
+                        backgroundColor: progressColor,
+                      },
+                    ]}
+                  />
+                </View>
+              )}
+
+              {/* Data Completeness */}
+              <View style={[styles.completenessBanner, isRtl && styles.rowRtl]}>
+                <Info size={14} color={theme.colors.textSecondary} style={{ marginTop: 1 }} />
+                <Text style={styles.completenessBannerText}>
+                  {formatDataCompleteness(progress.foodsWithDataCount, progress.totalMealsCount, t)}
+                </Text>
               </View>
 
               {/* Incomplete Data Marker Warning (Item 3 requirement) */}
               {progress.isIncomplete && (
                 <View style={[styles.incompleteBanner, isRtl && styles.rowRtl]}>
-                  <AlertCircle size={15} color="#D97706" style={{ marginTop: 1 }} />
+                  <AlertCircle size={15} color={theme.colors.amber} style={{ marginTop: 1 }} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.incompleteTitle}>
                       * {t('Incomplete data')} ({progress.missingCount}{' '}
@@ -283,14 +365,43 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
               )}
             </View>
 
+            {/* Reference Upper Intake Limit (Item 6 requirement: neutral reference, not medical advice) */}
+            {progress.upperLimit !== undefined && (
+              <View style={styles.upperLimitCard}>
+                <View style={[styles.upperLimitHeader, isRtl && styles.rowRtl]}>
+                  <Info size={15} color={theme.colors.textSecondary} />
+                  <Text style={styles.upperLimitTitle}>
+                    {t('Reference Upper Limit')}: {progress.upperLimit} {progress.unit}
+                    {progress.upperLimitScope === 'supplements_only' ? ` (${t('Supplements only')})` : ''}
+                  </Text>
+                </View>
+                <Text style={styles.upperLimitText}>
+                  {progress.upperLimitDescription
+                    ? t(progress.upperLimitDescription)
+                    : t('Dietary reference guidance for general informational reference, not medical advice.')}
+                </Text>
+                {progress.upperLimitWarning && (
+                  <Text style={styles.upperLimitWarningText}>
+                    {t(progress.upperLimitWarning)}
+                  </Text>
+                )}
+              </View>
+            )}
+
             {/* Goal Management Card (Item 2 requirement: edit the goal stored safely) */}
             <View style={styles.goalCard}>
               <View style={[styles.goalHeaderRow, isRtl && styles.rowRtl]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.goalSectionTitle}>{t('Daily Goal')}</Text>
-                  <Text style={styles.goalSubtitle}>
+                <View style={{ flex: 1, minWidth: 140 }}>
+                  <Text style={[styles.goalSectionTitle, isRtl && styles.textRtl]}>{t('Daily Goal')}</Text>
+                  <Text style={[styles.goalSubtitle, isRtl && styles.textRtl]}>
                     {progress.isCustomTarget
                       ? t('Custom goal set by you')
+                      : progress.isMinor
+                      ? t('Adolescent (<19): Adult DRIs not shown.')
+                      : progress.isGeneralAdultTarget
+                      ? `${progress.targetType || 'DRI'} · ${t('General adult reference target')}`
+                      : progress.targetType
+                      ? `${progress.targetType} (${t('National Academies DRI')})`
                       : t('Standard recommended allowance')}
                   </Text>
                 </View>
@@ -307,6 +418,17 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                   </TouchableOpacity>
                 )}
               </View>
+
+              {progress.isGeneralAdultTarget && !progress.isCustomTarget && progress.hasTarget && (
+                <View style={[styles.generalAdultNotice, isRtl && styles.rowRtl]}>
+                  <Info size={14} color={theme.colors.primary} style={{ marginTop: 2, flexShrink: 0 }} />
+                  <Text style={[styles.generalAdultNoticeText, isRtl && styles.textRtl]}>
+                    {t(
+                      'General adult reference values are applied when gender is not specified or is other. These values may differ from sex-specific recommendations.'
+                    )}
+                  </Text>
+                </View>
+              )}
 
               {isEditingGoal ? (
                 <View style={styles.goalEditForm}>
@@ -369,7 +491,9 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
               ) : (
                 <View style={[styles.goalStaticRow, isRtl && styles.rowRtl]}>
                   <Text style={styles.goalStaticValue}>
-                    {progress.target} {progress.unit} {t('per day')}
+                    {progress.hasTarget
+                      ? `${progress.target} ${progress.unit} ${t('per day')}`
+                      : t(progress.noTargetReason || 'No daily target for under 19')}
                   </Text>
                   {progress.isCustomTarget && (
                     <TouchableOpacity
@@ -457,7 +581,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                               styles.contribFill,
                               {
                                 width: `${Math.min(100, c.percentage)}%`,
-                                backgroundColor: progress.color,
+                                backgroundColor: progressColor,
                               },
                             ]}
                           />
@@ -493,22 +617,46 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             )}
 
             {/* Dietary Sources & Science Info */}
-            {progress.foodSources && (
+            {(progress.description || progress.foodSources) && (
               <View style={styles.sourcesCard}>
-                <View style={[styles.sourcesHeader, isRtl && styles.rowRtl]}>
-                  <Sparkles size={15} color={theme.colors.primary} />
-                  <Text style={styles.sourcesTitle}>{t('Natural Dietary Sources')}</Text>
-                </View>
-                <Text style={styles.sourcesContent}>{translate(language, progress.foodSources)}</Text>
+                {progress.description && (
+                  <View style={progress.foodSources ? styles.descriptionContainer : undefined}>
+                    <Text style={[styles.descriptionText, isRtl && styles.textRtl]}>
+                      {translate(language, progress.description)}
+                    </Text>
+                  </View>
+                )}
+                {progress.foodSources && (
+                  <>
+                    <View style={[styles.sourcesHeader, isRtl && styles.rowRtl]}>
+                      <Sparkles size={15} color={theme.colors.primary} />
+                      <Text style={[styles.sourcesTitle, isRtl && styles.textRtl]}>{t('Natural Dietary Sources')}</Text>
+                    </View>
+                    <Text style={[styles.sourcesContent, isRtl && styles.textRtl]}>{translate(language, progress.foodSources)}</Text>
+                  </>
+                )}
               </View>
             )}
 
-            {/* Gender RDA Callout */}
-            <View style={[styles.genderRdaCallout, isRtl && styles.rowRtl]}>
-              <Info size={14} color={theme.colors.secondary} />
-              <Text style={styles.genderRdaText}>
-                {t('RDA targets default to the higher dietary reference intake across biological sexes to ensure nutritional adequacy unless customized.')}
+            {/* National Academies DRI & Medical Disclaimer */}
+            <View style={styles.disclaimerCard}>
+              <View style={[styles.disclaimerHeader, isRtl && styles.rowRtl]}>
+                <Info size={14} color={theme.colors.textMuted} />
+                <Text style={[styles.disclaimerTitle, isRtl && styles.textRtl]}>
+                  {t('Dietary Reference Intakes (DRIs)')}
+                </Text>
+              </View>
+              <Text style={[styles.disclaimerText, isRtl && styles.textRtl]}>
+                {progress.citation ? `${progress.citation}. ` : ''}
+                {t(progress.disclaimer || 'Formulated for healthy adults 19+. Pregnancy, lactation, and medical conditions are not handled. Upper limits are safety ceilings, not goals.')}
               </Text>
+              {progress.isGeneralAdultTarget && !progress.isCustomTarget && (
+                <Text style={[styles.disclaimerText, isRtl && styles.textRtl, { marginTop: 6 }]}>
+                  {t(
+                    'Note: General adult reference values are applied for unspecified or non-binary gender, which may use the higher recommended intake among adult sex categories.'
+                  )}
+                </Text>
+              )}
             </View>
           </ScrollView>
         </View>
@@ -518,7 +666,8 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: theme.colors.backdrop,
@@ -612,7 +761,7 @@ const styles = StyleSheet.create({
   tabIncompleteStar: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#D97706',
+    color: theme.colors.amberText,
     marginLeft: 1,
   },
   content: {
@@ -624,35 +773,44 @@ const styles = StyleSheet.create({
   progressCard: {
     backgroundColor: theme.colors.surfaceSubtle,
     borderRadius: theme.radius.lg,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    gap: 14,
+    gap: 12,
   },
   progressTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  progressLeftCol: {
+    flex: 1,
+    minWidth: 120,
   },
   amountRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 4,
+    flexWrap: 'wrap',
   },
   currentAmount: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: theme.colors.textPrimary,
+    flexShrink: 1,
   },
   targetAmount: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: theme.colors.textMuted,
+    flexShrink: 1,
   },
   asteriskIndicator: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#D97706',
+    color: theme.colors.amberText,
     marginLeft: 2,
   },
   currentLabel: {
@@ -660,21 +818,48 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     marginTop: 2,
   },
+  breakdownSubText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 3,
+    lineHeight: 16,
+  },
   statusBadge: {
+    flexShrink: 1,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: theme.radius.md,
     alignItems: 'flex-end',
+    maxWidth: '100%',
+  },
+  statusBadgeRtl: {
+    alignItems: 'flex-start',
   },
   statusBadgeText: {
-    fontSize: 18,
+    // Dynamic color applied inline
+  },
+  statusBadgeTextNumeric: {
+    fontSize: 20,
     fontWeight: '800',
   },
+  statusBadgeTextLong: {
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+  statusBadgeTextRtl: {
+    textAlign: 'left',
+  },
   statusSubText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: theme.colors.textMuted,
-    marginTop: 1,
+    marginTop: 2,
+    lineHeight: 15,
+    textAlign: 'right',
+  },
+  statusSubTextRtl: {
+    textAlign: 'left',
   },
   progressTrack: {
     height: 8,
@@ -686,25 +871,92 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: theme.radius.full,
   },
+  completenessBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    marginTop: 2,
+  },
+  completenessBannerText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    flex: 1,
+  },
   incompleteBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.amberLight,
     padding: 10,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: theme.colors.amberBorder,
   },
   incompleteTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#92400E',
+    color: theme.colors.amberDark,
   },
   incompleteText: {
-    fontSize: 11,
-    color: '#B45309',
+    fontSize: 12,
+    color: theme.colors.amberText,
     marginTop: 2,
+  },
+  upperLimitCard: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.lg,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 4,
+  },
+  upperLimitHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  upperLimitTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  upperLimitText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    lineHeight: 16,
+  },
+  upperLimitWarningText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.amberText,
+    marginTop: 2,
+  },
+  disclaimerCard: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.lg,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 4,
+    marginTop: theme.spacing.sm,
+  },
+  disclaimerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  disclaimerTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+  },
+  disclaimerText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    lineHeight: 16,
   },
   goalCard: {
     backgroundColor: theme.colors.surface,
@@ -717,7 +969,26 @@ const styles = StyleSheet.create({
   goalHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  generalAdultNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: theme.colors.surfaceSubtle,
+    padding: 10,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginTop: 8,
+  },
+  generalAdultNoticeText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 17,
+    flex: 1,
   },
   goalSectionTitle: {
     fontSize: 14,
@@ -725,7 +996,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   goalSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 1,
   },
@@ -888,15 +1159,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rankFirst: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.amberLight,
   },
   rankText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.textMuted,
   },
   rankFirstText: {
-    color: '#B45309',
+    color: theme.colors.amberText,
   },
   contributorNameRow: {
     flexDirection: 'row',
@@ -919,12 +1190,12 @@ const styles = StyleSheet.create({
     backgroundColor: `${theme.colors.primary}15`,
   },
   suppTagText: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.primary,
   },
   contributorSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 1,
   },
@@ -937,7 +1208,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   contributorPct: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   contribTrack: {
@@ -983,7 +1254,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   notAvailText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     fontStyle: 'italic',
   },
@@ -994,6 +1265,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     gap: 6,
+  },
+  descriptionContainer: {
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    marginBottom: 4,
+  },
+  descriptionText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
   },
   sourcesHeader: {
     flexDirection: 'row',
@@ -1009,22 +1291,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textSecondary,
     lineHeight: 18,
-  },
-  genderRdaCallout: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderRadius: theme.radius.md,
-    padding: 12,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  genderRdaText: {
-    flex: 1,
-    fontSize: theme.typography.caption.fontSize,
-    color: theme.colors.textSecondary,
-    lineHeight: 17,
   },
 });

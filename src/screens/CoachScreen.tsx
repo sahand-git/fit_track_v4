@@ -1,16 +1,18 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   ActivityIndicator,
-  Keyboard,
+  Dimensions,
   ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
   View,
-  KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
+import { useReanimatedKeyboardAnimation, useKeyboardHandler } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle, runOnJS } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getScopedStorageKey, saveDailyAIReport } from '../storage/storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,23 +22,40 @@ import {
   Sparkles,
   Trash2,
   AlertTriangle,
+  AlertCircle,
+  RotateCcw,
   CheckCircle2,
   TrendingUp,
   Award,
   Utensils,
   MessageSquareText,
   Lightbulb,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Globe,
 } from 'lucide-react-native';
-import { AICoachReport, DailyLog, UserProfile } from '../types';
+import { AICoachReport, DailyLog, UserProfile, AppLanguage } from '../types';
 import { AppText as Text } from '../components/AppText';
 import { translate } from '../i18n/strings';
 import { useLanguage } from '../i18n/I18nContext';
+import { useIsRTL } from '../hooks/useIsRTL';
 import { askNutritionCoach, getStoredGeminiApiKey } from '../services/plateAnalysisService';
 import { generateDailyAIReport } from '../services/aiReportService';
-import { GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
-import { formatDisplayDate } from '../utils/dateUtils';
+import {
+  GeminiError,
+  getDefaultMessageForKind,
+  formatProviderErrorDetail,
+  isAQKeyRejection,
+  getAQKeyExplanation,
+} from '../utils/geminiModels';
+import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
+import { formatKcal } from '../utils/formatKcal';
+import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
+import { createUniqueId } from '../utils/idUtils';
 import { SkeletonCoachBubble } from '../components/SkeletonLoader';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { isReducedMotion } from '../utils/motion';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 
@@ -47,49 +66,100 @@ interface CoachScreenProps {
 }
 
 interface Message {
+  id: string;
   role: 'user' | 'coach';
   text: string;
+  language?: AppLanguage;
+  failed?: boolean;
+  errorMessage?: string;
+  providerDetail?: string | null;
 }
 
 const COACH_HISTORY_KEY = '@fittrack_coach_history';
 
-export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
+export const CoachScreen = React.memo<CoachScreenProps>(function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const dialog = useAppDialog();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const isRtl = useIsRTL();
   const [currentSubView, setCurrentSubView] = useState<'audit' | 'chat'>('audit');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [isLoadingAudit, setIsLoadingAudit] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
+  const [auditErrorDetail, setAuditErrorDetail] = useState<string | null>(null);
+  const [showAuditDetail, setShowAuditDetail] = useState(false);
+  const [expandedMessageErrors, setExpandedMessageErrors] = useState<Record<string, boolean>>({});
+  const toggleMessageError = (id: string) => {
+    setExpandedMessageErrors((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
   const scrollViewRef = useRef<ScrollView>(null);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const composerRef = useRef<View>(null);
+  const isSendingRef = useRef(false);
+  const closedSpace = Math.max(110, insets.bottom + 84);
+  const { height: keyboardHeightAnim } = useReanimatedKeyboardAnimation();
+  const [debugKeyboardHeight, setDebugKeyboardHeight] = useState(0);
+  const [showDebugOverlay, setShowDebugOverlay] = useState(false);
+  const [composerLayout, setComposerLayout] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    bottom: number;
+  } | null>(null);
 
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => {
-        setIsKeyboardVisible(true);
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
-        }, 100);
-      }
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setIsKeyboardVisible(false)
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
+  const measureComposer = useCallback(() => {
+    if (composerRef.current) {
+      composerRef.current.measureInWindow((x, y, width, height) => {
+        setComposerLayout({
+          x: Math.round(x),
+          y: Math.round(y),
+          width: Math.round(width),
+          height: Math.round(height),
+          bottom: Math.round(y + height),
+        });
+      });
+    }
   }, []);
 
-  const bottomPadding = isKeyboardVisible
-    ? theme.spacing.sm
-    : Math.max(100, insets.bottom + 76);
+  const scrollToBottom = useCallback(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
+  }, []);
+
+  useKeyboardHandler({
+    onMove: (e) => {
+      'worklet';
+      runOnJS(setDebugKeyboardHeight)(Math.round(e.height));
+    },
+    onEnd: (e) => {
+      'worklet';
+      runOnJS(setDebugKeyboardHeight)(Math.round(e.height));
+      if (e.height > 0) {
+        runOnJS(scrollToBottom)();
+        runOnJS(measureComposer)();
+      }
+    },
+  });
+
+  const composerAnimatedStyle = useAnimatedStyle(() => {
+    const currentKh = Math.abs(keyboardHeightAnim.value);
+    const overlap = Math.max(0, currentKh - closedSpace + 8);
+    return {
+      transform: [{ translateY: -overlap }],
+    };
+  }, [closedSpace]);
+
+  const listSpacerAnimatedStyle = useAnimatedStyle(() => {
+    const currentKh = Math.abs(keyboardHeightAnim.value);
+    const overlap = Math.max(0, currentKh - closedSpace + 8);
+    return {
+      height: overlap,
+    };
+  }, [closedSpace]);
 
   const totals = useMemo(
     () =>
@@ -110,7 +180,12 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
     [log.workouts]
   );
 
-  const t = (value: string) => translate(language, value);
+  const effectiveCalorieTarget = useMemo(
+    () => getDailyEffectiveCalorieTarget(profile, log),
+    [profile, log]
+  );
+
+  const t = useCallback((value: string) => translate(language, value), [language]);
 
   // Restore persisted chat history on mount
   useEffect(() => {
@@ -124,7 +199,16 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
           try {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setMessages((current) => (current.length > 0 ? [...parsed, ...current] : parsed));
+              const normalized = parsed.map((m: any) => ({
+                id: m.id || createUniqueId('hist'),
+                role: m.role || 'user',
+                text: m.text || '',
+                language: m.language,
+                failed: Boolean(m.failed),
+                errorMessage: m.errorMessage,
+                providerDetail: m.providerDetail,
+              }));
+              setMessages((current) => (current.length > 0 ? [...normalized, ...current] : normalized));
             }
           } catch {
             // Graceful fallback
@@ -136,27 +220,22 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
       });
   }, []);
 
-  const confirmClearConversation = () => {
-    Alert.alert(
-      t('Clear conversation'),
-      t('Are you sure you want to clear your chat history?'),
-      [
-        { text: t('Cancel'), style: 'cancel' },
-        {
-          text: t('Clear'),
-          style: 'destructive',
-          onPress: async () => {
-            setMessages([]);
-            setError('');
-            try {
-              await AsyncStorage.removeItem(getScopedStorageKey(COACH_HISTORY_KEY));
-            } catch (err) {
-              console.warn('Failed to clear coach history:', err);
-            }
-          },
-        },
-      ]
-    );
+  const confirmClearConversation = async () => {
+    const ok = await dialog.confirm({
+      title: t('Clear conversation'),
+      message: t('Are you sure you want to clear your chat history?'),
+      confirmText: t('Clear'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (ok) {
+      setMessages([]);
+      try {
+        await AsyncStorage.removeItem(getScopedStorageKey(COACH_HISTORY_KEY));
+      } catch (err) {
+        console.warn('Failed to clear coach history:', err);
+      }
+    }
   };
 
   // Persist messages whenever chat changes
@@ -173,6 +252,8 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
   const handleRunAudit = async () => {
     setIsLoadingAudit(true);
     setAuditError(null);
+    setAuditErrorDetail(null);
+    setShowAuditDetail(false);
     try {
       const generated = await generateDailyAIReport(
         profile,
@@ -188,25 +269,53 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
         await saveDailyAIReport(log.date, generated);
       }
     } catch (err: any) {
-      setAuditError(
-        err instanceof Error ? err.message : t('Could not generate report. Please try again.')
-      );
+      const key = await getStoredGeminiApiKey().catch(() => null);
+      if (isAQKeyRejection(err, key)) {
+        setAuditError(getAQKeyExplanation(language));
+        setAuditErrorDetail(null);
+      } else {
+        const detail = formatProviderErrorDetail(err, key || undefined);
+        const baseMsg =
+          err instanceof GeminiError
+            ? t(getDefaultMessageForKind(err.kind))
+            : err instanceof Error
+            ? err.message
+            : t('Gemini is busy right now. Try again in a moment.');
+        setAuditError(baseMsg);
+        setAuditErrorDetail(detail);
+      }
     } finally {
       setIsLoadingAudit(false);
     }
   };
 
-  const send = async (text: string) => {
+  const send = async (text: string, retryMessageId?: string) => {
     const trimmed = text.trim();
-    if (!trimmed || busy) return;
-    setInput('');
-    setError('');
-    setMessages((current) => [...current, { role: 'user', text: trimmed }]);
+    if (!trimmed || busy || isSendingRef.current) return;
+    isSendingRef.current = true;
+
+    let targetId: string;
+    if (retryMessageId) {
+      targetId = retryMessageId;
+      setMessages((current) =>
+        current.map((m) =>
+          m.id === retryMessageId ? { ...m, failed: false, errorMessage: undefined } : m
+        )
+      );
+    } else {
+      targetId = createUniqueId('msg');
+      setMessages((current) => [...current, { id: targetId, role: 'user', text: trimmed, language }]);
+      setInput('');
+    }
+
     setBusy(true);
     try {
-      const languageName =
-        language === 'ar' ? 'Arabic' : language === 'ckb' ? 'Sorani Kurdish' : 'English';
-      const transcript = [...messages, { role: 'user' as const, text: trimmed }]
+      const activeMessages = retryMessageId
+        ? messages.map((m) => (m.id === retryMessageId ? { ...m, failed: false } : m))
+        : [...messages, { id: targetId, role: 'user' as const, text: trimmed, language }];
+
+      const transcript = activeMessages
+        .filter((item) => !item.failed)
         .slice(-8)
         .map((item) => `${item.role === 'user' ? 'User' : 'Coach'}: ${item.text}`)
         .join('\n');
@@ -218,51 +327,123 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
         {
           name: profile.name,
           goal: profile.goal,
-          targetCalories: profile.targetCalories,
+          targetCalories: effectiveCalorieTarget,
           ...totals,
           waterGlasses: log.waterGlasses,
           burnedCalories,
           ...(workoutSummary ? { workouts: workoutSummary } : {}),
         } as any,
-        languageName
+        language
       );
-      setMessages((current) => [...current, { role: 'coach', text: reply }]);
+      const replyId = createUniqueId('coach');
+      setMessages((current) => [...current, { id: replyId, role: 'coach', text: reply, language }]);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
+      }, 100);
     } catch (err: any) {
-      if (err instanceof GeminiError) {
-        setError(t(getDefaultMessageForKind(err.kind)));
+      const key = await getStoredGeminiApiKey().catch(() => null);
+      let friendlyMessage: string;
+      if (isAQKeyRejection(err, key)) {
+        friendlyMessage = getAQKeyExplanation(language);
+      } else if (err instanceof GeminiError) {
+        friendlyMessage = t(getDefaultMessageForKind(err.kind));
       } else {
-        setError(err instanceof Error ? err.message : t('Could not reach the AI coach. Try again.'));
+        friendlyMessage = t('Gemini is busy right now. Try again in a moment.');
       }
+      const providerDetail = formatProviderErrorDetail(err, key || undefined);
+      setMessages((current) =>
+        current.map((m) =>
+          m.id === targetId ? { ...m, failed: true, errorMessage: friendlyMessage, providerDetail } : m
+        )
+      );
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() });
+      }, 100);
     } finally {
       setBusy(false);
+      isSendingRef.current = false;
     }
   };
+
+  const getLangLabel = useCallback((l: AppLanguage) => {
+    if (l === 'ar') return t('Arabic');
+    if (l === 'ckb') return t('Sorani Kurdish');
+    return t('English');
+  }, [t]);
 
   const report = log.aiReport;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
-      style={{ flex: 1 }}
+    <View
+      style={[
+        styles.container,
+        { paddingBottom: closedSpace, direction: language === 'en' ? 'ltr' : 'rtl' },
+      ]}
     >
-      <View
-        style={[
-          styles.container,
-          { paddingBottom: bottomPadding, direction: language === 'en' ? 'ltr' : 'rtl' },
-        ]}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.icon}>
-            <Bot size={20} color={theme.colors.primary} />
-          </View>
-          <View style={styles.headerCopy}>
-            <Text style={styles.title}>{t('AI Coach')}</Text>
-            <Text style={styles.subtitle}>
-              {formatDisplayDate(log.date, language)} · {totals.calories} kcal
+      {/* Temporary Debug Overlay */}
+      {showDebugOverlay && (
+        <View style={styles.debugOverlay} pointerEvents="box-none">
+          <View style={styles.debugCard}>
+            <View style={styles.debugHeaderRow}>
+              <Text style={styles.debugTitle}>Keyboard & Layout Debug</Text>
+              <TouchableOpacity
+                onPress={() => setShowDebugOverlay(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Close debug overlay"
+              >
+                <X size={16} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.debugRow}>Keyboard Height: {debugKeyboardHeight} dp</Text>
+            <Text style={styles.debugRow}>Window Height: {Math.round(Dimensions.get('window').height)} dp</Text>
+            <Text style={styles.debugRow}>
+              Insets: Top={Math.round(insets.top)} | Bottom={Math.round(insets.bottom)}
             </Text>
+            <Text style={styles.debugRow}>Closed Space: {closedSpace} dp</Text>
+            <Text style={styles.debugRow}>
+              Active Overlap: {Math.max(0, debugKeyboardHeight - closedSpace + 8)} dp
+            </Text>
+            <Text style={styles.debugRow}>
+              Composer: y={composerLayout?.y ?? 'unmeasured'} | bottom={composerLayout?.bottom ?? 'unmeasured'} | h={composerLayout?.height ?? 'unmeasured'}
+            </Text>
+            <TouchableOpacity
+              style={styles.debugRefreshBtn}
+              onPress={measureComposer}
+              accessibilityRole="button"
+              accessibilityLabel="Re-measure composer"
+            >
+              <Text style={styles.debugRefreshBtnText}>Re-measure Composer</Text>
+            </TouchableOpacity>
           </View>
+        </View>
+      )}
+
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.icon}>
+          <Bot size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.headerCopy}>
+          <TouchableOpacity
+            onLongPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+              measureComposer();
+              setShowDebugOverlay((prev) => !prev);
+            }}
+            delayLongPress={450}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('AI Coach')} - Long press for keyboard layout debug overlay`}
+          >
+            <Text style={styles.title}>{t('AI Coach')}</Text>
+          </TouchableOpacity>
+          <Text style={styles.subtitle}>
+            {log.date === getTodayDateString()
+              ? `${formatKcal(totals.calories, t)} ${t('eaten today')}`
+              : `${formatDisplayDate(log.date, language)} · ${formatKcal(totals.calories, t)} ${t('eaten')}`}
+          </Text>
+        </View>
           {currentSubView === 'chat' && messages.length > 0 && (
             <TouchableOpacity
               style={styles.clearButton}
@@ -343,6 +524,9 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
             style={styles.auditScrollView}
             contentContainerStyle={styles.auditContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            overScrollMode="never"
+            bounces={false}
           >
             {/* Intake Overview Card */}
             <View style={styles.intakeCard}>
@@ -353,7 +537,7 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                 </Text>
               </View>
               <Text style={styles.intakeMetrics}>
-                {totals.calories} / {profile.targetCalories} kcal · {totals.protein}g {t('protein')} · {totals.carbs}g {t('carbs')} · {totals.fat}g {t('fat')} · {log.steps} {t('steps')}
+                {totals.calories} / {formatKcal(effectiveCalorieTarget, t)} · {totals.protein}g {t('protein')} · {totals.carbs}g {t('carbs')} · {totals.fat}g {t('fat')} · {log.steps} {t('steps')}
               </Text>
 
               <TouchableOpacity
@@ -383,13 +567,68 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
 
             {auditError && (
               <View style={styles.errorCard}>
-                <AlertTriangle size={16} color={theme.colors.danger} />
-                <Text style={styles.errorText}>{auditError}</Text>
+                <View style={[styles.errorCardHeader, isRtl && styles.rowRtl]}>
+                  <AlertTriangle size={16} color={theme.colors.danger} />
+                  <Text style={styles.errorText}>{auditError}</Text>
+                </View>
+                {auditErrorDetail ? (
+                  <View style={styles.detailsToggleContainer}>
+                    <TouchableOpacity
+                      style={[styles.detailsToggleButton, isRtl && styles.rowRtl]}
+                      onPress={() => setShowAuditDetail((prev) => !prev)}
+                      accessibilityRole="button"
+                      accessibilityLabel={showAuditDetail ? t('Hide details') : t('Show details')}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.detailsToggleText}>
+                        {showAuditDetail ? t('Hide details') : t('Show details')}
+                      </Text>
+                      {showAuditDetail ? (
+                        <ChevronUp size={12} color={theme.colors.danger} />
+                      ) : (
+                        <ChevronDown size={12} color={theme.colors.danger} />
+                      )}
+                    </TouchableOpacity>
+                    {showAuditDetail ? (
+                      <Text style={styles.errorDetailText}>{auditErrorDetail}</Text>
+                    ) : null}
+                  </View>
+                ) : null}
               </View>
             )}
 
-            {/* Report Content */}
-            {report ? (
+            {/* Report Content or Language Mismatch Notice */}
+            {report && (!report.language || report.language !== language) ? (
+              <View style={styles.languageMismatchCard}>
+                <View style={[styles.languageMismatchHeader, isRtl && styles.rowRtl]}>
+                  <Globe size={18} color={theme.colors.warning} />
+                  <Text style={styles.languageMismatchTitle}>
+                    {t('Review in another language')}
+                  </Text>
+                </View>
+                <Text style={styles.languageMismatchText}>
+                  {t('This review was generated in a different language. Regenerate to view it in your current language.')}
+                </Text>
+                <TouchableOpacity
+                  style={styles.regenerateLangBtn}
+                  onPress={handleRunAudit}
+                  disabled={isLoadingAudit}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('Regenerate in')} ${getLangLabel(language)}`}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  {isLoadingAudit ? (
+                    <ActivityIndicator size="small" color={theme.colors.textInverted} />
+                  ) : (
+                    <RotateCcw size={15} color={theme.colors.textInverted} />
+                  )}
+                  <Text style={styles.regenerateLangBtnText}>
+                    {`${t('Regenerate in')} ${getLangLabel(language)}`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : report ? (
               <View style={styles.reportContainer}>
                 {/* Status & Grade Banner */}
                 <View style={styles.gradeBanner}>
@@ -440,10 +679,10 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
 
                 {/* Tomorrow Action Plan */}
                 {report.actionableTomorrowFixes && report.actionableTomorrowFixes.length > 0 && (
-                  <View style={[styles.reportCard, { backgroundColor: theme.colors.secondaryLight, borderColor: theme.colors.secondaryBorder }]}>
+                  <View style={[styles.reportCard, { backgroundColor: theme.colors.greenLight }]}>
                     <View style={styles.cardHeaderRow}>
-                      <CheckCircle2 size={18} color={theme.colors.primary} />
-                      <Text style={[styles.cardSectionTitle, { color: theme.colors.primary }]}>
+                      <CheckCircle2 size={18} color={theme.colors.green} />
+                      <Text style={[styles.cardSectionTitle, { color: theme.colors.greenDark }]}>
                         {t('Action Plan for Tomorrow')}
                       </Text>
                     </View>
@@ -451,7 +690,7 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                       {report.actionableTomorrowFixes.map((fix, idx) => (
                         <View key={idx} style={styles.numberedItemRow}>
                           <Text style={styles.itemNumber}>#{idx + 1}</Text>
-                          <Text style={[styles.listItemText, { color: theme.colors.textPrimary }]}>{fix}</Text>
+                          <Text style={[styles.listItemText, { color: theme.colors.greenDeep }]}>{fix}</Text>
                         </View>
                       ))}
                     </View>
@@ -460,14 +699,14 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
 
                 {/* Custom Meal Idea */}
                 {report.customMealSuggestion && (
-                  <View style={[styles.reportCard, { backgroundColor: theme.colors.warningLight, borderColor: theme.colors.accentBorder }]}>
+                  <View style={[styles.reportCard, { backgroundColor: theme.colors.creamMuted }]}>
                     <View style={styles.cardHeaderRow}>
-                      <Utensils size={18} color={theme.colors.warning} />
-                      <Text style={[styles.cardSectionTitle, { color: theme.colors.warning }]}>
+                      <Utensils size={18} color={theme.colors.amber} />
+                      <Text style={[styles.cardSectionTitle, { color: theme.colors.amberText }]}>
                         {t('Meal idea for selected day')}
                       </Text>
                     </View>
-                    <Text style={[styles.cardBodyText, { color: theme.colors.textPrimary }]}>
+                    <Text style={[styles.cardBodyText, { color: theme.colors.amberDeep }]}>
                       {report.customMealSuggestion}
                     </Text>
                   </View>
@@ -502,12 +741,14 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
 
         {/* 2. Interactive Chat Mode */}
         {currentSubView === 'chat' && (
-          <>
+          <View style={styles.chatFlexContainer}>
             <ScrollView
               ref={scrollViewRef}
               style={styles.messages}
               contentContainerStyle={styles.messagesContent}
               keyboardShouldPersistTaps="handled"
+              overScrollMode="never"
+              bounces={false}
               onContentSizeChange={() =>
                 scrollViewRef.current?.scrollToEnd({ animated: !isReducedMotion() })
               }
@@ -521,74 +762,112 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                       'Ask about your meals, daily targets, or practical ways to build a balanced routine.'
                     )}
                   </Text>
-                  <View style={styles.starterPillsRow}>
-                    <TouchableOpacity
-                      style={styles.reviewButton}
-                      onPress={() =>
-                        send(
-                          t(
-                            'Give me a brief review of my nutrition log today, with one practical suggestion.'
-                          )
+                  <TouchableOpacity
+                    style={styles.reviewButton}
+                    onPress={() =>
+                      send(
+                        t(
+                          'Give me a brief review of my nutrition log today, with one practical suggestion.'
                         )
-                      }
-                      disabled={busy}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Get a daily review')}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Sparkles size={15} color={theme.colors.primary} />
-                      <Text style={styles.reviewText}>{t('Get a daily review')}</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.reviewButton}
-                      onPress={() => send(t("Review today's protein"))}
-                      disabled={busy}
-                      accessibilityRole="button"
-                      accessibilityLabel={t("Review today's protein")}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Sparkles size={15} color={theme.colors.primary} />
-                      <Text style={styles.reviewText}>{t("Review today's protein")}</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.reviewButton}
-                      onPress={() => send(t('Plan a recovery dinner'))}
-                      disabled={busy}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Plan a recovery dinner')}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Sparkles size={15} color={theme.colors.primary} />
-                      <Text style={styles.reviewText}>{t('Plan a recovery dinner')}</Text>
-                    </TouchableOpacity>
-                  </View>
+                      )
+                    }
+                    disabled={busy}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Get a daily review')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Sparkles size={15} color={theme.colors.primary} />
+                    <Text style={styles.reviewText}>{t('Get a daily review')}</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
-                messages.map((message, index) => (
-                  <View
-                    key={`${message.role}_${index}`}
-                    style={[
-                      styles.bubble,
-                      message.role === 'user' ? styles.userBubble : styles.coachBubble,
-                    ]}
-                  >
-                    <Text
-                      style={
-                        message.role === 'user' ? styles.userText : styles.coachText
-                      }
+                messages.map((message) => (
+                  <View key={message.id} style={styles.messageRowGroup}>
+                    <View
+                      style={[
+                        styles.bubble,
+                        message.role === 'user' ? styles.userBubble : styles.coachBubble,
+                        message.failed && styles.userBubbleFailed,
+                      ]}
                     >
-                      {message.text}
-                    </Text>
+                      <Text
+                        style={
+                          message.role === 'user' ? styles.userText : styles.coachText
+                        }
+                      >
+                        {message.text}
+                      </Text>
+                    </View>
+
+                    {message.failed && message.role === 'user' ? (
+                      <>
+                        <View style={[styles.notSentRow, isRtl && styles.rowRtl]}>
+                          <AlertCircle size={12} color={theme.colors.danger} />
+                          <Text style={styles.notSentText}>{t('Not sent')}</Text>
+                        </View>
+
+                        {message.errorMessage ? (
+                          <View style={styles.errorBubbleContainer}>
+                            <View style={styles.errorBubble}>
+                              <View style={[styles.errorBubbleHeader, isRtl && styles.rowRtl]}>
+                                <AlertTriangle size={14} color={theme.colors.danger} />
+                                <Text style={styles.errorBubbleTitle}>{t('Could not send message')}</Text>
+                              </View>
+                              <Text style={styles.errorBubbleMessage}>{message.errorMessage}</Text>
+                              {message.providerDetail ? (
+                                <View style={styles.detailsToggleContainer}>
+                                  <TouchableOpacity
+                                    style={[styles.detailsToggleButton, isRtl && styles.rowRtl]}
+                                    onPress={() => toggleMessageError(message.id)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={expandedMessageErrors[message.id] ? t('Hide details') : t('Show details')}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  >
+                                    <Text style={styles.detailsToggleText}>
+                                      {expandedMessageErrors[message.id] ? t('Hide details') : t('Show details')}
+                                    </Text>
+                                    {expandedMessageErrors[message.id] ? (
+                                      <ChevronUp size={12} color={theme.colors.danger} />
+                                    ) : (
+                                      <ChevronDown size={12} color={theme.colors.danger} />
+                                    )}
+                                  </TouchableOpacity>
+                                  {expandedMessageErrors[message.id] ? (
+                                    <Text style={styles.errorBubbleProviderDetail}>
+                                      {message.providerDetail}
+                                    </Text>
+                                  ) : null}
+                                </View>
+                              ) : null}
+                              <TouchableOpacity
+                                style={[styles.retryButton, isRtl && styles.rowRtl]}
+                                onPress={() => send(message.text, message.id)}
+                                disabled={busy}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('Retry')}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              >
+                                <RotateCcw size={13} color={theme.colors.danger} />
+                                <Text style={styles.retryButtonText}>{t('Retry')}</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        ) : null}
+                      </>
+                    ) : null}
                   </View>
                 ))
               )}
               {busy && <SkeletonCoachBubble />}
-              {error ? <Text style={styles.error}>{error}</Text> : null}
+              <Animated.View style={listSpacerAnimatedStyle} />
             </ScrollView>
 
-            <View style={styles.composer}>
+            <Animated.View
+              ref={composerRef}
+              collapsable={false}
+              onLayout={measureComposer}
+              style={[styles.composer, composerAnimatedStyle]}
+            >
               <TextInput
                 value={input}
                 onChangeText={setInput}
@@ -609,7 +888,6 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                 disabled={!input.trim() || busy}
                 accessibilityLabel={t('Send')}
                 accessibilityRole="button"
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
                 {busy ? (
                   <ActivityIndicator size="small" color={theme.colors.textInverted} />
@@ -617,19 +895,69 @@ export function CoachScreen({ profile, log, onSaveReport }: CoachScreenProps) {
                   <Send size={17} color={theme.colors.textInverted} />
                 )}
               </AnimatedPressable>
-            </View>
-          </>
+            </Animated.View>
+          </View>
         )}
       </View>
-    </KeyboardAvoidingView>
   );
-}
+});
+CoachScreen.displayName = 'CoachScreen';
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
     padding: theme.spacing.md,
+  },
+  chatFlexContainer: {
+    flex: 1,
+    minHeight: 0,
+  },
+  debugOverlay: {
+    position: 'absolute',
+    top: 60,
+    left: 12,
+    right: 12,
+    zIndex: 99999,
+    elevation: 99999,
+  },
+  debugCard: {
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.radius.md,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+  },
+  debugHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  debugTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.accent,
+  },
+  debugRow: {
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    color: theme.colors.textPrimary,
+    lineHeight: 18,
+  },
+  debugRefreshBtn: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: theme.radius.sm,
+  },
+  debugRefreshBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.surface,
   },
   header: {
     flexDirection: 'row',
@@ -712,7 +1040,7 @@ const styles = StyleSheet.create({
   },
   disclaimerText: {
     color: theme.colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     textAlign: 'center',
   },
   keyNotice: {
@@ -724,7 +1052,7 @@ const styles = StyleSheet.create({
   },
   keyNoticeText: {
     color: theme.colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     textAlign: 'center',
   },
 
@@ -778,20 +1106,87 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverted,
   },
   errorCard: {
+    backgroundColor: theme.colors.redLight,
+    borderWidth: 1,
+    borderColor: theme.colors.redBorder,
+    borderRadius: theme.radius.md,
+    padding: 10,
+    gap: 4,
+  },
+  errorCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: theme.colors.dangerLight,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    padding: 10,
+  },
+  detailsToggleContainer: {
+    marginTop: 4,
+  },
+  detailsToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    minHeight: 28,
+  },
+  detailsToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.danger,
+  },
+  errorDetailText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginTop: 2,
   },
   errorText: {
     flex: 1,
-    fontSize: theme.typography.caption.fontSize,
+    fontSize: 12,
     color: theme.colors.danger,
     fontWeight: '500',
+  },
+  languageMismatchCard: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.warning,
+    borderRadius: theme.radius.xl,
+    padding: 16,
+    gap: 12,
+    marginTop: 10,
+    ...theme.shadow.subtle,
+  },
+  languageMismatchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  languageMismatchTitle: {
+    fontFamily: theme.fonts.serif,
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  languageMismatchText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: theme.colors.textSecondary,
+  },
+  regenerateLangBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: theme.radius.full,
+    gap: 8,
+    alignSelf: 'flex-start',
+    minHeight: 40,
+  },
+  regenerateLangBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textInverted,
   },
   reportContainer: {
     gap: 12,
@@ -800,7 +1195,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.bannerBg,
     borderRadius: theme.radius.lg,
     padding: 16,
     ...theme.shadow.floating,
@@ -809,23 +1204,23 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: theme.radius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: theme.colors.overlayGlass,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: theme.colors.overlayGlassBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
   gradeLabel: {
-    fontSize: theme.typography.micro.fontSize,
+    fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: theme.colors.overlayGlassText,
   },
   gradeValue: {
     fontFamily: theme.fonts.serif,
-    fontSize: theme.typography.title1.fontSize,
+    fontSize: 24,
     fontWeight: '800',
-    color: theme.colors.textInverted,
+    color: theme.colors.white,
     marginTop: -2,
   },
   gradeDetails: {
@@ -834,18 +1229,18 @@ const styles = StyleSheet.create({
   },
   gradeHeadline: {
     fontFamily: theme.fonts.serif,
-    fontSize: theme.typography.body.fontSize,
+    fontSize: 14,
     fontWeight: '700',
-    color: theme.colors.textInverted,
+    color: theme.colors.white,
     lineHeight: 19,
   },
   gradeCaloric: {
-    fontSize: theme.typography.caption.fontSize,
-    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 12,
+    color: theme.colors.overlayGlassTextBright,
   },
   gradeTimestamp: {
-    fontSize: theme.typography.micro.fontSize,
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 12,
+    color: theme.colors.overlayGlassText,
     marginTop: 2,
   },
   reportCard: {
@@ -863,14 +1258,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardSectionTitle: {
-    fontSize: theme.typography.caption.fontSize,
+    fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     color: theme.colors.textPrimary,
   },
   cardBodyText: {
-    fontSize: theme.typography.callout.fontSize,
+    fontSize: 13,
     lineHeight: 19,
     color: theme.colors.textSecondary,
   },
@@ -881,7 +1276,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: theme.colors.surfaceSubtle,
     borderRadius: theme.radius.sm,
     padding: 8,
     borderWidth: 1,
@@ -898,16 +1293,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.sm,
     padding: 8,
     borderWidth: 1,
-    borderColor: theme.colors.secondaryBorder,
+    borderColor: theme.colors.emeraldBorder,
   },
   itemNumber: {
-    fontSize: theme.typography.caption.fontSize,
+    fontSize: 12,
     fontWeight: '800',
-    color: theme.colors.primary,
+    color: theme.colors.green,
     minWidth: 20,
   },
   listItemText: {
@@ -971,31 +1366,23 @@ const styles = StyleSheet.create({
   },
   welcomeCopy: {
     color: theme.colors.textMuted,
-    fontSize: theme.typography.callout.fontSize,
+    fontSize: 13,
     lineHeight: 19,
     textAlign: 'center',
   },
-  starterPillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'center',
-    marginTop: 8,
-  },
   reviewButton: {
-    minHeight: 44,
+    marginTop: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 7,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.primaryLight,
-    paddingHorizontal: 16,
+    paddingHorizontal: 15,
     paddingVertical: 10,
   },
   reviewText: {
     color: theme.colors.primary,
-    fontSize: theme.typography.callout.fontSize,
+    fontSize: 13,
     fontWeight: '700',
   },
   bubble: {
@@ -1016,18 +1403,89 @@ const styles = StyleSheet.create({
   },
   userText: {
     color: theme.colors.textInverted,
-    fontSize: theme.typography.body.fontSize,
+    fontSize: 14,
     lineHeight: 20,
   },
   coachText: {
     color: theme.colors.textPrimary,
-    fontSize: theme.typography.body.fontSize,
+    fontSize: 14,
     lineHeight: 20,
   },
-  error: {
+  messageRowGroup: {
+    gap: 4,
+  },
+  userBubbleFailed: {
+    borderWidth: 1.5,
+    borderColor: theme.colors.danger,
+    opacity: 0.9,
+  },
+  notSentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: 4,
+    marginTop: 2,
+    marginRight: 4,
+  },
+  notSentText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: theme.colors.danger,
-    fontSize: theme.typography.caption.fontSize,
-    paddingHorizontal: 4,
+  },
+  errorBubbleContainer: {
+    alignSelf: 'flex-end',
+    maxWidth: '92%',
+    marginTop: 2,
+  },
+  errorBubble: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.dangerWashBorder,
+    borderRadius: 14,
+    padding: 12,
+    gap: 6,
+  },
+  errorBubbleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  errorBubbleTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.danger,
+  },
+  errorBubbleMessage: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: theme.colors.textSecondary,
+  },
+  errorBubbleProviderDetail: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginTop: 2,
+    writingDirection: 'ltr',
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.dangerSoftLight,
+  },
+  retryButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.danger,
+  },
+  rowRtl: {
+    flexDirection: 'row-reverse',
   },
   composer: {
     flexDirection: 'row',
@@ -1046,14 +1504,14 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: 9,
     paddingVertical: 8,
-    fontSize: theme.typography.body.fontSize,
+    fontSize: 14,
     color: theme.colors.textPrimary,
     textAlignVertical: 'top',
   },
   sendButton: {
-    width: 48,
-    height: 48,
-    borderRadius: theme.radius.md,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.primary,

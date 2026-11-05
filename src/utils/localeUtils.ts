@@ -12,8 +12,10 @@ export function normalizeSearch(text: string): string {
     .replace(/[أإآٱ]/g, 'ا')
     .replace(/ك/g, 'ک')
     .replace(/[يى]/g, 'ی')
+    .replace(/[ة]/g, 'ه')
     .replace(/[٠-٩]/g, (c) => String(c.charCodeAt(0) - 0x0660))
     .replace(/[۰-۹]/g, (c) => String(c.charCodeAt(0) - 0x06f0))
+    .replace(/[-_()[\]{}:,./\\+]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

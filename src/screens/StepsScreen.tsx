@@ -1,12 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Activity, ArrowLeft, Footprints, HeartPulse, Minus, Plus, RefreshCw, Target } from 'lucide-react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { Activity, Footprints, HeartPulse, Minus, Plus, RefreshCw, Target } from 'lucide-react-native';
+import { DirectionalIcon } from '../components/DirectionalIcon';
 import { AppText as Text } from '../components/AppText';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
+import { formatKcal } from '../utils/formatKcal';
 import { estimateStepCalories } from '../utils/activityBudget';
 import { isHealthStepServiceAvailable, syncHealthStepsForDate } from '../services/stepTrackingService';
 
@@ -23,8 +27,10 @@ interface Props {
 }
 
 export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heightCm, onSetSteps, onAddSteps, onSetGoal, onBack }) => {
-  const insets = useSafeAreaInsets();
   const language = useLanguage();
+  const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
   const [stepInput, setStepInput] = useState(String(steps));
   const [goalInput, setGoalInput] = useState(String(goal));
@@ -90,10 +96,18 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView
+      behavior="padding"
+      style={{ flex: 1 }}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(140, insets.bottom + 90) }]}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel={t('Back')} style={styles.back}>
-          <ArrowLeft size={20} color={theme.colors.textPrimary} />
+          <DirectionalIcon name="ArrowLeft" size={20} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.eyebrow}>{formatDisplayDate(date, language)}</Text>
@@ -111,9 +125,9 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
       </View>
 
       <View style={styles.stats}>
-        <Stat icon={<FlameIcon />} label={t('Estimated active calories')} value={`${estimated.calories} kcal`} />
-        <Stat icon={<Activity size={17} color={theme.colors.secondary} />} label={t('Estimated distance')} value={`${estimated.distanceKm} km`} />
-        <Stat icon={<HeartPulse size={17} color={theme.colors.secondary} />} label={t('Estimated active minutes')} value={`${estimated.activeMinutes} min`} />
+        <Stat styles={styles} icon={<Activity size={17} color={theme.colors.warning} />} label={t('Estimated active calories')} value={formatKcal(estimated.calories, t)} />
+        <Stat styles={styles} icon={<Activity size={17} color={theme.colors.secondary} />} label={t('Estimated distance')} value={`${estimated.distanceKm} km`} />
+        <Stat styles={styles} icon={<HeartPulse size={17} color={theme.colors.secondary} />} label={t('Estimated active minutes')} value={`${estimated.activeMinutes} min`} />
       </View>
 
       <View style={styles.card}>
@@ -197,20 +211,20 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
       {isFuture && <Text style={styles.error}>{t('Future dates are read-only.')}</Text>}
       {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
-const FlameIcon = () => <Activity size={17} color={theme.colors.warning} />;
-
-const Stat: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
+const Stat: React.FC<{ icon: React.ReactNode; label: string; value: string; styles: ReturnType<typeof createStyles> }> = ({ icon, label, value, styles }) => (
   <View style={styles.statRow}><View style={styles.statLabel}>{icon}<Text style={styles.statLabelText}>{label}</Text></View><Text style={styles.statValue}>{value}</Text></View>
 );
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: 20, paddingBottom: 140, gap: 16 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  back: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surfaceSubtle, borderWidth: 1, borderColor: theme.colors.border },
+  back: { padding: 10, borderRadius: 24, backgroundColor: theme.colors.surface },
   eyebrow: { fontSize: 12, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 1 },
   title: { fontFamily: theme.fonts.serif, fontSize: 30, color: theme.colors.textPrimary },
   hero: { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 24, padding: 24, alignItems: 'center', ...theme.shadow.subtle },
@@ -228,7 +242,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 18, padding: 18, gap: 12 },
   cardTitle: { fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontWeight: '700', fontSize: 20 },
   entryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 4 },
-  roundBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  roundBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   input: { minWidth: 110, flex: 1, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, textAlign: 'center', fontSize: 17, color: theme.colors.textPrimary, backgroundColor: theme.colors.background },
   primaryButton: { backgroundColor: theme.colors.primary, borderRadius: 14, padding: 14, alignItems: 'center' },
   primaryButtonText: { color: theme.colors.textInverted, fontWeight: '700', fontSize: 15 },
@@ -240,5 +254,5 @@ const styles = StyleSheet.create({
   healthButtonText: { color: theme.colors.primary, fontWeight: '700', fontSize: 14, textAlign: 'center', flexShrink: 1 },
   disclaimer: { color: theme.colors.textMuted, fontSize: 12, lineHeight: 18, textAlign: 'center' },
   error: { color: theme.colors.danger, fontSize: 13, textAlign: 'center' },
-  success: { color: theme.colors.secondary, fontSize: 13, textAlign: 'center' },
+  success: { color: theme.colors.emeraldDark, fontSize: 13, textAlign: 'center' },
 });

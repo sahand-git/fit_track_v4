@@ -216,4 +216,141 @@ console.log('Testing micronutrients and RDA calculation...');
   assertEqual(findMatchingCatalogItem('Iron Bisglycinate Gentle')?.nutrientKey, 'iron');
 }
 
+// 9. Coverage calculation and data presence
+{
+  const meals: LoggedMeal[] = [
+    {
+      id: 'm1',
+      foodId: 'f1',
+      name: 'Meal 1',
+      mealType: 'breakfast',
+      servings: 1,
+      servingSize: '1 serving',
+      servingGrams: 100,
+      calories: 200,
+      protein: 10,
+      carbs: 20,
+      fat: 5,
+      vitaminC: 45, // 50% RDA
+      timestamp: '2026-10-15T08:00:00Z',
+    },
+    {
+      id: 'm2',
+      foodId: 'f2',
+      name: 'Meal 2',
+      mealType: 'lunch',
+      servings: 1,
+      servingSize: '1 serving',
+      servingGrams: 100,
+      calories: 200,
+      protein: 10,
+      carbs: 20,
+      fat: 5,
+      // vitaminC missing here
+      timestamp: '2026-10-15T12:00:00Z',
+    },
+  ];
+
+  const result = calculateMicronutrientIntake(meals, []);
+  assertEqual(result.nutrients.vitaminC.hasData, true);
+  assertEqual(result.nutrients.vitaminC.coverage, 0.5); // 1 out of 2 meals has data = 50%
+  assertEqual(result.nutrients.vitaminC.isIncomplete, true);
+  assertEqual(result.nutrients.vitaminC.missingCount, 1);
+
+  // Vitamin D has no data at all
+  assertEqual(result.nutrients.vitaminD.hasData, false);
+  assertEqual(result.nutrients.vitaminD.coverage, 0);
+  assertEqual(result.nutrients.vitaminD.missingCount, 2);
+}
+
+// 10. High coverage with intake < 50% meets low estimate criteria
+{
+  const meals: LoggedMeal[] = [
+    {
+      id: 'm1',
+      foodId: 'f1',
+      name: 'Meal 1',
+      mealType: 'breakfast',
+      servings: 1,
+      servingSize: '100g',
+      servingGrams: 100,
+      calories: 150,
+      protein: 5,
+      carbs: 20,
+      fat: 2,
+      vitaminC: 10,
+      timestamp: '2026-10-15T08:00:00Z',
+    },
+    {
+      id: 'm2',
+      foodId: 'f2',
+      name: 'Meal 2',
+      mealType: 'lunch',
+      servings: 1,
+      servingSize: '100g',
+      servingGrams: 100,
+      calories: 150,
+      protein: 5,
+      carbs: 20,
+      fat: 2,
+      vitaminC: 15,
+      timestamp: '2026-10-15T12:00:00Z',
+    },
+    {
+      id: 'm3',
+      foodId: 'f3',
+      name: 'Meal 3',
+      mealType: 'dinner',
+      servings: 1,
+      servingSize: '100g',
+      servingGrams: 100,
+      calories: 150,
+      protein: 5,
+      carbs: 20,
+      fat: 2,
+      vitaminC: 10,
+      timestamp: '2026-10-15T18:00:00Z',
+    },
+  ];
+
+  const result = calculateMicronutrientIntake(meals, []);
+  assertEqual(result.nutrients.vitaminC.current, 35); // 35 / 90 = 39% (<50%)
+  assertEqual(result.nutrients.vitaminC.percent, 39);
+  assertEqual(result.nutrients.vitaminC.coverage, 1); // 3 out of 3 = 100% (>=70%)
+  assert(result.nutrients.vitaminC.percent < 50, 'Percent should be below 50%');
+  assert(result.nutrients.vitaminC.coverage >= 0.7, 'Coverage should be >= 70%');
+  assertEqual(result.nutrients.vitaminC.foodsWithDataCount, 3);
+  assertEqual(result.nutrients.vitaminC.remaining, 55); // 90 - 35 = 55 mg
+}
+
+// 12. Supplement Deduplication (No Double Counting)
+{
+  const duplicateSupps: LoggedDailySupplement[] = [
+    {
+      id: 'supp_d3_dup',
+      name: 'Vitamin D3 2000 IU',
+      amount: 2000,
+      unit: 'IU',
+      category: 'vitamin',
+      time: 'morning',
+      taken: true,
+      takenAt: '2026-10-15T08:00:00Z',
+    },
+    {
+      id: 'supp_d3_dup',
+      name: 'Vitamin D3 2000 IU',
+      amount: 2000,
+      unit: 'IU',
+      category: 'vitamin',
+      time: 'morning',
+      taken: true,
+      takenAt: '2026-10-15T08:00:00Z',
+    },
+  ];
+
+  const result = calculateMicronutrientIntake([], duplicateSupps);
+  assertEqual(result.nutrients.vitaminD.current, 50); // Counted once (50 mcg), not 100 mcg
+  assertEqual(result.nutrients.vitaminD.supplementAmount, 50);
+}
+
 console.log('All micronutrients and RDA calculation tests passed successfully.');

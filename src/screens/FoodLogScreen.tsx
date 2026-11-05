@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -6,33 +6,43 @@ import {
   TouchableOpacity,
   Platform,
   BackHandler,
-  Alert,
 } from 'react-native';
+import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
-  ChevronLeft,
-  ChevronRight,
   Plus,
   Trash2,
   CalendarDays,
   Calendar as CalendarIcon,
+  Coffee,
+  Utensils,
+  Moon,
+  Apple,
 } from 'lucide-react-native';
-import { DailyLog, LoggedMeal, MealType } from '../types';
+import { DailyLog, LoggedMeal, MealType, UserProfile } from '../types';
 import { FoodDetailsModal } from '../components/FoodDetailsModal';
 import { CalendarPickerModal } from '../components/CalendarPickerModal';
 import { AddFoodSheet } from '../components/addfood/AddFoodSheet';
 import { AnimatedFoodRow } from '../components/AnimatedFoodRow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { FoodThumbnail } from '../components/FoodThumbnail';
+import { FoodSourceBadge } from '../components/FoodSourceBadge';
+import { getLocalizedFoodName } from '../utils/foodLocalization';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
+import { DirectionalIcon } from '../components/DirectionalIcon';
 import * as Haptics from 'expo-haptics';
 import { MealsSkeleton } from '../components/SkeletonLoader';
+import { formatKcal } from '../utils/formatKcal';
+import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
 
 interface FoodLogScreenProps {
+  profile?: UserProfile;
   selectedDate: string;
   onSelectDate: (date: string) => void;
   log: DailyLog;
@@ -42,10 +52,10 @@ interface FoodLogScreenProps {
   onRemoveMeal: (mealId: string) => void;
   initialMealType?: MealType;
   onCopyYesterdayMeals?: (targetDate: string) => Promise<void>;
-  onOpenAddFood?: (mealType: MealType, targetDate: string) => void;
 }
 
-export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
+export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
+  profile,
   selectedDate,
   onSelectDate,
   log,
@@ -55,11 +65,27 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
   onRemoveMeal,
   initialMealType = 'breakfast',
   onCopyYesterdayMeals,
-  onOpenAddFood,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const dialog = useAppDialog();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const t = (value: string) => translate(language, value);
+  const isRtl = useIsRTL();
+  const [userAddedMealIds, setUserAddedMealIds] = useState<Set<string>>(() => new Set());
+
+  const handleAddMeal = useCallback(
+    (meal: LoggedMeal, targetDate: string) => {
+      setUserAddedMealIds((prev) => {
+        const next = new Set(prev);
+        next.add(meal.id);
+        return next;
+      });
+      onAddMeal(meal, targetDate);
+    },
+    [onAddMeal]
+  );
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const floatingBottom = dockBottom + 66;
@@ -115,37 +141,32 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     onSelectDate(getTodayDateString());
   };
 
-  // Daily Totals
+  // Daily Totals & Targets
   const totalKcal = log.meals.reduce((sum, m) => sum + m.calories, 0);
   const totalProtein = Math.round(log.meals.reduce((sum, m) => sum + m.protein, 0) * 10) / 10;
   const totalCarbs = Math.round(log.meals.reduce((sum, m) => sum + m.carbs, 0) * 10) / 10;
   const totalFat = Math.round(log.meals.reduce((sum, m) => sum + m.fat, 0) * 10) / 10;
+  const effectiveCalorieTarget = profile ? getDailyEffectiveCalorieTarget(profile, log) : null;
 
   const openAddSheet = (mealType: MealType) => {
     if (isFuture) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (onOpenAddFood) {
-      onOpenAddFood(mealType, selectedDate);
-    } else {
-      setActiveMealType(mealType);
-      setAddSheetVisible(true);
-    }
+    setActiveMealType(mealType);
+    setAddSheetVisible(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    Alert.alert(
-      t('Delete food item'),
-      t('Are you sure you want to delete this item?'),
-      [
-        { text: t('Cancel'), style: 'cancel' },
-        {
-          text: t('Delete'),
-          style: 'destructive',
-          onPress: () => onRemoveMeal(id),
-        },
-      ]
-    );
+    const confirmed = await dialog.confirm({
+      title: t('Delete food item'),
+      message: t('Are you sure you want to delete this item?'),
+      confirmText: t('Delete'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (confirmed) {
+      onRemoveMeal(id);
+    }
   };
 
   const handleUpdateInspectingServings = (newServings: number) => {
@@ -194,6 +215,21 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     setInspectingMeal(null);
   };
 
+  const getMealIcon = (mealType: MealType) => {
+    switch (mealType) {
+      case 'breakfast':
+        return <Coffee size={14} color={theme.colors.secondary} />;
+      case 'lunch':
+        return <Utensils size={14} color={theme.colors.secondary} />;
+      case 'dinner':
+        return <Moon size={14} color={theme.colors.secondary} />;
+      case 'snack':
+        return <Apple size={14} color={theme.colors.secondary} />;
+      default:
+        return <Utensils size={14} color={theme.colors.secondary} />;
+    }
+  };
+
   const mealCategories: { key: MealType; label: string }[] = [
     { key: 'breakfast', label: t('Breakfast') },
     { key: 'lunch', label: t('Lunch') },
@@ -209,16 +245,16 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
     <View style={styles.container}>
       {/* Calm Calendar Navigation */}
       <View style={styles.dateHeader}>
-        <TouchableOpacity
+        <AnimatedPressable
           style={styles.dateNavBtn}
           onPress={handlePrevDay}
           accessibilityLabel={t('Previous day')}
           accessibilityRole="button"
         >
-          <ChevronLeft size={20} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
+          <DirectionalIcon name="ChevronLeft" size={20} color={theme.colors.textSecondary} />
+        </AnimatedPressable>
 
-        <TouchableOpacity
+        <AnimatedPressable
           style={styles.datePickButton}
           onPress={() => setCalendarVisible(true)}
           accessibilityLabel={t('Choose date')}
@@ -226,17 +262,17 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
         >
           <CalendarDays size={17} color={theme.colors.primary} />
           <Text style={styles.dateTitle}>{formatDisplayDate(selectedDate, language)}</Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
 
-        <TouchableOpacity
+        <AnimatedPressable
           style={[styles.dateNavBtn, selectedDate >= getTodayDateString() && styles.disabledButton]}
           onPress={handleNextDay}
           disabled={selectedDate >= getTodayDateString()}
           accessibilityLabel={t('Next day')}
           accessibilityRole="button"
         >
-          <ChevronRight size={20} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
+          <DirectionalIcon name="ChevronRight" size={20} color={theme.colors.textSecondary} />
+        </AnimatedPressable>
       </View>
 
       {/* Past Date Banner */}
@@ -261,7 +297,9 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       <View style={styles.summaryBar}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{totalKcal}</Text>
-          <Text style={styles.summaryLabel}>kcal</Text>
+          <Text style={styles.summaryLabel}>
+            {effectiveCalorieTarget ? `/ ${effectiveCalorieTarget} kcal` : 'kcal'}
+          </Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.summaryItem}>
@@ -290,33 +328,38 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
             <View key={cat.key} style={styles.mealSection}>
               {/* Category Header */}
               <View style={styles.mealSectionHeader}>
-                <View>
-                  <Text style={styles.categoryTitle}>{cat.label}</Text>
-                  {categoryKcal > 0 && (
-                    <Text style={styles.categoryKcal}>{categoryKcal} kcal</Text>
-                  )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                  <View style={styles.categoryIconCircle}>
+                    {getMealIcon(cat.key)}
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.categoryTitle}>{cat.label}</Text>
+                    {categoryKcal > 0 && (
+                      <Text style={styles.categoryKcal}>{formatKcal(categoryKcal, t)}</Text>
+                    )}
+                  </View>
                 </View>
 
                 {!isFuture && (
-                  <TouchableOpacity
+                  <AnimatedPressable
                     style={styles.addFoodBtn}
                     onPress={() => openAddSheet(cat.key)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     accessibilityLabel={`${t('Add food to')} ${cat.label}`}
                     accessibilityRole="button"
                   >
                     <Plus size={14} color={theme.colors.primary} />
                     <Text style={styles.addFoodBtnText}>{t('Add')}</Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 )}
               </View>
 
               {/* Items List */}
               {categoryMeals.length === 0 ? (
-                <TouchableOpacity
+                <AnimatedPressable
                   style={styles.emptyPromptBox}
                   onPress={() => openAddSheet(cat.key)}
                   disabled={isFuture}
-                  activeOpacity={0.6}
                   accessibilityRole="button"
                   accessibilityLabel={`${t('No meals logged yet.')} ${t('Add food')}`}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -324,53 +367,63 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
                   <Text style={styles.emptyPromptText}>
                     {t('No meals logged yet.')}
                   </Text>
-                </TouchableOpacity>
+                </AnimatedPressable>
               ) : (
                 <View style={styles.foodListContainer}>
-                  {categoryMeals.map((item, idx) => (
-                    <AnimatedFoodRow key={item.id} delay={idx * 30}>
-                      <TouchableOpacity
-                        style={[
-                          styles.foodRow,
-                          idx > 0 && styles.foodRowBorder,
-                        ]}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                          setInspectingMeal(item);
-                        }}
-                        activeOpacity={0.7}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${item.name}, ${item.calories} kcal`}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <FoodThumbnail name={item.name} category={item.category} imageUrl={item.imageUrl} size="small" style={{ marginEnd: 12 }} />
-                        <View style={styles.foodInfo}>
-                          <Text style={styles.foodName}>{item.name}</Text>
-                          <Text style={styles.foodPortion}>
-                            {item.servings} × {item.servingSize}
-                          </Text>
-                          <Text style={styles.foodMacros}>
-                            P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g
-                          </Text>
-                        </View>
+                  {categoryMeals.map((item, idx) => {
+                    const isFirst = idx === 0;
+                    const isLast = idx === categoryMeals.length - 1;
+                    return (
+                      <AnimatedFoodRow key={item.id} isNew={userAddedMealIds.has(item.id)} delay={0}>
+                        <AnimatedPressable
+                          style={[
+                            styles.foodRow,
+                            isRtl && styles.rowRtl,
+                            idx > 0 && styles.foodRowBorder,
+                            isFirst && styles.foodRowFirst,
+                            isLast && styles.foodRowLast,
+                          ]}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                            setInspectingMeal(item);
+                          }}
+                          minScale={0.98}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${item.name}, ${formatKcal(item.calories, t)}`}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <FoodThumbnail name={item.name} category={item.category} imageUrl={item.imageUrl} size="small" style={{ marginEnd: 12 }} />
+                          <View style={styles.foodInfo}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                              <Text style={styles.foodName}>{getLocalizedFoodName(item, language)}</Text>
+                              {item.source && <FoodSourceBadge source={item.source} sourceRef={item.sourceRef} size="small" />}
+                            </View>
+                            <Text style={styles.foodPortion}>
+                              {item.servings} × {item.servingSize}
+                            </Text>
+                            <Text style={styles.foodMacros}>
+                              P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g
+                            </Text>
+                          </View>
 
-                        <View style={styles.foodRight}>
-                          <Text style={styles.foodKcal}>{item.calories} kcal</Text>
-                          <TouchableOpacity
-                            style={styles.deleteBtn}
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              handleDelete(item.id);
-                            }}
-                            accessibilityLabel={`${t('Delete')} ${item.name}`}
-                            accessibilityRole="button"
-                          >
-                            <Trash2 size={15} color={theme.colors.danger} />
-                          </TouchableOpacity>
-                        </View>
-                      </TouchableOpacity>
-                    </AnimatedFoodRow>
-                  ))}
+                          <View style={[styles.foodRight, isRtl && styles.foodRightRtl]}>
+                            <Text style={styles.foodKcal}>{formatKcal(item.calories, t)}</Text>
+                            <TouchableOpacity
+                              style={styles.deleteBtn}
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleDelete(item.id);
+                              }}
+                              accessibilityLabel={`${t('Delete')} ${item.name}`}
+                              accessibilityRole="button"
+                            >
+                              <Trash2 size={15} color={theme.colors.danger} />
+                            </TouchableOpacity>
+                          </View>
+                        </AnimatedPressable>
+                      </AnimatedFoodRow>
+                    );
+                  })}
                 </View>
               )}
             </View>
@@ -418,7 +471,8 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
         mealType={activeMealType}
         date={selectedDate}
         onClose={() => setAddSheetVisible(false)}
-        onAddMeal={onAddMeal}
+        onAddMeal={handleAddMeal}
+        onRemoveMeal={onRemoveMeal}
         onCopyYesterdayMeals={onCopyYesterdayMeals}
       />
 
@@ -438,9 +492,10 @@ export const FoodLogScreen: React.FC<FoodLogScreenProps> = ({
       />
     </View>
   );
-};
+});
+FoodLogScreen.displayName = 'FoodLogScreen';
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -456,9 +511,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   dateNavBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -518,7 +573,7 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontFamily: theme.fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -540,8 +595,19 @@ const styles = StyleSheet.create({
   mealSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
+    alignItems: 'center',
     paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  categoryIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   categoryTitle: {
     fontFamily: theme.fonts.serif,
@@ -557,17 +623,21 @@ const styles = StyleSheet.create({
   addFoodBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
-    minHeight: 44,
-    paddingVertical: 8,
+    paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.primaryLight,
+    flexShrink: 0,
   },
   addFoodBtnText: {
+    fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.primary,
+    lineHeight: 16,
+    includeFontPadding: false,
   },
   emptyPromptBox: {
     backgroundColor: theme.colors.surface,
@@ -587,7 +657,6 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    overflow: 'hidden',
     ...theme.shadow.subtle,
   },
   foodRow: {
@@ -597,12 +666,24 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: theme.spacing.md,
   },
+  foodRowFirst: {
+    borderTopLeftRadius: theme.radius.md,
+    borderTopRightRadius: theme.radius.md,
+  },
+  foodRowLast: {
+    borderBottomLeftRadius: theme.radius.md,
+    borderBottomRightRadius: theme.radius.md,
+  },
+  rowRtl: {
+    flexDirection: 'row-reverse',
+  },
   foodRowBorder: {
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
   foodInfo: {
     flex: 1,
+    marginEnd: 8,
   },
   foodName: {
     fontSize: 14,
@@ -615,13 +696,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   foodMacros: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
   foodRight: {
     alignItems: 'flex-end',
     gap: 6,
+  },
+  foodRightRtl: {
+    alignItems: 'flex-start',
   },
   foodKcal: {
     fontSize: 14,

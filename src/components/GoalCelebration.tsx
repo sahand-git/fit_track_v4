@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -15,13 +15,14 @@ import Animated, {
   FadeOut,
   SharedValue,
 } from 'react-native-reanimated';
-import { Award, Sparkles } from 'lucide-react-native';
+import { Award, Sparkles, Target } from 'lucide-react-native';
 import { AppText as Text } from './AppText';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { isReducedMotion } from '../utils/motion';
 import { getSpringConfig } from '../utils/reanimatedMotion';
-import { theme } from '../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -34,16 +35,11 @@ interface ParticleData {
   isPill: boolean;
 }
 
-const PARTICLE_COLORS = [
-  '#1E3A2F', // Forest green
-  '#C1664C', // Terracotta
-  '#7A9283', // Muted sage
-  '#D4AF37', // Warm gold
-  '#3B6B78', // Slate cyan
-];
-
 interface GoalCelebrationProps {
   visible: boolean;
+  title?: string;
+  message?: string;
+  isNeutralStatusOnly?: boolean;
   onDismiss: () => void;
 }
 
@@ -77,7 +73,7 @@ const SingleParticle: React.FC<{
   return (
     <Animated.View
       style={[
-        styles.particle,
+        { position: 'absolute' },
         {
           width: particle.isPill ? particle.size * 2 : particle.size,
           height: particle.size,
@@ -92,18 +88,30 @@ const SingleParticle: React.FC<{
 
 export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
   visible,
+  title,
+  message,
+  isNeutralStatusOnly = false,
   onDismiss,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
   const [particles] = useState<ParticleData[]>(() => {
+    const particleColors = [
+      theme.colors.primary,   // Forest green
+      theme.colors.accent,    // Terracotta
+      theme.colors.secondary, // Muted sage
+      theme.colors.gold,      // Warm gold
+      theme.colors.water,     // Slate cyan
+    ];
     return Array.from({ length: 24 }).map((_, i) => ({
       id: i,
       // Angles spray mostly upwards (-PI to 0) with spread
       angle: -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI * 0.8),
       velocity: 140 + Math.random() * 160,
-      color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
+      color: particleColors[i % particleColors.length],
       size: 6 + Math.random() * 6,
       isPill: i % 3 === 0,
     }));
@@ -157,8 +165,8 @@ export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
       style={styles.overlay}
       pointerEvents="box-none"
     >
-      {/* Particle emitter centered above card */}
-      {!isReducedMotion() && (
+      {/* Particle emitter centered above card (never for neutral calorie status) */}
+      {!isNeutralStatusOnly && !isReducedMotion() && (
         <View style={styles.emitterPoint} pointerEvents="none">
           {particles.map((p) => (
             <SingleParticle key={p.id} particle={p} progress={progress} />
@@ -166,26 +174,30 @@ export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
         </View>
       )}
 
-      {/* Celebratory Ledger Banner */}
+      {/* Celebratory or Neutral Status Ledger Banner */}
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={onDismiss}
         style={styles.touchArea}
         accessibilityRole="button"
-        accessibilityLabel="Dismiss celebration"
+        accessibilityLabel={title || t('Daily Goal Reached!')}
       >
         <Animated.View style={[styles.card, animatedCardStyle]}>
           <View style={styles.iconCircle}>
-            <Award size={22} color={theme.colors.surface} />
+            {isNeutralStatusOnly ? (
+              <Target size={22} color={theme.colors.surface} />
+            ) : (
+              <Award size={22} color={theme.colors.surface} />
+            )}
           </View>
 
           <View style={styles.textContainer}>
             <View style={styles.titleRow}>
-              <Text style={styles.title}>{t('Daily Goal Reached!')}</Text>
-              <Sparkles size={14} color="#D4AF37" />
+              <Text style={styles.title}>{title || t('Daily Goal Reached!')}</Text>
+              {!isNeutralStatusOnly && <Sparkles size={14} color={theme.colors.gold} />}
             </View>
             <Text style={styles.message}>
-              {t('You hit your calorie target for today.')}
+              {message || t('You hit your calorie target for today.')}
             </Text>
           </View>
         </Animated.View>
@@ -194,7 +206,7 @@ export const GoalCelebration: React.FC<GoalCelebrationProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 70,

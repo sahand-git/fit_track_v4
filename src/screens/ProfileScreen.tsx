@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -8,11 +8,14 @@ import {
   Platform,
   BackHandler,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, ArrowLeft, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText } from 'lucide-react-native';
+import { Check, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText, Moon } from 'lucide-react-native';
+import { DirectionalIcon } from '../components/DirectionalIcon';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
+import { formatKcal } from '../utils/formatKcal';
 import { GeminiKeyManager } from '../components/GeminiKeyManager';
 import { ReminderSettingsModal } from '../components/ReminderSettingsModal';
 import { BackupModal } from '../components/BackupModal';
@@ -26,7 +29,8 @@ import { sendFeedback } from '../utils/feedback';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useLanguage } from '../i18n/I18nContext';
 import { languageNames, translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
 
 interface ProfileScreenProps {
@@ -52,7 +56,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 }) => {
   const currentLanguage = useLanguage();
   const insets = useSafeAreaInsets();
-  const bottomPadding = Math.max(110, insets.bottom + 76);
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const bottomPadding = Math.max(120, insets.bottom + 90);
   const t = (str: string) => translate(currentLanguage, str);
 
   const [remindersModalVisible, setRemindersModalVisible] = useState(false);
@@ -161,19 +167,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   ];
 
   return (
-    <ScrollView
-      style={[styles.container, { direction: currentLanguage === 'en' ? 'ltr' : 'rtl' }]}
-      contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+    <KeyboardAvoidingView
+      behavior="padding"
+      style={{ flex: 1 }}
     >
+      <ScrollView
+        style={[styles.container, { direction: currentLanguage === 'en' ? 'ltr' : 'rtl' }]}
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+        keyboardShouldPersistTaps="handled"
+      >
       {onBack && (
         <TouchableOpacity
           onPress={onBack}
           style={styles.backRow}
           accessibilityLabel={t('Back')}
           accessibilityRole="button"
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
-          <ArrowLeft size={18} color={theme.colors.textPrimary} />
+          <DirectionalIcon name="ArrowLeft" size={18} color={theme.colors.textPrimary} />
           <Text style={styles.backText}>{t('Back')}</Text>
         </TouchableOpacity>
       )}
@@ -239,15 +249,63 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </Text>
       </View>
 
+      {/* Theme Appearance Selector */}
+      <View style={styles.languageCard}>
+        <View style={styles.languageHeader}>
+          <Moon size={18} color={theme.colors.secondary} />
+          <Text style={styles.languageTitle}>{t('Theme')}</Text>
+        </View>
+        <View style={styles.languageOptions}>
+          {(['system', 'light', 'dark'] as const).map((mode) => {
+            const currentMode = profile.themeMode || 'system';
+            const isSelected = currentMode === mode;
+            const modeLabels: Record<string, string> = {
+              system: t('System'),
+              light: t('Light'),
+              dark: t('Dark'),
+            };
+            return (
+              <TouchableOpacity
+                key={mode}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  onSaveProfile({ ...profile, themeMode: mode });
+                }}
+                style={[
+                  styles.languageOption,
+                  isSelected && styles.languageOptionActive,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={modeLabels[mode]}
+                accessibilityState={{ selected: isSelected }}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Text
+                  style={[
+                    styles.languageOptionText,
+                    isSelected && styles.languageOptionTextActive,
+                  ]}
+                >
+                  {modeLabels[mode]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={styles.restartNote}>
+          {t('Matches device system appearance settings.')}
+        </Text>
+      </View>
+
       {/* Shared Gemini API Key Manager */}
       <GeminiKeyManager />
 
       {/* Daily Target Estimation Summary Card */}
       <View style={styles.targetPreviewCard}>
         <Text style={styles.previewTitle}>{t('Estimated Daily Target')}</Text>
-        <Text style={styles.previewKcal}>{liveTargets.targetCalories} kcal</Text>
+        <Text style={styles.previewKcal}>{formatKcal(liveTargets.targetCalories, t)}</Text>
         <Text style={styles.previewMeta}>
-          {t('BMR')}: {liveTargets.bmr} kcal • {t('TDEE')}: {liveTargets.tdee} kcal
+          {t('BMR')}: {formatKcal(liveTargets.bmr, t)} • {t('TDEE')}: {formatKcal(liveTargets.tdee, t)}
         </Text>
 
         <View style={styles.macroStrip}>
@@ -577,6 +635,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </View>
           </View>
         </TouchableOpacity>
+
+        {/* Open Food Facts Attribution */}
+        <View style={styles.attributionCard}>
+          <Globe2 size={16} color={theme.colors.secondary} />
+          <Text style={styles.attributionText}>
+            {t('Global food search & barcode data powered by Open Food Facts (openfoodfacts.org), under Open Database License (ODbL).')}
+          </Text>
+        </View>
       </View>
 
       {/* Save Button */}
@@ -630,10 +696,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         }}
       />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -645,17 +713,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   backRow: {
-    minHeight: 44,
-    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    gap: 6,
     marginBottom: 4,
   },
   backText: {
@@ -723,7 +783,7 @@ const styles = StyleSheet.create({
   },
   restartNote: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
   },
   targetPreviewCard: {
@@ -772,7 +832,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   macroLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -839,14 +899,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   optionRow: {
-    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    padding: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
@@ -912,5 +970,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textSecondary,
     lineHeight: 17,
+  },
+  attributionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: theme.colors.surfaceSubtle,
+    padding: 12,
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginTop: 8,
+  },
+  attributionText: {
+    flex: 1,
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 16,
   },
 });

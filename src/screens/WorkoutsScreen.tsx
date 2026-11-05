@@ -1,17 +1,22 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Activity, ArrowLeft, ChevronLeft, ChevronRight, Dumbbell, Plus, Search, Trash2 } from 'lucide-react-native';
+import { Activity, Dumbbell, Plus, Search, Trash2 } from 'lucide-react-native';
+import { DirectionalIcon } from '../components/DirectionalIcon';
 import Animated from 'react-native-reanimated';
 import { AppText as Text } from '../components/AppText';
 import { AddWorkoutSheet } from '../components/AddWorkoutSheet';
 import { WorkoutEntry, UserProfile, ExerciseCategory } from '../types';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
-import { getStaggeredCardEntry, getItemExitAnimation, getListLayoutTransition } from '../utils/reanimatedMotion';
+import { formatKcal } from '../utils/formatKcal';
+import { getItemEnterAnimation, getItemExitAnimation, getListLayoutTransition } from '../utils/reanimatedMotion';
 
 interface Props {
   date: string;
@@ -29,6 +34,9 @@ const categories: (ExerciseCategory | 'all')[] = ['all', 'strength', 'cardio', '
 export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSelectDate, onAddWorkout, onUpdateWorkout, onDeleteWorkout, onBack }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const dialog = useAppDialog();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
   const addButtonBottom = Math.max(104, insets.bottom + 96);
   const [query, setQuery] = useState('');
@@ -41,19 +49,44 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
   ), [workouts, category, query]);
   const totalMinutes = visibleWorkouts.reduce((total, workout) => total + workout.durationMinutes, 0);
   const totalKcal = visibleWorkouts.reduce((total, workout) => total + workout.caloriesBurned, 0);
+  const [userAddedWorkoutIds, setUserAddedWorkoutIds] = useState<Set<string>>(() => new Set());
+
+  const handleAddWorkoutInternal = (workout: WorkoutEntry, targetDate: string) => {
+    setUserAddedWorkoutIds((prev) => {
+      const next = new Set(prev);
+      next.add(workout.id);
+      return next;
+    });
+    onAddWorkout(workout, targetDate);
+  };
 
   const openEdit = (workout: WorkoutEntry) => { setEditing(workout); setSheetVisible(true); };
   const closeSheet = () => { setSheetVisible(false); setEditing(null); };
-  const askDelete = (workoutId: string) => Alert.alert(t('Delete workout'), t('Are you sure you want to delete this workout?'), [
-    { text: t('Cancel'), style: 'cancel' },
-    { text: t('Delete'), style: 'destructive', onPress: () => onDeleteWorkout(workoutId) },
-  ]);
+  const askDelete = async (workoutId: string) => {
+    const ok = await dialog.confirm({
+      title: t('Delete workout'),
+      message: t('Are you sure you want to delete this workout?'),
+      confirmText: t('Delete'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (ok) {
+      onDeleteWorkout(workoutId);
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView
+      behavior="padding"
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(210, addButtonBottom + 72) }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.back} accessibilityLabel={t('Back')} accessibilityRole="button"><ArrowLeft size={19} color={theme.colors.textPrimary} /></TouchableOpacity>
+          <TouchableOpacity onPress={onBack} style={styles.back} accessibilityLabel={t('Back')} accessibilityRole="button"><DirectionalIcon name="ArrowLeft" size={19} color={theme.colors.textPrimary} /></TouchableOpacity>
           <View style={{ flex: 1 }}><Text style={styles.eyebrow}>{t('Activity history')}</Text><Text style={styles.title}>{t('Workouts')}</Text></View>
           <Dumbbell size={24} color={theme.colors.primary} />
         </View>
@@ -65,7 +98,7 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
             accessibilityLabel={t('Previous day')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <ChevronLeft size={20} color={theme.colors.primary} />
+            <DirectionalIcon name="ChevronLeft" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
           <Text style={styles.dateText}>{formatDisplayDate(date, language)}</Text>
           <TouchableOpacity
@@ -76,15 +109,15 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
             accessibilityLabel={t('Next day')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <ChevronRight size={20} color={theme.colors.primary} />
+            <DirectionalIcon name="ChevronRight" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
         </View>
         <View style={styles.summary}>
-          <Summary label={t('Workouts')} value={String(visibleWorkouts.length)} />
+          <Summary styles={styles} label={t('Workouts')} value={String(visibleWorkouts.length)} />
           <View style={styles.divider} />
-          <Summary label={t('Duration')} value={`${totalMinutes} ${t('min')}`} />
+          <Summary styles={styles} label={t('Duration')} value={`${totalMinutes} ${t('min')}`} />
           <View style={styles.divider} />
-          <Summary label={t('Estimated burn')} value={`${totalKcal} kcal`} />
+          <Summary styles={styles} label={t('Estimated burn')} value={formatKcal(totalKcal, t)} />
         </View>
         <View style={styles.search}><Search size={17} color={theme.colors.textMuted} /><TextInput value={query} onChangeText={setQuery} placeholder={t('Search workouts')} placeholderTextColor={theme.colors.textMuted} style={styles.searchInput} accessibilityLabel={t('Search workouts')} /></View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
@@ -110,7 +143,7 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
           return (
             <Animated.View
               key={workout.id}
-              entering={getStaggeredCardEntry(index, 30)}
+              entering={userAddedWorkoutIds.has(workout.id) ? getItemEnterAnimation() : undefined}
               exiting={getItemExitAnimation()}
               layout={getListLayoutTransition()}
               style={styles.workoutCard}
@@ -152,20 +185,24 @@ export const WorkoutsScreen: React.FC<Props> = ({ date, workouts, profile, onSel
           <Text style={styles.addButtonText}>{t('Add workout')}</Text>
         </TouchableOpacity>
       )}
-      {sheetVisible && <AddWorkoutSheet visible onClose={closeSheet} date={date} profile={profile} onSaveWorkout={onAddWorkout} editingWorkout={editing} onUpdateWorkout={onUpdateWorkout} />}
+      {sheetVisible && <AddWorkoutSheet visible onClose={closeSheet} date={date} profile={profile} onSaveWorkout={handleAddWorkoutInternal} editingWorkout={editing} onUpdateWorkout={onUpdateWorkout} />}
     </View>
+    </KeyboardAvoidingView>
   );
 };
 
-const Summary: React.FC<{ label: string; value: string }> = ({ label, value }) => <View style={styles.summaryItem}><Text style={styles.summaryValue}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>;
+const Summary: React.FC<{ label: string; value: string; styles: ReturnType<typeof createStyles> }> = ({ label, value, styles }) => (
+  <View style={styles.summaryItem}><Text style={styles.summaryValue}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>
+);
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background }, content: { padding: 18, paddingBottom: 210, gap: 14 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 }, back: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
-  eyebrow: { color: theme.colors.textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }, title: { fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontSize: 29 },
-  dateCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10, backgroundColor: theme.colors.surface, borderRadius: 15, borderWidth: 1, borderColor: theme.colors.border }, dateArrow: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }, dateText: { color: theme.colors.textPrimary, fontWeight: '700', fontSize: theme.typography.bodyMedium.fontSize },
-  summary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingVertical: 16, backgroundColor: theme.colors.surface, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border }, summaryItem: { flex: 1, minWidth: 0, alignItems: 'center', gap: 4 }, summaryValue: { fontWeight: '700', color: theme.colors.primary, fontSize: 15, textAlign: 'center' }, summaryLabel: { color: theme.colors.textMuted, fontSize: 11, lineHeight: 15, textAlign: 'center' }, divider: { width: 1, height: 30, backgroundColor: theme.colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 }, back: { padding: 10, borderRadius: 24, backgroundColor: theme.colors.surface },
+  eyebrow: { color: theme.colors.textMuted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }, title: { fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontSize: 29 },
+  dateCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10, backgroundColor: theme.colors.surface, borderRadius: 15, borderWidth: 1, borderColor: theme.colors.border }, dateArrow: { padding: 8 }, dateText: { color: theme.colors.textPrimary, fontWeight: '700', fontSize: 15 },
+  summary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingVertical: 16, backgroundColor: theme.colors.surface, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border }, summaryItem: { flex: 1, minWidth: 0, alignItems: 'center', gap: 4 }, summaryValue: { fontWeight: '700', color: theme.colors.primary, fontSize: 15, textAlign: 'center' }, summaryLabel: { color: theme.colors.textMuted, fontSize: 12, lineHeight: 15, textAlign: 'center' }, divider: { width: 1, height: 30, backgroundColor: theme.colors.border },
   search: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 12, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 13, backgroundColor: theme.colors.surface }, searchInput: { flex: 1, minWidth: 0, paddingVertical: 12, color: theme.colors.textPrimary, fontSize: 14 }, filters: { gap: 8 }, filter: { flexShrink: 0, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20, backgroundColor: theme.colors.surface }, filterActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }, filterText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: '600' }, filterTextActive: { color: theme.colors.textInverted },
-  workoutCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: theme.colors.surface, padding: 12, borderRadius: 15, borderWidth: 1, borderColor: theme.colors.border }, workoutMain: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 2 }, workoutIcon: { width: 40, height: 40, flexShrink: 0, borderRadius: 20, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' }, workoutInfo: { flex: 1, minWidth: 0, gap: 6 }, workoutName: { fontWeight: '700', color: theme.colors.textPrimary, fontSize: 15, lineHeight: 21 }, workoutMetaList: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 }, workoutMeta: { color: theme.colors.textSecondary, fontSize: 11, lineHeight: 15, backgroundColor: theme.colors.surfaceSubtle, borderRadius: theme.radius.full, paddingHorizontal: 8, paddingVertical: 4, overflow: 'hidden' }, delete: { minWidth: 40, minHeight: 40, alignItems: 'center', justifyContent: 'center', padding: 8 },
+  workoutCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: theme.colors.surface, padding: 12, borderRadius: 15, borderWidth: 1, borderColor: theme.colors.border }, workoutMain: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 2 }, workoutIcon: { width: 40, height: 40, flexShrink: 0, borderRadius: 20, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' }, workoutInfo: { flex: 1, minWidth: 0, gap: 6 }, workoutName: { fontWeight: '700', color: theme.colors.textPrimary, fontSize: 15, lineHeight: 21 }, workoutMetaList: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 }, workoutMeta: { color: theme.colors.textSecondary, fontSize: 12, lineHeight: 15, backgroundColor: theme.colors.surfaceSubtle, borderRadius: theme.radius.full, paddingHorizontal: 8, paddingVertical: 4, overflow: 'hidden' }, delete: { minWidth: 40, minHeight: 40, alignItems: 'center', justifyContent: 'center', padding: 8 },
   empty: { alignItems: 'center', padding: 28, borderRadius: 17, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, gap: 8 }, emptyTitle: { fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontSize: 20, fontWeight: '700', textAlign: 'center' }, emptyText: { color: theme.colors.textMuted, fontSize: 13, textAlign: 'center' }, addButton: { position: 'absolute', alignSelf: 'center', paddingHorizontal: 22, paddingVertical: 14, borderRadius: 24, backgroundColor: theme.colors.primary, flexDirection: 'row', alignItems: 'center', gap: 8, ...theme.shadow.floating }, addButtonText: { color: theme.colors.textInverted, fontWeight: '700', fontSize: 15 },
 });

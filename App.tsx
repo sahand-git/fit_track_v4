@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
   TouchableOpacity,
   Platform,
-  Alert,
   BackHandler,
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { AppDialogProvider, appDialog } from './src/components/dialogs/AppDialogProvider';
 import { AppText as Text } from './src/components/AppText';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -35,13 +36,13 @@ import {
   addWorkoutToDay,
   removeWorkoutFromDay,
   updateWorkoutInDay,
-  loadWeightHistory,
   loadAccurateStreak,
   setDailySteps,
   addDailySteps,
   loadMedicalDisclaimerAccepted,
   saveMedicalDisclaimerAccepted,
   saveDailyAIReport,
+  setAccountStorageNamespace,
 } from './src/storage/storage';
 import {
   initNotificationService,
@@ -54,6 +55,7 @@ import {
 import { getDefaultProfile } from './src/utils/calculator';
 import { OnboardingModal } from './src/components/OnboardingModal';
 import { getTodayDateString } from './src/utils/dateUtils';
+import { WEB_APP_MAX_WIDTH } from './src/utils/dashboardLayout';
 import { TodaySkeleton } from './src/components/SkeletonLoader';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { FoodLogScreen } from './src/screens/FoodLogScreen';
@@ -62,35 +64,415 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { SupplementsScreen } from './src/screens/SupplementsScreen';
 import { CoachScreen } from './src/screens/CoachScreen';
 import { AddFoodSheet } from './src/components/addfood/AddFoodSheet';
-import { AddFoodScreen } from './src/screens/AddFoodScreen';
 import { MedicalDisclaimerModal } from './src/components/MedicalDisclaimerModal';
 import { ScientificReferencesModal } from './src/components/ScientificReferencesModal';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { ScreenTransitionView } from './src/components/ScreenTransitionView';
 import { persistRoutineThenCommit } from './src/utils/supplementRoutine';
-import { I18nProvider } from './src/i18n/I18nContext';
+import { I18nProvider, useLanguage } from './src/i18n/I18nContext';
 import { translate } from './src/i18n/strings';
-import { theme } from './src/theme';
+import { ThemeType } from './src/theme';
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import * as Haptics from 'expo-haptics';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { getSpringConfig } from './src/utils/reanimatedMotion';
+import { isReducedMotion } from './src/utils/motion';
 
 import { StepsScreen } from './src/screens/StepsScreen';
 import { WorkoutsScreen } from './src/screens/WorkoutsScreen';
 import { AccountScreen } from './src/screens/AccountScreen';
 import { AuthIdentity, watchAuthState } from './src/services/authService';
-import { setAccountStorageNamespace } from './src/storage/storage';
+
+const getScreenTopOffset = (insetsTop: number, platform: string = Platform.OS) =>
+  Math.max(insetsTop, platform === 'android' ? 24 : 0);
 
 type Tab = 'today' | 'meals' | 'coach' | 'progress';
-type TemporaryScreen = 'none' | 'profile' | 'supplements' | 'steps' | 'workouts' | 'account' | 'add-food';
+type TemporaryScreen = 'none' | 'profile' | 'supplements' | 'steps' | 'workouts' | 'account';
 
 export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <FitTrackApp />
+        <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
+          <FitTrackApp />
+        </KeyboardProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
   );
 }
+
+const ThemedStatusBar: React.FC = () => {
+  const { isDark } = useTheme();
+  return <StatusBar style={isDark ? 'light' : 'dark'} />;
+};
+
+const ThemedAppLayout: React.FC<{
+  children: React.ReactNode;
+  direction?: 'ltr' | 'rtl';
+  paddingTop?: number;
+}> = ({ children, direction = 'ltr', paddingTop = 0 }) => {
+  const { theme: activeTheme, isDark } = useTheme();
+
+  if (Platform.OS === 'web') {
+    return (
+      <View
+        style={[
+          styles.webOuter,
+          {
+            backgroundColor: isDark ? activeTheme.colors.background : activeTheme.colors.surfaceSubtle,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.container,
+            styles.webColumn,
+            {
+              direction,
+              paddingTop,
+              backgroundColor: activeTheme.colors.background,
+              borderColor: activeTheme.colors.border,
+              shadowColor: activeTheme.colors.shadow,
+            },
+          ]}
+        >
+          {children}
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.container,
+        {
+          direction,
+          paddingTop,
+          backgroundColor: activeTheme.colors.background,
+        },
+      ]}
+    >
+      {children}
+    </View>
+  );
+};
+
+interface ThemedBottomNavProps {
+  activeTab: Tab;
+  tempScreen: TemporaryScreen;
+  isHighlightToday: boolean;
+  onSwitchTab: (tab: Tab) => void;
+  insetsBottom: number;
+}
+
+interface AnimatedBottomNavItemProps {
+  label: string;
+  isActive: boolean;
+  activeTheme: ThemeType;
+  onPress: () => void;
+  accessibilityLabel: string;
+  icon: (color: string) => React.ReactNode;
+}
+
+const AnimatedBottomNavItem: React.FC<AnimatedBottomNavItemProps> = ({
+  label,
+  isActive,
+  activeTheme,
+  onPress,
+  accessibilityLabel,
+  icon,
+}) => {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    if (!isReducedMotion()) {
+      // eslint-disable-next-line react-hooks/immutability
+      scale.value = withSpring(0.92, getSpringConfig('tactile'));
+    }
+  };
+
+  const handlePressOut = () => {
+    if (!isReducedMotion()) {
+      // eslint-disable-next-line react-hooks/immutability
+      scale.value = withSpring(1, getSpringConfig('pop'));
+    }
+  };
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    onPress();
+  };
+
+  const color = isActive ? activeTheme.colors.primary : activeTheme.colors.textMuted;
+
+  return (
+    <TouchableOpacity
+      style={navItemStyles.navBtn}
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={0.85}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+    >
+      <Animated.View
+        style={[
+          navItemStyles.navPill,
+          isActive && {
+            backgroundColor: activeTheme.colors.primaryLight,
+            borderColor: activeTheme.colors.primaryBorder,
+            borderWidth: StyleSheet.hairlineWidth,
+          },
+          animatedStyle,
+        ]}
+      >
+        {icon(color)}
+        <Text
+          style={[
+            navItemStyles.navLabel,
+            {
+              fontFamily: activeTheme.fonts.sans,
+              color,
+              fontWeight: isActive ? '600' : '500',
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
+
+const navItemStyles = StyleSheet.create({
+  navBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+  },
+  navPill: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 22,
+    minWidth: 58,
+  },
+  navLabel: {
+    fontSize: 11,
+    marginTop: 3,
+    textAlign: 'center',
+  },
+});
+
+const ThemedBottomNav: React.FC<ThemedBottomNavProps> = ({
+  activeTab,
+  tempScreen,
+  isHighlightToday,
+  onSwitchTab,
+  insetsBottom,
+}) => {
+  const { theme: activeTheme } = useTheme();
+  const styles = useMemo(() => createNavStyles(activeTheme), [activeTheme]);
+  const language = useLanguage();
+  const t = useCallback((str: string) => translate(language, str), [language]);
+
+  const dockBottom = insetsBottom > 0 ? insetsBottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
+
+  return (
+    <>
+      {/* Solid background covering the area below the tab bar and system navigation bar */}
+      <View
+        pointerEvents="none"
+        style={[
+          styles.bottomSolidBar,
+          {
+            height: dockBottom + 4,
+            backgroundColor: activeTheme.colors.background,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.dockContainer,
+          {
+            bottom: dockBottom,
+          },
+        ]}
+      >
+        <View style={styles.bottomNav}>
+          <AnimatedBottomNavItem
+            label={t('Today')}
+            isActive={isHighlightToday}
+            activeTheme={activeTheme}
+            onPress={() => onSwitchTab('today')}
+            accessibilityLabel={t('Today')}
+            icon={(color) => <LayoutDashboard size={20} color={color} />}
+          />
+          <AnimatedBottomNavItem
+            label={t('Diary')}
+            isActive={tempScreen === 'none' && activeTab === 'meals'}
+            activeTheme={activeTheme}
+            onPress={() => onSwitchTab('meals')}
+            accessibilityLabel={t('Diary')}
+            icon={(color) => <UtensilsCrossed size={20} color={color} />}
+          />
+          <AnimatedBottomNavItem
+            label={t('Coach')}
+            isActive={tempScreen === 'none' && activeTab === 'coach'}
+            activeTheme={activeTheme}
+            onPress={() => onSwitchTab('coach')}
+            accessibilityLabel={t('Coach')}
+            icon={(color) => <Bot size={20} color={color} />}
+          />
+          <AnimatedBottomNavItem
+            label={t('Progress')}
+            isActive={tempScreen === 'none' && activeTab === 'progress'}
+            activeTheme={activeTheme}
+            onPress={() => onSwitchTab('progress')}
+            accessibilityLabel={t('Progress')}
+            icon={(color) => <TrendingUp size={20} color={color} />}
+          />
+        </View>
+      </View>
+    </>
+  );
+};
+
+const createNavStyles = (activeTheme: ThemeType) =>
+  StyleSheet.create({
+    bottomSolidBar: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    dockContainer: {
+      position: 'absolute',
+      left: 14,
+      right: 14,
+      maxWidth: 500,
+      alignSelf: 'center',
+    },
+    bottomNav: {
+      flexDirection: 'row',
+      backgroundColor: activeTheme.colors.surface,
+      borderRadius: 28,
+      borderWidth: 1,
+      borderColor: activeTheme.colors.border,
+      paddingVertical: 6,
+      paddingHorizontal: 8,
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      ...activeTheme.shadow.floating,
+      shadowOpacity: 0.1,
+      shadowRadius: 16,
+      elevation: 6,
+    },
+  });
+
+const InitErrorScreen: React.FC<{ onRetry: () => void; language: AppLanguage }> = ({ onRetry, language }) => {
+  const { theme: activeTheme } = useTheme();
+  const styles = useMemo(() => createInitErrorStyles(activeTheme), [activeTheme]);
+  const t = (str: string) => translate(language, str);
+
+  return (
+    <View style={styles.initErrorContainer}>
+      <View style={styles.initErrorCard}>
+        <View style={styles.initErrorIconCircle}>
+          <AlertTriangle size={36} color={activeTheme.colors.danger} />
+        </View>
+        <Text style={styles.initErrorTitle}>{t('Failed to start FitTrack')}</Text>
+        <Text style={styles.initErrorMessage}>
+          {t('Unable to load app data. Please try again.')}
+        </Text>
+        <TouchableOpacity
+          style={styles.initRetryButton}
+          onPress={onRetry}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={t('Retry')}
+        >
+          <RefreshCw size={18} color={activeTheme.colors.white} style={{ marginRight: 8 }} />
+          <Text style={styles.initRetryButtonText}>{t('Retry')}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const createInitErrorStyles = (activeTheme: ThemeType) =>
+  StyleSheet.create({
+    initErrorContainer: {
+      flex: 1,
+      backgroundColor: activeTheme.colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    initErrorCard: {
+      backgroundColor: activeTheme.colors.surface,
+      borderRadius: activeTheme.radius.lg,
+      borderWidth: 1,
+      borderColor: activeTheme.colors.border,
+      padding: 28,
+      alignItems: 'center',
+      width: '100%',
+      maxWidth: 380,
+      ...activeTheme.shadow.floating,
+    },
+    initErrorIconCircle: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: activeTheme.colors.dangerLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    initErrorTitle: {
+      fontFamily: activeTheme.fonts.serif,
+      fontSize: 22,
+      fontWeight: '700',
+      color: activeTheme.colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    initErrorMessage: {
+      fontFamily: activeTheme.fonts.sans,
+      fontSize: 15,
+      color: activeTheme.colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: 24,
+    },
+    initRetryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: activeTheme.colors.primary,
+      borderRadius: activeTheme.radius.md,
+      paddingVertical: 13,
+      paddingHorizontal: 28,
+      minWidth: 140,
+    },
+    initRetryButtonText: {
+      fontFamily: activeTheme.fonts.sans,
+      fontSize: 15,
+      fontWeight: '600',
+      color: activeTheme.colors.white,
+    },
+  });
 
 function FitTrackApp() {
   const insets = useSafeAreaInsets();
@@ -135,16 +517,16 @@ function FitTrackApp() {
   });
 
   const language = appLanguage;
-  const t = (str: string) => translate(language, str);
+  const t = useCallback((str: string) => translate(language, str), [language]);
 
-  const refreshStreak = async () => {
+  const refreshStreak = useCallback(async () => {
     try {
       const res = await loadAccurateStreak();
       setStreak(res.currentStreak);
     } catch (e) {
       console.warn('Error calculating streak:', e);
     }
-  };
+  }, []);
 
   useEffect(() => watchAuthState((user) => {
     setAccountStorageNamespace(user?.uid || null);
@@ -168,9 +550,6 @@ function FitTrackApp() {
         setProfile(p);
         const appLang = p.language || 'en';
         setAppLanguage(appLang);
-        const l = await loadDailyLog(selectedDate);
-        if (isCancelled) return;
-        setLog(l);
         const initialRoutine = await loadSupplementRoutine();
         if (isCancelled) return;
         setSupplementRoutine(initialRoutine);
@@ -211,7 +590,7 @@ function FitTrackApp() {
     }
     init();
     return () => { isCancelled = true; };
-  }, [authReady, authUser?.uid, initRetryCount]);
+  }, [authReady, authUser?.uid, initRetryCount, refreshStreak]);
 
   // Reload log whenever date changes with cancellation to prevent race conditions
   useEffect(() => {
@@ -228,7 +607,7 @@ function FitTrackApp() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedDate, authReady, authUser?.uid]);
+  }, [selectedDate, authReady, authUser?.uid, refreshStreak]);
 
   // Handle Android hardware back button
   useEffect(() => {
@@ -253,8 +632,8 @@ function FitTrackApp() {
   }, [addSheetConfig.visible, tempScreen, activeTab]);
 
   // Handlers
-  const handleUpdateWater = async (delta: number) => {
-    const targetDate = selectedDate;
+  const handleUpdateWater = useCallback(async (delta: number) => {
+    const targetDate = selectedDateRef.current;
     if (targetDate > getTodayDateString()) return;
     try {
       const updated = await updateWater(targetDate, delta);
@@ -263,11 +642,11 @@ function FitTrackApp() {
       }
     } catch (err) {
       console.error('Failed to update water:', err);
-      Alert.alert(t('Error'), t('Could not update water intake.'));
+      appDialog.notify({ title: t('Error'), message: t('Could not update water intake.') });
     }
-  };
+  }, [t]);
 
-  const handleAddMeal = async (meal: LoggedMeal, targetDate: string) => {
+  const handleAddMeal = useCallback(async (meal: LoggedMeal, targetDate: string) => {
     if (targetDate > getTodayDateString()) return;
     try {
       const updated = await addMealToDay(targetDate, meal);
@@ -277,12 +656,12 @@ function FitTrackApp() {
       await refreshStreak();
     } catch (err) {
       console.error('Failed to add meal:', err);
-      Alert.alert(t('Error'), t('Failed to save meal.'));
+      appDialog.notify({ title: t('Error'), message: t('Failed to save meal.') });
     }
-  };
+  }, [refreshStreak, t]);
 
-  const handleUpdateMeal = async (meal: LoggedMeal) => {
-    const targetDate = selectedDate;
+  const handleUpdateMeal = useCallback(async (meal: LoggedMeal) => {
+    const targetDate = selectedDateRef.current;
     try {
       const updated = await updateMealInDay(targetDate, meal);
       if (selectedDateRef.current === targetDate) {
@@ -290,12 +669,12 @@ function FitTrackApp() {
       }
     } catch (err) {
       console.error('Failed to update meal:', err);
-      Alert.alert(t('Error'), t('Failed to update meal.'));
+      appDialog.notify({ title: t('Error'), message: t('Failed to update meal.') });
     }
-  };
+  }, [t]);
 
-  const handleRemoveMeal = async (mealId: string) => {
-    const targetDate = selectedDate;
+  const handleRemoveMeal = useCallback(async (mealId: string) => {
+    const targetDate = selectedDateRef.current;
     try {
       const updated = await removeMealFromDay(targetDate, mealId);
       if (selectedDateRef.current === targetDate) {
@@ -304,11 +683,11 @@ function FitTrackApp() {
       await refreshStreak();
     } catch (err) {
       console.error('Failed to remove meal:', err);
-      Alert.alert(t('Error'), t('Failed to remove meal.'));
+      appDialog.notify({ title: t('Error'), message: t('Failed to remove meal.') });
     }
-  };
+  }, [refreshStreak, t]);
 
-  const handleCopyYesterdayMeals = async (targetDate: string) => {
+  const handleCopyYesterdayMeals = useCallback(async (targetDate: string) => {
     try {
       const updated = await loadDailyLog(targetDate);
       if (selectedDateRef.current === targetDate) {
@@ -318,7 +697,7 @@ function FitTrackApp() {
     } catch (err) {
       console.error('Failed to reload after copying meals:', err);
     }
-  };
+  }, [refreshStreak]);
 
   const handleSaveProfile = async (newProfile: UserProfile) => {
     try {
@@ -335,7 +714,7 @@ function FitTrackApp() {
       setSelectedDate(getTodayDateString());
     } catch (err) {
       console.error('Error saving user profile:', err);
-      Alert.alert(t('Save Error'), t('Could not save your profile changes. Please try again.'));
+      appDialog.notify({ title: t('Save Error'), message: t('Could not save your profile changes. Please try again.') });
     }
   };
 
@@ -349,7 +728,7 @@ function FitTrackApp() {
       await reconcileNotificationLanguage(nextLanguage, supplementRoutine);
     } catch (err) {
       console.error('Error changing language:', err);
-      Alert.alert(t('Save Error'), t('Could not save language preference. Please try again.'));
+      appDialog.notify({ title: t('Save Error'), message: t('Could not save language preference. Please try again.') });
     }
   };
 
@@ -372,27 +751,16 @@ function FitTrackApp() {
     }
   };
 
-  const handleUpdateSupplement = async (item: SupplementRoutineItem) => {
-    const updated = supplementRoutine.map((existing) => existing.id === item.id ? item : existing);
-    await persistRoutineThenCommit(updated, saveSupplementRoutine, setSupplementRoutine);
-    try {
-      const remSettings = await loadReminderSettings();
-      await scheduleSupplementReminders(remSettings, updated, language);
-    } catch (e) {
-      console.warn('Error syncing reminders after supplement update:', e);
-    }
-  };
-
-  const handleToggleSupplement = async (id: string, taken: boolean) => {
-    const targetDate = selectedDate;
+  const handleToggleSupplement = useCallback(async (id: string, taken: boolean) => {
+    const targetDate = selectedDateRef.current;
     if (targetDate > getTodayDateString()) return;
     const updated = await setSupplementTaken(targetDate, id, taken);
     if (selectedDateRef.current === targetDate) {
       setLog(updated);
     }
-  };
+  }, []);
 
-  const handleAddWorkout = async (workout: WorkoutEntry, targetDate: string) => {
+  const handleAddWorkout = useCallback(async (workout: WorkoutEntry, targetDate: string) => {
     if (targetDate > getTodayDateString()) return;
     try {
       const updated = await addWorkoutToDay(targetDate, workout);
@@ -402,12 +770,12 @@ function FitTrackApp() {
       await refreshStreak();
     } catch (err) {
       console.error('Failed to add workout:', err);
-      Alert.alert(t('Error'), t('Failed to save workout.'));
+      appDialog.notify({ title: t('Error'), message: t('Failed to save workout.') });
     }
-  };
+  }, [refreshStreak, t]);
 
-  const handleDeleteWorkout = async (workoutId: string) => {
-    const targetDate = selectedDate;
+  const handleDeleteWorkout = useCallback(async (workoutId: string) => {
+    const targetDate = selectedDateRef.current;
     try {
       const updated = await removeWorkoutFromDay(targetDate, workoutId);
       if (selectedDateRef.current === targetDate) {
@@ -416,20 +784,20 @@ function FitTrackApp() {
       await refreshStreak();
     } catch (err) {
       console.error('Failed to delete workout:', err);
-      Alert.alert(t('Error'), t('Failed to delete workout.'));
+      appDialog.notify({ title: t('Error'), message: t('Failed to delete workout.') });
     }
-  };
+  }, [refreshStreak, t]);
 
-  const handleUpdateWorkout = async (workout: WorkoutEntry, targetDate: string) => {
+  const handleUpdateWorkout = useCallback(async (workout: WorkoutEntry, targetDate: string) => {
     if (targetDate > getTodayDateString()) return;
     const updated = await updateWorkoutInDay(targetDate, workout);
     if (selectedDateRef.current === targetDate) setLog(updated);
-  };
+  }, []);
 
-  const handleSaveAIReport = async (report: AICoachReport, targetDate: string) => {
+  const handleSaveAIReport = useCallback(async (report: AICoachReport, targetDate: string) => {
     const updated = await saveDailyAIReport(targetDate, report);
     if (selectedDateRef.current === targetDate) setLog(updated);
-  };
+  }, []);
 
   const handleSaveSteps = async (total: number) => {
     const targetDate = selectedDateRef.current;
@@ -467,63 +835,64 @@ function FitTrackApp() {
     }
   };
 
-  const handleNavigateToMeals = (targetMeal?: MealType) => {
+  const handleNavigateToMeals = useCallback((targetMeal?: MealType) => {
     if (targetMeal) setInitialMealForAdd(targetMeal);
     setTempScreen('none');
     setActiveTab('meals');
-  };
+  }, []);
 
-  const handleSwitchTab = (tab: Tab) => {
+  const handleSwitchTab = useCallback((tab: Tab) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setTempScreen('none');
     if (tab === 'today') {
       setSelectedDate(getTodayDateString());
     }
     setActiveTab(tab);
-  };
+  }, []);
 
-  const handleOpenAddFoodToday = (
+  const handleSelectDate = useCallback((newDate: string) => {
+    setSelectedDate(newDate);
+  }, []);
+
+  const handleOpenAddFoodToday = useCallback((
     mealType?: MealType,
     initialTab?: 'search' | 'photo' | 'describe',
     initialScanBarcode?: boolean
   ) => {
     setAddSheetConfig({
       visible: true,
-      targetDate: selectedDateRef.current || getTodayDateString(),
+      targetDate: getTodayDateString(),
       mealType,
       initialTab,
       initialScanBarcode,
     });
-    setTempScreen('add-food');
-  };
+  }, []);
+
+  const handleOpenSupplements = useCallback(() => setTempScreen('supplements'), []);
+  const handleOpenProfile = useCallback(() => setTempScreen('profile'), []);
+  const handleOpenSteps = useCallback(() => setTempScreen('steps'), []);
+  const handleOpenWorkouts = useCallback(() => setTempScreen('workouts'), []);
+  const handleOpenLogWeight = useCallback(() => handleSwitchTab('progress'), [handleSwitchTab]);
+  const handleUpdateProfile = useCallback(async (p: UserProfile) => {
+    await saveUserProfile(p);
+    setProfile(p);
+  }, []);
+  const handleBackToNone = useCallback(() => setTempScreen('none'), []);
+  const handleBackToProfile = useCallback(() => setTempScreen('profile'), []);
+  const handleCloseAddSheet = useCallback(() => setAddSheetConfig((prev) => ({ ...prev, visible: false })), []);
 
   if (initError) {
     return (
       <I18nProvider language={language}>
-        <View style={styles.initErrorContainer}>
-          <View style={styles.initErrorCard}>
-            <View style={styles.initErrorIconCircle}>
-              <AlertTriangle size={36} color={theme.colors.danger} />
-            </View>
-            <Text style={styles.initErrorTitle}>{t('Failed to start FitTrack')}</Text>
-            <Text style={styles.initErrorMessage}>
-              {t('Unable to load app data. Please try again.')}
-            </Text>
-            <TouchableOpacity
-              style={styles.initRetryButton}
-              onPress={() => {
-                setInitError(null);
-                setInitRetryCount((c) => c + 1);
-              }}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel={t('Retry')}
-            >
-              <RefreshCw size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={styles.initRetryButtonText}>{t('Retry')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <ThemeProvider themeMode={profile?.themeMode}>
+          <InitErrorScreen
+            language={language}
+            onRetry={() => {
+              setInitError(null);
+              setInitRetryCount((c) => c + 1);
+            }}
+          />
+        </ThemeProvider>
       </I18nProvider>
     );
   }
@@ -531,18 +900,20 @@ function FitTrackApp() {
   if (!initialLoaded) {
     return (
       <I18nProvider language={language}>
-        <View
-          style={[
-            styles.container,
-            {
-              direction: language === 'en' ? 'ltr' : 'rtl',
-              paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0),
-            },
-          ]}
-        >
-          <StatusBar style="dark" />
-          <TodaySkeleton />
-        </View>
+        <ThemeProvider themeMode={profile.themeMode}>
+          <View
+            style={[
+              styles.container,
+              {
+                direction: language === 'en' ? 'ltr' : 'rtl',
+                paddingTop: getScreenTopOffset(insets.top, Platform.OS),
+              },
+            ]}
+          >
+            <ThemedStatusBar />
+            <TodaySkeleton />
+          </View>
+        </ThemeProvider>
       </I18nProvider>
     );
   }
@@ -550,26 +921,34 @@ function FitTrackApp() {
   if (!profile.hasAcceptedMedicalDisclaimer && tempScreen !== 'account') {
     return (
       <I18nProvider language={language}>
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-          <MedicalDisclaimerModal
-            visible={true}
-            onAccept={async () => {
-              try {
-                await saveMedicalDisclaimerAccepted(true);
-              } catch (e) {
-                console.error('Failed to save medical disclaimer acceptance:', e);
-              }
-              setProfile((prev) => ({ ...prev, hasAcceptedMedicalDisclaimer: true }));
-            }}
-            isFirstRun={true}
-            onOpenReferences={() => setReferencesModalVisible(true)}
-          />
-          <ScientificReferencesModal
-            visible={referencesModalVisible}
-            onClose={() => setReferencesModalVisible(false)}
-            onOpenDisclaimer={() => setReferencesModalVisible(false)}
-          />
-        </View>
+        <ThemeProvider themeMode={profile.themeMode}>
+          <AppDialogProvider>
+            <ThemedAppLayout
+              direction={language === 'en' ? 'ltr' : 'rtl'}
+              paddingTop={getScreenTopOffset(insets.top, Platform.OS)}
+            >
+              <ThemedStatusBar />
+              <MedicalDisclaimerModal
+                visible={true}
+                onAccept={async () => {
+                  try {
+                    await saveMedicalDisclaimerAccepted(true);
+                  } catch (e) {
+                    console.error('Failed to save medical disclaimer acceptance:', e);
+                  }
+                  setProfile((prev) => ({ ...prev, hasAcceptedMedicalDisclaimer: true }));
+                }}
+                isFirstRun={true}
+                onOpenReferences={() => setReferencesModalVisible(true)}
+              />
+              <ScientificReferencesModal
+                visible={referencesModalVisible}
+                onClose={() => setReferencesModalVisible(false)}
+                onOpenDisclaimer={() => setReferencesModalVisible(false)}
+              />
+            </ThemedAppLayout>
+          </AppDialogProvider>
+        </ThemeProvider>
       </I18nProvider>
     );
   }
@@ -577,7 +956,17 @@ function FitTrackApp() {
   if (!profile.isOnboarded && tempScreen !== 'account') {
     return (
       <I18nProvider language={language}>
-        <OnboardingModal onComplete={handleSaveProfile} onLanguageChange={setAppLanguage} />
+        <ThemeProvider themeMode={profile.themeMode}>
+          <AppDialogProvider>
+            <ThemedAppLayout
+              direction={language === 'en' ? 'ltr' : 'rtl'}
+              paddingTop={getScreenTopOffset(insets.top, Platform.OS)}
+            >
+              <ThemedStatusBar />
+              <OnboardingModal onComplete={handleSaveProfile} onLanguageChange={setAppLanguage} />
+            </ThemedAppLayout>
+          </AppDialogProvider>
+        </ThemeProvider>
       </I18nProvider>
     );
   }
@@ -587,16 +976,13 @@ function FitTrackApp() {
 
   return (
     <I18nProvider language={language}>
-      <View
-        style={[
-          styles.container,
-          {
-            direction: language === 'en' ? 'ltr' : 'rtl',
-            paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0),
-          },
-        ]}
-      >
-        <StatusBar style="dark" />
+      <ThemeProvider themeMode={profile.themeMode}>
+        <AppDialogProvider>
+          <ThemedAppLayout
+            direction={language === 'en' ? 'ltr' : 'rtl'}
+            paddingTop={getScreenTopOffset(insets.top, Platform.OS)}
+          >
+            <ThemedStatusBar />
 
         {/* Main Screen Body */}
         <ScreenTransitionView
@@ -653,34 +1039,19 @@ function FitTrackApp() {
               date={selectedDate}
               workouts={log.workouts || []}
               profile={profile}
-              onSelectDate={setSelectedDate}
+              onSelectDate={handleSelectDate}
               onAddWorkout={handleAddWorkout}
               onUpdateWorkout={handleUpdateWorkout}
               onDeleteWorkout={handleDeleteWorkout}
-              onBack={() => setTempScreen('none')}
+              onBack={handleBackToNone}
             />
           )}
 
           {tempScreen === 'account' && (
             <AccountScreen
               user={authUser}
-              onBack={() => setTempScreen('profile')}
+              onBack={handleBackToProfile}
               onRestoreComplete={handleRestoreComplete}
-            />
-          )}
-
-          {tempScreen === 'add-food' && (
-            <AddFoodScreen
-              date={addSheetConfig.targetDate}
-              mealType={addSheetConfig.mealType}
-              initialTab={addSheetConfig.initialTab}
-              initialScanBarcode={addSheetConfig.initialScanBarcode}
-              onClose={() => {
-                setTempScreen('none');
-                setAddSheetConfig((prev) => ({ ...prev, visible: false }));
-              }}
-              onAddMeal={handleAddMeal}
-              onCopyYesterdayMeals={handleCopyYesterdayMeals}
             />
           )}
 
@@ -696,26 +1067,25 @@ function FitTrackApp() {
               onUpdateWater={handleUpdateWater}
               onNavigateToMeals={handleNavigateToMeals}
               onOpenAddFood={handleOpenAddFoodToday}
-              onOpenSupplements={() => setTempScreen('supplements')}
-              onOpenProfile={() => setTempScreen('profile')}
-              onOpenSteps={() => setTempScreen('steps')}
-              onOpenWorkouts={() => setTempScreen('workouts')}
+              onOpenSupplements={handleOpenSupplements}
+              onOpenProfile={handleOpenProfile}
+              onOpenSteps={handleOpenSteps}
+              onOpenWorkouts={handleOpenWorkouts}
               onAddWorkout={handleAddWorkout}
               onDeleteWorkout={handleDeleteWorkout}
               onUpdateWorkout={handleUpdateWorkout}
-              onOpenLogWeight={() => handleSwitchTab('progress')}
-              onUpdateProfile={async (p: UserProfile) => {
-                await saveUserProfile(p);
-                setProfile(p);
-              }}
+              onOpenLogWeight={handleOpenLogWeight}
+              onUpdateProfile={handleUpdateProfile}
+              isAddFoodSheetOpen={addSheetConfig.visible}
             />
           )}
 
           {/* Tab 2: Meals */}
           {tempScreen === 'none' && activeTab === 'meals' && (
             <FoodLogScreen
+              profile={profile}
               selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
+              onSelectDate={handleSelectDate}
               log={log}
               isLoading={!initialLoaded}
               onAddMeal={handleAddMeal}
@@ -723,7 +1093,6 @@ function FitTrackApp() {
               onRemoveMeal={handleRemoveMeal}
               initialMealType={initialMealForAdd}
               onCopyYesterdayMeals={handleCopyYesterdayMeals}
-              onOpenAddFood={(mealType) => handleOpenAddFoodToday(mealType)}
             />
           )}
 
@@ -749,217 +1118,55 @@ function FitTrackApp() {
           date={addSheetConfig.targetDate}
           initialTab={addSheetConfig.initialTab}
           initialScanBarcode={addSheetConfig.initialScanBarcode}
-          onClose={() => setAddSheetConfig((prev) => ({ ...prev, visible: false }))}
+          onClose={handleCloseAddSheet}
           onAddMeal={handleAddMeal}
+          onRemoveMeal={handleRemoveMeal}
           onCopyYesterdayMeals={handleCopyYesterdayMeals}
         />
 
         {/* Bottom Navigation Dock: Exactly 4 Tabs */}
-        {tempScreen === 'none' && (
-        <View
-          style={[
-            styles.dockContainer,
-            {
-              bottom: insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10),
-            },
-          ]}
-        >
-          <View style={styles.bottomNav}>
-            {/* 1. Today */}
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() => handleSwitchTab('today')}
-              activeOpacity={0.7}
-              accessibilityLabel={t('Today')}
-              accessibilityRole="button"
-            >
-              <LayoutDashboard
-                size={20}
-                color={isHighlightToday ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.navLabel,
-                  isHighlightToday && styles.navLabelActive,
-                ]}
-              >
-                {t('Today')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* 2. Meals */}
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() => handleSwitchTab('meals')}
-              activeOpacity={0.7}
-              accessibilityLabel={t('Meals')}
-              accessibilityRole="button"
-            >
-              <UtensilsCrossed
-                size={20}
-                color={tempScreen === 'none' && activeTab === 'meals' ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.navLabel,
-                  tempScreen === 'none' && activeTab === 'meals' && styles.navLabelActive,
-                ]}
-              >
-                {t('Meals')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* 3. Coach */}
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() => handleSwitchTab('coach')}
-              activeOpacity={0.7}
-              accessibilityLabel={t('Coach')}
-              accessibilityRole="button"
-            >
-              <Bot
-                size={20}
-                color={tempScreen === 'none' && activeTab === 'coach' ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.navLabel,
-                  tempScreen === 'none' && activeTab === 'coach' && styles.navLabelActive,
-                ]}
-              >
-                {t('Coach')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* 4. Progress */}
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() => handleSwitchTab('progress')}
-              activeOpacity={0.7}
-              accessibilityLabel={t('Progress')}
-              accessibilityRole="button"
-            >
-              <TrendingUp
-                size={20}
-                color={tempScreen === 'none' && activeTab === 'progress' ? theme.colors.primary : theme.colors.textMuted}
-              />
-              <Text
-                style={[
-                  styles.navLabel,
-                  tempScreen === 'none' && activeTab === 'progress' && styles.navLabelActive,
-                ]}
-              >
-                {t('Progress')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-        )}
-      </View>
+        <ThemedBottomNav
+          activeTab={activeTab}
+          tempScreen={tempScreen}
+          isHighlightToday={isHighlightToday}
+          onSwitchTab={handleSwitchTab}
+          insetsBottom={insets.bottom}
+        />
+      </ThemedAppLayout>
+      </AppDialogProvider>
+      </ThemeProvider>
     </I18nProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  webOuter: {
+    flex: 1,
+    width: '100%',
+    minHeight: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webColumn: {
+    width: '100%',
+    maxWidth: WEB_APP_MAX_WIDTH,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    marginHorizontal: 'auto',
+    ...Platform.select({
+      web: {
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      default: {},
+    }),
+  },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    position: 'relative',
   },
   main: {
     flex: 1,
-  },
-  dockContainer: {
-    position: 'absolute',
-    left: 14,
-    right: 14,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.xl,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    ...theme.shadow.floating,
-  },
-  navBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-  },
-  navLabel: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 11,
-    fontWeight: '500',
-    color: theme.colors.textMuted,
-    marginTop: 3,
-  },
-  navLabelActive: {
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
-  initErrorContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  initErrorCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 28,
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: 380,
-    ...theme.shadow.floating,
-  },
-  initErrorIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: theme.colors.dangerLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  initErrorTitle: {
-    fontFamily: theme.fonts.serif,
-    fontSize: 22,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  initErrorMessage: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 15,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  initRetryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    paddingVertical: 13,
-    paddingHorizontal: 28,
-    minWidth: 140,
-  },
-  initRetryButtonText: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
 });

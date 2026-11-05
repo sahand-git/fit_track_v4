@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -21,7 +21,9 @@ import {
 } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 
 interface MedicalDisclaimerModalProps {
@@ -40,8 +42,10 @@ export const MedicalDisclaimerModal: React.FC<MedicalDisclaimerModalProps> = ({
   onOpenReferences,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
-  const isRTL = language === 'ar' || language === 'ckb';
+  const isRTL = useIsRTL();
 
   useEffect(() => {
     if (Platform.OS !== 'android' || !visible) return;
@@ -67,6 +71,8 @@ export const MedicalDisclaimerModal: React.FC<MedicalDisclaimerModalProps> = ({
       onRequestClose={() => {
         if (!isFirstRun && onClose) onClose();
       }}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.overlay}>
         <TouchableOpacity
@@ -198,7 +204,7 @@ export const MedicalDisclaimerModal: React.FC<MedicalDisclaimerModalProps> = ({
               accessibilityRole="button"
               accessibilityLabel={t('I Understand & Agree')}
             >
-              <Check size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Check size={18} color={theme.colors.white} style={{ marginRight: 6 }} />
               <Text style={styles.primaryBtnText}>
                 {isFirstRun ? t('I Understand & Agree') : t('I Understand')}
               </Text>
@@ -210,10 +216,11 @@ export const MedicalDisclaimerModal: React.FC<MedicalDisclaimerModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: theme.colors.backdrop,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
@@ -266,7 +273,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -368,6 +375,6 @@ const styles = StyleSheet.create({
   primaryBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.colors.white,
   },
 });

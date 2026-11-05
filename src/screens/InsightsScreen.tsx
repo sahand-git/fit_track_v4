@@ -16,9 +16,12 @@ import {
 import { UserProfile, DailyLog } from '../types';
 import { loadLogsForDates } from '../storage/storage';
 import { getPastDates, parseLocalDateString, formatDisplayDate } from '../utils/dateUtils';
+import { formatKcal } from '../utils/formatKcal';
+import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
 
 interface InsightsScreenProps {
@@ -28,6 +31,8 @@ interface InsightsScreenProps {
 export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const bottomPadding = Math.max(110, insets.bottom + 76);
   const t = useCallback((key: string) => translate(language, key), [language]);
 
@@ -61,42 +66,64 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
     };
   }, [language, t]);
 
-  const calorieTarget = profile?.targetCalories || 2000;
-  const proteinTarget = profile?.targetProtein || 140;
+  const proteinTarget = profile?.customNutrientGoals?.protein ?? profile?.targetProtein ?? 140;
+  const MIN_LOGGED_CALORIES = 500;
 
   const {
     activeDays,
+    completeDays,
     dailyAvgCalories,
     dailyAvgProtein,
     maxWeeklyCalories,
+    avgDailyCalorieTarget,
   } = useMemo(() => {
     const active = daysLogs.filter((d) => d.log.meals.length > 0);
-    const totalCal = daysLogs.reduce((sum, d) => {
+    const complete = daysLogs.filter(
+      (d) => d.log.meals.reduce((s, m) => s + m.calories, 0) >= MIN_LOGGED_CALORIES
+    );
+
+    // Compute averages only over days with complete tracking (>= 500 kcal), falling back to all active if none reach threshold
+    const sampleDays = complete.length > 0 ? complete : active;
+    const sampleCal = sampleDays.reduce((sum, d) => {
       return sum + d.log.meals.reduce((mSum, m) => mSum + m.calories, 0);
     }, 0);
-    const totalProt = daysLogs.reduce((sum, d) => {
+    const sampleProt = sampleDays.reduce((sum, d) => {
       return sum + d.log.meals.reduce((mSum, m) => mSum + m.protein, 0);
     }, 0);
-    const avgCal = active.length > 0 ? Math.round(totalCal / active.length) : 0;
-    const avgProt = active.length > 0 ? Math.round((totalProt / active.length) * 10) / 10 : 0;
+    const avgCal = sampleDays.length > 0 ? Math.round(sampleCal / sampleDays.length) : 0;
+    const avgProt = sampleDays.length > 0 ? Math.round((sampleProt / sampleDays.length) * 10) / 10 : 0;
+
+    const allTargets = daysLogs.map((d) => getDailyEffectiveCalorieTarget(profile, d.log));
+    const sampleTargets = sampleDays.map((d) => getDailyEffectiveCalorieTarget(profile, d.log));
+    const avgCalTarget = sampleTargets.length > 0
+      ? Math.round(sampleTargets.reduce((s, t) => s + t, 0) / sampleTargets.length)
+      : Math.round(allTargets.reduce((s, t) => s + t, 0) / (allTargets.length || 1));
+
     const maxCal = Math.max(
-      calorieTarget * 1.2,
-      ...daysLogs.map((d) => d.log.meals.reduce((s, m) => s + m.calories, 0))
+      ...allTargets.map((t) => t * 1.2),
+      ...daysLogs.map((d) => d.log.meals.reduce((s, m) => s + m.calories, 0)),
+      1000
     );
 
     return {
       activeDays: active,
-      totalCaloriesLogged: totalCal,
-      totalProteinLogged: totalProt,
+      completeDays: complete,
       dailyAvgCalories: avgCal,
       dailyAvgProtein: avgProt,
       maxWeeklyCalories: maxCal,
+      avgDailyCalorieTarget: avgCalTarget,
     };
-  }, [daysLogs, calorieTarget]);
+  }, [daysLogs, profile]);
 
   const selectedEntry = selectedDayIdx !== null && daysLogs[selectedDayIdx]
     ? daysLogs[selectedDayIdx]
     : null;
+
+  const selectedDayTarget = useMemo(() => {
+    return selectedEntry
+      ? getDailyEffectiveCalorieTarget(profile, selectedEntry.log)
+      : avgDailyCalorieTarget;
+  }, [selectedEntry, profile, avgDailyCalorieTarget]);
 
   const selectedCalories = useMemo(() => {
     return selectedEntry
@@ -111,7 +138,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
     >
       {/* Header */}
       <View style={styles.headerRow}>
-        <View>
+        <View style={styles.headerTextGroup}>
           <Text style={styles.headerSubtitle}>{t('Weekly Review')}</Text>
           <Text style={styles.headerTitle}>{t('Nutrition Insights')}</Text>
         </View>
@@ -133,7 +160,13 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
             <Text style={styles.statUnit}>kcal</Text>
           </View>
           <Text style={styles.statSub}>
-            {activeDays.length > 0 ? `${activeDays.length} ${t('of')} 7 ${t('days logged')}` : t('No data yet')}
+            {activeDays.length > 0
+              ? `${activeDays.length} ${t('of')} 7 ${t('days logged')}${
+                  completeDays.length < activeDays.length && completeDays.length > 0
+                    ? ` (${t('avg of')} ${completeDays.length} ${t('full days')})`
+                    : ''
+                }`
+              : t('No data yet')}
           </Text>
         </View>
 
@@ -154,10 +187,20 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
       <View style={styles.chartCard}>
         <View style={styles.chartHeader}>
           <Text style={styles.chartTitle}>{t('7-Day Intake Trend')}</Text>
-          <Text style={styles.targetLabel}>{calorieTarget} {t('kcal target')}</Text>
+          <Text style={styles.targetLabel}>{selectedDayTarget} {t('kcal target')}</Text>
         </View>
 
         <View style={styles.barChartContainer}>
+          {maxWeeklyCalories > 0 && selectedDayTarget > 0 && (
+            <View
+              style={[
+                styles.chartTargetLine,
+                {
+                  bottom: Math.min(78, Math.max(6, Math.round((selectedDayTarget / maxWeeklyCalories) * 80))),
+                },
+              ]}
+            />
+          )}
           <View style={styles.barsRow}>
             {daysLogs.map((item, idx) => {
               const dayKcal = item.log.meals.reduce((s, m) => s + m.calories, 0);
@@ -166,6 +209,8 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                 : 6;
               const isSelected = selectedDayIdx === idx;
               const hasData = dayKcal > 0;
+              const isLowDay = dayKcal > 0 && dayKcal < MIN_LOGGED_CALORIES;
+              const itemTarget = getDailyEffectiveCalorieTarget(profile, item.log);
 
               return (
                 <TouchableOpacity
@@ -177,7 +222,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                   }}
                   activeOpacity={0.8}
                   accessibilityRole="button"
-                  accessibilityLabel={`${item.dayLabel}: ${dayKcal} kcal`}
+                  accessibilityLabel={`${item.dayLabel}: ${formatKcal(dayKcal, t)}${isLowDay ? ` (${t('Partial day')})` : ''}`}
                   accessibilityState={{ selected: isSelected }}
                 >
                   <View style={styles.barTrack}>
@@ -188,9 +233,12 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                           height: `${heightPct}%`,
                           backgroundColor: !hasData
                             ? theme.colors.surfaceSubtle
-                            : dayKcal <= calorieTarget
+                            : isLowDay
+                            ? theme.colors.borderStrong
+                            : dayKcal <= itemTarget
                             ? theme.colors.primary
                             : theme.colors.accent,
+                          opacity: isLowDay ? 0.65 : 1,
                         },
                         isSelected && styles.barFillSelected,
                       ]}
@@ -199,6 +247,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
                   <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
                     {item.dayLabel}
                   </Text>
+                  {isLowDay && <View style={styles.lowDayMarker} />}
                 </TouchableOpacity>
               );
             })}
@@ -208,14 +257,17 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
         {selectedEntry && (
           <View style={styles.detailBanner}>
             <Text style={styles.detailDayText}>
-              {formatDisplayDate(selectedEntry.date, language)}: {selectedCalories} kcal
+              {formatDisplayDate(selectedEntry.date, language)}: {formatKcal(selectedCalories, t)}
+              {selectedCalories > 0 && selectedCalories < MIN_LOGGED_CALORIES
+                ? ` · ${t('Partial day (<500 kcal)')}`
+                : ''}
             </Text>
             <Text style={styles.detailStatusText}>
               {selectedCalories === 0
                 ? t('No entries')
-                : selectedCalories <= calorieTarget
-                ? `${calorieTarget - selectedCalories} ${t('kcal under budget')}`
-                : `${selectedCalories - calorieTarget} ${t('kcal over budget')}`}
+                : selectedCalories <= selectedDayTarget
+                ? `${selectedDayTarget - selectedCalories} ${t('kcal under budget')}`
+                : `${selectedCalories - selectedDayTarget} ${t('kcal over budget')}`}
             </Text>
           </View>
         )}
@@ -246,7 +298,8 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ profile }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -260,13 +313,20 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  headerTextGroup: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
   headerSubtitle: {
     fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '500',
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
@@ -288,6 +348,8 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    flexShrink: 0,
+    alignSelf: 'flex-start',
   },
   rangeBadgeText: {
     fontFamily: theme.fonts.sans,
@@ -339,7 +401,7 @@ const styles = StyleSheet.create({
   },
   statSub: {
     fontFamily: theme.fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 4,
   },
@@ -364,13 +426,23 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   targetLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   barChartContainer: {
     height: 120,
     justifyContent: 'flex-end',
     marginBottom: 10,
+    position: 'relative',
+  },
+  chartTargetLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    borderBottomWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: theme.colors.border,
+    zIndex: 1,
   },
   barsRow: {
     flexDirection: 'row',
@@ -401,13 +473,20 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.textPrimary,
   },
   dayLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 6,
   },
   dayLabelSelected: {
     color: theme.colors.textPrimary,
     fontWeight: '600',
+  },
+  lowDayMarker: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.textMuted,
+    marginTop: 2,
   },
   detailBanner: {
     flexDirection: 'row',
@@ -425,7 +504,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   detailStatusText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textSecondary,
   },
   insightsSection: {

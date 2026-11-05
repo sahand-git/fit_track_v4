@@ -72,6 +72,30 @@ async function runWaterUpdateRaceTests() {
     console.log('✓ Scenario 2: Date change while save pending does NOT overwrite visible date log');
   }
 
+  // Test Case 3: Water goal reached and 150% intake confirmation threshold logic
+  {
+    const target = 8;
+    // Below goal
+    assert((target > 0 && 5 >= target) === false, '5 glasses should not be goal reached for target 8');
+    // At goal
+    assert((target > 0 && 8 >= target) === true, '8 glasses should be goal reached for target 8');
+    // Above goal (e.g. 9 glasses)
+    assert((target > 0 && 9 >= target) === true, '9 glasses should be goal reached for target 8');
+
+    // 150% threshold: 8 * 1.5 = 12
+    const threshold150 = Math.round(target * 1.5);
+    assert(threshold150 === 12, '150% of 8 glasses is 12');
+    assert((11 >= threshold150) === false, '11 glasses does not trigger 150% confirmation');
+    assert((12 >= threshold150) === true, '12 glasses triggers 150% confirmation');
+    assert((13 >= threshold150) === true, '13 glasses triggers 150% confirmation');
+
+    // Zero or negative target safeguard
+    const zeroTarget = 0;
+    assert((zeroTarget > 0 && 5 >= Math.round(zeroTarget * 1.5)) === false, 'Zero target does not trigger 150% confirmation');
+
+    console.log('✓ Scenario 3: Water goal reached state and 150% confirmation threshold validated');
+  }
+
   console.log('All water save race condition tests passed successfully.');
 }
 

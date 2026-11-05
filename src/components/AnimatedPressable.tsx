@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  Animated,
   TouchableOpacityProps,
   TouchableOpacity,
   GestureResponderEvent,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { isReducedMotion } from '../utils/motion';
+import { getSpringConfig } from '../utils/reanimatedMotion';
 
-interface AnimatedPressableProps extends TouchableOpacityProps {
+export interface AnimatedPressableProps extends TouchableOpacityProps {
   minScale?: number;
 }
 
@@ -16,31 +21,29 @@ export const AnimatedPressable: React.FC<AnimatedPressableProps> = ({
   style,
   onPressIn,
   onPressOut,
-  minScale = 0.975,
+  minScale = 0.96,
   ...rest
 }) => {
-  const [scale] = useState(() => new Animated.Value(1));
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
 
   const handlePressIn = (e: GestureResponderEvent) => {
     if (!isReducedMotion()) {
-      Animated.spring(scale, {
-        toValue: minScale,
-        useNativeDriver: true,
-        speed: 40,
-        bounciness: 0,
-      }).start();
+      // eslint-disable-next-line react-hooks/immutability
+      scale.value = withSpring(minScale, getSpringConfig('tactile'));
     }
     onPressIn?.(e);
   };
 
   const handlePressOut = (e: GestureResponderEvent) => {
     if (!isReducedMotion()) {
-      Animated.spring(scale, {
-        toValue: 1,
-        useNativeDriver: true,
-        speed: 40,
-        bounciness: 0,
-      }).start();
+      // eslint-disable-next-line react-hooks/immutability
+      scale.value = withSpring(1, getSpringConfig('pop'));
     }
     onPressOut?.(e);
   };
@@ -51,11 +54,11 @@ export const AnimatedPressable: React.FC<AnimatedPressableProps> = ({
       accessibilityLabel={rest.accessibilityLabel}
       hitSlop={rest.hitSlop ?? { top: 8, bottom: 8, left: 8, right: 8 }}
       {...rest}
-      activeOpacity={rest.activeOpacity ?? 0.85}
+      activeOpacity={rest.activeOpacity ?? 0.88}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
     >
-      <Animated.View style={[{ transform: [{ scale }] }, style]}>
+      <Animated.View style={[animatedStyle, style]}>
         {children}
       </Animated.View>
     </TouchableOpacity>

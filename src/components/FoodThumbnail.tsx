@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { getFoodEmoji } from '../utils/foodCategories';
 
 export interface FoodThumbnailProps {
@@ -21,6 +22,23 @@ export interface FoodThumbnailProps {
  * Attribution note: Visual emoji mappings align with standard Unicode / Twemoji
  * categorization (Twemoji graphics by Twitter/X, CC-BY 4.0).
  */
+const styleCache = new Map<ThemeType, ReturnType<typeof createStyles>>();
+
+function getThumbnailStyles(theme: ThemeType): ReturnType<typeof createStyles> {
+  let cached = styleCache.get(theme);
+  if (!cached) {
+    cached = createStyles(theme);
+    styleCache.set(theme, cached);
+  }
+  return cached;
+}
+
+const SIZE_DIMENSIONS = {
+  small: { width: 36, height: 36, borderRadius: 10, fontSize: 18 },
+  medium: { width: 44, height: 44, borderRadius: 12, fontSize: 22 },
+  large: { width: 64, height: 64, borderRadius: 16, fontSize: 32 },
+} as const;
+
 export const FoodThumbnail: React.FC<FoodThumbnailProps> = ({
   name,
   category,
@@ -28,16 +46,14 @@ export const FoodThumbnail: React.FC<FoodThumbnailProps> = ({
   size = 'small',
   style,
 }) => {
+  const { theme } = useTheme();
+  const styles = getThumbnailStyles(theme);
   const [imageFailed, setImageFailed] = useState(false);
 
   const emoji = getFoodEmoji(name, category);
   const showImage = Boolean(imageUrl && !imageFailed && imageUrl.startsWith('http'));
 
-  const sizeDimensions = {
-    small: { width: 36, height: 36, borderRadius: 10, fontSize: 18 },
-    medium: { width: 44, height: 44, borderRadius: 12, fontSize: 22 },
-    large: { width: 64, height: 64, borderRadius: 16, fontSize: 32 },
-  }[size];
+  const sizeDimensions = SIZE_DIMENSIONS[size];
 
   return (
     <View
@@ -47,6 +63,7 @@ export const FoodThumbnail: React.FC<FoodThumbnailProps> = ({
           width: sizeDimensions.width,
           height: sizeDimensions.height,
           borderRadius: sizeDimensions.borderRadius,
+          overflow: showImage ? 'hidden' : 'visible',
         },
         style,
       ]}
@@ -72,7 +89,7 @@ export const FoodThumbnail: React.FC<FoodThumbnailProps> = ({
         <Text
           style={[
             styles.emoji,
-            { fontSize: sizeDimensions.fontSize, lineHeight: sizeDimensions.fontSize + 4 },
+            { fontSize: sizeDimensions.fontSize },
           ]}
         >
           {emoji}
@@ -82,19 +99,20 @@ export const FoodThumbnail: React.FC<FoodThumbnailProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   container: {
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
-    borderColor: '#E5E0D5',
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
   image: {
     backgroundColor: theme.colors.surfaceSubtle,
   },
   emoji: {
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 });

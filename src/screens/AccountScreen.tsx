@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { ArrowLeft, Check, ChevronDown, ChevronUp, Cloud, Copy, ExternalLink, LogIn, LogOut, Mail, ShieldCheck, Trash2, Wrench } from 'lucide-react-native';
+import React, { useState, useMemo } from 'react';
+import { Linking, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useAppDialog } from '../components/dialogs/AppDialogProvider';
+import { Check, ChevronDown, ChevronUp, Cloud, Copy, ExternalLink, LogIn, LogOut, Mail, ShieldCheck, Trash2, Wrench } from 'lucide-react-native';
+import { DirectionalIcon } from '../components/DirectionalIcon';
 import * as Clipboard from 'expo-clipboard';
 import { AppText as Text } from '../components/AppText';
 import { AnimatedPressable } from '../components/AnimatedPressable';
@@ -11,7 +14,8 @@ import { copyGuestDataToAccount, getGuestDataSummary, isAccountEmpty } from '../
 import { firebaseConfigured } from '../services/firebaseApp';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FIREBASE_SETUP_GUIDE_URL, PRIVACY_POLICY_URL, SUPPORT_EMAIL } from '../constants/urls';
 
@@ -20,6 +24,9 @@ interface Props { user: AuthIdentity | null; onBack: () => void; onRestoreComple
 export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const dialog = useAppDialog();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
   const [mode, setMode] = useState<'login' | 'create'>('login');
   const [email, setEmail] = useState(user?.email || '');
@@ -96,21 +103,19 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
         if (guestSummary.weightsCount > 0) parts.push(`${guestSummary.weightsCount} ${t('weight records')}`);
 
         const itemsStr = parts.join(', ');
-        Alert.alert(
-          t("Copy this device's data into your account?"),
-          `${t('Found')} ${itemsStr} ${t("recorded on this device. Would you like to copy them into your account? Your guest data will remain safe.")}`,
-          [
-            { text: t('Start fresh'), style: 'cancel' },
-            {
-              text: t('Copy to account'),
-              style: 'default',
-              onPress: () => perform(async () => {
-                await copyGuestDataToAccount(uid);
-                onRestoreComplete();
-              }, 'Device data copied to your account.'),
-            },
-          ]
-        );
+        dialog.confirm({
+          title: t("Copy this device's data into your account?"),
+          message: `${t('Found')} ${itemsStr} ${t("recorded on this device. Would you like to copy them into your account? Your guest data will remain safe.")}`,
+          confirmText: t('Copy to account'),
+          cancelText: t('Start fresh'),
+        }).then((confirmed) => {
+          if (confirmed) {
+            perform(async () => {
+              await copyGuestDataToAccount(uid);
+              onRestoreComplete();
+            }, 'Device data copied to your account.');
+          }
+        });
       }
     } catch (copyCheckErr) {
       console.warn('Could not check guest data for copy offer:', copyCheckErr);
@@ -122,29 +127,23 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
       const backupMeta = await getCloudBackupMetadata(uid);
       if (backupMeta?.exists) {
         const dateStr = backupMeta.exportedAt ? new Date(backupMeta.exportedAt).toLocaleDateString() : '';
-        Alert.alert(
-          t('Restore cloud backup?'),
-          dateStr
+        dialog.confirm({
+          title: t('Restore cloud backup?'),
+          message: dateStr
             ? `${t('A cloud backup from')} ${dateStr} ${t('is available in your account. Would you like to restore it now?')}`
             : t('A cloud backup is available in your account. Would you like to restore it now?'),
-          [
-            {
-              text: t('Skip'),
-              style: 'cancel',
-              onPress: () => {
-                checkGuestDataOffer(uid);
-              },
-            },
-            {
-              text: t('Restore'),
-              style: 'default',
-              onPress: () => perform(async () => {
-                await restoreCloudBackup(uid);
-                onRestoreComplete();
-              }, 'Cloud backup restored'),
-            },
-          ]
-        );
+          confirmText: t('Restore'),
+          cancelText: t('Skip'),
+        }).then((confirmed) => {
+          if (confirmed) {
+            perform(async () => {
+              await restoreCloudBackup(uid);
+              onRestoreComplete();
+            }, 'Cloud backup restored');
+          } else {
+            checkGuestDataOffer(uid);
+          }
+        });
         return;
       }
     } catch (backupCheckErr) {
@@ -183,10 +182,10 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
     try {
       await Linking.openURL(PRIVACY_POLICY_URL);
     } catch {
-      Alert.alert(
-        t('Privacy Policy'),
-        t('FitTrack operates offline-first. Your nutrition, workout, and biometric data stays strictly on your device unless you explicitly opt in to Firebase Cloud Backup or Gemini AI plate analysis.')
-      );
+      dialog.notify({
+        title: t('Privacy Policy'),
+        message: t('FitTrack operates offline-first. Your nutrition, workout, and biometric data stays strictly on your device unless you explicitly opt in to Firebase Cloud Backup or Gemini AI plate analysis.'),
+      });
     }
   };
 
@@ -196,31 +195,52 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
     setMessage(`${t('Cloud backup saved')}: ${new Date(result.exportedAt).toLocaleString()}`);
   }, 'Cloud backup saved');
 
-  const restore = () => {
+  const restore = async () => {
     if (!user) return;
-    Alert.alert(t('Restore cloud backup?'), t('This replaces the fitness data stored on this device with the backup in your account. Export a local copy first if you need both.'), [
-      { text: t('Cancel'), style: 'cancel' },
-      { text: t('Restore'), style: 'destructive', onPress: () => perform(async () => { await restoreCloudBackup(user.uid); onRestoreComplete(); }, 'Cloud backup restored') },
-    ]);
+    const ok = await dialog.confirm({
+      title: t('Restore cloud backup?'),
+      message: t('This replaces the fitness data stored on this device with the backup in your account. Export a local copy first if you need both.'),
+      confirmText: t('Restore'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (ok) {
+      perform(async () => {
+        await restoreCloudBackup(user.uid);
+        onRestoreComplete();
+      }, 'Cloud backup restored');
+    }
   };
 
-  const removeAccount = () => {
+  const removeAccount = async () => {
     if (!user) return;
-    Alert.alert(t('Delete account and cloud backup?'), t('This permanently deletes your Firebase account and its cloud backup. Local records on this device remain available as guest data.'), [
-      { text: t('Cancel'), style: 'cancel' },
-      { text: t('Delete account'), style: 'destructive', onPress: () => perform(async () => { await deleteAccountAndBackup(user.uid, password); setPassword(''); }, 'Account deleted') },
-    ]);
+    const ok = await dialog.confirm({
+      title: t('Delete account and cloud backup?'),
+      message: t('This permanently deletes your Firebase account and its cloud backup. Local records on this device remain available as guest data.'),
+      confirmText: t('Delete account'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (ok) {
+      perform(async () => {
+        await deleteAccountAndBackup(user.uid, password);
+        setPassword('');
+      }, 'Account deleted');
+    }
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.keyboardAvoidingView}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+      behavior="padding"
     >
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 48 }]} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingBottom: Math.max(145, insets.bottom + 90) }]}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.back} accessibilityLabel={t('Back')} accessibilityRole="button"><ArrowLeft size={19} color={theme.colors.textPrimary} /></TouchableOpacity>
+        <TouchableOpacity onPress={onBack} style={styles.back} accessibilityLabel={t('Back')} accessibilityRole="button"><DirectionalIcon name="ArrowLeft" size={19} color={theme.colors.textPrimary} /></TouchableOpacity>
         <View style={{ flex: 1 }}><Text style={styles.eyebrow}>{t('Account')}</Text><Text style={styles.title}>{t('Sign in & backup')}</Text></View>
         <ShieldCheck size={24} color={theme.colors.primary} />
       </View>
@@ -496,11 +516,12 @@ export const AccountScreen: React.FC<Props> = ({ user, onBack, onRestoreComplete
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   keyboardAvoidingView: { flex: 1 },
   container: { flex: 1, backgroundColor: theme.colors.background }, content: { padding: 18, paddingBottom: 145, gap: 14 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 }, back: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }, eyebrow: { fontSize: theme.typography.caption.fontSize, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 1 }, title: { fontFamily: theme.fonts.serif, fontSize: theme.typography.title1.fontSize, color: theme.colors.textPrimary },
-  card: { padding: 18, gap: 12, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 18 }, notice: { alignItems: 'center', padding: 22, gap: 10, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 18 }, emailIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' }, noticeTitle: { textAlign: 'center', fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontWeight: '700', fontSize: 19 }, cardTitle: { fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontWeight: '700', fontSize: 20 }, body: { color: theme.colors.textSecondary, fontSize: 13, lineHeight: 19 }, small: { color: theme.colors.textMuted, fontSize: 11, lineHeight: 16, textAlign: 'center' }, muted: { color: theme.colors.textMuted, fontSize: 13, textAlign: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 }, back: { padding: 10, borderRadius: 24, backgroundColor: theme.colors.surface }, eyebrow: { fontSize: 12, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 1 }, title: { fontFamily: theme.fonts.serif, fontSize: 27, color: theme.colors.textPrimary },
+  card: { padding: 18, gap: 12, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 18 }, notice: { alignItems: 'center', padding: 22, gap: 10, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 18 }, emailIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center' }, noticeTitle: { textAlign: 'center', fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontWeight: '700', fontSize: 19 }, cardTitle: { fontFamily: theme.fonts.serif, color: theme.colors.textPrimary, fontWeight: '700', fontSize: 20 }, body: { color: theme.colors.textSecondary, fontSize: 13, lineHeight: 19 }, small: { color: theme.colors.textMuted, fontSize: 12, lineHeight: 16, textAlign: 'center' }, muted: { color: theme.colors.textMuted, fontSize: 13, textAlign: 'center' },
   input: { width: '100%', borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, backgroundColor: theme.colors.background, paddingHorizontal: 13, paddingVertical: 12, color: theme.colors.textPrimary, fontSize: 14 }, primaryBtn: { minHeight: 48, backgroundColor: theme.colors.primary, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 14 }, primaryText: { color: theme.colors.textInverted, fontWeight: '700', fontSize: 14 }, outlineBtn: { minHeight: 45, borderWidth: 1, borderColor: theme.colors.borderStrong, borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: theme.colors.surface }, outlineText: { color: theme.colors.primary, fontWeight: '700', textAlign: 'center', fontSize: 13 }, disabled: { opacity: 0.5 }, switchMode: { paddingVertical: 6, alignItems: 'center' }, separator: { flexDirection: 'row', alignItems: 'center', gap: 12 }, rule: { flex: 1, height: 1, backgroundColor: theme.colors.border }, googleBtn: { minHeight: 48 }, success: { color: theme.colors.success, textAlign: 'center', fontWeight: '600' }, error: { color: theme.colors.danger, textAlign: 'center', fontSize: 13 }, deleteBtn: { minHeight: 48, borderWidth: 1, borderColor: theme.colors.dangerLight, backgroundColor: theme.colors.surface, borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }, deleteText: { color: theme.colors.danger, fontWeight: '700' },
   accordionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
   rowAlign: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
@@ -512,5 +533,5 @@ const styles = StyleSheet.create({
   diagnosticValue: { fontSize: 13, fontWeight: '600', color: theme.colors.textPrimary },
   tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   tagBadge: { backgroundColor: theme.colors.dangerLight, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  tagText: { fontSize: 11, color: theme.colors.danger },
+  tagText: { fontSize: 12, color: theme.colors.danger },
 });

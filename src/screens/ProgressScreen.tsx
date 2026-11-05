@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
-  Alert,
   Platform,
   BackHandler,
-  KeyboardAvoidingView,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
@@ -33,12 +33,15 @@ import { translate } from '../i18n/strings';
 import { InsightsScreen } from './InsightsScreen';
 import { TrendLineChart } from '../components/TrendLineChart';
 import { TrendBarChart } from '../components/TrendBarChart';
+import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
 import {
   generateDateWindow,
   CalorieTrendPoint,
   WeightTrendPoint,
 } from '../utils/trends';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 import { ProgressSkeleton } from '../components/SkeletonLoader';
 
@@ -48,10 +51,13 @@ interface ProgressScreenProps {
   onUpdateWeight?: (weightKg: number) => void;
 }
 
-export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoading, onUpdateWeight }) => {
+export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoading, onUpdateWeight }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
-  const bottomPadding = Math.max(110, insets.bottom + 76);
+  const { theme } = useTheme();
+  const dialog = useAppDialog();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const bottomPadding = Math.max(120, insets.bottom + 90);
   const t = useCallback((key: string) => translate(language, key), [language]);
 
   const [loading, setLoading] = useState(true);
@@ -105,7 +111,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
     return () => sub.remove();
   }, [modalVisible]);
 
-  const isRTL = language === 'ar' || language === 'ckb';
+  const isRTL = useIsRTL();
 
   const dateList = useMemo(() => {
     return generateDateWindow(getTodayDateString(), daysRange);
@@ -120,7 +126,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
       return {
         date: d,
         calories: totalCal,
-        target: profile?.targetCalories || 2000,
+        target: getDailyEffectiveCalorieTarget(profile, dayLog),
         label: daysRange === 7 ? t(weekdayNames[dateObj.getDay()]) : d.slice(-2),
       };
     });
@@ -176,7 +182,10 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
   const handleSaveWeight = async () => {
     const num = parseFloat(inputWeight);
     if (isNaN(num) || num < 25 || num > 350) {
-      Alert.alert(t('Invalid Weight'), t('Please enter a realistic weight between 25 and 350 kg.'));
+      dialog.notify({
+        title: t('Invalid Weight'),
+        message: t('Please enter a realistic weight between 25 and 350 kg.'),
+      });
       return;
     }
 
@@ -201,21 +210,17 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
 
   const handleDeleteEntry = async (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    Alert.alert(
-      t('Delete weight entry'),
-      t('Are you sure you want to delete this weight record?'),
-      [
-        { text: t('Cancel'), style: 'cancel' },
-        {
-          text: t('Delete'),
-          style: 'destructive',
-          onPress: async () => {
-            const updated = await removeWeightEntry(id);
-            setHistory(updated);
-          },
-        },
-      ]
-    );
+    const confirmed = await dialog.confirm({
+      title: t('Delete weight entry'),
+      message: t('Are you sure you want to delete this weight record?'),
+      confirmText: t('Delete'),
+      cancelText: t('Cancel'),
+      destructive: true,
+    });
+    if (confirmed) {
+      const updated = await removeWeightEntry(id);
+      setHistory(updated);
+    }
   };
 
   return (
@@ -262,13 +267,16 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
       ) : (
         <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
           {/* Header */}
-          <View style={[styles.headerRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-            <View>
+          <View style={[styles.headerRow, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+            <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
               <Text style={styles.headerSubtitle}>{t('Progress')}</Text>
               <Text style={styles.headerTitle}>{t('Progress & Trends')}</Text>
             </View>
             <TouchableOpacity
-              style={styles.addBtn}
+              style={[
+                styles.addBtn,
+                { flexDirection: isRTL ? 'row-reverse' : 'row' },
+              ]}
               onPress={() => setModalVisible(true)}
               accessibilityLabel={t('Log weight')}
               accessibilityRole="button"
@@ -360,12 +368,12 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
           {/* Streak Card */}
           <View style={[styles.streakCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <View style={styles.streakFlameCircle}>
-              <Flame size={20} color={theme.colors.accent} />
+              <Flame size={20} color={theme.colors.amber} />
             </View>
             <View style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
               <View style={[styles.inlineRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                 <Text style={styles.streakCount}>{streak.currentStreak}</Text>
-                <Text style={styles.streakLabel}>{t('days streak')}</Text>
+                <Text style={styles.streakLabel}>{t(streak.currentStreak === 1 ? 'day streak' : 'days streak')}</Text>
               </View>
               <Text style={styles.streakSubtitle}>
                 {streak.loggedToday ? t('Logged today') : t('Log today to keep streak')}
@@ -397,7 +405,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
               </View>
               <TrendBarChart
                 data={calorieData}
-                targetCalories={profile?.targetCalories || 2000}
+                targetCalories={getDailyEffectiveCalorieTarget(profile)}
                 isRTL={isRTL}
                 selectedRange={daysRange}
               />
@@ -487,10 +495,17 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
       )}
 
       {/* LOG WEIGHT MODAL */}
-      <Modal visible={modalVisible} transparent animationType="fade">
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+        statusBarTranslucent
+        navigationBarTranslucent
+      >
         <View style={styles.modalBackdrop}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior="padding"
             style={{ width: '100%', alignItems: 'center' }}
           >
             <View style={styles.modalCard}>
@@ -544,9 +559,11 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ profile, isLoadi
       </Modal>
     </View>
   );
-};
+});
+ProgressScreen.displayName = 'ProgressScreen';
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -591,15 +608,13 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    gap: 10,
   },
   headerSubtitle: {
     fontFamily: theme.fonts.sans,
     fontSize: 12,
     fontWeight: '500',
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
@@ -691,7 +706,7 @@ const styles = StyleSheet.create({
   },
   deltaSub: {
     fontFamily: theme.fonts.sans,
-    fontSize: 10,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   bmiStrip: {
@@ -727,12 +742,9 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   rangePill: {
-    minHeight: 38,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: theme.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   rangePillActive: {
     backgroundColor: theme.colors.primary,
@@ -752,22 +764,19 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   filterChip: {
-    minHeight: 38,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   filterChipActive: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
   filterChipText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },
@@ -790,11 +799,11 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: theme.colors.warningLight,
+    backgroundColor: theme.colors.amberLight,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: theme.colors.accentBorder,
+    borderColor: theme.colors.amberBorder,
   },
   streakCount: {
     fontSize: 20,

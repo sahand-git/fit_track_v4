@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -10,9 +10,12 @@ import { AppText as Text } from './AppText';
 import { AnimatedCount } from './AnimatedCount';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import { isReducedMotion } from '../utils/motion';
-import { Sparkles, ChevronRight } from 'lucide-react-native';
+import { Activity } from 'lucide-react-native';
+import { DirectionalIcon } from './DirectionalIcon';
 
 interface MacroCardsProps {
   calorieTarget: number;
@@ -25,14 +28,17 @@ interface MacroCardsProps {
   fatConsumed: number;
   fiberConsumed?: number;
   fiberTarget?: number;
+  fiberHasTarget?: boolean;
   sugarConsumed?: number;
   sugarTarget?: number;
+  sugarHasTarget?: boolean;
   fiberIsIncomplete?: boolean;
   sugarIsIncomplete?: boolean;
   onSelectNutrient?: (nutrientKey: string) => void;
 }
 
-const AnimatedProgressBar: React.FC<{ pct: number; color: string }> = ({ pct, color }) => {
+const AnimatedProgressBar: React.FC<{ pct: number; color: string; trackColor?: string }> = ({ pct, color, trackColor }) => {
+  const { theme } = useTheme();
   const width = useSharedValue(pct);
 
   useEffect(() => {
@@ -53,10 +59,10 @@ const AnimatedProgressBar: React.FC<{ pct: number; color: string }> = ({ pct, co
   });
 
   return (
-    <View style={styles.track}>
+    <View style={[{ height: 6, backgroundColor: trackColor || theme.colors.surfaceSubtle, borderRadius: 3, overflow: 'hidden' }]}>
       <Animated.View
         style={[
-          styles.bar,
+          { height: '100%', borderRadius: 3 },
           { backgroundColor: color },
           animatedStyle,
         ]}
@@ -74,14 +80,18 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
   fatConsumed,
   fiberConsumed,
   fiberTarget = 28,
+  fiberHasTarget = true,
   sugarConsumed,
   sugarTarget = 50,
+  sugarHasTarget = true,
   fiberIsIncomplete = false,
   sugarIsIncomplete = false,
   onSelectNutrient,
 }) => {
   const language = useLanguage();
-  const isRtl = language === 'ar' || language === 'ckb';
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const isRtl = useIsRTL();
   const t = (key: string) => translate(language, key);
 
   const macros = [
@@ -144,18 +154,33 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           style={[styles.secondaryPill, isRtl && styles.rowRtl]}
           onPress={() => onSelectNutrient?.('fiber')}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
-          accessibilityLabel={t('Fiber')}
+          accessibilityLabel={`${t('Fiber')}: ${
+            typeof fiberConsumed === 'number' && Number.isFinite(fiberConsumed)
+              ? fiberHasTarget
+                ? `${Math.round(fiberConsumed * 10) / 10} / ${fiberTarget}g`
+                : `${Math.round(fiberConsumed * 10) / 10}g`
+              : t('Not enough data')
+          }`}
         >
-          <Text style={styles.secondaryLabel}>{t('Fiber')}:</Text>
-          <Text style={styles.secondaryValue}>
-            {typeof fiberConsumed === 'number' ? Math.round(fiberConsumed * 10) / 10 : 0}/{fiberTarget}g
-          </Text>
-          {fiberIsIncomplete && (
-            <Text style={styles.incompleteAsterisk} accessibilityLabel={t('Incomplete data')}>
-              *
+          <Text style={styles.pillCombinedText} numberOfLines={2}>
+            <Text style={styles.secondaryLabel}>{t('Fiber')}: </Text>
+            <Text style={styles.secondaryValue}>
+              {typeof fiberConsumed === 'number' && Number.isFinite(fiberConsumed)
+                ? fiberHasTarget
+                  ? `${Math.round(fiberConsumed * 10) / 10}/${fiberTarget}g`
+                  : `${Math.round(fiberConsumed * 10) / 10}g`
+                : fiberHasTarget
+                ? `—/${fiberTarget}g`
+                : '—g'}
             </Text>
-          )}
+            {fiberIsIncomplete && (
+              <Text style={styles.incompleteAsterisk} accessibilityLabel={t('Incomplete data')}>
+                {' '}*
+              </Text>
+            )}
+          </Text>
         </TouchableOpacity>
 
         {/* Sugar Pill */}
@@ -163,18 +188,33 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           style={[styles.secondaryPill, isRtl && styles.rowRtl]}
           onPress={() => onSelectNutrient?.('sugar')}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
-          accessibilityLabel={t('Sugar')}
+          accessibilityLabel={`${t('Total Sugar')}: ${
+            typeof sugarConsumed === 'number' && Number.isFinite(sugarConsumed)
+              ? sugarHasTarget
+                ? `${Math.round(sugarConsumed * 10) / 10} / ${sugarTarget}g`
+                : `${Math.round(sugarConsumed * 10) / 10}g`
+              : t('Not enough data')
+          }`}
         >
-          <Text style={styles.secondaryLabel}>{t('Sugar')}:</Text>
-          <Text style={styles.secondaryValue}>
-            {typeof sugarConsumed === 'number' ? Math.round(sugarConsumed * 10) / 10 : 0}/{sugarTarget}g
-          </Text>
-          {sugarIsIncomplete && (
-            <Text style={styles.incompleteAsterisk} accessibilityLabel={t('Incomplete data')}>
-              *
+          <Text style={styles.pillCombinedText} numberOfLines={2}>
+            <Text style={styles.secondaryLabel}>{t('Total Sugar')}: </Text>
+            <Text style={styles.secondaryValue}>
+              {typeof sugarConsumed === 'number' && Number.isFinite(sugarConsumed)
+                ? sugarHasTarget
+                  ? `${Math.round(sugarConsumed * 10) / 10}/${sugarTarget}g`
+                  : `${Math.round(sugarConsumed * 10) / 10}g`
+                : sugarHasTarget
+                ? `—/${sugarTarget}g`
+                : '—g'}
             </Text>
-          )}
+            {sugarIsIncomplete && (
+              <Text style={styles.incompleteAsterisk} accessibilityLabel={t('Incomplete data')}>
+                {' '}*
+              </Text>
+            )}
+          </Text>
         </TouchableOpacity>
 
         {/* Vitamins & RDA Explorer Button */}
@@ -182,19 +222,20 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
           style={[styles.vitaminsBtn, isRtl && styles.rowRtl]}
           onPress={() => onSelectNutrient?.('vitaminC')}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
           accessibilityLabel={t('Micronutrients & Daily Allowance (RDA)')}
         >
-          <Sparkles size={12} color={theme.colors.primary} />
-          <Text style={styles.vitaminsBtnText}>{t('Vitamins')}</Text>
-          <ChevronRight size={12} color={theme.colors.textMuted} />
+          <Activity size={12} color={theme.colors.primary} />
+          <Text style={styles.vitaminsBtnText} numberOfLines={1}>{t('Vitamins')}</Text>
+          <DirectionalIcon name="ChevronRight" size={12} color={theme.colors.textMuted} />
         </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   container: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
@@ -249,31 +290,38 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     gap: 6,
+    flexWrap: 'wrap',
   },
   secondaryPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.surfaceSubtle,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  pillCombinedText: {
+    fontSize: 12,
+    flexShrink: 1,
+    lineHeight: 16,
   },
   secondaryLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },
   secondaryValue: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   incompleteAsterisk: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#D97706',
-    marginLeft: 1,
+    color: theme.colors.amberText,
   },
   vitaminsBtn: {
     flexDirection: 'row',
@@ -283,10 +331,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: theme.radius.sm,
     backgroundColor: `${theme.colors.primary}12`,
-    marginLeft: 'auto',
+    marginStart: 'auto',
+    flexShrink: 0,
   },
   vitaminsBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.primary,
   },

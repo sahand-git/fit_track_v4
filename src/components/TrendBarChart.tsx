@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Svg, { Rect, Line, Text as SvgText } from 'react-native-svg';
 import { AppText as Text } from './AppText';
 import { Utensils, CheckCircle2 } from 'lucide-react-native';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import {
@@ -13,6 +14,7 @@ import {
   MIN_LOGGING_COVERAGE_CALORIES,
 } from '../utils/trends';
 import { formatDisplayDate } from '../utils/dateUtils';
+import { formatKcal } from '../utils/formatKcal';
 
 export interface TrendBarChartProps {
   data: CalorieTrendPoint[];
@@ -30,6 +32,8 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
   emptyMessage,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (k: string) => translate(language, k);
 
   const [inspectedIndex, setInspectedIndex] = useState<number | null>(null);
@@ -86,11 +90,11 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
     if (d.calories === 0) {
       fillColor = theme.colors.border;
     } else if (isPartial) {
-      fillColor = '#D1D5DB';
+      fillColor = theme.colors.grayMutedBorder;
     } else if (isOnTarget) {
-      fillColor = '#059669';
+      fillColor = theme.colors.emeraldDark;
     } else if (isOver) {
-      fillColor = '#D97706';
+      fillColor = theme.colors.amber;
     }
 
     return {
@@ -115,7 +119,7 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
             <Text style={styles.mainAvg}>
               {metrics.avgCalories.toLocaleString()}
             </Text>
-            <Text style={styles.unitText}>kcal</Text>
+            <Text style={styles.unitText}>{t('kcal')}</Text>
           </View>
           <Text style={styles.rangeLabel}>
             {`${t('avg kcal / day')} (${metrics.coveredDaysCount} ${
@@ -126,7 +130,7 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
 
         {metrics.coveredDaysCount > 0 && (
           <View style={[styles.adherenceBadge, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-            <CheckCircle2 size={13} color="#059669" />
+            <CheckCircle2 size={13} color={theme.colors.emeraldDark} />
             <Text style={styles.adherenceText}>
               {`${metrics.adherenceRate}% ${t('on target')}`}
             </Text>
@@ -143,14 +147,14 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
             y1={targetY}
             x2={width - paddingX}
             y2={targetY}
-            stroke="#D97706"
+            stroke={theme.colors.amber}
             strokeDasharray="4 4"
             strokeWidth={1.5}
           />
           <SvgText
             x={isRTL ? width - paddingX - 4 : paddingX + 4}
             y={Math.max(12, targetY - 4)}
-            fill="#D97706"
+            fill={theme.colors.amber}
             fontSize={9}
             fontWeight="600"
             textAnchor={isRTL ? 'end' : 'start'}
@@ -215,7 +219,7 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
             {formatDisplayDate(inspectedBar.data.date, language)}
           </Text>
           <Text style={styles.inspectorValue}>
-            {inspectedBar.data.calories} kcal
+            {formatKcal(inspectedBar.data.calories, t)}
           </Text>
           <Text style={styles.inspectorPct}>
             ({Math.round((inspectedBar.data.calories / targetCalories) * 100)}% {t('of target')})
@@ -230,7 +234,8 @@ export const TrendBarChart: React.FC<TrendBarChartProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
@@ -267,16 +272,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: theme.colors.emeraldLight,
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: theme.colors.emeraldBorder,
   },
   adherenceText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#059669',
+    color: theme.colors.emeraldDark,
   },
   svgWrapper: {
     marginVertical: 4,
@@ -302,7 +307,7 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   inspectorPct: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   hintRow: {
@@ -310,7 +315,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hintText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   emptyContainer: {

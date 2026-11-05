@@ -1,18 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react-native';
+import { CalendarDays, X } from 'lucide-react-native';
+import { DirectionalIcon } from './DirectionalIcon';
 import { AppText as Text } from './AppText';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { DailyLog } from '../types';
 import { loadLogsForDates } from '../storage/storage';
 import { addDaysToDateString, formatDateToLocalString, getTodayDateString, parseLocalDateString } from '../utils/dateUtils';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 
 interface CalendarPickerModalProps { visible: boolean; selectedDate: string; onClose: () => void; onSelect: (date: string) => void }
 
 export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }: CalendarPickerModalProps) {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (value: string) => translate(language, value);
   const [month, setMonth] = useState(() => {
     const date = parseLocalDateString(selectedDate);
@@ -53,7 +57,14 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
   const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => t(day));
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
         <View style={styles.sheet}>
           <View style={styles.header}>
@@ -77,7 +88,7 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
               accessibilityLabel={t('Previous month')}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <ChevronLeft size={20} color={theme.colors.textSecondary} />
+              <DirectionalIcon name="ChevronLeft" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
             <Text style={styles.monthLabel}>{monthLabel}</Text>
             <TouchableOpacity
@@ -88,7 +99,7 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
               accessibilityLabel={t('Next month')}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <ChevronRight size={20} color={theme.colors.textSecondary} />
+              <DirectionalIcon name="ChevronRight" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
           <View style={styles.grid}>
@@ -131,7 +142,8 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: theme.colors.backdrop, justifyContent: 'center', padding: 18 },
   sheet: { backgroundColor: theme.colors.surface, borderRadius: theme.radius.xl, borderWidth: 1, borderColor: theme.colors.border, padding: 16, ...theme.shadow.floating },
   header: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 10 },
@@ -143,7 +155,7 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.35 },
   monthLabel: { color: theme.colors.textPrimary, fontSize: 15, fontWeight: '700' },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  weekday: { width: `${100 / 7}%`, textAlign: 'center', color: theme.colors.textMuted, fontSize: 10, fontWeight: '700', paddingVertical: 8 },
+  weekday: { width: `${100 / 7}%`, textAlign: 'center', color: theme.colors.textMuted, fontSize: 12, fontWeight: '700', paddingVertical: 8 },
   dayCell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 16, marginVertical: 1 },
   outsideMonth: { opacity: 0 },
   daySelected: { backgroundColor: theme.colors.primary },
@@ -153,7 +165,7 @@ const styles = StyleSheet.create({
   logDot: { width: 4, height: 4, borderRadius: 2, marginTop: 2, backgroundColor: theme.colors.accent },
   logDotSelected: { backgroundColor: theme.colors.textInverted },
   legend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, marginBottom: 12 },
-  legendText: { color: theme.colors.textMuted, fontSize: 9 },
+  legendText: { color: theme.colors.textMuted, fontSize: 12 },
   legendSpacer: { width: 4 },
   todayButton: { borderRadius: theme.radius.md, backgroundColor: theme.colors.primaryLight, alignItems: 'center', paddingVertical: 11 },
   todayButtonText: { color: theme.colors.primary, fontSize: 13, fontWeight: '700' },

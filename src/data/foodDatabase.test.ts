@@ -1,6 +1,8 @@
 import { REGIONAL_FOODS, VERIFIED_FOOD_DATABASE } from './foodDatabase';
-import { getFoodSourceLabel } from '../utils/foodSource';
+import { getFoodSourceLabel, getFoodSourceBadgeInfo } from '../utils/foodSource';
 import { PortionUnit } from '../types';
+import { isValidBarcode } from '../utils/barcodeUtils';
+import { CANONICAL_FOOD_CATEGORIES } from '../utils/foodCategories';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) {
@@ -140,40 +142,9 @@ function runFoodDatabaseTests() {
     console.log('✓ Test 6 passed: Recipe ingredients, USDA citations, and preparation variants verified across all regional dishes.');
   }
 
-  // Test 7: Category Validity for Every Food in Database
+  // Test 7: Category Validity for Every Food in Database (Phase 3: 17 Canonical Categories)
   {
-    const recognizedCategories = new Set([
-      'Meat',
-      'Fish',
-      'Fish & Seafood',
-      'Drinks',
-      'Beverages',
-      'Eggs & Dairy',
-      'Dairy',
-      'Dairy Alternative',
-      'Grains & Bread',
-      'Grains',
-      'Bakery',
-      'Fruit',
-      'Fruits',
-      'Vegetables',
-      'Beans & Lentils',
-      'Plant Protein',
-      'Nuts & Seeds',
-      'Nuts',
-      'Snacks & Protein',
-      'Snacks',
-      'Protein',
-      'Supplements',
-      'Prepared Meals',
-      'Meals',
-      'Breakfast',
-      'Soups',
-      'Oils',
-      'Pantry',
-      'Dips',
-      'Other',
-    ]);
+    const recognizedCategories = new Set(CANONICAL_FOOD_CATEGORIES);
 
     for (const food of VERIFIED_FOOD_DATABASE) {
       assert(typeof food.category === 'string', `Food ${food.id} category must be a string`);
@@ -182,11 +153,11 @@ function runFoodDatabaseTests() {
       assert(trimmedCategory.length > 0, `Food ${food.id} has empty category`);
       assert(trimmedCategory === category, `Food ${food.id} category has leading/trailing whitespace`);
       assert(
-        recognizedCategories.has(category),
+        recognizedCategories.has(category as any),
         `Food ${food.id} has unrecognized category: "${category}"`
       );
     }
-    console.log(`✓ Test 7 passed: All ${VERIFIED_FOOD_DATABASE.length} foods verified to have valid, recognized categories.`);
+    console.log(`✓ Test 7 passed: All ${VERIFIED_FOOD_DATABASE.length} foods verified to belong to one of the 17 canonical categories.`);
   }
 
   // Test 8: Serving Size and Grams Validity for Every Food
@@ -221,6 +192,83 @@ function runFoodDatabaseTests() {
       );
     }
     console.log(`✓ Test 9 passed: All ${REGIONAL_FOODS.length} regional dishes reconciled: ingredient grams equal servingGrams and ingredient calories match food calories within ±5 kcal.`);
+  }
+
+  // Test 10: Barcode Integrity and Uniqueness across Entire Database
+  {
+    const seenBarcodes = new Map<string, string>();
+    for (const food of VERIFIED_FOOD_DATABASE) {
+      if (food.barcode !== undefined && food.barcode !== null && String(food.barcode).trim() !== '') {
+        const code = String(food.barcode).trim();
+        assert(
+          isValidBarcode(code),
+          `Invalid barcode "${code}" on food "${food.name}" (${food.id}) - must pass GS1 check digit validation`
+        );
+        assert(
+          !seenBarcodes.has(code),
+          `Duplicate barcode "${code}" found on "${food.name}" (${food.id}), already registered to "${seenBarcodes.get(code)}"`
+        );
+        seenBarcodes.set(code, food.id);
+      }
+    }
+    console.log(`✓ Test 10 passed: All ${seenBarcodes.size} food barcodes in VERIFIED_FOOD_DATABASE have valid GS1 check digits and unique assignments.`);
+  }
+
+  // Test 11: Phase 2 Honest Labelling, Brand Optionality, and Source Badges
+  {
+    const ALLOWED_REAL_BRANDS = new Set([
+      'The Coca-Cola Company',
+      'PepsiCo',
+      'Red Bull',
+      'Frito-Lay',
+      'Optimum Nutrition',
+      'KIND',
+      'Quest Nutrition',
+    ]);
+
+    for (const food of VERIFIED_FOOD_DATABASE) {
+      if (food.brand) {
+        assert(
+          ALLOWED_REAL_BRANDS.has(food.brand),
+          `Prohibited placeholder brand "${food.brand}" detected on food ${food.id} ("${food.name}"). Only real commercial brands are permitted.`
+        );
+      }
+      assert(
+        food.source !== undefined && food.source !== null,
+        `Food ${food.id} ("${food.name}") must have a defined source.`
+      );
+    }
+
+    // Verify badge helper & sourceRef enforcement
+    assert(getFoodSourceBadgeInfo('verified_database')?.label === 'Verified', 'Verified badge label fallback');
+    assert(getFoodSourceBadgeInfo('verified_database', 'USDA FDC 170467')?.label === 'Verified', 'Verified badge label with sourceRef');
+    assert(getFoodSourceBadgeInfo('verified_database', '') === null, 'Verified badge hidden when sourceRef is empty');
+    assert(getFoodSourceBadgeInfo('generic_estimate')?.isEstimate === true, 'generic_estimate is flagged as estimate');
+    assert(getFoodSourceBadgeInfo('regional_culinary_estimate')?.isEstimate === true, 'regional_culinary_estimate is flagged as estimate');
+    assert(getFoodSourceBadgeInfo('ai_estimated')?.isEstimate === true, 'ai_estimated is flagged as estimate');
+
+    // All verified_database foods must have a valid sourceRef
+    for (const food of VERIFIED_FOOD_DATABASE) {
+      if (food.source === 'verified_database' || food.source === 'usda_sr28') {
+        assert(
+          Boolean(food.sourceRef && food.sourceRef.trim().length > 0),
+          `Verified food ${food.id} ("${food.name}") must have a defined sourceRef.`
+        );
+      }
+    }
+    console.log('✓ Test 11 passed: Phase 2 & Step 4 honest labelling verified (0 placeholder brands, valid sources, sourceRef present for all verified entries, and estimate badges).');
+  }
+
+  // Test 12: Phase 3 Multilingual Separation and Drinks Unit
+  {
+    const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    for (const food of VERIFIED_FOOD_DATABASE) {
+      assert(!arabicRegex.test(food.name), `Food ${food.id} name "${food.name}" contains Arabic/Kurdish script. English name must not contain Arabic characters.`);
+      if (food.category === 'Drinks') {
+        assert(food.unit === 'ml', `Food ${food.id} ("${food.name}") in Drinks category must specify unit: 'ml'`);
+      }
+    }
+    console.log('✓ Test 12 passed: Phase 3 multilingual script separation and drinks unit "ml" verified.');
   }
 
   console.log('All Food Database & Regional Foods Tests Passed successfully!');

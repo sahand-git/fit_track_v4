@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  ScrollView,
   ActivityIndicator,
   Linking,
   Modal,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
 import {
@@ -20,13 +20,25 @@ import {
   Eye,
   EyeOff,
   X,
-  ArrowRight,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react-native';
-import { testGeminiConnection, GeminiError, getDefaultMessageForKind, sanitizeGeminiString } from '../utils/geminiModels';
+import { DirectionalIcon } from './DirectionalIcon';
+import {
+  testGeminiConnection,
+  GeminiError,
+  getDefaultMessageForKind,
+  sanitizeGeminiString,
+  formatProviderErrorDetail,
+  isAQKeyRejection,
+  getAQKeyExplanation,
+} from '../utils/geminiModels';
 import { setStoredGeminiApiKey, getStoredGeminiApiKey } from '../services/plateAnalysisService';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 
 export interface AiSetupWizardProps {
@@ -47,8 +59,10 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
   isSkippable = true,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
-  const isRTL = language !== 'en';
+  const isRTL = useIsRTL();
 
   const [inputKey, setInputKey] = useState('');
   const [showKey, setShowKey] = useState(false);
@@ -56,6 +70,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
   const [verifiedModel, setVerifiedModel] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [providerDetail, setProviderDetail] = useState<string | null>(null);
+  const [showErrorDetail, setShowErrorDetail] = useState(false);
 
   // Load existing key on open if available
   React.useEffect(() => {
@@ -86,6 +101,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
     setTestState('testing');
     setErrorMessage(null);
     setProviderDetail(null);
+    setShowErrorDetail(false);
     setVerifiedModel(null);
 
     try {
@@ -97,15 +113,16 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
       setTestState('failed');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
 
-      if (err instanceof GeminiError) {
+      if (isAQKeyRejection(err, keyToTest)) {
+        setErrorMessage(getAQKeyExplanation(language));
+        setProviderDetail(formatProviderErrorDetail(err, keyToTest));
+      } else if (err instanceof GeminiError) {
         setErrorMessage(t(getDefaultMessageForKind(err.kind)));
-        if (err.providerMessage && err.providerMessage.trim().length > 0) {
-          // Sanitized: Never leak the key
-          setProviderDetail(sanitizeGeminiString(err.providerMessage, keyToTest));
-        }
+        setProviderDetail(formatProviderErrorDetail(err, keyToTest));
       } else {
         const sanitizedErr = sanitizeGeminiString(err?.message || 'Connection failed', keyToTest);
         setErrorMessage(sanitizedErr);
+        setProviderDetail(formatProviderErrorDetail(err, keyToTest));
       }
     }
   };
@@ -130,10 +147,9 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
     }
   };
 
-  const content = (
-    <SafeAreaView style={[styles.container, { direction: isRTL ? 'rtl' : 'ltr' }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Header Bar */}
+  const formBody = (
+    <View style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+      {/* Header Bar */}
         <View style={[styles.headerBar, isRTL && styles.rowRTL]}>
           <View style={[styles.titleGroup, isRTL && styles.rowRTL]}>
             <View style={styles.sparkleCircle}>
@@ -186,7 +202,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
                 {t('Security & Privacy Guarantee')}
               </Text>
               <Text style={[styles.securityText, isRTL && styles.textRTL]}>
-                {t('Your key stays strictly on this device in secure encrypted storage. FitTrack never uploads your key to any server or shares it with anyone.')}
+                {t('The key stays on this device, is not included in backups, and is only sent to Google with my AI requests.')}
               </Text>
             </View>
           </View>
@@ -269,7 +285,7 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
           <View style={styles.successBox}>
             <View style={[styles.feedbackRow, isRTL && styles.rowRTL]}>
               <View style={styles.successIconCircle}>
-                <Check size={16} color="#1E3A2F" />
+                <Check size={16} color={theme.colors.primary} />
               </View>
               <View style={{ flex: 1, marginStart: 10 }}>
                 <Text style={[styles.successTitle, isRTL && styles.textRTL]}>
@@ -302,9 +318,29 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
                   </Text>
                 )}
                 {providerDetail && (
-                  <Text style={[styles.providerDetail, isRTL && styles.textRTL]}>
-                    {providerDetail}
-                  </Text>
+                  <View style={styles.providerDetailSection}>
+                    <TouchableOpacity
+                      style={[styles.providerDetailToggle, isRTL && styles.rowRTL]}
+                      onPress={() => setShowErrorDetail((prev) => !prev)}
+                      accessibilityRole="button"
+                      accessibilityLabel={showErrorDetail ? t('Hide details') : t('Show details')}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.providerDetailToggleText}>
+                        {showErrorDetail ? t('Hide details') : t('Show details')}
+                      </Text>
+                      {showErrorDetail ? (
+                        <ChevronUp size={12} color={theme.colors.danger} />
+                      ) : (
+                        <ChevronDown size={12} color={theme.colors.danger} />
+                      )}
+                    </TouchableOpacity>
+                    {showErrorDetail ? (
+                      <Text style={[styles.providerDetail, isRTL && styles.textRTL]}>
+                        {providerDetail}
+                      </Text>
+                    ) : null}
+                  </View>
                 )}
               </View>
             </View>
@@ -348,25 +384,42 @@ export const AiSetupWizard: React.FC<AiSetupWizardProps> = ({
             <Text style={styles.finishBtnText}>
               {inputKey.trim() ? t('Save & Finish') : t('Use FitTrack without AI')}
             </Text>
-            <ArrowRight size={16} color={theme.colors.textInverted} style={{ marginStart: 8 }} />
+            <DirectionalIcon name="ArrowRight" size={16} color={theme.colors.textInverted} style={{ marginStart: 8 }} />
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 
   if (!isModal) {
-    return content;
+    return formBody;
   }
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      {content}
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
+      <SafeAreaView style={[styles.container, { direction: isRTL ? 'rtl' : 'ltr' }]}>
+        <KeyboardAwareScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          overScrollMode="never"
+          bounces={false}
+          bottomOffset={24}
+        >
+          {formBody}
+        </KeyboardAwareScrollView>
+      </SafeAreaView>
     </Modal>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -545,10 +598,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   successBox: {
-    backgroundColor: '#EBF5F0',
+    backgroundColor: theme.colors.forestWash,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: '#B8DFCB',
+    borderColor: theme.colors.forestBorder,
     padding: theme.spacing.md,
     marginBottom: 16,
   },
@@ -560,26 +613,26 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#B8DFCB',
+    backgroundColor: theme.colors.forestBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
   successTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1E3A2F',
+    color: theme.colors.primary,
     marginBottom: 2,
   },
   modelBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#285C4D',
+    color: theme.colors.forestDeep,
   },
   errorBox: {
-    backgroundColor: '#FDEDED',
+    backgroundColor: theme.colors.dangerBannerBg,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: '#F8B4B4',
+    borderColor: theme.colors.dangerOutline,
     padding: theme.spacing.md,
     marginBottom: 16,
   },
@@ -587,7 +640,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F8B4B4',
+    backgroundColor: theme.colors.dangerOutline,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -603,10 +656,27 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginBottom: 4,
   },
+  providerDetailSection: {
+    marginTop: 4,
+  },
+  providerDetailToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    minHeight: 28,
+  },
+  providerDetailToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.danger,
+  },
   providerDetail: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     lineHeight: 15,
+    marginTop: 2,
   },
   errorStudioLink: {
     flexDirection: 'row',
@@ -614,7 +684,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F8B4B4',
+    borderTopColor: theme.colors.dangerOutline,
   },
   errorStudioText: {
     fontSize: 12,

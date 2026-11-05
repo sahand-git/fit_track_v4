@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,13 +8,17 @@ import {
   Platform,
   BackHandler,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
-import { ArrowRight, Check } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
+import { DirectionalIcon } from './DirectionalIcon';
 import { Gender, ActivityLevel, FitnessGoal, UserProfile, AppLanguage } from '../types';
 import { languageNames, translate } from '../i18n/strings';
 import { calculateTargets } from '../utils/calculator';
-import { theme } from '../theme';
+import { formatKcal } from '../utils/formatKcal';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
 import { AiSetupWizard } from './AiSetupWizardModal';
@@ -26,6 +30,8 @@ interface OnboardingModalProps {
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, onLanguageChange }) => {
   const currentLanguage = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [step, setStep] = useState(1);
 
   // Handle Android hardware back press during onboarding steps
@@ -94,7 +100,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
 
   return (
     <SafeAreaView style={[styles.container, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          overScrollMode="never"
+          bounces={false}
+        >
         {/* Step Indicator */}
         <View style={styles.stepHeader}>
           <Text style={styles.badgeText}>{t('Welcome to FitTrack')}</Text>
@@ -201,7 +216,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.nextBtnText}>{t('Continue')}</Text>
-              <ArrowRight size={16} color={theme.colors.textInverted} />
+              <DirectionalIcon name="ArrowRight" size={16} color={theme.colors.textInverted} />
             </TouchableOpacity>
           </View>
         )}
@@ -268,7 +283,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.nextBtnText}>{t('Review Plan')}</Text>
-                <ArrowRight size={16} color={theme.colors.textInverted} />
+                <DirectionalIcon name="ArrowRight" size={16} color={theme.colors.textInverted} />
               </TouchableOpacity>
             </View>
           </View>
@@ -284,9 +299,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
 
             <View style={styles.summaryCard}>
               <Text style={styles.summaryTitle}>{t('Estimated Daily Target')}</Text>
-              <Text style={styles.summaryValue}>{targets.targetCalories} kcal</Text>
+              <Text style={styles.summaryValue}>{formatKcal(targets.targetCalories, t)}</Text>
               <Text style={styles.summarySub}>
-                {t('BMR')}: {targets.bmr} kcal • {t('TDEE')}: {targets.tdee} kcal
+                {t('BMR')}: {formatKcal(targets.bmr, t)} • {t('TDEE')}: {formatKcal(targets.tdee, t)}
               </Text>
 
               <View style={styles.macroSplitRow}>
@@ -331,7 +346,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.nextBtnText}>{t('Next: AI Setup (Optional)')}</Text>
-                <ArrowRight size={16} color={theme.colors.textInverted} />
+                <DirectionalIcon name="ArrowRight" size={16} color={theme.colors.textInverted} />
               </TouchableOpacity>
             </View>
           </View>
@@ -360,11 +375,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, on
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -394,7 +411,7 @@ const styles = StyleSheet.create({
   languageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   languageChip: { paddingHorizontal: 11, paddingVertical: 8, borderRadius: theme.radius.full, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
   languageChipActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryLight },
-  languageChipText: { color: theme.colors.textSecondary, fontSize: 11, fontWeight: '600' },
+  languageChipText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: '600' },
   languageChipTextActive: { color: theme.colors.primary },
   stepContainer: {
     gap: 12,
@@ -533,7 +550,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   macroSplitLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },

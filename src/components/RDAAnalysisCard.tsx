@@ -1,40 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { AppText as Text } from './AppText';
 import {
   calculateMicronutrientIntake,
   ORDERED_MICRONUTRIENT_KEYS,
 } from '../utils/micronutrients';
+import { formatDataCompleteness } from '../utils/nutrientTotals';
 import { MicronutrientKey } from '../data/supplementCatalog';
-import { LoggedMeal, LoggedDailySupplement } from '../types';
+import { LoggedMeal, LoggedDailySupplement, UserProfile } from '../types';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import {
   ChevronDown,
   ChevronUp,
-  AlertTriangle,
-  Sparkles,
+  ShieldCheck,
   Info,
+  AlertTriangle,
 } from 'lucide-react-native';
 
 interface RDAAnalysisCardProps {
   meals?: LoggedMeal[];
   supplements?: LoggedDailySupplement[];
+  profile?: UserProfile;
   onSelectNutrient?: (key: MicronutrientKey) => void;
 }
 
 export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
   meals = [],
   supplements = [],
+  profile,
   onSelectNutrient,
 }) => {
   const language = useLanguage();
-  const isRtl = language === 'ar' || language === 'ckb';
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const isRtl = useIsRTL();
   const [expanded, setExpanded] = useState(false);
 
-  const analysis = calculateMicronutrientIntake(meals, supplements);
-  const { nutrients, deficiencies, targetsMetCount } = analysis;
+  const analysis = calculateMicronutrientIntake(meals, supplements, profile);
+  const { nutrients, targetsMetCount, isMinor } = analysis;
+
+  const nutrientsWithDataCount = useMemo(() => {
+    return ORDERED_MICRONUTRIENT_KEYS.filter((k) => nutrients[k]?.hasData).length;
+  }, [nutrients]);
+
+  const sortedKeys = useMemo(() => {
+    return [...ORDERED_MICRONUTRIENT_KEYS].sort((a, b) => {
+      const aHas = nutrients[a]?.hasData ? 1 : 0;
+      const bHas = nutrients[b]?.hasData ? 1 : 0;
+      if (aHas !== bHas) return bHas - aHas;
+      return ORDERED_MICRONUTRIENT_KEYS.indexOf(a) - ORDERED_MICRONUTRIENT_KEYS.indexOf(b);
+    });
+  }, [nutrients]);
+
+  const displayedKeys = expanded ? sortedKeys : sortedKeys.slice(0, 3);
+  const hasAnyIncomplete = displayedKeys.some((k) => !nutrients[k]?.hasData || nutrients[k]?.isIncomplete);
 
   return (
     <View style={styles.card}>
@@ -42,14 +65,16 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
       <View style={[styles.headerRow, isRtl && styles.rowRtl]}>
         <View style={[styles.titleGroup, isRtl && styles.titleGroupRtl]}>
           <View style={styles.iconCircle}>
-            <Sparkles size={16} color={theme.colors.primary} />
+            <ShieldCheck size={16} color={theme.colors.primary} />
           </View>
-          <View>
+          <View style={styles.titleContainer}>
             <Text style={styles.cardTitle}>
               {translate(language, 'Micronutrients & Daily Allowance (RDA)')}
             </Text>
             <Text style={styles.cardSubtitle}>
-              {translate(language, 'Estimated intake from meals & taken supplements')}
+              {isMinor
+                ? translate(language, 'Adolescent (<19): Adult DRIs not shown. Tracking raw intake.')
+                : translate(language, 'Estimated intake from meals & taken supplements')}
             </Text>
           </View>
         </View>
@@ -57,49 +82,27 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
         {/* Met score pill */}
         <View style={styles.scoreBadge}>
           <Text style={styles.scoreBadgeText}>
-            {targetsMetCount}/9 {translate(language, 'targets met')}
+            {isMinor
+              ? translate(language, 'Minor (<19)')
+              : `${targetsMetCount}/${nutrientsWithDataCount} ${translate(language, 'targets met')}`}
           </Text>
         </View>
       </View>
 
-      {/* Deficiency Alerts Banner (if any) */}
-      {deficiencies.length > 0 && (
-        <View style={styles.alertBanner}>
-          <View style={[styles.alertHeader, isRtl && styles.rowRtl]}>
-            <AlertTriangle size={15} color="#D97706" style={{ marginTop: 1 }} />
-            <Text style={styles.alertTitle}>
-              {translate(language, 'Deficiency risks detected (<50% RDA):')}
-            </Text>
-          </View>
-          <View style={styles.deficiencyList}>
-            {deficiencies.slice(0, 4).map((d) => (
-              <View key={d.key} style={[styles.deficiencyItem, isRtl && styles.rowRtl]}>
-                <Text style={styles.deficiencyNutrient}>
-                  • {translate(language, d.label)} ({d.percent}%):
-                </Text>
-                <Text style={styles.deficiencySources}>
-                  {' '}{translate(language, d.foodSources)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
       {/* Primary Highlights (Top 3 or when expanded) */}
       <View style={styles.grid}>
-        {(expanded
-          ? ORDERED_MICRONUTRIENT_KEYS
-          : ORDERED_MICRONUTRIENT_KEYS.slice(0, 3)
-        ).map((key) => {
+        {displayedKeys.map((key) => {
           const item = nutrients[key];
-          const pctWidth = Math.min(100, item.percent);
-          const barColor =
-            item.percent >= 80
-              ? '#10B981' // emerald
-              : item.percent >= 50
-              ? '#F59E0B' // amber
-              : '#EF4444'; // red
+          const hasData = item?.hasData;
+          const hasTarget = typeof item.target === 'number' && item.target > 0;
+          const pctWidth = hasData && hasTarget ? Math.min(100, item.percent) : 0;
+          const barColor = !hasData || !hasTarget
+            ? theme.colors.border
+            : item.percent >= 80
+            ? theme.colors.emerald
+            : item.percent >= 50
+            ? theme.colors.amber
+            : theme.colors.crimson;
 
           return (
             <TouchableOpacity
@@ -109,52 +112,110 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
               disabled={!onSelectNutrient}
               activeOpacity={0.75}
               accessibilityRole={onSelectNutrient ? 'button' : 'none'}
-              accessibilityLabel={`${translate(language, item.label)}: ${item.current} / ${item.target} ${item.unit}`}
+              accessibilityLabel={`${translate(language, item.label)}: ${
+                hasData
+                  ? hasTarget
+                    ? `${item.current} / ${item.target} ${item.unit}`
+                    : `${item.current} ${item.unit}`
+                  : translate(language, 'Not enough data')
+              }`}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <View style={[styles.nutrientTopRow, isRtl && styles.rowRtl]}>
-                <Text style={styles.nutrientName}>
-                  {translate(language, item.label)}
-                </Text>
+                <View style={[styles.nameGroup, isRtl && styles.rowRtl]}>
+                  <Text style={styles.nutrientName}>
+                    {translate(language, item.label)}
+                  </Text>
+                  {(!hasData || item.isIncomplete) && (
+                    <Text style={styles.incompleteAsterisk} accessibilityLabel={translate(language, 'Incomplete data')}>
+                      *
+                    </Text>
+                  )}
+                </View>
                 <Text style={styles.nutrientValues}>
-                  {item.current} / {item.target} {item.unit}
+                  {hasData
+                    ? hasTarget
+                      ? `${item.current} / ${item.target} ${item.unit}`
+                      : `${item.current} ${item.unit}`
+                    : hasTarget
+                    ? `— / ${item.target} ${item.unit}`
+                    : `— ${item.unit}`}
                 </Text>
               </View>
 
-              {/* Progress track */}
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${pctWidth}%`,
-                      backgroundColor: barColor,
-                    },
-                  ]}
-                />
-              </View>
+              {/* Progress track (omitted or flat if no target) */}
+              {hasTarget && (
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${pctWidth}%`,
+                        backgroundColor: barColor,
+                      },
+                    ]}
+                  />
+                </View>
+              )}
 
               {/* Nutrient details sub-row */}
               <View style={[styles.nutrientBottomRow, isRtl && styles.rowRtl]}>
                 <Text style={styles.breakdownText}>
-                  {translate(language, 'Food')}: {item.foodAmount} • {translate(language, 'Supp')}: {item.supplementAmount}
+                  {hasData
+                    ? `${translate(language, 'Food')}: ${item.foodAmount} • ${translate(language, 'Supp')}: ${item.supplementAmount}`
+                    : translate(language, 'No data in logged foods')}
                 </Text>
                 <Text
                   style={[
                     styles.pctBadgeText,
                     {
-                      color:
-                        item.percent >= 80
-                          ? '#059669'
-                          : item.percent >= 50
-                          ? '#D97706'
-                          : '#DC2626',
+                      color: !hasData || !hasTarget
+                        ? theme.colors.textMuted
+                        : item.percent >= 80
+                        ? theme.colors.emeraldDark
+                        : item.percent >= 50
+                        ? theme.colors.amberText
+                        : theme.colors.crimsonDark,
                     },
                   ]}
                 >
-                  {item.percent}% {translate(language, 'RDA')}
+                  {hasData
+                    ? hasTarget
+                      ? item.remaining > 0
+                        ? `${item.percent}% (${item.remaining} ${item.unit} ${translate(language, 'remaining')})`
+                        : `${item.percent}% (${translate(language, 'Target reached')})`
+                      : `${item.current} ${item.unit}`
+                    : `${translate(language, 'Not enough data')} *`}
                 </Text>
               </View>
+
+              {/* Data Completeness */}
+              {meals.length > 0 && (
+                <View style={[styles.completenessRow, isRtl && styles.rowRtl]}>
+                  <Text style={styles.completenessText}>
+                    {formatDataCompleteness(item.foodsWithDataCount, meals.length, (k) => translate(language, k))}
+                  </Text>
+                </View>
+              )}
+
+              {/* Soft neutral note when below 50% with >= 70% coverage */}
+              {hasData && hasTarget && item.percent < 50 && item.coverage >= 0.7 && (
+                <View style={[styles.estimatedLowRow, isRtl && styles.rowRtl]}>
+                  <Text style={styles.estimatedLowText}>
+                    {translate(language, 'estimated low from logged foods')}
+                  </Text>
+                </View>
+              )}
+
+              {/* Upper Limit Warning */}
+              {item.upperLimitWarning && (
+                <View style={[styles.ulWarningRow, isRtl && styles.rowRtl]}>
+                  <AlertTriangle size={12} color={theme.colors.amberText} />
+                  <Text style={styles.ulWarningText}>
+                    {translate(language, item.upperLimitWarning)}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -184,13 +245,22 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
         )}
       </TouchableOpacity>
 
+      {/* Incomplete Data Footnote if applicable */}
+      {hasAnyIncomplete && (
+        <View style={[styles.incompleteRow, isRtl && styles.rowRtl]}>
+          <Text style={styles.incompleteNoticeText}>
+            * {translate(language, 'Incomplete data')}: {translate(language, 'Some logged foods do not have data for this nutrient.')}
+          </Text>
+        </View>
+      )}
+
       {/* Footnote */}
       <View style={[styles.footnoteRow, isRtl && styles.rowRtl]}>
         <Info size={12} color={theme.colors.textMuted} style={{ marginTop: 1 }} />
         <Text style={styles.footnoteText}>
           {translate(
             language,
-            'NIH/IOM adult Recommended Dietary Allowances. For wellness tracking only.'
+            'National Academies DRIs for healthy adults 19+. Pregnancy, lactation, and medical conditions not handled. Upper limits are safety ceilings, not goals.'
           )}
         </Text>
       </View>
@@ -198,7 +268,8 @@ export const RDAAnalysisCard: React.FC<RDAAnalysisCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.xl,
@@ -212,6 +283,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
+    gap: 8,
   },
   rowRtl: {
     flexDirection: 'row-reverse',
@@ -224,6 +296,9 @@ const styles = StyleSheet.create({
   },
   titleGroupRtl: {
     flexDirection: 'row-reverse',
+  },
+  titleContainer: {
+    flex: 1,
   },
   iconCircle: {
     width: 32,
@@ -241,7 +316,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   cardSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textSecondary,
     marginTop: 1,
   },
@@ -252,47 +327,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    flexShrink: 0,
   },
   scoreBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: theme.colors.primary,
-  },
-  alertBanner: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FDE68A',
-    borderWidth: 1,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  alertHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
-  },
-  alertTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#92400E',
-  },
-  deficiencyList: {
-    gap: 4,
-  },
-  deficiencyItem: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  deficiencyNutrient: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#B45309',
-  },
-  deficiencySources: {
-    fontSize: 11,
-    color: '#78350F',
-    flex: 1,
+    color: theme.colors.primary,
   },
   grid: {
     gap: 8,
@@ -309,6 +349,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 6,
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  nameGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 1,
+  },
+  incompleteAsterisk: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.amberText,
   },
   nutrientName: {
     fontSize: 12,
@@ -316,9 +369,10 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   nutrientValues: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     color: theme.colors.textSecondary,
+    flexShrink: 1,
   },
   progressTrack: {
     height: 6,
@@ -335,15 +389,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
   },
   breakdownText: {
-    fontSize: 10,
+    fontSize: 12,
     color: theme.colors.textMuted,
+    flexShrink: 1,
   },
   pctBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    flexShrink: 1,
+  },
+  completenessRow: {
+    marginTop: 4,
+    paddingTop: 3,
+  },
+  completenessText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+  },
+  estimatedLowRow: {
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.border,
+  },
+  estimatedLowText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    fontStyle: 'italic',
+  },
+  ulWarningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.border,
+  },
+  ulWarningText: {
+    fontSize: 12,
+    color: theme.colors.amberText,
+    flex: 1,
   },
   toggleBtn: {
     flexDirection: 'row',
@@ -358,6 +449,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.primary,
   },
+  incompleteRow: {
+    marginTop: 6,
+    paddingTop: 6,
+  },
+  incompleteNoticeText: {
+    fontSize: 12,
+    color: theme.colors.amberDark,
+    fontStyle: 'italic',
+  },
   footnoteRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -368,9 +468,9 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.border,
   },
   footnoteText: {
-    fontSize: 10,
+    fontSize: 12,
     color: theme.colors.textMuted,
     flex: 1,
-    lineHeight: 14,
+    lineHeight: 16,
   },
 });

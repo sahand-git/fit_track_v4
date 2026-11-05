@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Switch,
-  Alert,
   Linking,
   Platform,
 } from 'react-native';
+import { useAppDialog } from './dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
 import {
@@ -33,7 +33,8 @@ import {
 } from '../types';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
 import {
   checkNotificationPermissions,
@@ -81,6 +82,9 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const dialog = useAppDialog();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
   const [settings, setSettings] = useState<ReminderSettings>(DEFAULT_REMINDER_SETTINGS);
@@ -117,20 +121,17 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
     }
 
     if (!current.canAskAgain) {
-      Alert.alert(
-        t('Notifications Permission'),
-        t('FitTrack needs notification permission to remind you about supplements, water, and meals at your chosen times.'),
-        [
-          { text: t('Cancel'), style: 'cancel' },
-          {
-            text: t('Open Settings'),
-            onPress: () => {
-              if (Platform.OS === 'ios') Linking.openURL('app-settings:');
-              else Linking.openSettings();
-            },
-          },
-        ]
-      );
+      dialog.confirm({
+        title: t('Notifications Permission'),
+        message: t('FitTrack needs notification permission to remind you about supplements, water, and meals at your chosen times.'),
+        confirmText: t('Open Settings'),
+        cancelText: t('Cancel'),
+      }).then((ok) => {
+        if (ok) {
+          if (Platform.OS === 'ios') Linking.openURL('app-settings:');
+          else Linking.openSettings();
+        }
+      });
       return false;
     }
 
@@ -261,14 +262,24 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
       onClose();
     } catch (err) {
       console.warn('Error saving reminders:', err);
-      Alert.alert(t('Save Error'), t('Could not save reminder settings. Please try again.'));
+      dialog.notify({
+        title: t('Save Error'),
+        message: t('Could not save reminder settings. Please try again.'),
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={[styles.backdrop, { direction: language === 'en' ? 'ltr' : 'rtl' }]}>
         <View style={[styles.sheetContainer, { paddingBottom: Math.max(theme.spacing.md, insets.bottom + 12) }]}>
           {/* Header */}
@@ -424,7 +435,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderLeft}>
-                  <Droplet size={18} color="#0EA5E9" />
+                  <Droplet size={18} color={theme.colors.sky} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.sectionTitle}>{t('Water reminders')}</Text>
                     <Text style={styles.sectionSub}>
@@ -435,7 +446,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                 <Switch
                   value={settings.water.enabled}
                   onValueChange={handleToggleWaterMaster}
-                  trackColor={{ false: theme.colors.border, true: '#0EA5E9' }}
+                  trackColor={{ false: theme.colors.border, true: theme.colors.sky }}
                   thumbColor={theme.colors.surface}
                 />
               </View>
@@ -572,7 +583,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderLeft}>
-                  <Utensils size={18} color="#F59E0B" />
+                  <Utensils size={18} color={theme.colors.nutrientVitaminA} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.sectionTitle}>{t('Meal reminders')}</Text>
                     <Text style={styles.sectionSub}>
@@ -620,7 +631,7 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
                       <Switch
                         value={mSetting.enabled}
                         onValueChange={(val) => handleToggleMeal(mKey, val)}
-                        trackColor={{ false: theme.colors.border, true: '#F59E0B' }}
+                        trackColor={{ false: theme.colors.border, true: theme.colors.nutrientVitaminA }}
                         thumbColor={theme.colors.surface}
                       />
                     </View>
@@ -648,7 +659,8 @@ export const ReminderSettingsModal: React.FC<ReminderSettingsModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: theme.colors.backdrop,
@@ -696,7 +708,7 @@ const styles = StyleSheet.create({
   },
   disclaimerText: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     lineHeight: 16,
   },
@@ -704,10 +716,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: 'rgba(193, 102, 76, 0.08)',
+    backgroundColor: theme.colors.accentLight,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(193, 102, 76, 0.3)',
+    borderColor: theme.colors.accentBorder,
     padding: 12,
   },
   unsupportedTitle: {
@@ -727,21 +739,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: theme.colors.amberLight,
     borderRadius: theme.radius.md,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: theme.colors.amberBorder,
   },
   permWarningTitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#92400E',
+    color: theme.colors.amberDark,
   },
   permWarningAction: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#B45309',
+    color: theme.colors.amberText,
     marginTop: 2,
     textDecorationLine: 'underline',
   },
@@ -776,7 +788,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   sectionSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 1,
   },
@@ -808,12 +820,12 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   slotItemNames: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
   },
   slotEmptyNote: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   timeStepperWrap: {
@@ -863,7 +875,7 @@ const styles = StyleSheet.create({
   },
   settingItemSubLabel: {
     fontFamily: theme.fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -890,16 +902,16 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceSubtle,
   },
   chipBtnActive: {
-    borderColor: '#0EA5E9',
-    backgroundColor: '#E0F2FE',
+    borderColor: theme.colors.sky,
+    backgroundColor: theme.colors.skyLight,
   },
   chipBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },
   chipBtnTextActive: {
-    color: '#0369A1',
+    color: theme.colors.skyDark,
     fontWeight: '700',
   },
   timeWindowText: {

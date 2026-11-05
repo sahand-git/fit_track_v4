@@ -1,12 +1,21 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Linking, useWindowDimensions } from 'react-native';
 import { AppText as Text } from './AppText';
-import { Key, Check, Trash2, ExternalLink, AlertCircle, Sparkles } from 'lucide-react-native';
+import { Key, Check, Trash2, ExternalLink, AlertCircle, Sparkles, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { getStoredGeminiApiKey, setStoredGeminiApiKey, clearGeminiApiKey } from '../services/plateAnalysisService';
-import { testGeminiConnection, GeminiError, getDefaultMessageForKind } from '../utils/geminiModels';
+import {
+  testGeminiConnection,
+  GeminiError,
+  getDefaultMessageForKind,
+  formatProviderErrorDetail,
+  isAQKeyRejection,
+  getAQKeyExplanation,
+} from '../utils/geminiModels';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 import { AiSetupWizard } from './AiSetupWizardModal';
 
@@ -17,8 +26,10 @@ interface GeminiKeyManagerProps {
 
 export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged, compact = false }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
-  const isRTL = language !== 'en';
+  const isRTL = useIsRTL();
 
   const [key, setKey] = useState('');
   const [hasSavedKey, setHasSavedKey] = useState(false);
@@ -30,7 +41,17 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [providerDetail, setProviderDetail] = useState<string | null>(null);
+  const [showErrorDetail, setShowErrorDetail] = useState(false);
   const [showWizardModal, setShowWizardModal] = useState(false);
+  const { fontScale } = useWindowDimensions();
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [textOverflowed, setTextOverflowed] = useState(false);
+
+  const shouldStack =
+    fontScale > 1.15 ||
+    textOverflowed ||
+    (language === 'ckb' && containerWidth > 0 && containerWidth < 330) ||
+    (containerWidth > 0 && containerWidth < 280);
 
   const checkKey = useCallback(() => {
     let isMounted = true;
@@ -58,6 +79,7 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
     setActiveModel(null);
     setErrorMessage(null);
     setProviderDetail(null);
+    setShowErrorDetail(false);
   };
 
   const handleTestConnection = async () => {
@@ -67,6 +89,7 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
     setTestState('testing');
     setErrorMessage(null);
     setProviderDetail(null);
+    setShowErrorDetail(false);
     setActiveModel(null);
 
     try {
@@ -78,13 +101,15 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
       setTestState('failed');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
 
-      if (err instanceof GeminiError) {
+      if (isAQKeyRejection(err, keyToTest)) {
+        setErrorMessage(getAQKeyExplanation(language));
+        setProviderDetail(formatProviderErrorDetail(err, keyToTest));
+      } else if (err instanceof GeminiError) {
         setErrorMessage(t(getDefaultMessageForKind(err.kind)));
-        if (err.providerMessage && err.providerMessage.trim().length > 0) {
-          setProviderDetail(err.providerMessage);
-        }
+        setProviderDetail(formatProviderErrorDetail(err, keyToTest));
       } else {
         setErrorMessage(err?.message || t('Connection failed'));
+        setProviderDetail(formatProviderErrorDetail(err, keyToTest));
       }
     }
   };
@@ -125,16 +150,23 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
         </View>
         <View style={styles.titleCol}>
           <Text style={[styles.title, isRTL && styles.textRTL]}>{t('Google Gemini API Key')}</Text>
-          <Text style={[styles.subtitle, isRTL && styles.textRTL]}>
-            {hasSavedKey ? t('API key saved') : t('Connect a Gemini API key in Profile to use AI features.')}
-          </Text>
+          {!hasSavedKey && (
+            <Text style={[styles.subtitle, isRTL && styles.textRTL]}>
+              {t('Connect a Gemini API key in Profile to use AI features.')}
+            </Text>
+          )}
         </View>
       </View>
 
       {!compact && (
-        <Text style={[styles.description, isRTL && styles.textRTL]}>
-          {t('A Gemini API key enables text meal estimates, plate scanning, and AI Coach. Requests send your prompt and the relevant meal or goal context to Google. Google usage limits and billing apply.')}
-        </Text>
+        <>
+          <Text style={[styles.description, isRTL && styles.textRTL]}>
+            {t('A Gemini API key enables text meal estimates, plate scanning, and AI Coach. Requests send your prompt and the relevant meal or goal context to Google. Google usage limits and billing apply.')}
+          </Text>
+          <Text style={[styles.securityNote, isRTL && styles.textRTL]}>
+            {t('The key stays on this device, is not included in backups, and is only sent to Google with my AI requests.')}
+          </Text>
+        </>
       )}
 
       <TouchableOpacity
@@ -149,14 +181,20 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
 
       {hasSavedKey && !isEditing ? (
         <View style={styles.savedSection}>
-          <View style={[styles.savedRow, isRTL && styles.rowRTL]}>
+          <View style={[styles.statusPillRow, isRTL && styles.rowRTL]}>
             <View style={[styles.savedBadge, isRTL && styles.rowRTL]}>
               <Check size={14} color={theme.colors.primary} />
               <Text style={styles.savedBadgeText}>{t('API key saved')}</Text>
             </View>
-            <View style={[styles.savedActions, isRTL && styles.rowRTL]}>
+          </View>
+
+          {shouldStack ? (
+            <View
+              style={styles.savedActionsStacked}
+              onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+            >
               <TouchableOpacity
-                style={[styles.actionBtnSmall, testState === 'testing' && styles.btnDisabled]}
+                style={[styles.actionBtnFull, testState === 'testing' && styles.btnDisabled]}
                 onPress={handleTestConnection}
                 disabled={testState === 'testing'}
                 accessibilityRole="button"
@@ -166,33 +204,104 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
                 {testState === 'testing' ? (
                   <View style={[styles.inlineTestingRow, isRTL && styles.rowRTL]}>
                     <ActivityIndicator size="small" color={theme.colors.primary} />
-                    <Text style={styles.actionBtnSmallText}>{t('Testing connection…')}</Text>
+                    <Text style={styles.actionBtnText}>{t('Testing connection…')}</Text>
                   </View>
                 ) : (
-                  <Text style={styles.actionBtnSmallText}>{t('Test connection')}</Text>
+                  <Text style={styles.actionBtnText}>{t('Test connection')}</Text>
                 )}
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={styles.actionBtnSmall}
+                style={styles.actionBtnFull}
                 onPress={() => {
                   setIsEditing(true);
                   resetTestState();
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={t('Configure Gemini API Key')}
+                accessibilityLabel={t('Change key')}
               >
-                <Text style={styles.actionBtnSmallText}>{t('Configure Gemini API Key')}</Text>
+                <Text style={styles.actionBtnText}>{t('Change key')}</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={[styles.actionBtnSmall, styles.actionBtnDanger]}
+                style={[styles.actionBtnFull, styles.actionBtnDanger, styles.trashBtnFull, isRTL && styles.rowRTL]}
                 onPress={handleRemove}
                 accessibilityRole="button"
                 accessibilityLabel={t('Remove API key')}
               >
-                <Trash2 size={13} color={theme.colors.danger} />
+                <Trash2 size={16} color={theme.colors.danger} />
+                <Text style={styles.trashBtnFullText}>{t('Remove API key')}</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          ) : (
+            <View
+              style={[styles.savedActionsRow, isRTL && styles.rowRTL]}
+              onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+            >
+              <TouchableOpacity
+                style={[styles.actionBtnFlex, testState === 'testing' && styles.btnDisabled]}
+                onPress={handleTestConnection}
+                disabled={testState === 'testing'}
+                accessibilityRole="button"
+                accessibilityLabel={t('Test connection')}
+                accessibilityState={{ busy: testState === 'testing' }}
+              >
+                {testState === 'testing' ? (
+                  <View style={[styles.inlineTestingRow, isRTL && styles.rowRTL]}>
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                    <Text
+                      style={styles.actionBtnText}
+                      numberOfLines={2}
+                      onTextLayout={(e) => {
+                        if (e.nativeEvent.lines.length > 2) setTextOverflowed(true);
+                      }}
+                    >
+                      {t('Testing connection…')}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text
+                    style={styles.actionBtnText}
+                    numberOfLines={2}
+                    onTextLayout={(e) => {
+                      if (e.nativeEvent.lines.length > 2) setTextOverflowed(true);
+                    }}
+                  >
+                    {t('Test connection')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionBtnFlex}
+                onPress={() => {
+                  setIsEditing(true);
+                  resetTestState();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t('Change key')}
+              >
+                <Text
+                  style={styles.actionBtnText}
+                  numberOfLines={2}
+                  onTextLayout={(e) => {
+                    if (e.nativeEvent.lines.length > 2) setTextOverflowed(true);
+                  }}
+                >
+                  {t('Change key')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.trashBtnSquare, styles.actionBtnDanger]}
+                onPress={handleRemove}
+                accessibilityRole="button"
+                accessibilityLabel={t('Remove API key')}
+              >
+                <Trash2 size={16} color={theme.colors.danger} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       ) : (
         <View style={styles.inputContainer}>
@@ -261,7 +370,7 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
         <View style={styles.successBox}>
           <View style={[styles.feedbackHeaderRow, isRTL && styles.rowRTL]}>
             <View style={styles.successIconCircle}>
-              <Check size={14} color="#1E3A2F" />
+              <Check size={14} color={theme.colors.primary} />
             </View>
             <View style={styles.feedbackTitleCol}>
               <Text style={[styles.successTitle, isRTL && styles.textRTL]}>{t('Connection successful')}</Text>
@@ -287,9 +396,29 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
                 <Text style={[styles.errorBody, isRTL && styles.textRTL]}>{errorMessage}</Text>
               )}
               {providerDetail && providerDetail !== errorMessage && (
-                <Text style={[styles.providerDetailText, isRTL && styles.textRTL]}>
-                  {providerDetail}
-                </Text>
+                <View style={styles.providerDetailSection}>
+                  <TouchableOpacity
+                    style={[styles.providerDetailToggle, isRTL && styles.rowRTL]}
+                    onPress={() => setShowErrorDetail((prev) => !prev)}
+                    accessibilityRole="button"
+                    accessibilityLabel={showErrorDetail ? t('Hide details') : t('Show details')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.providerDetailToggleText}>
+                      {showErrorDetail ? t('Hide details') : t('Show details')}
+                    </Text>
+                    {showErrorDetail ? (
+                      <ChevronUp size={12} color={theme.colors.danger} />
+                    ) : (
+                      <ChevronDown size={12} color={theme.colors.danger} />
+                    )}
+                  </TouchableOpacity>
+                  {showErrorDetail ? (
+                    <Text style={[styles.providerDetailText, isRTL && styles.textRTL]}>
+                      {providerDetail}
+                    </Text>
+                  ) : null}
+                </View>
               )}
             </View>
           </View>
@@ -329,7 +458,8 @@ export const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ onKeyChanged
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   wizardLaunchBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -393,7 +523,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 1,
   },
@@ -402,52 +532,100 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: theme.colors.textSecondary,
   },
+  securityNote: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: theme.colors.textMuted,
+    marginTop: 4,
+  },
   savedSection: {
     gap: 8,
+    marginTop: 4,
   },
-  savedRow: {
+  statusPillRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 4,
-    flexWrap: 'wrap',
-    gap: 8,
   },
   savedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: theme.colors.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: theme.radius.full,
+    alignSelf: 'flex-start',
   },
   savedBadgeText: {
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.primary,
   },
-  savedActions: {
+  savedActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    width: '100%',
   },
-  actionBtnSmall: {
-    paddingHorizontal: 10,
+  savedActionsStacked: {
+    flexDirection: 'column',
+    gap: 8,
+    width: '100%',
+  },
+  actionBtnFlex: {
+    flex: 1,
+    minHeight: 44,
+    paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  actionBtnSmallText: {
-    fontSize: 11,
+  actionBtnFull: {
+    width: '100%',
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionBtnText: {
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+  trashBtnSquare: {
+    width: 44,
+    height: 44,
+    minWidth: 44,
+    minHeight: 44,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trashBtnFull: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  trashBtnFullText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.danger,
   },
   actionBtnDanger: {
-    backgroundColor: '#FDECEC',
-    borderColor: '#FACDCD',
+    backgroundColor: theme.colors.crimsonLight,
+    borderColor: theme.colors.crimsonBorder,
   },
   inputContainer: {
     gap: 8,
@@ -517,15 +695,15 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   statusToast: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.primary,
     fontWeight: '600',
     textAlign: 'center',
   },
   successBox: {
-    backgroundColor: '#EEF6F2',
+    backgroundColor: theme.colors.forestKeyLight,
     borderWidth: 1,
-    borderColor: '#C7E4D4',
+    borderColor: theme.colors.forestKeyBorder,
     borderRadius: theme.radius.md,
     padding: 10,
     gap: 4,
@@ -540,7 +718,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#D1EBDC',
+    backgroundColor: theme.colors.forestKeyPill,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
@@ -551,18 +729,18 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1E3A2F',
+    color: theme.colors.primary,
   },
   activeModelText: {
-    fontSize: 11,
-    color: '#2C5A48',
+    fontSize: 12,
+    color: theme.colors.forestKeyText,
     marginTop: 2,
     fontWeight: '500',
   },
   errorBox: {
-    backgroundColor: '#FDF3F2',
+    backgroundColor: theme.colors.dangerLightWash,
     borderWidth: 1,
-    borderColor: '#FACBC8',
+    borderColor: theme.colors.dangerWashBorder,
     borderRadius: theme.radius.md,
     padding: 10,
     gap: 8,
@@ -572,7 +750,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#FDE2E0',
+    backgroundColor: theme.colors.dangerSoftLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
@@ -583,27 +761,43 @@ const styles = StyleSheet.create({
     color: theme.colors.danger,
   },
   errorBody: {
-    fontSize: 11,
-    color: '#7A221F',
+    fontSize: 12,
+    color: theme.colors.dangerMuted,
     marginTop: 2,
     lineHeight: 16,
   },
+  providerDetailSection: {
+    marginTop: 4,
+  },
+  providerDetailToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    minHeight: 28,
+  },
+  providerDetailToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.danger,
+  },
   providerDetailText: {
-    fontSize: 10,
-    color: '#9C3A36',
+    fontSize: 12,
+    color: theme.colors.dangerDeep,
     marginTop: 3,
     fontStyle: 'italic',
   },
   hintContainer: {
     borderTopWidth: 1,
-    borderTopColor: '#F5D3D1',
+    borderTopColor: theme.colors.dangerSubtleBorder,
     paddingTop: 6,
     gap: 4,
   },
   hintText: {
-    fontSize: 10,
+    fontSize: 12,
     color: theme.colors.textMuted,
-    lineHeight: 14,
+    lineHeight: 16,
   },
   studioLinkBtn: {
     flexDirection: 'row',
@@ -613,7 +807,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   studioLinkText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.primary,
     textDecorationLine: 'underline',

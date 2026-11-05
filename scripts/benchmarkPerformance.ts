@@ -1,17 +1,3 @@
-// Performance Benchmark Script for 2-Year (730 Days) Dataset
-// Setup mock storage environment before importing modules
-const mockStore: Record<string, string> = {};
-(globalThis as any).window = {
-  localStorage: {
-    getItem: (k: string) => mockStore[k] ?? null,
-    setItem: (k: string, v: string) => { mockStore[k] = String(v); },
-    removeItem: (k: string) => { delete mockStore[k]; },
-    clear: () => { Object.keys(mockStore).forEach((k) => delete mockStore[k]); },
-    key: (i: number) => Object.keys(mockStore)[i] ?? null,
-    get length() { return Object.keys(mockStore).length; },
-  },
-};
-
 import {
   loadUserProfile,
   saveUserProfile,
@@ -37,7 +23,7 @@ import {
   loadRecentFoods,
   loadFavoriteFoods,
 } from '../src/storage/storage';
-import { serializeBackup, parseBackup, computeBackupSummary } from '../src/utils/backupCore';
+import { serializeBackup, parseBackup } from '../src/utils/backupCore';
 import {
   DailyLog,
   UserProfile,
@@ -52,6 +38,20 @@ import {
 import { calculateTargets } from '../src/utils/calculator';
 import { generateDateWindow, calculateCalorieTrendMetrics, calculateWeightTrendMetrics } from '../src/utils/trends';
 import { addDaysToDateString, getTodayDateString } from '../src/utils/dateUtils';
+
+// Performance Benchmark Script for 2-Year (730 Days) Dataset
+// Setup mock storage environment before running storage operations
+const mockStore: Record<string, string> = {};
+(globalThis as any).window = {
+  localStorage: {
+    getItem: (k: string) => mockStore[k] ?? null,
+    setItem: (k: string, v: string) => { mockStore[k] = String(v); },
+    removeItem: (k: string) => { delete mockStore[k]; },
+    clear: () => { Object.keys(mockStore).forEach((k) => delete mockStore[k]); },
+    key: (i: number) => Object.keys(mockStore)[i] ?? null,
+    get length() { return Object.keys(mockStore).length; },
+  },
+};
 
 async function createBenchmarkBackupPayload(): Promise<FitTrackBackup> {
   const [
@@ -392,7 +392,7 @@ export async function runBenchmark() {
     await addWeightEntry(entry);
   }
 
-  for (const [dateStr, log] of Object.entries(dataset.dailyLogs)) {
+  for (const [, log] of Object.entries(dataset.dailyLogs)) {
     await saveDailyLog(log);
   }
   const seedDuration = performance.now() - seedStart;

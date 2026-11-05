@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,9 +7,9 @@ import {
   TextInput,
   ScrollView,
   Platform,
-  KeyboardAvoidingView,
   BackHandler,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
 import {
@@ -37,7 +37,8 @@ import { getTodayDateString, formatDisplayDate } from '../utils/dateUtils';
 import { createUniqueId } from '../utils/idUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { SaveSuccessOverlay } from './SaveSuccessOverlay';
 import * as Haptics from 'expo-haptics';
 
@@ -62,6 +63,8 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
 }) => {
   const language = useLanguage();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
   const isFuture = date > getTodayDateString();
@@ -172,7 +175,7 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
     setTimeout(() => {
       setShowSuccess(false);
       onClose();
-    }, 450);
+    }, 950);
   };
 
   const categories: { id: ExerciseCategory | 'all'; label: string }[] = [
@@ -194,6 +197,8 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
       animationType="slide"
       transparent
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.overlay}>
         <TouchableOpacity
@@ -204,7 +209,7 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
           accessibilityLabel={t('Close')}
         />
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           style={styles.sheetContainer}
         >
           <SaveSuccessOverlay visible={showSuccess} message={t('Workout Logged')} />
@@ -393,7 +398,7 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
                     placeholder="0"
                     placeholderTextColor={theme.colors.textMuted}
                   />
-                  <Text style={styles.calorieUnit}>kcal</Text>
+                  <Text style={styles.calorieUnit}>{t('kcal')}</Text>
                 </View>
               </View>
             </View>
@@ -479,11 +484,12 @@ export const AddWorkoutSheet: React.FC<AddWorkoutSheetProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: theme.colors.backdrop,
   },
   backdrop: {
     ...StyleSheet.absoluteFill,
@@ -494,6 +500,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: theme.radius.lg,
     maxHeight: '90%',
     paddingTop: 10,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 480 : undefined,
+    alignSelf: 'center',
     ...theme.shadow.floating,
   },
   dragPill: {
@@ -605,7 +614,7 @@ const styles = StyleSheet.create({
   presetInfo: {
     flex: 1,
     minWidth: 0,
-    marginRight: 8,
+    marginEnd: 8,
   },
   presetName: {
     fontSize: 14,
@@ -668,7 +677,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   statSubLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   stepperContainer: {
@@ -819,4 +828,3 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverted,
   },
 });
-

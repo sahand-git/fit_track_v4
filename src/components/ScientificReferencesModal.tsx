@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -23,7 +23,9 @@ import {
 } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 
 interface ScientificReferencesModalProps {
@@ -38,8 +40,10 @@ export const ScientificReferencesModal: React.FC<ScientificReferencesModalProps>
   onOpenDisclaimer,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
-  const isRTL = language === 'ar' || language === 'ckb';
+  const isRTL = useIsRTL();
 
   useEffect(() => {
     if (Platform.OS !== 'android' || !visible) return;
@@ -59,6 +63,8 @@ export const ScientificReferencesModal: React.FC<ScientificReferencesModalProps>
       animationType="slide"
       transparent
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.overlay}>
         <TouchableOpacity
@@ -91,6 +97,7 @@ export const ScientificReferencesModal: React.FC<ScientificReferencesModalProps>
             <TouchableOpacity
               onPress={onClose}
               style={styles.closeBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityRole="button"
               accessibilityLabel={t('Close')}
             >
@@ -123,7 +130,7 @@ export const ScientificReferencesModal: React.FC<ScientificReferencesModalProps>
                     {t('Open Food Facts Global Database')}
                   </Text>
                   <Text style={styles.referenceItemDesc}>
-                    {t('Barcode lookups query Open Food Facts API v2. Provides Nutri-Score, NOVA food processing classifications, and manufacturer package nutrition panels.')}
+                    {t('Global food search and barcode lookups powered by Open Food Facts (openfoodfacts.org), made available under the Open Database License (ODbL).')}
                   </Text>
                 </View>
               </View>
@@ -296,10 +303,11 @@ export const ScientificReferencesModal: React.FC<ScientificReferencesModalProps>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: theme.colors.backdrop,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
@@ -369,12 +377,12 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primaryBorder,
   },
   evidenceBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.primary,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -435,31 +443,31 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   referenceItemDesc: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     lineHeight: 16,
     marginTop: 2,
   },
   formulaBox: {
-    backgroundColor: '#0F172A',
+    backgroundColor: theme.colors.slateNavy,
     borderRadius: theme.radius.md,
     padding: 12,
     gap: 6,
   },
   formulaTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#E2E8F0',
+    color: theme.colors.slateBorder,
   },
   formulaCode: {
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 11,
-    color: '#34D399',
+    fontSize: 12,
+    color: theme.colors.greenMint,
     lineHeight: 16,
   },
   formulaExplanation: {
-    fontSize: 10,
-    color: '#94A3B8',
+    fontSize: 12,
+    color: theme.colors.slateMuted,
     lineHeight: 14,
     marginTop: 2,
   },

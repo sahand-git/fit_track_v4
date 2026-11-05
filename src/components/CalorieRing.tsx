@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -11,8 +11,12 @@ import { AppText as Text } from './AppText';
 import { AnimatedCount } from './AnimatedCount';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 import { isReducedMotion } from '../utils/motion';
+import { calculateCalorieRingMetrics, CalorieRingMetrics } from '../utils/calorieRingCalculations';
+
+export { calculateCalorieRingMetrics, CalorieRingMetrics };
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -32,6 +36,8 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
   onPress,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (key: string) => translate(language, key);
 
   const strokeWidth = 10;
@@ -60,8 +66,13 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
     };
   });
 
-  const remaining = Math.max(0, target - consumed);
-  const isOver = consumed > target;
+  const { isOver, displayedValue } = useMemo(
+    () => calculateCalorieRingMetrics(consumed, target),
+    [consumed, target]
+  );
+
+  const tolerance = Math.max(25, Math.round(target * 0.02));
+  const isInTolerance = target > 0 && Math.abs(consumed - target) <= tolerance;
 
   return (
     <View style={styles.wrapper}>
@@ -71,7 +82,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
         disabled={!onPress}
         activeOpacity={0.82}
         accessibilityRole="button"
-        accessibilityLabel={t('Calories')}
+        accessibilityLabel={`${t('Calories')} · ${displayedValue} ${isOver ? t('kcal over budget') : t('kcal remaining')}`}
       >
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           {/* Track */}
@@ -102,16 +113,20 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
         {/* Center Metrics: Natural, calm typography with count-up */}
         <View style={styles.centerContent}>
           <AnimatedCount
-            value={remaining}
+            value={displayedValue}
             style={[styles.remainingValue, isOver && { color: theme.colors.accent }]}
           />
-          <Text style={styles.remainingLabel}>
-            {isOver ? t('kcal over budget') : t('kcal remaining')}
+          <Text style={styles.remainingLabel} numberOfLines={2}>
+            {isInTolerance
+              ? t("You've reached today's calorie goal.")
+              : isOver
+              ? t('kcal over budget')
+              : t('kcal remaining')}
           </Text>
         </View>
       </TouchableOpacity>
 
-      {/* 3-Point Calorie Ledger: Consumed | Remaining | Daily Target */}
+      {/* 3-Point Calorie Ledger: Consumed | Remaining/Over | Daily Target */}
       <View style={styles.ledgerRow}>
         <View style={styles.ledgerCol}>
           <AnimatedCount value={consumed} style={styles.ledgerVal} />
@@ -122,7 +137,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
 
         <View style={styles.ledgerCol}>
           <AnimatedCount
-            value={remaining}
+            value={displayedValue}
             style={[styles.ledgerVal, isOver && { color: theme.colors.accent }]}
           />
           <Text style={styles.ledgerLbl}>
@@ -141,7 +156,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   wrapper: {
     alignItems: 'center',
     width: '100%',
@@ -172,6 +187,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
   ledgerRow: {
     flexDirection: 'row',
@@ -197,7 +214,7 @@ const styles = StyleSheet.create({
   },
   ledgerLbl: {
     fontFamily: theme.fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
     color: theme.colors.textMuted,
     marginTop: 2,

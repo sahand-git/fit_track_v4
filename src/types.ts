@@ -68,6 +68,7 @@ export interface UserProfile {
   hasAcceptedMedicalDisclaimer?: boolean;
   customNutrientGoals?: Partial<Record<string, number>>;
   enableCrashReporting?: boolean;
+  themeMode?: 'system' | 'light' | 'dark';
 }
 
 export type ExerciseCategory = 'strength' | 'cardio' | 'hiit' | 'sports' | 'flexibility';
@@ -119,9 +120,13 @@ export interface FoodVariant {
 export interface FoodItem {
   id: string;
   name: string;
+  nameAr?: string;
+  nameCkb?: string;
   brand?: string;
+  aliases?: string[];
   servingSize: string;
   servingGrams: number;
+  unit?: 'g' | 'ml';
   calories: number;
   protein: number;
   carbs: number;
@@ -129,7 +134,8 @@ export interface FoodItem {
   category?: string;
   barcode?: string;
   imageUrl?: string;
-  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate' | 'gemini';
+  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate' | 'generic_estimate' | 'gemini';
+  sourceRef?: string;
   fiber?: number;
   sugar?: number; // Canonical sugar content in grams
   sugars?: number; // Maintained for database schema compatibility
@@ -144,12 +150,29 @@ export interface FoodItem {
   vitaminB12?: number; // mcg
   magnesium?: number; // mg
   zinc?: number; // mg
+  vitaminE?: number; // mg
+  vitaminK?: number; // mcg
+  thiamin?: number; // mg
+  riboflavin?: number; // mg
+  niacin?: number; // mg
+  vitaminB6?: number; // mg
+  folate?: number; // mcg
+  pantothenicAcid?: number; // mg
+  choline?: number; // mg
+  phosphorus?: number; // mg
+  copper?: number; // mg
+  manganese?: number; // mg
+  selenium?: number; // mcg
+  iodine?: number; // mcg
   isEstimate?: boolean;
+  isIncomplete?: boolean;
+  incompleteReason?: string;
   portionUnit?: PortionUnit;
   gramsPerUnit?: number;
   ingredients?: RecipeIngredient[];
   variants?: FoodVariant[];
   recipeEstimate?: boolean;
+  nutrientsSnapshot?: Partial<Record<string, number>>;
 }
 
 export interface WeightEntry {
@@ -164,13 +187,17 @@ export interface LoggedMeal {
   id: string;
   foodId: string;
   name: string;
+  nameAr?: string;
+  nameCkb?: string;
   brand?: string;
+  aliases?: string[];
   category?: string;
   imageUrl?: string;
   mealType: MealType;
   servings: number;
   servingSize: string;
   servingGrams: number;
+  unit?: 'g' | 'ml';
   calories: number;
   protein: number;
   carbs: number;
@@ -188,9 +215,12 @@ export interface LoggedMeal {
   magnesium?: number;
   zinc?: number;
   barcode?: string;
-  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate' | 'gemini';
+  source?: 'verified_database' | 'usda_sr28' | 'custom' | 'open_food_facts' | 'ai_estimated' | 'regional_culinary_estimate' | 'generic_estimate' | 'gemini';
+  sourceRef?: string;
   timestamp: string; // ISO string
   isEstimate?: boolean;
+  isIncomplete?: boolean;
+  incompleteReason?: string;
   portionUnit?: PortionUnit;
   gramsPerUnit?: number;
   copiedFromId?: string;
@@ -200,6 +230,7 @@ export interface LoggedMeal {
   selectedVariantId?: string;
   variantName?: string;
   recipeEstimate?: boolean;
+  nutrientsSnapshot?: Partial<Record<string, number>>;
 }
 
 export interface CopyYesterdayResult extends DailyLog {
@@ -224,6 +255,7 @@ export interface MealTemplateItem {
   gramsPerUnit?: number;
   isEstimate?: boolean;
   source?: FoodItem['source'];
+  nutrientsSnapshot?: Partial<Record<string, number>>;
 }
 
 export interface MealTemplate {
@@ -248,6 +280,7 @@ export interface AICoachReport {
   customMealSuggestion: string;
   coachNote: string;
   generatedAt: string;
+  language?: AppLanguage;
 }
 
 export interface DailyLog {

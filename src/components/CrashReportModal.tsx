@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -23,7 +23,9 @@ import {
 } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import {
   ScrubbedCrashReport,
   clearStoredCrashes,
@@ -44,8 +46,10 @@ export const CrashReportModal: React.FC<CrashReportModalProps> = ({
   onClear,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
-  const isRTL = language === 'ar' || language === 'ckb';
+  const isRTL = useIsRTL();
 
   const [copied, setCopied] = useState(false);
   const [cleared, setCleared] = useState(false);
@@ -121,6 +125,8 @@ export const CrashReportModal: React.FC<CrashReportModalProps> = ({
       animationType="slide"
       transparent
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.overlay}>
         <TouchableOpacity
@@ -277,11 +283,12 @@ export const CrashReportModal: React.FC<CrashReportModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(28, 33, 28, 0.45)',
+    backgroundColor: theme.colors.backdrop,
   },
   backdrop: {
     position: 'absolute',
@@ -386,7 +393,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: theme.radius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(217, 107, 79, 0.2)',
+    borderColor: theme.colors.accentBorder,
   },
   noticeText: {
     flex: 1,
@@ -439,7 +446,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   stackText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     lineHeight: 16,

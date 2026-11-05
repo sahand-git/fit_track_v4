@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -6,12 +6,11 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Linking,
   Share,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { AppText as Text } from './AppText';
 import { X, Send, Mail, Share2, AlertCircle, CheckCircle, Info } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';
@@ -21,7 +20,8 @@ import {
   createFoodRequestMailtoUrl,
   formatFoodRequestShareMessage,
 } from '../services/foodRequestService';
-import { theme } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { ThemeType } from '../theme';
 
 export interface RequestFoodModalProps {
   visible: boolean;
@@ -37,6 +37,8 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
   initialBarcode = '',
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
   const [foodName, setFoodName] = useState(initialFoodName);
@@ -141,9 +143,11 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.backdrop}
       >
         <View style={styles.sheetContainer}>
@@ -316,10 +320,11 @@ export const RequestFoodModal: React.FC<RequestFoodModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) =>
+  StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(31, 36, 33, 0.45)',
+    backgroundColor: theme.colors.backdrop,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
@@ -333,7 +338,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,

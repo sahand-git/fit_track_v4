@@ -71,17 +71,33 @@ const shape = <T extends object>(
 // Portion Unit Choice
 const portionUnitChoice = choice('g', 'piece', 'spoon', 'glass', 'samoon', 'bowl', 'plate', 'serving');
 
+// Nutrient Snapshot Validator (Phase 2 compact nutrient snapshots)
+const nutrientSnapshotShape: Validator<Partial<Record<string, number>>> = (v) => {
+  const rec = record(v);
+  const result: Record<string, number> = {};
+  for (const [key, val] of Object.entries(rec)) {
+    if (typeof val === 'number' && Number.isFinite(val) && val >= 0) {
+      result[key] = val;
+    }
+  }
+  return result;
+};
+
 // Nutrients & Food Meal
 const mealShape = shape<LoggedMeal>({
   id: str,
   foodId: str,
   name: str,
+  nameAr: optional(str),
+  nameCkb: optional(str),
   brand: optional(str),
+  aliases: optional(list(str)),
   category: optional(str),
   mealType: choice('breakfast', 'lunch', 'dinner', 'snack'),
   servings: num,
   servingSize: str,
   servingGrams: num,
+  unit: optional(choice('g', 'ml')),
   calories: num,
   protein: num,
   carbs: num,
@@ -99,11 +115,12 @@ const mealShape = shape<LoggedMeal>({
   magnesium: optional(num),
   zinc: optional(num),
   barcode: optional(str),
-  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate')),
+  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate', 'generic_estimate', 'gemini')),
   timestamp: str,
   isEstimate: optional(bool),
   portionUnit: optional(portionUnitChoice),
   gramsPerUnit: optional(num),
+  nutrientsSnapshot: optional(nutrientSnapshotShape),
 });
 
 // Exercise & Workout
@@ -250,9 +267,13 @@ const weightEntryShape = shape<WeightEntry>({
 const foodItemShape = shape<FoodItem>({
   id: str,
   name: str,
+  nameAr: optional(str),
+  nameCkb: optional(str),
   brand: optional(str),
+  aliases: optional(list(str)),
   servingSize: str,
   servingGrams: num,
+  unit: optional(choice('g', 'ml')),
   calories: num,
   protein: num,
   carbs: num,
@@ -260,7 +281,7 @@ const foodItemShape = shape<FoodItem>({
   category: optional(str),
   barcode: optional(str),
   imageUrl: optional(str),
-  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate')),
+  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate', 'generic_estimate', 'gemini')),
   fiber: optional(num),
   sugar: optional(num),
   sugars: optional(num),
@@ -278,6 +299,7 @@ const foodItemShape = shape<FoodItem>({
   isEstimate: optional(bool),
   portionUnit: optional(portionUnitChoice),
   gramsPerUnit: optional(num),
+  nutrientsSnapshot: optional(nutrientSnapshotShape),
 });
 
 // Meal Template
@@ -295,7 +317,8 @@ const mealTemplateItemShape = shape<MealTemplateItem>({
   portionUnit: optional(portionUnitChoice),
   gramsPerUnit: optional(num),
   isEstimate: optional(bool),
-  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate')),
+  source: optional(choice('verified_database', 'usda_sr28', 'custom', 'open_food_facts', 'ai_estimated', 'regional_culinary_estimate', 'generic_estimate', 'gemini')),
+  nutrientsSnapshot: optional(nutrientSnapshotShape),
 });
 
 const mealTemplateShape = shape<MealTemplate>({

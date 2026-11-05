@@ -1,23 +1,25 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
-import { FoodItem } from '../types';
-
+import { FoodItem, AppLanguage } from '../types';
 import { clearActiveModelCache } from '../utils/geminiModels';
-
+import { askNutritionCoach as coreAskNutritionCoach } from './coachChatService';
 import {
   executeGeminiRequest as coreExecuteGeminiRequest,
   FetchFunction,
   WaitFunction,
 } from '../utils/geminiCore';
 
+export { generateLocalCoachAdvice } from './coachChatService';
+
 const SECURE_GEMINI_API_KEY = 'fittrack_gemini_api_key';
 const LEGACY_GEMINI_API_KEY_STORAGE = '@fittrack_gemini_api_key';
 
 async function canUseSecureStore(): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
   try {
-    return await SecureStore.isAvailableAsync();
+    if (typeof SecureStore?.isAvailableAsync === 'function') {
+      return await SecureStore.isAvailableAsync();
+    }
+    return false;
   } catch {
     return false;
   }
@@ -159,11 +161,33 @@ export async function estimateMealFromText(description: string, language = 'Engl
   return parseEstimate(await requestGemini([{ text: prompt }], true), 'Estimated meal');
 }
 
-export async function askNutritionCoach(message: string, context: {
-  name: string; goal: string; targetCalories: number; calories: number; protein: number; carbs: number; fat: number; waterGlasses: number;
-}, language: string): Promise<string> {
-  const prompt = `You are a supportive nutrition and fitness coach. Give brief, practical, nonjudgmental general education. You are not a medical professional: do not diagnose, prescribe supplements, or recommend extreme restriction. Clearly say when the log is too limited to conclude anything. Reply in ${language}. User context: ${JSON.stringify(context)}. User message: ${JSON.stringify(message)}`;
-  return requestGemini([{ text: prompt }]);
+export async function askNutritionCoach(
+  message: string,
+  context: {
+    name: string;
+    goal: string;
+    targetCalories: number;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    waterGlasses: number;
+    burnedCalories?: number;
+    workouts?: string;
+  },
+  language: AppLanguage | string,
+  customFetch?: FetchFunction,
+  customWait?: WaitFunction,
+  apiKeyGetter?: () => Promise<string | null>
+): Promise<string> {
+  return coreAskNutritionCoach(
+    message,
+    context,
+    language,
+    customFetch,
+    customWait,
+    apiKeyGetter || getStoredGeminiApiKey
+  );
 }
 
 export interface PlateAnalysisItem {

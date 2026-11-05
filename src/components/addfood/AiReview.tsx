@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { AppText as Text } from '../AppText';
 import { Sparkles, Plus, Check, Minus } from 'lucide-react-native';
@@ -6,7 +6,9 @@ import { PlateAnalysisResult, PlateAnalysisItem } from '../../services/plateAnal
 import { LoggedMeal, MealType } from '../../types';
 import { useLanguage } from '../../i18n/I18nContext';
 import { translate } from '../../i18n/strings';
-import { theme } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
+import { ThemeType } from '../../theme';
+import { formatKcal } from '../../utils/formatKcal';
 import * as Haptics from 'expo-haptics';
 
 interface AiReviewProps {
@@ -31,6 +33,8 @@ export const AiReview: React.FC<AiReviewProps> = ({
   onLogAll,
 }) => {
   const language = useLanguage();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (str: string) => translate(language, str);
 
   const currentResultKey = result
@@ -152,7 +156,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
       return { bg: theme.colors.primaryLight, text: theme.colors.primary };
     }
     if (confidence === 'low') {
-      return { bg: '#FDECEC', text: theme.colors.danger };
+      return { bg: theme.colors.crimsonLight, text: theme.colors.danger };
     }
     return { bg: theme.colors.accentLight, text: theme.colors.accent };
   };
@@ -173,7 +177,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
         <Text style={styles.mealName}>{result.mealName}</Text>
 
         <View style={styles.totalsRow}>
-          <Text style={styles.totalKcal}>{totalCalories} kcal</Text>
+          <Text style={styles.totalKcal}>{formatKcal(totalCalories, t)}</Text>
           <Text style={styles.totalMacros}>
             P: {totalProtein}g • C: {totalCarbs}g • F: {totalFat}g
           </Text>
@@ -200,7 +204,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
                   <Text style={styles.itemPortionSub}>{entry.item.portionEstimate}</Text>
                 </View>
                 <View style={styles.itemRight}>
-                  <Text style={styles.itemKcal}>{nut.calories} kcal</Text>
+                  <Text style={styles.itemKcal}>{formatKcal(nut.calories, t)}</Text>
                   <View style={[styles.confBadge, { backgroundColor: badgeColors.bg }]}>
                     <Text style={[styles.confBadgeText, { color: badgeColors.text }]}>
                       {t(entry.item.confidence)}
@@ -292,7 +296,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeType) => StyleSheet.create({
   container: {
     gap: 12,
   },
@@ -318,7 +322,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.accent,
   },
@@ -353,8 +357,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   disclaimerText: {
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 16,
     color: theme.colors.textMuted,
   },
   itemsList: {
@@ -383,7 +387,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   itemPortionSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 1,
   },
@@ -402,12 +406,12 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
   },
   confBadgeText: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
   macroSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textSecondary,
   },
   adjustRow: {
@@ -453,7 +457,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   unitText: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textMuted,
     marginRight: 2,
   },
@@ -470,7 +474,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryLight,
   },
   singleLogBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: theme.colors.textInverted,
   },
