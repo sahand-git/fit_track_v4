@@ -2,9 +2,9 @@ name: Build FitTrack v4 Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, fix-addfood-loop]
   pull_request:
-    branches: [main]
+    branches: [main, fix-addfood-loop]
   workflow_dispatch:
 
 permissions:
