@@ -52,7 +52,6 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
-import { useIsRTL } from '../hooks/useIsRTL';
 import { DirectionalIcon } from '../components/DirectionalIcon';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
@@ -159,7 +158,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     }
   }, [isAddFoodSheetOpen]);
 
-  const isRtl = useIsRTL();
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const dockClearance = dockBottom + 72;
   const scrollBottomPadding = Math.max(240, dockClearance + 140);
@@ -264,16 +262,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
       { key: 'snack', label: t('Snacks') },
     ],
     [t]
-  );
-
-  const mealBorderColors: Record<MealType, string> = useMemo(
-    () => ({
-      breakfast: theme.colors.orange,
-      lunch: theme.colors.emerald,
-      dinner: theme.colors.primary,
-      snack: theme.colors.purple,
-    }),
-    [theme]
   );
 
   const todayLabel = formatDisplayDate(log.date, language);
@@ -406,11 +394,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     onOpenAddFood(meal);
   };
 
-  const handleOpenFloatingAddFood = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    onOpenAddFood();
-  };
-
   if (isLoading) {
     return <TodaySkeleton />;
   }
@@ -518,12 +501,13 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           />
         </Animated.View>
 
-        {/* 1.3 Quick Action Grid (Sleek 2x2 Fast Food Logging & Discovery) */}
+        {/* 1.3 Quick Action Grid (Sleek Single Row with Clear Labels) */}
         <Animated.View entering={getStaggeredCardEntry(2)}>
           <DashboardQuickGrid
             onScanPlate={() => onOpenAddFood(undefined, 'photo')}
             onDescribeMeal={() => onOpenAddFood(undefined, 'describe')}
             onScanBarcode={() => onOpenAddFood(undefined, 'search', true)}
+            onQuickAdd={() => onOpenAddFood()}
             onExploreFood={() => (onExploreFood ? onExploreFood() : onOpenAddFood(undefined, 'search'))}
           />
         </Animated.View>
@@ -558,7 +542,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
                   style={[
                     styles.mealRow,
                     isLast && styles.mealRowLast,
-                    { borderLeftWidth: 3, borderLeftColor: mealBorderColors[m.key] },
                   ]}
                   onPress={() => handleQuickAdd(m.key)}
                   minScale={0.98}
@@ -837,32 +820,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           </View>
         </Animated.View>
       </ScrollView>
-
-      {/* Canonical Floating Add Food Button */}
-      {!isFuture && (
-        <View
-          pointerEvents="box-none"
-          style={[
-            styles.addFoodFooter,
-            {
-              paddingBottom: dockClearance,
-              flexDirection: isRtl ? 'row-reverse' : 'row',
-              justifyContent: isRtl ? 'flex-start' : 'flex-end',
-            },
-          ]}
-        >
-          <AnimatedPressable
-            style={styles.floatingAddBtn}
-            onPress={handleOpenFloatingAddFood}
-            minScale={0.94}
-            accessibilityLabel={t('Add food')}
-            accessibilityRole="button"
-          >
-            <Plus size={18} color={theme.colors.textInverted} strokeWidth={2.4} />
-            <Text style={styles.floatingAddBtnText}>{t('Add food')}</Text>
-          </AnimatedPressable>
-        </View>
-      )}
 
       <QuickActionSheet
         visible={quickActionVisible}
@@ -1353,42 +1310,5 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  floatingAddBtn: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: theme.radius.full,
-    ...theme.shadow.floating,
-  },
-  floatingQuickBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.full,
-    ...theme.shadow.subtle,
-  },
-  addFoodFooter: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
-    paddingHorizontal: 18,
-    paddingTop: 8,
-  },
-  floatingAddBtnText: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.colors.textInverted,
   },
 });

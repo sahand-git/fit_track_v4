@@ -5,7 +5,7 @@ import {
   Camera,
   Sparkles,
   Barcode,
-  Compass,
+  Zap,
 } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -13,59 +13,55 @@ import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { AnimatedPressable } from './AnimatedPressable';
-import { useIsRTL } from '../hooks/useIsRTL';
 
 interface DashboardQuickGridProps {
   onScanPlate: () => void;
   onDescribeMeal: () => void;
   onScanBarcode: () => void;
-  onExploreFood: () => void;
+  onQuickAdd?: () => void;
+  onExploreFood?: () => void;
 }
 
 export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
   onScanPlate,
   onDescribeMeal,
   onScanBarcode,
+  onQuickAdd,
   onExploreFood,
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
-  const isRtl = useIsRTL();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (key: string) => translate(language, key);
 
   const actions = [
     {
       id: 'scan',
-      label: t('Scan Plate'),
-      sub: t('AI Camera'),
-      icon: <Camera size={19} color={theme.colors.primary} />,
+      label: t('Scan Food'),
+      icon: <Camera size={22} color={theme.colors.primary} />,
       iconBg: theme.colors.primaryLight,
       onPress: onScanPlate,
     },
     {
       id: 'describe',
-      label: t('Describe'),
-      sub: t('Voice & Text'),
-      icon: <Sparkles size={19} color={theme.colors.amber} />,
+      label: t('AI Describe'),
+      icon: <Sparkles size={22} color={theme.colors.amber} />,
       iconBg: theme.colors.amberLight,
       onPress: onDescribeMeal,
     },
     {
       id: 'barcode',
       label: t('Barcode'),
-      sub: t('Instant Scan'),
-      icon: <Barcode size={19} color={theme.colors.purple} />,
+      icon: <Barcode size={22} color={theme.colors.purple} />,
       iconBg: theme.colors.purpleLight,
       onPress: onScanBarcode,
     },
     {
-      id: 'explore',
-      label: t('Explore'),
-      sub: t('Food Catalog'),
-      icon: <Compass size={19} color={theme.colors.water} />,
+      id: 'quick_add',
+      label: t('Quick Add'),
+      icon: <Zap size={22} color={theme.colors.water} />,
       iconBg: theme.colors.waterLight,
-      onPress: onExploreFood,
+      onPress: onQuickAdd || onExploreFood || onScanPlate,
     },
   ];
 
@@ -75,27 +71,22 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
   };
 
   return (
-    <View style={styles.grid}>
+    <View style={styles.container}>
       {actions.map((act) => (
         <AnimatedPressable
           key={act.id}
-          style={[styles.card, isRtl && styles.cardRtl]}
+          style={styles.actionItem}
           onPress={() => handlePress(act.onPress)}
-          minScale={0.96}
+          minScale={0.93}
           accessibilityRole="button"
-          accessibilityLabel={`${act.label}, ${act.sub}`}
+          accessibilityLabel={act.label}
         >
-          <View style={[styles.iconContainer, { backgroundColor: act.iconBg }]}>
+          <View style={[styles.circleButton, { backgroundColor: act.iconBg }]}>
             {act.icon}
           </View>
-          <View style={styles.textContainer}>
-            <Text style={styles.cardLabel} numberOfLines={1}>
-              {act.label}
-            </Text>
-            <Text style={styles.cardSub} numberOfLines={1}>
-              {act.sub}
-            </Text>
-          </View>
+          <Text style={styles.actionLabel} numberOfLines={1}>
+            {act.label}
+          </Text>
         </AnimatedPressable>
       ))}
     </View>
@@ -104,48 +95,34 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
 
 const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
-    grid: {
+    container: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
       justifyContent: 'space-between',
-      gap: theme.spacing.sm,
+      alignItems: 'center',
+      paddingHorizontal: theme.spacing.sm,
       marginVertical: theme.spacing.sm,
     },
-    card: {
-      width: '48.5%',
-      backgroundColor: theme.colors.surface,
-      borderRadius: theme.radius.lg,
+    actionItem: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 2,
+    },
+    circleButton: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 6,
       borderWidth: 1,
       borderColor: theme.colors.border,
-      paddingVertical: 12,
-      paddingHorizontal: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
+      ...theme.shadow.subtle,
     },
-    cardRtl: {
-      flexDirection: 'row-reverse',
-    },
-    iconContainer: {
-      width: 40,
-      height: 40,
-      borderRadius: theme.radius.md,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    textContainer: {
-      flex: 1,
-      justifyContent: 'center',
-    },
-    cardLabel: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.colors.textPrimary,
-    },
-    cardSub: {
+    actionLabel: {
       fontSize: 12,
-      fontWeight: '400',
-      color: theme.colors.textSecondary,
-      marginTop: 2,
+      fontWeight: '600',
+      color: theme.colors.textPrimary,
+      textAlign: 'center',
     },
   });

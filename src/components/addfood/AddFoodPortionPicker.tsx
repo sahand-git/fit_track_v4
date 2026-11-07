@@ -14,10 +14,11 @@ import {
   AlertTriangle,
   Edit3,
 } from 'lucide-react-native';
-import { FoodItem, FoodVariant, AppLanguage } from '../../types';
+import { FoodItem, FoodVariant, AppLanguage, MealType } from '../../types';
 import { FoodThumbnail } from '../FoodThumbnail';
 import { FoodSourceBadge } from '../FoodSourceBadge';
 import { getLocalizedFoodName } from '../../utils/foodLocalization';
+import { formatServingWithGrams } from '../../utils/formatServing';
 import { formatKcal } from '../../utils/formatKcal';
 import { useTheme } from '../../theme/ThemeContext';
 import { ThemeType } from '../../theme';
@@ -28,6 +29,7 @@ export { calculatePortionMacros };
 
 export interface AddFoodPortionPickerProps {
   food: FoodItem;
+  mealType?: MealType;
   servingsCount: number;
   onServingsChange: (updater: (prev: number) => number) => void;
   activeVariant?: FoodVariant;
@@ -43,6 +45,7 @@ export interface AddFoodPortionPickerProps {
 
 export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
   food,
+  mealType,
   servingsCount,
   onServingsChange,
   activeVariant,
@@ -71,27 +74,48 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
     (food.source === 'open_food_facts' && (food.calories === 0 || (food.protein === 0 && food.carbs === 0 && food.fat === 0)))
   );
 
+  const mealLabel = mealType === 'breakfast'
+    ? t('Breakfast')
+    : mealType === 'lunch'
+    ? t('Lunch')
+    : mealType === 'dinner'
+    ? t('Dinner')
+    : mealType === 'snack'
+    ? t('Snack')
+    : t('Diary');
+  const scaledKcal = Math.round(activeCalories * scaleRatio);
+  const logButtonText = mealType
+    ? `${t('Log to')} ${mealLabel} (${scaledKcal} ${t('kcal')})`
+    : `${t('Log to Diary')} (${scaledKcal} ${t('kcal')})`;
+
   return (
     <View style={styles.selectedFoodCard}>
       <View style={styles.selectedHeaderRow}>
         <View style={styles.selectedBadgesRow}>
-          {food.source ? <FoodSourceBadge source={food.source} size="small" /> : null}
           {isIncompleteFood ? (
             <View style={styles.incompleteBadge}>
               <AlertTriangle size={11} color={theme.colors.orangeDeep} />
               <Text style={styles.incompleteBadgeText}>{t('Incomplete Data')}</Text>
             </View>
           ) : null}
-          {food.recipeEstimate ? (
+          {/* Single Consolidated Estimate/Source Badge (BUG 10) */}
+          {food.source === 'ai_estimated' || food.source === 'gemini' ? (
+            <View style={styles.aiEstimateBadge}>
+              <Sparkles size={11} color={theme.colors.accent} />
+              <Text style={styles.aiEstimateBadgeText}>{t('AI Estimate')}</Text>
+            </View>
+          ) : food.recipeEstimate || (food.ingredients && food.ingredients.length > 0) ? (
             <View style={styles.recipeEstimateBadge}>
-              <Sparkles size={11} color={theme.colors.orangeDeep} />
-              <Text style={styles.recipeEstimateBadgeText}>{t('Recipe estimate')}</Text>
+              <Sparkles size={11} color={theme.colors.emerald} />
+              <Text style={styles.recipeEstimateBadgeText}>{t('Recipe')}</Text>
             </View>
           ) : food.isEstimate ? (
             <View style={styles.estimateBadge}>
-              <Info size={11} color={theme.colors.amberDark} />
-              <Text style={styles.estimateBadgeText}>{t('Culinary Estimate')}</Text>
+              <Info size={11} color={theme.colors.water} />
+              <Text style={styles.estimateBadgeText}>{t('Estimate')}</Text>
             </View>
+          ) : food.source ? (
+            <FoodSourceBadge source={food.source} size="small" />
           ) : null}
           {food.barcode ? (
             <View style={styles.barcodeBadge}>
@@ -124,7 +148,7 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
           <Text style={styles.selectedPortion}>
             {food.portionUnit
               ? `${servingsCount} ${t(food.portionUnit)} (${totalGrams}g)`
-              : `${activeVariant?.servingSize ?? food.servingSize} (${totalGrams}g)`}
+              : formatServingWithGrams(activeVariant?.servingSize ?? food.servingSize, food.servingGrams, servingsCount)}
           </Text>
           <Text style={styles.selectedMacrosPreview}>
             {`P: ${(activeProtein * scaleRatio).toFixed(1)}g • C: ${(activeCarbs * scaleRatio).toFixed(1)}g • F: ${(activeFat * scaleRatio).toFixed(1)}g`}
@@ -178,15 +202,16 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
             accessibilityRole="button"
             accessibilityLabel={t('Recipe ingredients & USDA sources')}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, flexWrap: 'wrap' }}>
               <Utensils size={14} color={theme.colors.primary} />
               <Text style={styles.ingredientsToggleText}>
                 {t('Recipe ingredients & USDA sources')} ({food.ingredients.length})
               </Text>
+              <Text style={styles.ingredientsSeparator}> · </Text>
+              <Text style={styles.ingredientsToggleAction}>
+                {showIngredients ? t('Hide ingredients') : t('Show ingredients')}
+              </Text>
             </View>
-            <Text style={styles.ingredientsToggleAction}>
-              {showIngredients ? t('Hide ingredients') : t('Show ingredients')}
-            </Text>
           </TouchableOpacity>
 
           {showIngredients ? (
@@ -292,10 +317,10 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
             onConfirm();
           }}
           accessibilityRole="button"
-          accessibilityLabel={t('Log to Diary')}
+          accessibilityLabel={logButtonText}
         >
           <Check size={16} color={theme.colors.textInverted} />
-          <Text style={styles.confirmAddBtnText}>{t('Log to Diary')}</Text>
+          <Text style={styles.confirmAddBtnText}>{logButtonText}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -382,6 +407,22 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.primary,
   },
+  aiEstimateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.colors.surfaceSubtle,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+  },
+  aiEstimateBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.accent,
+  },
   recipeEstimateBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -391,12 +432,12 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     paddingVertical: 3,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: theme.colors.orangeDeep,
+    borderColor: theme.colors.emerald,
   },
   recipeEstimateBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: theme.colors.orangeDeep,
+    color: theme.colors.emerald,
   },
   estimateBadge: {
     flexDirection: 'row',
@@ -407,12 +448,12 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     paddingVertical: 3,
     borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: theme.colors.amberDark,
+    borderColor: theme.colors.water,
   },
   estimateBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: theme.colors.amberDark,
+    color: theme.colors.water,
   },
   barcodeBadge: {
     flexDirection: 'row',
@@ -472,15 +513,20 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     marginBottom: 6,
   },
   variantChipsRow: {
-    gap: 6,
+    gap: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
   variantChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   variantChipActive: {
     backgroundColor: theme.colors.primary,
@@ -490,6 +536,7 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
+    flexShrink: 0,
   },
   variantChipTextActive: {
     color: theme.colors.textInverted,
@@ -502,7 +549,6 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   },
   ingredientsToggleBtn: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 4,
   },
@@ -510,6 +556,11 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: theme.colors.primary,
+  },
+  ingredientsSeparator: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginHorizontal: 2,
   },
   ingredientsToggleAction: {
     fontSize: 12,

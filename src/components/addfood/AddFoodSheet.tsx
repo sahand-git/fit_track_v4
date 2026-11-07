@@ -2140,24 +2140,6 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                     </View>
                   )}
 
-                  {/* Selected Food Confirmation Box */}
-                  {selectedFood && (
-                    <AddFoodPortionPicker
-                      food={selectedFood}
-                      servingsCount={servingsCount}
-                      onServingsChange={setServingsCount}
-                      activeVariant={activeVariant ?? undefined}
-                      onSelectVariant={setSelectedVariantId}
-                      showIngredients={showIngredients}
-                      onToggleIngredients={() => setShowIngredients((prev) => !prev)}
-                      onCustomizeRecipe={handleCustomizeSelectedFood}
-                      onCancel={() => setSelectedFood(null)}
-                      onConfirm={handleSaveSelectedFood}
-                      language={language}
-                      t={t}
-                    />
-                  )}
-
                   {/* Unified Single Filter Row (Collapsed when searching) */}
                   {searchQuery.trim().length === 0 && (
                     <View style={styles.filterActionsContainer}>
@@ -2247,8 +2229,8 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                         {
                           paddingBottom:
                             sessionState.items.length > 0
-                              ? Math.max(104, insets.bottom + 88)
-                              : Math.max(theme.spacing.xl, insets.bottom + 36),
+                              ? Math.max(140, insets.bottom + 110)
+                              : Math.max(120, insets.bottom + 80),
                         },
                       ]}
                       keyboardShouldPersistTaps="handled"
@@ -2337,8 +2319,8 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                         {
                           paddingBottom:
                             sessionState.items.length > 0
-                              ? Math.max(104, insets.bottom + 88)
-                              : Math.max(theme.spacing.xl, insets.bottom + 36),
+                              ? Math.max(140, insets.bottom + 110)
+                              : Math.max(120, insets.bottom + 80),
                         },
                       ]}
                       ListHeaderComponent={renderListHeader}
@@ -2514,12 +2496,93 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
       initialFoodName={requestModalInitialName}
       initialBarcode={requestModalInitialBarcode}
     />
+
+    {/* Food Portion & Detail Bottom Sheet Modal (BUG 9, 2, 13, 14) */}
+    {selectedFood && (
+      <Modal
+        visible={Boolean(selectedFood)}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectedFood(null)}
+        statusBarTranslucent
+        navigationBarTranslucent
+      >
+        <View style={styles.portionModalBackdrop}>
+          <TouchableOpacity
+            style={styles.portionModalBackdropTouchable}
+            activeOpacity={1}
+            onPress={() => setSelectedFood(null)}
+            accessibilityRole="button"
+            accessibilityLabel={t('Close')}
+          />
+          <View style={[styles.portionModalSheet, { paddingBottom: Math.max(insets.bottom + 16, 28) }]}>
+            {/* Drag Handle Indicator (BUG 2) */}
+            <View style={styles.dragHandleContainer}>
+              <View style={styles.dragHandle} />
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+              contentContainerStyle={{ paddingBottom: 12 }}
+            >
+              <AddFoodPortionPicker
+                food={selectedFood}
+                mealType={selectedMeal}
+                servingsCount={servingsCount}
+                onServingsChange={setServingsCount}
+                activeVariant={activeVariant ?? undefined}
+                onSelectVariant={setSelectedVariantId}
+                showIngredients={showIngredients}
+                onToggleIngredients={() => setShowIngredients((prev) => !prev)}
+                onCustomizeRecipe={handleCustomizeSelectedFood}
+                onCancel={() => setSelectedFood(null)}
+                onConfirm={handleSaveSelectedFood}
+                language={language}
+                t={t}
+              />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    )}
   </>
   );
 };
 
 const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
+  portionModalBackdrop: {
+    flex: 1,
+    backgroundColor: theme.colors.backdrop,
+    justifyContent: 'flex-end',
+  },
+  portionModalBackdropTouchable: {
+    flex: 1,
+  },
+  portionModalSheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: theme.colors.border,
+    maxHeight: '85%',
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.xs,
+  },
+  dragHandleContainer: {
+    alignItems: 'center',
+    paddingTop: 6,
+    paddingBottom: 8,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.border,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: theme.colors.background,

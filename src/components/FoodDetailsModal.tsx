@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from './AppText';
 import {
   X,
@@ -25,6 +26,7 @@ import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 import { FoodSourceBadge } from './FoodSourceBadge';
 import { getLocalizedFoodName } from '../utils/foodLocalization';
+import { formatServingWithGrams } from '../utils/formatServing';
 
 interface FoodDetailsModalProps {
   visible: boolean;
@@ -45,6 +47,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const isRtl = useIsRTL();
   const t = (key: string) => translate(language, key);
@@ -190,7 +193,12 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
       navigationBarTranslucent
     >
       <View style={[styles.backdrop, { direction: isRtl ? 'rtl' : 'ltr' }]}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 16, 28) }]}>
+          {/* Drag Handle Indicator */}
+          <View style={styles.dragHandleContainer}>
+            <View style={styles.dragHandle} />
+          </View>
+
           {/* Header */}
           <View style={[styles.header, isRtl && styles.rowRtl]}>
             <View style={{ flex: 1 }}>
@@ -221,7 +229,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
                 <Text style={styles.kcalLabel}>{t('Total Calories (kcal)')}</Text>
               </View>
               <Text style={styles.portionLabel} numberOfLines={2}>
-                {servings} × {item.servingSize} ({currentGrams}g)
+                {formatServingWithGrams(item.servingSize, item.servingGrams, servings)}
               </Text>
             </View>
 
@@ -344,7 +352,19 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     borderTopLeftRadius: theme.radius.xl,
     borderTopRightRadius: theme.radius.xl,
     maxHeight: '85%',
-    padding: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.xs,
+  },
+  dragHandleContainer: {
+    alignItems: 'center',
+    paddingTop: 6,
+    paddingBottom: 8,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.border,
   },
   header: {
     flexDirection: 'row',

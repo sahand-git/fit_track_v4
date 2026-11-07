@@ -29,6 +29,7 @@ import * as Haptics from 'expo-haptics';
 import { FoodItem, MealType } from '../types';
 import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
 import { getLocalizedFoodName } from '../utils/foodLocalization';
+import { formatServingWithGrams } from '../utils/formatServing';
 import { FoodThumbnail } from '../components/FoodThumbnail';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useIsRTL } from '../hooks/useIsRTL';
@@ -354,7 +355,12 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
           navigationBarTranslucent
         >
           <View style={styles.modalBackdrop}>
-            <View style={styles.modalSheet}>
+            <View style={[styles.modalSheet, { paddingBottom: Math.max(insets.bottom + 16, 28) }]}>
+              {/* Drag Handle Indicator */}
+              <View style={styles.dragHandleContainer}>
+                <View style={styles.dragHandle} />
+              </View>
+
               {/* Modal Header */}
               <View style={[styles.modalHeader, isRtl && styles.rowRtl]}>
                 <View style={{ flex: 1 }}>
@@ -362,7 +368,7 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
                     {getLocalizedFoodName(selectedFoodToLog, language)}
                   </Text>
                   <Text style={styles.modalSub}>
-                    {selectedFoodToLog.servingSize} ({selectedFoodToLog.servingGrams || 100}g)
+                    {formatServingWithGrams(selectedFoodToLog.servingSize, selectedFoodToLog.servingGrams, servings)}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -538,6 +544,7 @@ const createStyles = (theme: ThemeType) =>
     },
     categoriesScroll: {
       paddingHorizontal: theme.spacing.md,
+      paddingEnd: theme.spacing.xl + 24,
       gap: 12,
     },
     categoryCircleCard: {
@@ -698,8 +705,20 @@ const createStyles = (theme: ThemeType) =>
       borderLeftWidth: 1,
       borderRightWidth: 1,
       borderColor: theme.colors.border,
-      padding: theme.spacing.lg,
+      paddingHorizontal: theme.spacing.lg,
+      paddingTop: theme.spacing.sm,
       gap: theme.spacing.sm,
+    },
+    dragHandleContainer: {
+      alignItems: 'center',
+      paddingTop: 4,
+      paddingBottom: 8,
+    },
+    dragHandle: {
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.colors.border,
     },
     modalHeader: {
       flexDirection: 'row',
