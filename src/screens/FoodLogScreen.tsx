@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   ScrollView,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Platform,
   BackHandler,
+  PanResponder,
 } from 'react-native';
 import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -135,6 +136,52 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     onSelectDate(getTodayDateString());
   };
+
+  const selectedDateRef = useRef(selectedDate);
+  selectedDateRef.current = selectedDate;
+  const isRtlRef = useRef(isRtl);
+  isRtlRef.current = isRtl;
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onStartShouldSetPanResponderCapture: () => false,
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          return (
+            Math.abs(gestureState.dx) > 35 &&
+            Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.8
+          );
+        },
+        onMoveShouldSetPanResponderCapture: () => false,
+        onPanResponderRelease: (_, gestureState) => {
+          if (Math.abs(gestureState.dx) > 50) {
+            if (gestureState.dx > 0) {
+              if (isRtlRef.current) {
+                if (selectedDateRef.current < getTodayDateString()) {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  onSelectDate(addDaysToDateString(selectedDateRef.current, 1));
+                }
+              } else {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                onSelectDate(addDaysToDateString(selectedDateRef.current, -1));
+              }
+            } else {
+              if (isRtlRef.current) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                onSelectDate(addDaysToDateString(selectedDateRef.current, -1));
+              } else {
+                if (selectedDateRef.current < getTodayDateString()) {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  onSelectDate(addDaysToDateString(selectedDateRef.current, 1));
+                }
+              }
+            }
+          }
+        },
+      }),
+    [onSelectDate]
+  );
 
   // Daily Totals & Targets
   const totalKcal = log.meals.reduce((sum, m) => sum + m.calories, 0);
@@ -307,23 +354,28 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...panResponder.panHandlers}>
       {/* Calm Calendar Navigation — True Horizontal Center */}
       <View style={styles.dateHeader}>
         <AnimatedPressable
-          style={[styles.dateNavBtn, styles.dateNavBtnLeft]}
+          style={styles.dateNavBtn}
           onPress={handlePrevDay}
           accessibilityLabel={t('Previous day')}
           accessibilityRole="button"
+          minScale={0.9}
         >
-          <DirectionalIcon name="ChevronLeft" size={20} color={theme.colors.textSecondary} />
+          <DirectionalIcon name="ChevronLeft" size={22} color={theme.colors.textPrimary} />
         </AnimatedPressable>
 
         <AnimatedPressable
           style={styles.datePickButton}
-          onPress={() => setCalendarVisible(true)}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            setCalendarVisible(true);
+          }}
           accessibilityLabel={t('Choose date')}
           accessibilityRole="button"
+          minScale={0.96}
         >
           <CalendarDays size={18} color={theme.colors.primary} />
           <Text style={styles.dateTitle}>{formatDisplayDate(selectedDate, language)}</Text>
@@ -332,15 +384,19 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         <AnimatedPressable
           style={[
             styles.dateNavBtn,
-            styles.dateNavBtnRight,
             selectedDate >= getTodayDateString() && styles.disabledButton,
           ]}
           onPress={handleNextDay}
           disabled={selectedDate >= getTodayDateString()}
           accessibilityLabel={t('Next day')}
           accessibilityRole="button"
+          minScale={0.9}
         >
-          <DirectionalIcon name="ChevronRight" size={20} color={theme.colors.textSecondary} />
+          <DirectionalIcon
+            name="ChevronRight"
+            size={22}
+            color={selectedDate >= getTodayDateString() ? theme.colors.textMuted : theme.colors.textPrimary}
+          />
         </AnimatedPressable>
       </View>
 
@@ -515,42 +571,37 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   dateHeader: {
-    height: 52,
+    height: 60,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
-    position: 'relative',
   },
   dateNavBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  dateNavBtnLeft: {
-    position: 'absolute',
-    left: theme.spacing.md,
-    zIndex: 2,
-  },
-  dateNavBtnRight: {
-    position: 'absolute',
-    right: theme.spacing.md,
-    zIndex: 2,
+    ...theme.shadow.subtle,
   },
   disabledButton: {
-    opacity: 0.3,
+    opacity: 0.35,
   },
   datePickButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    justifyContent: 'center',
+    gap: 8,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 8,
   },
   dateTitle: {
     fontFamily: theme.fonts.serif,

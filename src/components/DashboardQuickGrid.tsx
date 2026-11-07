@@ -38,29 +38,33 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'scan',
       label: t('Scan Food'),
-      icon: <Camera size={22} color={theme.colors.primary} />,
+      icon: <Camera size={26} color={theme.colors.primary} strokeWidth={2.2} />,
       iconBg: theme.colors.primaryLight,
+      borderColor: theme.colors.primary,
       onPress: onScanPlate,
     },
     {
       id: 'describe',
       label: t('AI Describe'),
-      icon: <Sparkles size={22} color={theme.colors.amber} />,
+      icon: <Sparkles size={26} color={theme.colors.amber} strokeWidth={2.2} />,
       iconBg: theme.colors.amberLight,
+      borderColor: theme.colors.amber,
       onPress: onDescribeMeal,
     },
     {
       id: 'barcode',
       label: t('Barcode'),
-      icon: <Barcode size={22} color={theme.colors.purple} />,
+      icon: <Barcode size={26} color={theme.colors.purple} strokeWidth={2.2} />,
       iconBg: theme.colors.purpleLight,
+      borderColor: theme.colors.purple,
       onPress: onScanBarcode,
     },
     {
       id: 'quick_add',
       label: t('Quick Add'),
-      icon: <Zap size={22} color={theme.colors.water} />,
+      icon: <Zap size={26} color={theme.colors.water} strokeWidth={2.2} fill={theme.colors.waterLight} />,
       iconBg: theme.colors.waterLight,
+      borderColor: theme.colors.water,
       onPress: onQuickAdd || onExploreFood || onScanPlate,
     },
   ];
@@ -77,11 +81,16 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
           key={act.id}
           style={styles.actionItem}
           onPress={() => handlePress(act.onPress)}
-          minScale={0.93}
+          minScale={0.92}
           accessibilityRole="button"
           accessibilityLabel={act.label}
         >
-          <View style={[styles.circleButton, { backgroundColor: act.iconBg }]}>
+          <View
+            style={[
+              styles.circleButton,
+              { backgroundColor: act.iconBg, borderColor: act.borderColor },
+            ]}
+          >
             {act.icon}
           </View>
           <Text style={styles.actionLabel} numberOfLines={1}>
@@ -109,14 +118,13 @@ const createStyles = (theme: ThemeType) =>
       paddingHorizontal: 2,
     },
     circleButton: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
+      width: 58,
+      height: 58,
+      borderRadius: 29,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 6,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      marginBottom: 8,
+      borderWidth: 1.5,
       ...theme.shadow.subtle,
     },
     actionLabel: {

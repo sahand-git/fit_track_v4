@@ -53,6 +53,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import { DirectionalIcon } from '../components/DirectionalIcon';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -123,6 +124,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   onExploreFood,
 }) => {
   const language = useLanguage();
+  const isRtl = useIsRTL();
   const { theme, isDark } = useTheme();
   const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -160,7 +162,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const dockClearance = dockBottom + 72;
-  const scrollBottomPadding = Math.max(240, dockClearance + 140);
+  const scrollBottomPadding = Math.max(300, dockClearance + 200);
 
   const fiberProgress = useMemo(
     () => calculateNutrientDayProgress('fiber', log.meals, log.dailySupplements, profile),
@@ -535,6 +537,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
               const mealsOfCategory = log.meals.filter((item) => item.mealType === m.key);
               const cals = mealsOfCategory.reduce((sum, item) => sum + item.calories, 0);
               const isLast = index === mealTypes.length - 1;
+              const isEmpty = mealsOfCategory.length === 0;
 
               return (
                 <AnimatedPressable
@@ -542,23 +545,29 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
                   style={[
                     styles.mealRow,
                     isLast && styles.mealRowLast,
+                    isEmpty && styles.mealRowEmpty,
                   ]}
                   onPress={() => handleQuickAdd(m.key)}
-                  minScale={0.98}
+                  minScale={0.97}
                   accessibilityLabel={`${t('Add to')} ${m.label}`}
                   accessibilityRole="button"
                 >
                   <View style={styles.mealLeft}>
-                    <View style={styles.mealIconBox}>
+                    <View style={[styles.mealIconBox, isEmpty && styles.mealIconBoxEmpty]}>
                       {getMealIcon(m.key)}
                     </View>
-                    <View>
+                    <View style={styles.mealTextWrapper}>
                       <Text style={styles.mealName}>{m.label}</Text>
-                      <Text style={styles.mealSub}>
-                        {mealsOfCategory.length > 0
-                          ? `${mealsOfCategory.length} ${t(mealsOfCategory.length > 1 ? 'items' : 'item')}`
-                          : t('Tap to log food')}
-                      </Text>
+                      <View style={styles.mealSubRow}>
+                        {isEmpty && (
+                          <Plus size={12} color={theme.colors.primary} strokeWidth={2.5} style={styles.mealSubPlus} />
+                        )}
+                        <Text style={[styles.mealSub, isEmpty && styles.mealSubEmpty]}>
+                          {mealsOfCategory.length > 0
+                            ? `${mealsOfCategory.length} ${t(mealsOfCategory.length > 1 ? 'items' : 'item')}`
+                            : t('Tap to log food')}
+                        </Text>
+                      </View>
                     </View>
                   </View>
 
@@ -566,7 +575,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
                     {cals > 0 && <Text style={styles.mealCals}>{formatKcal(cals, t)}</Text>}
                     <View style={styles.plusIconWrapper}>
                       <View style={styles.plusIconCircle}>
-                        <Plus size={14} color={theme.colors.primary} />
+                        <Plus size={20} color={theme.colors.textInverted} strokeWidth={2.5} />
                       </View>
                     </View>
                   </View>
@@ -820,6 +829,25 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           </View>
         </Animated.View>
       </ScrollView>
+
+      {/* Floating "+ Add Food" FAB */}
+      <AnimatedPressable
+        style={[
+          styles.floatingAddFab,
+          { bottom: dockClearance + 16 },
+          isRtl ? { left: 20 } : { right: 20 },
+        ]}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          onOpenAddFood();
+        }}
+        minScale={0.92}
+        accessibilityRole="button"
+        accessibilityLabel={t('Add Food')}
+      >
+        <Plus size={20} color={theme.colors.textInverted} strokeWidth={2.5} />
+        <Text style={styles.floatingAddFabText}>{t('Add Food')}</Text>
+      </AnimatedPressable>
 
       <QuickActionSheet
         visible={quickActionVisible}
@@ -1261,6 +1289,9 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   mealRowLast: {
     borderBottomWidth: 0,
   },
+  mealRowEmpty: {
+    backgroundColor: theme.colors.surface,
+  },
   mealLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1274,17 +1305,35 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  mealIconBoxEmpty: {
+    backgroundColor: theme.colors.primaryLight,
+  },
+  mealTextWrapper: {
+    justifyContent: 'center',
+  },
   mealName: {
     fontFamily: theme.fonts.sans,
     fontSize: 15,
     fontWeight: '600',
     color: theme.colors.textPrimary,
   },
+  mealSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  mealSubPlus: {
+    marginRight: 3,
+  },
   mealSub: {
     fontFamily: theme.fonts.sans,
     fontSize: 12,
     color: theme.colors.textMuted,
-    marginTop: 2,
+  },
+  mealSubEmpty: {
+    color: theme.colors.primary,
+    fontWeight: '600',
+    fontSize: 12,
   },
   mealRight: {
     flexDirection: 'row',
@@ -1304,11 +1353,34 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     justifyContent: 'center',
   },
   plusIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: theme.colors.primaryLight,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    ...theme.shadow.subtle,
+  },
+  floatingAddFab: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 50,
+    paddingHorizontal: 18,
+    borderRadius: 25,
+    backgroundColor: theme.colors.primary,
+    borderWidth: 1,
+    borderColor: theme.colors.borderFocus,
+    ...theme.shadow.floating,
+    zIndex: 99,
+    elevation: 6,
+  },
+  floatingAddFabText: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.textInverted,
+    letterSpacing: 0.2,
   },
 });
