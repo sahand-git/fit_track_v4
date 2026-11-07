@@ -29,6 +29,9 @@ import { UserProfile, DailyLog, MealType, SupplementRoutineItem, WorkoutEntry } 
 import { CalorieRing } from '../components/CalorieRing';
 import { MacroCards } from '../components/MacroCards';
 import { WaterTracker } from '../components/WaterTracker';
+import { WeekDayRibbon } from '../components/WeekDayRibbon';
+import { DashboardQuickGrid } from '../components/DashboardQuickGrid';
+import { WeightJourneyCard } from '../components/WeightJourneyCard';
 import { AddWorkoutSheet } from '../components/AddWorkoutSheet';
 import { QuickActionSheet } from '../components/QuickActionSheet';
 import { AnimatedPressable } from '../components/AnimatedPressable';
@@ -89,6 +92,10 @@ interface DashboardScreenProps {
   onOpenLogWeight?: () => void;
   onUpdateProfile?: (profile: UserProfile) => Promise<void> | void;
   isAddFoodSheetOpen?: boolean;
+  selectedDate?: string;
+  onSelectDate?: (date: string) => void;
+  onOpenDatePicker?: () => void;
+  onExploreFood?: () => void;
 }
 
 export const DashboardScreen = React.memo<DashboardScreenProps>(({
@@ -111,6 +118,10 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   onOpenLogWeight,
   onUpdateProfile,
   isAddFoodSheetOpen = false,
+  selectedDate,
+  onSelectDate,
+  onOpenDatePicker,
+  onExploreFood,
 }) => {
   const language = useLanguage();
   const { theme, isDark } = useTheme();
@@ -253,6 +264,16 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
       { key: 'snack', label: t('Snacks') },
     ],
     [t]
+  );
+
+  const mealBorderColors: Record<MealType, string> = useMemo(
+    () => ({
+      breakfast: theme.colors.orange,
+      lunch: theme.colors.emerald,
+      dinner: theme.colors.primary,
+      snack: theme.colors.purple,
+    }),
+    [theme]
   );
 
   const todayLabel = formatDisplayDate(log.date, language);
@@ -434,6 +455,15 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           </View>
         </View>
 
+        {/* 1.1 Horizontal Week Day Ribbon */}
+        {onSelectDate && (
+          <WeekDayRibbon
+            selectedDate={selectedDate || log.date}
+            onSelectDate={onSelectDate}
+            onOpenDatePicker={onOpenDatePicker}
+          />
+        )}
+
         {/* Hero Calorie Budget Focus */}
         <Animated.View
           entering={getStaggeredCardEntry(0)}
@@ -488,8 +518,22 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           />
         </Animated.View>
 
-        {/* Meals Ledger (Positioned directly below macros for fast, seamless food logging) */}
+        {/* 1.3 Quick Action Grid (2x3 visual card grid) */}
         <Animated.View entering={getStaggeredCardEntry(2)}>
+          <DashboardQuickGrid
+            onScanPlate={() => onOpenAddFood(undefined, 'photo')}
+            onOpenSupplements={onOpenSupplements}
+            onOpenWorkouts={() => setWorkoutSheetVisible(true)}
+            onDescribeMeal={() => onOpenAddFood(undefined, 'describe')}
+            onExploreFood={() => (onExploreFood ? onExploreFood() : onOpenAddFood(undefined, 'search'))}
+            onOpenAnalytics={() => onNavigateToMeals()}
+            uncheckedSupplementsCount={activeSupplements.filter((s) => !s.isTaken).length}
+            hasWorkoutsToday={(log.workouts || []).length > 0}
+          />
+        </Animated.View>
+
+        {/* Meals Ledger (Positioned directly below macros for fast, seamless food logging) */}
+        <Animated.View entering={getStaggeredCardEntry(3)}>
           <View style={styles.mealsHeader}>
             <Text style={styles.sectionHeading}>{t('Today’s Meals')}</Text>
             <TouchableOpacity
@@ -515,7 +559,11 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
               return (
                 <AnimatedPressable
                   key={m.key}
-                  style={[styles.mealRow, isLast && styles.mealRowLast]}
+                  style={[
+                    styles.mealRow,
+                    isLast && styles.mealRowLast,
+                    { borderLeftWidth: 3, borderLeftColor: mealBorderColors[m.key] },
+                  ]}
                   onPress={() => handleQuickAdd(m.key)}
                   minScale={0.98}
                   accessibilityLabel={`${t('Add to')} ${m.label}`}
@@ -549,8 +597,18 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           </View>
         </Animated.View>
 
+        {/* 6.1 Weight Journey Card */}
+        <Animated.View entering={getStaggeredCardEntry(4)}>
+          <WeightJourneyCard
+            currentWeightKg={profile.weightKg}
+            targetWeightKg={profile.targetWeightKg}
+            heightCm={profile.heightCm}
+            onLogWeight={onOpenLogWeight}
+          />
+        </Animated.View>
+
         {/* Hydration Row */}
-        <Animated.View entering={getStaggeredCardEntry(3)}>
+        <Animated.View entering={getStaggeredCardEntry(5)}>
           <WaterTracker
             glasses={log.waterGlasses}
             target={profile.waterTargetGlasses}

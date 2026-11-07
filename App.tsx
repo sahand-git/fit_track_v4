@@ -81,13 +81,15 @@ import { isReducedMotion } from './src/utils/motion';
 import { StepsScreen } from './src/screens/StepsScreen';
 import { WorkoutsScreen } from './src/screens/WorkoutsScreen';
 import { AccountScreen } from './src/screens/AccountScreen';
+import { ExploreScreen } from './src/screens/ExploreScreen';
+import { AchievementsScreen } from './src/screens/AchievementsScreen';
 import { AuthIdentity, watchAuthState } from './src/services/authService';
 
 const getScreenTopOffset = (insetsTop: number, platform: string = Platform.OS) =>
   Math.max(insetsTop, platform === 'android' ? 24 : 0);
 
 type Tab = 'today' | 'meals' | 'coach' | 'progress';
-type TemporaryScreen = 'none' | 'profile' | 'supplements' | 'steps' | 'workouts' | 'account';
+type TemporaryScreen = 'none' | 'profile' | 'supplements' | 'steps' | 'workouts' | 'account' | 'explore' | 'achievements';
 
 export default function App() {
   return (
@@ -881,6 +883,44 @@ function FitTrackApp() {
   const handleBackToProfile = useCallback(() => setTempScreen('profile'), []);
   const handleCloseAddSheet = useCallback(() => setAddSheetConfig((prev) => ({ ...prev, visible: false })), []);
 
+  const handleSelectExploreFood = useCallback((food: any) => {
+    setTempScreen('none');
+    handleAddMeal({
+      id: `meal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      foodId: food.id,
+      name: food.name,
+      nameAr: food.nameAr,
+      nameCkb: food.nameCkb,
+      mealType: 'lunch',
+      servings: 1,
+      servingSize: food.servingSize,
+      servingGrams: food.servingGrams,
+      unit: food.unit,
+      calories: food.calories,
+      protein: food.protein,
+      carbs: food.carbs,
+      fat: food.fat,
+      fiber: food.fiber,
+      sugar: food.sugar,
+      sodium: food.sodium,
+      potassium: food.potassium,
+      calcium: food.calcium,
+      iron: food.iron,
+      vitaminC: food.vitaminC,
+      vitaminA: food.vitaminA,
+      vitaminD: food.vitaminD,
+      vitaminB12: food.vitaminB12,
+      magnesium: food.magnesium,
+      zinc: food.zinc,
+      timestamp: new Date().toISOString(),
+      source: food.source,
+    }, selectedDateRef.current);
+    appDialog.notify({
+      title: t('Food Logged'),
+      message: `${food.name} ${t('added to today’s meals.')}`,
+    });
+  }, [handleAddMeal, appDialog, t]);
+
   if (initError) {
     return (
       <I18nProvider language={language}>
@@ -999,7 +1039,23 @@ function FitTrackApp() {
               onSaveProfile={handleSaveProfile}
               onRestoreComplete={handleRestoreComplete}
               onOpenAccount={() => setTempScreen('account')}
+              onOpenAchievements={() => setTempScreen('achievements')}
               onBack={() => setTempScreen('none')}
+            />
+          )}
+
+          {tempScreen === 'explore' && (
+            <ExploreScreen
+              onSelectFood={handleSelectExploreFood}
+              onBack={handleBackToNone}
+            />
+          )}
+
+          {tempScreen === 'achievements' && (
+            <AchievementsScreen
+              profile={profile}
+              streak={streak}
+              onBack={handleBackToProfile}
             />
           )}
 
@@ -1077,6 +1133,9 @@ function FitTrackApp() {
               onOpenLogWeight={handleOpenLogWeight}
               onUpdateProfile={handleUpdateProfile}
               isAddFoodSheetOpen={addSheetConfig.visible}
+              selectedDate={selectedDate}
+              onSelectDate={handleSelectDate}
+              onExploreFood={() => setTempScreen('explore')}
             />
           )}
 

@@ -69,6 +69,9 @@ export interface UserProfile {
   customNutrientGoals?: Partial<Record<string, number>>;
   enableCrashReporting?: boolean;
   themeMode?: 'system' | 'light' | 'dark';
+  streakFreezes?: number; // max 5 stored
+  frozenDates?: string[]; // dates preserved by freeze
+  unlockedAchievements?: string[]; // IDs of unlocked badges
 }
 
 export type ExerciseCategory = 'strength' | 'cardio' | 'hiit' | 'sports' | 'flexibility';
@@ -173,6 +176,10 @@ export interface FoodItem {
   variants?: FoodVariant[];
   recipeEstimate?: boolean;
   nutrientsSnapshot?: Partial<Record<string, number>>;
+  preparationModifiers?: {
+    cookingMethods: { method: string; calorieMultiplier: number; fatDelta: number }[];
+    oilModifiers: { type: string; caloriesAdded: number; fatAdded: number }[];
+  };
 }
 
 export interface WeightEntry {
@@ -231,6 +238,8 @@ export interface LoggedMeal {
   variantName?: string;
   recipeEstimate?: boolean;
   nutrientsSnapshot?: Partial<Record<string, number>>;
+  cookingMethod?: string;
+  oilModifier?: string;
 }
 
 export interface CopyYesterdayResult extends DailyLog {

@@ -11,7 +11,7 @@ import {
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText, Moon } from 'lucide-react-native';
+import { Check, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText, Moon, Award } from 'lucide-react-native';
 import { DirectionalIcon } from '../components/DirectionalIcon';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
@@ -42,6 +42,7 @@ interface ProfileScreenProps {
   onRestoreComplete?: () => void;
   onBack?: () => void;
   onOpenAccount?: () => void;
+  onOpenAchievements?: () => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
@@ -53,6 +54,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onRestoreComplete,
   onBack,
   onOpenAccount,
+  onOpenAchievements,
 }) => {
   const currentLanguage = useLanguage();
   const insets = useSafeAreaInsets();
@@ -208,6 +210,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <View style={{ flex: 1 }}>
               <Text style={styles.optionLabel}>{t('Account & cloud backup')}</Text>
               <Text style={styles.optionDesc}>{t('Sign in, verify your account, and back up to your own cloud space.')}</Text>
+            </View>
+          </View>
+        </AnimatedPressable>
+      )}
+
+      {onOpenAchievements && (
+        <AnimatedPressable
+          style={[styles.optionRow, styles.accountShortcut, { marginTop: 8 }]}
+          onPress={onOpenAchievements}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel={t('Achievements & Streak Freezes')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <View style={[styles.accountShortcutIcon, { backgroundColor: theme.colors.amberLight }]}>
+              <Award size={20} color={theme.colors.amber} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optionLabel}>{t('Achievements & Streak Freezes')}</Text>
+              <Text style={styles.optionDesc}>{t('View unlocked badges, streak freezes, and progress.')}</Text>
             </View>
           </View>
         </AnimatedPressable>

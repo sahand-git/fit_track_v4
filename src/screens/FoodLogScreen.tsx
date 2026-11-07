@@ -19,7 +19,7 @@ import {
   Moon,
   Apple,
 } from 'lucide-react-native';
-import { DailyLog, LoggedMeal, MealType, UserProfile } from '../types';
+import { DailyLog, LoggedMeal, MealType, UserProfile, FoodItem } from '../types';
 import { FoodDetailsModal } from '../components/FoodDetailsModal';
 import { CalendarPickerModal } from '../components/CalendarPickerModal';
 import { AddFoodSheet } from '../components/addfood/AddFoodSheet';
@@ -27,6 +27,8 @@ import { AnimatedFoodRow } from '../components/AnimatedFoodRow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { FoodLogSwipeableRow } from '../components/FoodLogSwipeableRow';
 import { MacroSummaryBar } from '../components/MacroSummaryBar';
+import { MealQuickLogCarousel } from '../components/MealQuickLogCarousel';
+import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -116,10 +118,6 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
 
   const isPast = selectedDate < getTodayDateString();
   const isFuture = selectedDate > getTodayDateString();
-
-  if (isLoading) {
-    return <MealsSkeleton />;
-  }
 
   // Date navigation
   const handlePrevDay = () => {
@@ -254,6 +252,56 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
     { key: 'snack', label: t('Snacks') },
   ];
 
+  const mealBorderColors: Record<MealType, string> = {
+    breakfast: theme.colors.orange,
+    lunch: theme.colors.emerald,
+    dinner: theme.colors.primary,
+    snack: theme.colors.purple,
+  };
+
+  const getRecentFoodsForMeal = useCallback((mealType: MealType): FoodItem[] => {
+    return VERIFIED_FOOD_DATABASE.filter((f) => {
+      if (mealType === 'breakfast') return /egg|cheese|bread|yogurt|honey|tea|coffee|labneh|جبن|هێلکە/i.test(f.name + (f.category || ''));
+      if (mealType === 'lunch') return /chicken|rice|meat|stew|salad|fish|kebab|dolma|دجاج|تمن/i.test(f.name + (f.category || ''));
+      if (mealType === 'dinner') return /soup|salad|grilled|fish|chicken|vegetable|kebab|شوربة/i.test(f.name + (f.category || ''));
+      return /apple|banana|date|almond|walnut|fruit|sweet|snack|تمر|سێو/i.test(f.name + (f.category || ''));
+    }).slice(0, 8);
+  }, []);
+
+  const handleQuickLogFood = useCallback((food: FoodItem, mealType: MealType) => {
+    const newMeal: LoggedMeal = {
+      id: `meal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      foodId: food.id,
+      name: food.name,
+      nameAr: food.nameAr,
+      nameCkb: food.nameCkb,
+      mealType,
+      servings: 1,
+      servingSize: food.servingSize,
+      servingGrams: food.servingGrams,
+      unit: food.unit,
+      calories: food.calories,
+      protein: food.protein,
+      carbs: food.carbs,
+      fat: food.fat,
+      fiber: food.fiber,
+      sugar: food.sugar,
+      sodium: food.sodium,
+      potassium: food.potassium,
+      calcium: food.calcium,
+      iron: food.iron,
+      vitaminC: food.vitaminC,
+      vitaminA: food.vitaminA,
+      vitaminD: food.vitaminD,
+      vitaminB12: food.vitaminB12,
+      magnesium: food.magnesium,
+      zinc: food.zinc,
+      timestamp: new Date().toISOString(),
+      source: food.source,
+    };
+    onAddMeal(newMeal, selectedDate);
+  }, [onAddMeal, selectedDate]);
+
   if (isLoading) {
     return <MealsSkeleton />;
   }
@@ -335,7 +383,13 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
           const categoryKcal = categoryMeals.reduce((s, m) => s + m.calories, 0);
 
           return (
-            <View key={cat.key} style={styles.mealSection}>
+            <View
+              key={cat.key}
+              style={[
+                styles.mealSection,
+                { borderLeftWidth: 3, borderLeftColor: mealBorderColors[cat.key] },
+              ]}
+            >
               {/* Category Header */}
               <View style={styles.mealSectionHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
@@ -361,6 +415,15 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
                   </AnimatedPressable>
                 )}
               </View>
+
+              {/* Quick Log Circular Carousel */}
+              {!isFuture && (
+                <MealQuickLogCarousel
+                  mealType={cat.key}
+                  recentFoods={getRecentFoodsForMeal(cat.key)}
+                  onQuickLog={(food) => handleQuickLogFood(food, cat.key)}
+                />
+              )}
 
               {/* Items List */}
               {categoryMeals.length === 0 ? (
