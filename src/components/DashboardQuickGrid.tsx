@@ -3,11 +3,9 @@ import { View, StyleSheet } from 'react-native';
 import { AppText as Text } from './AppText';
 import {
   Camera,
-  Pill,
-  Dumbbell,
   Sparkles,
+  Barcode,
   Compass,
-  TrendingUp,
 } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -15,30 +13,24 @@ import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
 import { AnimatedPressable } from './AnimatedPressable';
+import { useIsRTL } from '../hooks/useIsRTL';
 
 interface DashboardQuickGridProps {
   onScanPlate: () => void;
-  onOpenSupplements: () => void;
-  onOpenWorkouts: () => void;
   onDescribeMeal: () => void;
+  onScanBarcode: () => void;
   onExploreFood: () => void;
-  onOpenAnalytics: () => void;
-  uncheckedSupplementsCount?: number;
-  hasWorkoutsToday?: boolean;
 }
 
 export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
   onScanPlate,
-  onOpenSupplements,
-  onOpenWorkouts,
   onDescribeMeal,
+  onScanBarcode,
   onExploreFood,
-  onOpenAnalytics,
-  uncheckedSupplementsCount = 0,
-  hasWorkoutsToday = false,
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
+  const isRtl = useIsRTL();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (key: string) => translate(language, key);
 
@@ -46,44 +38,34 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'scan',
       label: t('Scan Plate'),
-      icon: <Camera size={20} color={theme.colors.primary} />,
+      sub: t('AI Camera'),
+      icon: <Camera size={19} color={theme.colors.primary} />,
+      iconBg: theme.colors.primaryLight,
       onPress: onScanPlate,
-      badge: null,
-    },
-    {
-      id: 'supplements',
-      label: t('Supplements'),
-      icon: <Pill size={20} color={theme.colors.macroFat} />,
-      onPress: onOpenSupplements,
-      badge: uncheckedSupplementsCount > 0 ? `${uncheckedSupplementsCount}` : null,
-    },
-    {
-      id: 'workout',
-      label: t('Workouts'),
-      icon: <Dumbbell size={20} color={theme.colors.accent} />,
-      onPress: onOpenWorkouts,
-      badgeDot: !hasWorkoutsToday,
     },
     {
       id: 'describe',
       label: t('Describe'),
-      icon: <Sparkles size={20} color={theme.colors.amber} />,
+      sub: t('Voice & Text'),
+      icon: <Sparkles size={19} color={theme.colors.amber} />,
+      iconBg: theme.colors.amberLight,
       onPress: onDescribeMeal,
-      badge: null,
+    },
+    {
+      id: 'barcode',
+      label: t('Barcode'),
+      sub: t('Instant Scan'),
+      icon: <Barcode size={19} color={theme.colors.purple} />,
+      iconBg: theme.colors.purpleLight,
+      onPress: onScanBarcode,
     },
     {
       id: 'explore',
       label: t('Explore'),
-      icon: <Compass size={20} color={theme.colors.water} />,
+      sub: t('Food Catalog'),
+      icon: <Compass size={19} color={theme.colors.water} />,
+      iconBg: theme.colors.waterLight,
       onPress: onExploreFood,
-      badge: null,
-    },
-    {
-      id: 'analytics',
-      label: t('Analytics'),
-      icon: <TrendingUp size={20} color={theme.colors.emeraldDark} />,
-      onPress: onOpenAnalytics,
-      badge: null,
     },
   ];
 
@@ -97,25 +79,23 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
       {actions.map((act) => (
         <AnimatedPressable
           key={act.id}
-          style={styles.card}
+          style={[styles.card, isRtl && styles.cardRtl]}
           onPress={() => handlePress(act.onPress)}
-          minScale={0.94}
+          minScale={0.96}
           accessibilityRole="button"
-          accessibilityLabel={act.label}
+          accessibilityLabel={`${act.label}, ${act.sub}`}
         >
-          <View style={styles.iconContainer}>
+          <View style={[styles.iconContainer, { backgroundColor: act.iconBg }]}>
             {act.icon}
-            {act.badge ? (
-              <View style={styles.badgePill}>
-                <Text style={styles.badgeText}>{act.badge}</Text>
-              </View>
-            ) : act.badgeDot ? (
-              <View style={styles.badgeDot} />
-            ) : null}
           </View>
-          <Text style={styles.cardLabel} numberOfLines={1}>
-            {act.label}
-          </Text>
+          <View style={styles.textContainer}>
+            <Text style={styles.cardLabel} numberOfLines={1}>
+              {act.label}
+            </Text>
+            <Text style={styles.cardSub} numberOfLines={1}>
+              {act.sub}
+            </Text>
+          </View>
         </AnimatedPressable>
       ))}
     </View>
@@ -132,53 +112,40 @@ const createStyles = (theme: ThemeType) =>
       marginVertical: theme.spacing.sm,
     },
     card: {
-      width: '31%',
+      width: '48.5%',
       backgroundColor: theme.colors.surface,
       borderRadius: theme.radius.lg,
       borderWidth: 1,
       borderColor: theme.colors.border,
-      paddingVertical: 14,
-      paddingHorizontal: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      gap: 10,
+    },
+    cardRtl: {
+      flexDirection: 'row-reverse',
     },
     iconContainer: {
       width: 40,
       height: 40,
       borderRadius: theme.radius.md,
-      backgroundColor: theme.colors.surfaceSubtle,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 6,
-      position: 'relative',
+    },
+    textContainer: {
+      flex: 1,
+      justifyContent: 'center',
     },
     cardLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.colors.textPrimary,
-      textAlign: 'center',
-    },
-    badgePill: {
-      position: 'absolute',
-      top: -4,
-      right: -6,
-      backgroundColor: theme.colors.amber,
-      paddingHorizontal: 5,
-      paddingVertical: 1,
-      borderRadius: theme.radius.full,
-    },
-    badgeText: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '700',
-      color: theme.colors.white,
+      color: theme.colors.textPrimary,
     },
-    badgeDot: {
-      position: 'absolute',
-      top: -2,
-      right: -2,
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: theme.colors.accent,
+    cardSub: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: theme.colors.textSecondary,
+      marginTop: 2,
     },
   });

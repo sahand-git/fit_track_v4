@@ -518,17 +518,13 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           />
         </Animated.View>
 
-        {/* 1.3 Quick Action Grid (2x3 visual card grid) */}
+        {/* 1.3 Quick Action Grid (Sleek 2x2 Fast Food Logging & Discovery) */}
         <Animated.View entering={getStaggeredCardEntry(2)}>
           <DashboardQuickGrid
             onScanPlate={() => onOpenAddFood(undefined, 'photo')}
-            onOpenSupplements={onOpenSupplements}
-            onOpenWorkouts={() => setWorkoutSheetVisible(true)}
             onDescribeMeal={() => onOpenAddFood(undefined, 'describe')}
+            onScanBarcode={() => onOpenAddFood(undefined, 'search', true)}
             onExploreFood={() => (onExploreFood ? onExploreFood() : onOpenAddFood(undefined, 'search'))}
-            onOpenAnalytics={() => onNavigateToMeals()}
-            uncheckedSupplementsCount={activeSupplements.filter((s) => !s.isTaken).length}
-            hasWorkoutsToday={(log.workouts || []).length > 0}
           />
         </Animated.View>
 

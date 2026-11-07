@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
@@ -16,13 +17,16 @@ import {
   List,
   ChevronLeft,
   ChevronRight,
+  Plus,
+  Minus,
+  Check,
 } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import * as Haptics from 'expo-haptics';
-import { FoodItem } from '../types';
+import { FoodItem, MealType } from '../types';
 import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
 import { getLocalizedFoodName } from '../utils/foodLocalization';
 import { FoodThumbnail } from '../components/FoodThumbnail';
@@ -30,7 +34,7 @@ import { AnimatedPressable } from '../components/AnimatedPressable';
 import { useIsRTL } from '../hooks/useIsRTL';
 
 interface ExploreScreenProps {
-  onSelectFood: (food: FoodItem) => void;
+  onSelectFood: (food: FoodItem, mealType?: MealType, servings?: number) => void;
   onBack?: () => void;
 }
 
@@ -80,6 +84,15 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedNutrientFilter, setSelectedNutrientFilter] = useState<string | null>(null);
   const [isGridView, setIsGridView] = useState(false);
+  const [selectedFoodToLog, setSelectedFoodToLog] = useState<FoodItem | null>(null);
+  const [selectedMealType, setSelectedMealType] = useState<MealType>(() => {
+    const hr = new Date().getHours();
+    if (hr < 11) return 'breakfast';
+    if (hr < 15) return 'lunch';
+    if (hr < 18) return 'snack';
+    return 'dinner';
+  });
+  const [servings, setServings] = useState(1);
 
   // Filter food items
   const filteredFoods = useMemo(() => {
@@ -118,7 +131,8 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
 
   const handleFoodPress = (food: FoodItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    onSelectFood(food);
+    setSelectedFoodToLog(food);
+    setServings(1);
   };
 
   return (
@@ -328,6 +342,145 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
           );
         }}
       />
+
+      {/* Meal & Portion Selection Modal */}
+      {selectedFoodToLog && (
+        <Modal
+          visible={Boolean(selectedFoodToLog)}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setSelectedFoodToLog(null)}
+          statusBarTranslucent
+          navigationBarTranslucent
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalSheet}>
+              {/* Modal Header */}
+              <View style={[styles.modalHeader, isRtl && styles.rowRtl]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.modalTitle}>
+                    {getLocalizedFoodName(selectedFoodToLog, language)}
+                  </Text>
+                  <Text style={styles.modalSub}>
+                    {selectedFoodToLog.servingSize} ({selectedFoodToLog.servingGrams || 100}g)
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setSelectedFoodToLog(null)}
+                  style={styles.modalCloseBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Close')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={18} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Scaled Macro Pills */}
+              <View style={[styles.modalMacroRow, isRtl && styles.rowRtl]}>
+                <View style={[styles.modalMacroPill, { backgroundColor: theme.colors.primaryLight }]}>
+                  <Text style={[styles.modalMacroVal, { color: theme.colors.primary }]}>
+                    {Math.round(selectedFoodToLog.calories * servings)} {t('kcal')}
+                  </Text>
+                </View>
+                <View style={[styles.modalMacroPill, { backgroundColor: theme.colors.surfaceSubtle }]}>
+                  <Text style={styles.modalMacroVal}>
+                    {Math.round(selectedFoodToLog.protein * servings * 10) / 10}g {t('Protein')}
+                  </Text>
+                </View>
+                <View style={[styles.modalMacroPill, { backgroundColor: theme.colors.surfaceSubtle }]}>
+                  <Text style={styles.modalMacroVal}>
+                    {Math.round(selectedFoodToLog.carbs * servings * 10) / 10}g {t('Carbs')}
+                  </Text>
+                </View>
+                <View style={[styles.modalMacroPill, { backgroundColor: theme.colors.surfaceSubtle }]}>
+                  <Text style={styles.modalMacroVal}>
+                    {Math.round(selectedFoodToLog.fat * servings * 10) / 10}g {t('Fat')}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Meal Slot Picker */}
+              <Text style={styles.modalSectionLabel}>{t('Add to which meal?')}</Text>
+              <View style={[styles.mealPickerRow, isRtl && styles.rowRtl]}>
+                {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((m) => {
+                  const isSelected = selectedMealType === m;
+                  const label = m === 'breakfast' ? t('Breakfast') : m === 'lunch' ? t('Lunch') : m === 'dinner' ? t('Dinner') : t('Snack');
+                  const emoji = m === 'breakfast' ? '🍳' : m === 'lunch' ? '🍝' : m === 'dinner' ? '🍽️' : '🍪';
+                  return (
+                    <TouchableOpacity
+                      key={m}
+                      style={[styles.mealChip, isSelected && styles.mealChipActive]}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        setSelectedMealType(m);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={label}
+                    >
+                      <Text style={styles.mealChipEmoji}>{emoji}</Text>
+                      <Text style={[styles.mealChipText, isSelected && styles.mealChipTextActive]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Servings Stepper */}
+              <Text style={styles.modalSectionLabel}>{t('Servings')}</Text>
+              <View style={[styles.stepperContainer, isRtl && styles.rowRtl]}>
+                <TouchableOpacity
+                  style={styles.stepperBtn}
+                  onPress={() => {
+                    if (servings > 0.5) {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      setServings((s) => Math.max(0.5, Math.round((s - 0.5) * 10) / 10));
+                    }
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Decrease servings')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Minus size={16} color={theme.colors.textPrimary} />
+                </TouchableOpacity>
+                <Text style={styles.stepperVal}>
+                  {servings} {servings === 1 ? t('serving') : t('servings')}
+                </Text>
+                <TouchableOpacity
+                  style={styles.stepperBtn}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                    setServings((s) => Math.round((s + 0.5) * 10) / 10);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Increase servings')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Plus size={16} color={theme.colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Add Button */}
+              <TouchableOpacity
+                style={styles.modalAddBtn}
+                onPress={() => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                  onSelectFood(selectedFoodToLog, selectedMealType, servings);
+                  setSelectedFoodToLog(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t('Log Food')}
+              >
+                <Check size={18} color={theme.colors.textInverted} />
+                <Text style={styles.modalAddBtnText}>
+                  {t('Log to')} {selectedMealType === 'breakfast' ? t('Breakfast') : selectedMealType === 'lunch' ? t('Lunch') : selectedMealType === 'dinner' ? t('Dinner') : t('Snack')} ({Math.round(selectedFoodToLog.calories * servings)} {t('kcal')})
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 };
@@ -531,5 +684,144 @@ const createStyles = (theme: ThemeType) =>
       fontWeight: '600',
       color: theme.colors.textSecondary,
       marginTop: 2,
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: theme.colors.backdrop,
+      justifyContent: 'flex-end',
+    },
+    modalSheet: {
+      backgroundColor: theme.colors.surface,
+      borderTopLeftRadius: theme.radius.xl,
+      borderTopRightRadius: theme.radius.xl,
+      borderTopWidth: 1,
+      borderLeftWidth: 1,
+      borderRightWidth: 1,
+      borderColor: theme.colors.border,
+      padding: theme.spacing.lg,
+      gap: theme.spacing.sm,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    modalTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: theme.colors.textPrimary,
+    },
+    modalSub: {
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
+    },
+    modalCloseBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: theme.radius.full,
+      backgroundColor: theme.colors.surfaceSubtle,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalMacroRow: {
+      flexDirection: 'row',
+      gap: 6,
+      flexWrap: 'wrap',
+      marginTop: 4,
+    },
+    modalMacroPill: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: theme.radius.sm,
+    },
+    modalMacroVal: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.colors.textPrimary,
+    },
+    modalSectionLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.colors.textPrimary,
+      marginTop: 6,
+    },
+    mealPickerRow: {
+      flexDirection: 'row',
+      gap: 8,
+      flexWrap: 'wrap',
+    },
+    mealChip: {
+      flex: 1,
+      minWidth: '22%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 10,
+      paddingHorizontal: 6,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.surfaceSubtle,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    mealChipActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    mealChipEmoji: {
+      fontSize: 14,
+    },
+    mealChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.colors.textPrimary,
+    },
+    mealChipTextActive: {
+      color: theme.colors.textInverted,
+    },
+    stepperContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 16,
+      backgroundColor: theme.colors.surfaceSubtle,
+      borderRadius: theme.radius.md,
+      paddingVertical: 6,
+    },
+    stepperBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: theme.radius.full,
+      backgroundColor: theme.colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    stepperVal: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: theme.colors.textPrimary,
+      minWidth: 80,
+      textAlign: 'center',
+    },
+    modalAddBtn: {
+      height: 48,
+      backgroundColor: theme.colors.primary,
+      borderRadius: theme.radius.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      marginTop: 10,
+    },
+    modalAddBtnText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: theme.colors.textInverted,
+    },
+    rowRtl: {
+      flexDirection: 'row-reverse',
     },
   });

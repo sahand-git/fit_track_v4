@@ -23,6 +23,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSpringConfig } from '../../utils/reanimatedMotion';
 import { isReducedMotion } from '../../utils/motion';
 import { DirectionalIcon } from '../DirectionalIcon';
+import { useIsRTL } from '../../hooks/useIsRTL';
+import { AnimatedPressable } from '../AnimatedPressable';
 import { AppText as Text } from '../AppText';
 import {
   X,
@@ -43,6 +45,9 @@ import {
   Database,
   Camera as CameraIcon,
   MoreHorizontal,
+  Coffee,
+  Moon,
+  Apple,
 } from 'lucide-react-native';
 import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -60,7 +65,7 @@ import { FoodThumbnail } from '../FoodThumbnail';
 import { RequestFoodModal } from '../RequestFoodModal';
 import { useLanguage } from '../../i18n/I18nContext';
 import { translate } from '../../i18n/strings';
-import { formatDisplayDate, getTodayDateString } from '../../utils/dateUtils';
+import { getTodayDateString } from '../../utils/dateUtils';
 import { formatKcal } from '../../utils/formatKcal';
 import { getPreviousDayString } from '../../utils/streak';
 import { AddFoodPortionPicker } from './AddFoodPortionPicker';
@@ -71,7 +76,7 @@ import { AddFoodCustomModal } from './AddFoodCustomModal';
 import { AddFoodQuickAddModal } from './AddFoodQuickAddModal';
 import { AddFoodTemplateModal } from './AddFoodTemplateModal';
 import { useFoodSearch, FoodFilter } from './useFoodSearch';
-import { CANONICAL_FOOD_CATEGORIES, CATEGORY_DEFAULT_EMOJI, CanonicalFoodCategory } from '../../utils/foodCategories';
+import { CATEGORY_DEFAULT_EMOJI, CanonicalFoodCategory } from '../../utils/foodCategories';
 import { REGIONAL_FOODS } from '../../data/foodDatabase';
 import {
   loadRecentFoods,
@@ -82,7 +87,6 @@ import {
   addCustomFood,
   loadBarcodeCache,
   upsertBarcodeCacheItem,
-  copyYesterdayMeals,
   copyYesterdayMealType,
   getYesterdayMealsPreview,
   YesterdayMealsPreview,
@@ -300,6 +304,7 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
   const { theme } = useTheme();
   const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const isRtl = useIsRTL();
   const t = useCallback((str: string) => translate(language, str), [language]);
 
   const translateY = useSharedValue(SCREEN_HEIGHT);
@@ -325,6 +330,8 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
 
   const [activeTab, setActiveTab] = useState<TabMode>('search');
   const [selectedMeal, setSelectedMeal] = useState<MealType>(mealType || getDefaultMealType());
+  const [step, setStep] = useState<1 | 2>(mealType ? 2 : 1);
+  const [dismissedCopyBanners, setDismissedCopyBanners] = useState<Record<string, boolean>>({});
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -380,10 +387,8 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
   const [customFat, setCustomFat] = useState('');
   const [customServingGrams, setCustomServingGrams] = useState<number>(100);
   const [customError, setCustomError] = useState<string | null>(null);
-  const [copyLoading, setCopyLoading] = useState(false);
   const [copyMealTypeLoading, setCopyMealTypeLoading] = useState(false);
   const [yesterdayMealTypePreview, setYesterdayMealTypePreview] = useState<YesterdayMealsPreview>({ count: 0, calories: 0 });
-  const [yesterdayAllPreview, setYesterdayAllPreview] = useState<YesterdayMealsPreview>({ count: 0, calories: 0 });
 
   // Online Food Search state
   const [onlineFoods, setOnlineFoods] = useState<FoodItem[]>([]);
@@ -425,12 +430,10 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
   const lastAddTapRef = useRef<number>(0);
   const [showManualBarcode, setShowManualBarcode] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showAllRecent, setShowAllRecent] = useState(false);
   const [showAllFrequent, setShowAllFrequent] = useState(false);
   const [showAllFavorites, setShowAllFavorites] = useState(false);
 
-  const isToday = date === getTodayDateString();
   const isFuture = date > getTodayDateString();
 
   const currentMealType = mealType ?? null;
@@ -441,6 +444,7 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
     setPrevVisible(currentVisible);
     setPrevMealType(currentMealType);
     if (currentVisible) {
+      setStep(mealType ? 2 : 1);
       setSelectedMeal(mealType || getDefaultMealType());
       setSessionState(createInitialSessionState());
       if (initialTab) {
@@ -490,7 +494,6 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
         setCurrentDayMeals(daily.meals);
       }
       setYesterdayMealTypePreview(mealTypePrev);
-      setYesterdayAllPreview(allPrev);
     }).catch((err) => {
       console.error('Error loading collections:', err);
     });
@@ -958,54 +961,6 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
     }
   };
 
-  const handleCopyYesterday = useCallback(async () => {
-    if (isFuture || copyLoading) return;
-    setCopyLoading(true);
-    try {
-      const yesterday = getPreviousDayString(date);
-      const yesterdayLog = await loadDailyLog(yesterday);
-      if (!yesterdayLog.meals || yesterdayLog.meals.length === 0) {
-        dialog.notify({
-          title: t("Copy yesterday's meals"),
-          message: t('No meals were logged yesterday.'),
-        });
-        return;
-      }
-      const res = await copyYesterdayMeals(date);
-      if (onCopyYesterdayMeals) {
-        await onCopyYesterdayMeals(date);
-      }
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      if (res.addedCount > 0) {
-        const newMeals = (res.meals || []).slice(-res.addedCount);
-        const sessionItems: SessionItem[] = newMeals.map((m) => ({
-          id: m.id,
-          foodId: m.foodId,
-          name: m.name,
-          portion: `${m.servings} × ${m.servingSize || 'serving'}`,
-          calories: m.calories,
-          mealType: m.mealType,
-          timestamp: m.timestamp,
-        }));
-        const toastMsg = formatBatchAddedToastMessage(res.addedCount, t);
-        setSessionState((prev) => addSessionItems(prev, sessionItems, toastMsg));
-        loadCollections();
-      } else {
-        dialog.notify({
-          title: t("Copy yesterday's meals"),
-          message: t('Nothing new to copy.'),
-        });
-      }
-    } catch (err) {
-      console.error('Failed to copy yesterday meals:', err);
-      dialog.notify({
-        title: t('Error'),
-        message: t('Failed to save meal.'),
-      });
-    } finally {
-      setCopyLoading(false);
-    }
-  }, [isFuture, copyLoading, date, dialog, t, onCopyYesterdayMeals, loadCollections]);
 
   const getCopyMealTypeLabel = useCallback(
     (meal: MealType) => {
@@ -1323,19 +1278,52 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
     return filteredFoods;
   }, [isDiscoveryMode, filteredFoods]);
 
-  const mealCategories: { key: MealType; label: string }[] = useMemo(
+  const mealCategories = useMemo(
     () => [
-      { key: 'breakfast', label: t('Breakfast') },
-      { key: 'lunch', label: t('Lunch') },
-      { key: 'dinner', label: t('Dinner') },
-      { key: 'snack', label: t('Snacks') },
+      {
+        key: 'breakfast' as MealType,
+        label: t('Breakfast'),
+        icon: <Coffee size={24} color={theme.colors.orange} />,
+        iconBg: theme.colors.orangeLight,
+      },
+      {
+        key: 'lunch' as MealType,
+        label: t('Lunch'),
+        icon: <Utensils size={24} color={theme.colors.primary} />,
+        iconBg: theme.colors.primaryLight,
+      },
+      {
+        key: 'dinner' as MealType,
+        label: t('Dinner'),
+        icon: <Moon size={24} color={theme.colors.water} />,
+        iconBg: theme.colors.waterLight,
+      },
+      {
+        key: 'snack' as MealType,
+        label: t('Snacks'),
+        icon: <Apple size={24} color={theme.colors.purple} />,
+        iconBg: theme.colors.purpleLight,
+      },
     ],
-    [t]
+    [t, theme]
   );
 
-  const headerTitle = isToday
-    ? `${t('Add food')} · ${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))}`
-    : `${formatDisplayDate(date, language)} · ${t(selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1))}`;
+  const mealSummaries = useMemo(() => {
+    const summaries: Record<MealType, { count: number; calories: number }> = {
+      breakfast: { count: 0, calories: 0 },
+      lunch: { count: 0, calories: 0 },
+      dinner: { count: 0, calories: 0 },
+      snack: { count: 0, calories: 0 },
+    };
+    for (const m of currentDayMeals) {
+      if (summaries[m.mealType]) {
+        summaries[m.mealType].count += 1;
+        summaries[m.mealType].calories += m.calories || 0;
+      }
+    }
+    return summaries;
+  }, [currentDayMeals]);
+
 
   const handleSelectFood = useCallback((item: FoodItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -1377,99 +1365,44 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
     if (isDiscoveryMode) {
       return (
         <View style={{ width: '100%', gap: 12, paddingBottom: 4 }}>
-          {/* Quick Add Chips (scrolls with list) */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickActionsRow}
-          >
-            <TouchableOpacity
-              style={[styles.quickActionBtn, styles.quickAddActionBtn]}
-              onPress={() => {
-                setQuickAddName('');
-                setQuickAddCalories('');
-                setQuickAddProtein('');
-                setQuickAddCarbs('');
-                setQuickAddFat('');
-                setQuickAddError(null);
-                setQuickAddModalVisible(true);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={t('Quick Add Calories')}
-            >
-              <Zap size={13} color={theme.colors.primary} />
-              <Text style={[styles.quickActionBtnText, { fontWeight: '700' }]} numberOfLines={1}>
-                {t('Quick Add')}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickActionBtn}
-              onPress={handleCopyYesterdayMealType}
-              disabled={copyMealTypeLoading || isFuture}
-              accessibilityRole="button"
-              accessibilityLabel={getCopyMealTypeLabel(selectedMeal)}
-            >
-              {copyMealTypeLoading ? (
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-              ) : (
-                <Utensils size={13} color={theme.colors.primary} />
-              )}
-              <Text style={styles.quickActionBtnText} numberOfLines={1}>
-                {getCopyMealTypeLabel(selectedMeal)}
-                {yesterdayMealTypePreview.count > 0 ? ` (${yesterdayMealTypePreview.count} • ${formatKcal(yesterdayMealTypePreview.calories, t)})` : ''}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickActionBtn}
-              onPress={handleCopyYesterday}
-              disabled={copyLoading || isFuture}
-              accessibilityRole="button"
-              accessibilityLabel={t("Copy yesterday's meals")}
-            >
-              {copyLoading ? (
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-              ) : (
-                <Copy size={13} color={theme.colors.primary} />
-              )}
-              <Text style={styles.quickActionBtnText} numberOfLines={1}>
-                {t("Copy yesterday's meals")}
-                {yesterdayAllPreview.count > 0 ? ` (${yesterdayAllPreview.count} • ${formatKcal(yesterdayAllPreview.calories, t)})` : ''}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickActionBtn}
-              onPress={() => {
-                setTemplateError(null);
-                setTemplateModalVisible(true);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={t('Save as template')}
-            >
-              <Bookmark size={13} color={theme.colors.primary} />
-              <Text style={styles.quickActionBtnText} numberOfLines={1}>
-                {t('Save as template')}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickActionBtn}
-              onPress={() => {
-                setCustomError(null);
-                setCustomServingGrams(100);
-                setCustomModalVisible(true);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={t('Create custom food')}
-            >
-              <Plus size={13} color={theme.colors.primary} />
-              <Text style={styles.quickActionBtnText} numberOfLines={1}>
-                {t('Create custom food')}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
+          {/* Smart Suggestion Banner (Only when current meal has no items logged yet) */}
+          {searchQuery.trim().length === 0 &&
+            currentDayMeals.filter((m) => m.mealType === selectedMeal).length === 0 &&
+            yesterdayMealTypePreview.count > 0 &&
+            !dismissedCopyBanners[selectedMeal] &&
+            !isFuture &&
+            Boolean(onCopyYesterdayMeals) && (
+              <View style={[styles.smartCopyBanner, isRtl && styles.rowRtl]}>
+                <TouchableOpacity
+                  style={[styles.smartCopyContent, isRtl && styles.rowRtl]}
+                  onPress={handleCopyYesterdayMealType}
+                  disabled={copyMealTypeLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel={getCopyMealTypeLabel(selectedMeal)}
+                >
+                  <View style={styles.smartCopyIconBox}>
+                    <Copy size={16} color={theme.colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.smartCopyTitle}>
+                      {getCopyMealTypeLabel(selectedMeal)} ({yesterdayMealTypePreview.count} {t(yesterdayMealTypePreview.count > 1 ? 'items' : 'item')})
+                    </Text>
+                    <Text style={styles.smartCopySub}>
+                      {formatKcal(yesterdayMealTypePreview.calories, t)} · {t('Tap to copy')}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setDismissedCopyBanners((prev) => ({ ...prev, [selectedMeal]: true }))}
+                  style={styles.smartCopyDismissBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Dismiss')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={15} color={theme.colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            )}
 
           {!isDeferredLoaded && (
             <View style={{ paddingVertical: 10, alignItems: 'center' }}>
@@ -1672,14 +1605,15 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
     handleSelectFood,
     handleToggleFavorite,
     handleCopyYesterdayMealType,
-    handleCopyYesterday,
     copyMealTypeLoading,
-    copyLoading,
     isFuture,
     yesterdayMealTypePreview,
-    yesterdayAllPreview,
     selectedMeal,
     getCopyMealTypeLabel,
+    currentDayMeals,
+    dismissedCopyBanners,
+    isRtl,
+    onCopyYesterdayMeals,
     t,
     theme,
     styles,
@@ -1903,51 +1837,98 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                 { height: '100%', paddingBottom: 0 },
               ]}
             >
-          {/* Compact Top Bar */}
-          <View style={[styles.header, { paddingTop: Math.max(insets.top, 8) }]}>
-            <View style={{ flex: 1, minWidth: 0, justifyContent: 'center' }}>
-              <View style={styles.headerTitleRow}>
-                <Text style={styles.headerTitle} numberOfLines={1}>{headerTitle}</Text>
-                <View style={styles.headerContextBadge}>
-                  <Text style={styles.headerContext}>
-                    {isToday ? t('Today') : formatDisplayDate(date, language)}
+          {/* STEP 1: MEAL SELECTION SCREEN */}
+          {step === 1 ? (
+            <View style={{ flex: 1 }}>
+              {/* Header: "Add Food" with X close */}
+              <View style={[styles.header, { paddingTop: Math.max(insets.top, 8) }]}>
+                <View style={{ flex: 1, minWidth: 0, justifyContent: 'center' }}>
+                  <Text style={styles.headerTitle}>{t('Add Food')}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={handleClose}
+                  style={styles.closeBtn}
+                  accessibilityLabel={t('Close')}
+                  accessibilityRole="button"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={18} color={theme.colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                style={styles.step1Container}
+                contentContainerStyle={[styles.step1Content, { paddingBottom: 40 + insets.bottom }]}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={styles.step1SubHeading}>{t('Choose a meal to log food into')}</Text>
+                <View style={styles.step1CardsStack}>
+                  {mealCategories.map((m) => {
+                    const summary = mealSummaries[m.key];
+                    const hasItems = summary && summary.count > 0;
+                    const countStr = hasItems
+                      ? `${summary.count} ${t(summary.count > 1 ? 'items' : 'item')} · ${formatKcal(summary.calories, t)}`
+                      : t('No items yet');
+
+                    return (
+                      <AnimatedPressable
+                        key={m.key}
+                        style={[styles.mealSelectCard, isRtl && styles.rowRtl]}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                          setSelectedMeal(m.key);
+                          setStep(2);
+                        }}
+                        minScale={0.97}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${m.label}, ${countStr}`}
+                      >
+                        <View style={[styles.mealSelectIconBox, { backgroundColor: m.iconBg }]}>
+                          {m.icon}
+                        </View>
+                        <View style={styles.mealSelectInfo}>
+                          <Text style={styles.mealSelectName}>{m.label}</Text>
+                          <Text style={styles.mealSelectSub}>{countStr}</Text>
+                        </View>
+                        <DirectionalIcon name="ChevronRight" size={20} color={theme.colors.textMuted} />
+                      </AnimatedPressable>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            </View>
+          ) : (
+            /* STEP 2: FOOD SELECTION SCREEN */
+            <View style={{ flex: 1 }}>
+              {/* Header: Back Arrow (←), "Add food · Dinner", X Close */}
+              <View style={[styles.header, { paddingTop: Math.max(insets.top, 8) }]}>
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                    setStep(1);
+                  }}
+                  style={styles.stepBackBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Back to meal selection')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <DirectionalIcon name="ChevronLeft" size={20} color={theme.colors.textPrimary} />
+                </TouchableOpacity>
+                <View style={{ flex: 1, minWidth: 0, justifyContent: 'center' }}>
+                  <Text style={styles.headerTitle} numberOfLines={1}>
+                    {t('Add food')} · {getMealLabel(selectedMeal)}
                   </Text>
                 </View>
-              </View>
-            </View>
-            <TouchableOpacity
-              onPress={handleClose}
-              style={styles.closeBtn}
-              accessibilityLabel={t('Close')}
-              accessibilityRole="button"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <X size={18} color={theme.colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Meal Slot Selector */}
-          <View style={styles.mealSlotRow}>
-            {mealCategories.map((m) => (
-              <TouchableOpacity
-                key={m.key}
-                style={[styles.mealSlotChip, selectedMeal === m.key && styles.mealSlotChipActive]}
-                onPress={() => setSelectedMeal(m.key)}
-                accessibilityRole="button"
-                accessibilityLabel={m.label}
-                hitSlop={{ top: 6, bottom: 6 }}
-              >
-                <Text
-                  style={[
-                    styles.mealSlotText,
-                    selectedMeal === m.key && styles.mealSlotTextActive,
-                  ]}
+                <TouchableOpacity
+                  onPress={handleClose}
+                  style={styles.closeBtn}
+                  accessibilityLabel={t('Close')}
+                  accessibilityRole="button"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  {m.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <X size={18} color={theme.colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
 
           {/* TAB 1: SEARCH & BARCODE */}
           {activeTab === 'search' && (
@@ -2254,117 +2235,7 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
                             {t('Favorites')} {favoriteFoods.length > 0 ? `(${favoriteFoods.length})` : ''}
                           </Text>
                         </TouchableOpacity>
-
-                        {/* Categories Dropdown Filter Pill */}
-                        <TouchableOpacity
-                          style={[
-                            styles.filterChip,
-                            (showCategoryPicker || (selectedCategory && selectedCategory !== 'all')) && styles.filterChipActive,
-                          ]}
-                          onPress={() => setShowCategoryPicker((prev) => !prev)}
-                          accessibilityRole="button"
-                          accessibilityLabel={t('Categories')}
-                        >
-                          <Text
-                            style={[
-                              styles.filterChipText,
-                              (showCategoryPicker || (selectedCategory && selectedCategory !== 'all')) && styles.filterChipTextActive,
-                            ]}
-                          >
-                            🍽️ {selectedCategory && selectedCategory !== 'all' ? selectedCategory : t('Categories')} ▾
-                          </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[styles.filterChip, foodFilter === 'custom' && styles.filterChipActive]}
-                          onPress={() => setFoodFilter('custom')}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${t('Custom')} ${customFoods.length > 0 ? `(${customFoods.length})` : ''}`.trim()}
-                        >
-                          <Text
-                            style={[
-                              styles.filterChipText,
-                              foodFilter === 'custom' && styles.filterChipTextActive,
-                            ]}
-                          >
-                            {t('Custom')} {customFoods.length > 0 ? `(${customFoods.length})` : ''}
-                          </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[styles.filterChip, foodFilter === 'scanned' && styles.filterChipActive]}
-                          onPress={() => setFoodFilter('scanned')}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${t('Scanned')} ${barcodeCache.length > 0 ? `(${barcodeCache.length})` : ''}`.trim()}
-                        >
-                          <Text
-                            style={[
-                              styles.filterChipText,
-                              foodFilter === 'scanned' && styles.filterChipTextActive,
-                            ]}
-                          >
-                            {t('Scanned')} {barcodeCache.length > 0 ? `(${barcodeCache.length})` : ''}
-                          </Text>
-                        </TouchableOpacity>
                       </ScrollView>
-
-                      {/* Secondary Category Picker (revealed on Demand) */}
-                      {showCategoryPicker && (
-                        <ScrollView
-                          horizontal
-                          showsHorizontalScrollIndicator={false}
-                          contentContainerStyle={styles.categoryChipsScroll}
-                        >
-                          <TouchableOpacity
-                            style={[
-                              styles.categoryChip,
-                              (!selectedCategory || selectedCategory === 'all') && styles.categoryChipActive,
-                            ]}
-                            onPress={() => {
-                              setSelectedCategory('all');
-                              setShowCategoryPicker(false);
-                            }}
-                            accessibilityRole="button"
-                            accessibilityLabel={t('All')}
-                            hitSlop={{ top: 6, bottom: 6 }}
-                          >
-                            <Text style={styles.categoryChipEmoji}>🍽️</Text>
-                            <Text
-                              style={[
-                                styles.categoryChipText,
-                                (!selectedCategory || selectedCategory === 'all') && styles.categoryChipTextActive,
-                              ]}
-                            >
-                              {t('All')}
-                            </Text>
-                          </TouchableOpacity>
-
-                          {CANONICAL_FOOD_CATEGORIES.map((cat) => {
-                            const isCatActive = selectedCategory === cat;
-                            return (
-                              <TouchableOpacity
-                                key={cat}
-                                style={[styles.categoryChip, isCatActive && styles.categoryChipActive]}
-                                onPress={() => {
-                                  setSelectedCategory(isCatActive ? 'all' : cat);
-                                  setShowCategoryPicker(false);
-                                }}
-                                accessibilityRole="button"
-                                accessibilityLabel={t(cat)}
-                                hitSlop={{ top: 6, bottom: 6 }}
-                              >
-                                <Text style={styles.categoryChipEmoji}>{CATEGORY_DEFAULT_EMOJI[cat] ?? '🍽️'}</Text>
-                                <Text
-                                  style={[styles.categoryChipText, isCatActive && styles.categoryChipTextActive]}
-                                  numberOfLines={1}
-                                >
-                                  {cat}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </ScrollView>
-                      )}
                     </View>
                   )}
 
@@ -2548,6 +2419,8 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
               />
             </View>
           )}
+        </View>
+      )}
 
           {/* Bottom Session Tray: summary, expandable items drawer, and primary Done button */}
           <AddFoodSessionTray
@@ -3509,6 +3382,107 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.orangeDeep,
+  },
+  step1Container: {
+    flex: 1,
+    paddingHorizontal: theme.spacing.md,
+  },
+  step1Content: {
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.md,
+  },
+  step1SubHeading: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginBottom: 4,
+  },
+  step1CardsStack: {
+    gap: 12,
+  },
+  mealSelectCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    gap: 14,
+    ...theme.shadow.subtle,
+  },
+  mealSelectIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mealSelectInfo: {
+    flex: 1,
+  },
+  mealSelectName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  mealSelectSub: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginTop: 3,
+  },
+  stepBackBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginEnd: 8,
+  },
+  smartCopyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryBorder,
+    padding: 12,
+    gap: 10,
+    marginVertical: 4,
+    ...theme.shadow.subtle,
+  },
+  smartCopyContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  smartCopyIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smartCopyTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  smartCopySub: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  smartCopyDismissBtn: {
+    padding: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowRtl: {
+    flexDirection: 'row-reverse',
   },
   });
 

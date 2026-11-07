@@ -15,7 +15,6 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { LoggedMeal, FoodItem } from '../types';
-import { formattedNutrientValue } from '../utils/nutrientTotals';
 import { resolveMealNutrient } from '../utils/mealNutrients';
 import { AllNutrientKey } from '../data/nutrientRegistry';
 import { useLanguage } from '../i18n/I18nContext';
@@ -164,6 +163,11 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
     { label: 'Choline', value: getScaledNutrient('choline'), unit: 'mg' },
   ];
 
+  const availableNutrients = detailedNutrients.filter(
+    (n): n is { label: string; value: number; unit: string } =>
+      typeof n.value === 'number' && !isNaN(n.value) && n.value > 0
+  );
+
   const handleMinus = () => {
     if (servings > 0.5) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -269,32 +273,27 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
               </View>
             </View>
 
-            {/* Micronutrients & Detailed Breakdown (Item 3 requirement: show "Not available", never zero) */}
+            {/* Micronutrients & Detailed Breakdown (Only show available nutrients) */}
             <View style={styles.detailsCard}>
               <Text style={styles.detailsSectionTitle}>
                 {t('Micronutrients & Vitamins')}
               </Text>
-              <View style={styles.nutrientsGrid}>
-                {detailedNutrients.map((n) => {
-                  const isMissing = n.value === undefined;
-                  return (
+              {availableNutrients.length > 0 ? (
+                <View style={styles.nutrientsGrid}>
+                  {availableNutrients.map((n) => (
                     <View key={n.label} style={[styles.nutrientRowItem, isRtl && styles.rowRtl]}>
                       <Text style={styles.nutrientItemLabel}>{t(n.label)}</Text>
-                      {isMissing ? (
-                        <View style={styles.notAvailPill}>
-                          <Text style={styles.notAvailText}>
-                            {formattedNutrientValue(undefined, n.unit, t)}
-                          </Text>
-                        </View>
-                      ) : (
-                        <Text style={styles.nutrientItemValue}>
-                          {n.value} {n.unit}
-                        </Text>
-                      )}
+                      <Text style={styles.nutrientItemValue}>
+                        {n.value} {n.unit}
+                      </Text>
                     </View>
-                  );
-                })}
-              </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.noNutrientsText}>
+                  {t('No additional micronutrient data recorded for this item.')}
+                </Text>
+              )}
             </View>
           </ScrollView>
 
@@ -469,6 +468,12 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   },
   nutrientsGrid: {
     gap: 8,
+  },
+  noNutrientsText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
+    paddingVertical: 8,
   },
   nutrientRowItem: {
     flexDirection: 'row',
