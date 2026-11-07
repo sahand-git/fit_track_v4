@@ -235,18 +235,18 @@ const createStyles = (theme: ThemeType) =>
     cardContent: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 12,
-      paddingHorizontal: 14,
+      paddingVertical: 9,
+      paddingHorizontal: 12,
     },
     infoCol: {
       flex: 1,
-      marginEnd: 10,
+      marginEnd: 8,
     },
     titleRow: {
       flexDirection: 'row',
       alignItems: 'center',
       flexWrap: 'wrap',
-      gap: 6,
+      gap: 5,
     },
     foodName: {
       fontFamily: theme.fonts.sans,
@@ -259,13 +259,13 @@ const createStyles = (theme: ThemeType) =>
       fontFamily: theme.fonts.sans,
       fontSize: 12,
       color: theme.colors.textMuted,
-      marginTop: 2,
+      marginTop: 1,
     },
     foodMacros: {
       fontFamily: theme.fonts.sans,
       fontSize: 12,
       color: theme.colors.textSecondary,
-      marginTop: 3,
+      marginTop: 2,
       fontWeight: '500',
     },
     kcalPill: {

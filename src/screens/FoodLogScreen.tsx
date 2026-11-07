@@ -19,6 +19,8 @@ import {
   Utensils,
   Moon,
   Apple,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react-native';
 import { DailyLog, LoggedMeal, MealType, UserProfile, FoodItem } from '../types';
 import { FoodDetailsModal } from '../components/FoodDetailsModal';
@@ -83,17 +85,38 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         next.add(meal.id);
         return next;
       });
+      setCollapsedOverrides((prev) => ({
+        ...prev,
+        [meal.mealType]: true,
+      }));
       onAddMeal(meal, targetDate);
     },
     [onAddMeal]
   );
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
+  const dockClearance = dockBottom + 72;
+  const scrollBottomPadding = Math.max(160, dockClearance + 80);
 
   const [addSheetVisible, setAddSheetVisible] = useState(false);
   const [activeMealType, setActiveMealType] = useState<MealType>(initialMealType);
   const [inspectingMeal, setInspectingMeal] = useState<LoggedMeal | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
+
+  // Collapsible meals state (by default: with food -> collapsed, empty -> expanded)
+  const [collapsedOverrides, setCollapsedOverrides] = useState<Partial<Record<MealType, boolean>>>({});
+  const [activeMealNav, setActiveMealNav] = useState<MealType>('breakfast');
+  const scrollViewRef = useRef<ScrollView>(null);
+  const mealOffsets = useRef<Record<MealType, number>>({
+    breakfast: 0,
+    lunch: 0,
+    dinner: 0,
+    snack: 0,
+  });
+
+  useEffect(() => {
+    setCollapsedOverrides({});
+  }, [selectedDate]);
 
   // Handle Android hardware back press for dialogs
   useEffect(() => {
@@ -196,6 +219,43 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
     setActiveMealType(mealType);
     setAddSheetVisible(true);
   };
+
+  const toggleMealExpanded = useCallback((mealKey: MealType, currentExpanded: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setCollapsedOverrides((prev) => ({
+      ...prev,
+      [mealKey]: !currentExpanded,
+    }));
+  }, []);
+
+  const handleJumpToMeal = useCallback((mealKey: MealType) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setActiveMealNav(mealKey);
+    setCollapsedOverrides((prev) => ({
+      ...prev,
+      [mealKey]: true,
+    }));
+    const targetY = mealOffsets.current[mealKey];
+    if (targetY !== undefined && scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({
+        y: Math.max(0, targetY - 56),
+        animated: true,
+      });
+    }
+  }, []);
+
+  const handleScroll = useCallback((e: any) => {
+    const scrollY = e.nativeEvent.contentOffset.y;
+    const offsets = mealOffsets.current;
+    const categories: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+    let current: MealType = 'breakfast';
+    for (const cat of categories) {
+      if (scrollY + 90 >= (offsets[cat] || 0)) {
+        current = cat;
+      }
+    }
+    setActiveMealNav((prev) => (prev !== current ? current : prev));
+  }, []);
 
   const handleDelete = async (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -400,47 +460,88 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         </AnimatedPressable>
       </View>
 
-      {/* Past Date Banner */}
-      {isPast && (
-        <TouchableOpacity
-          style={styles.pastDateBanner}
-          onPress={handleBackToToday}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel={`${t('Viewing')} ${formatDisplayDate(selectedDate, language)} · ${t('Back to today')}`}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <CalendarIcon size={14} color={theme.colors.secondary} />
-          <Text style={styles.pastDateBannerText}>
-            {`${t('Viewing')} ${formatDisplayDate(selectedDate, language)} · `}
-            <Text style={styles.backToTodayLink}>{t('Back to today')}</Text>
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Macro Summary Bar with Circular Progress Ring & Horizontal Macro Bars */}
-      <MacroSummaryBar
-        totalKcal={totalKcal}
-        effectiveCalorieTarget={effectiveCalorieTarget}
-        totalProtein={totalProtein}
-        targetProtein={profile?.targetProtein ?? 130}
-        totalCarbs={totalCarbs}
-        targetCarbs={profile?.targetCarbs ?? 220}
-        totalFat={totalFat}
-        targetFat={profile?.targetFat ?? 65}
-        theme={theme}
-        t={t}
-      />
-
       {/* Meal Groups Scroll List */}
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: dockBottom + 28 }]}>
+      <ScrollView
+        ref={scrollViewRef}
+        onScroll={handleScroll}
+        scrollEventThrottle={32}
+        stickyHeaderIndices={[1]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPadding }]}
+      >
+        {/* Child 0: Past Date Banner & Macro Summary */}
+        <View style={styles.topSummaryContainer}>
+          {isPast && (
+            <TouchableOpacity
+              style={styles.pastDateBanner}
+              onPress={handleBackToToday}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('Viewing')} ${formatDisplayDate(selectedDate, language)} · ${t('Back to today')}`}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <CalendarIcon size={14} color={theme.colors.secondary} />
+              <Text style={styles.pastDateBannerText}>
+                {`${t('Viewing')} ${formatDisplayDate(selectedDate, language)} · `}
+                <Text style={styles.backToTodayLink}>{t('Back to today')}</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <MacroSummaryBar
+            totalKcal={totalKcal}
+            effectiveCalorieTarget={effectiveCalorieTarget}
+            totalProtein={totalProtein}
+            targetProtein={profile?.targetProtein ?? 130}
+            totalCarbs={totalCarbs}
+            targetCarbs={profile?.targetCarbs ?? 220}
+            totalFat={totalFat}
+            targetFat={profile?.targetFat ?? 65}
+            theme={theme}
+            t={t}
+          />
+        </View>
+
+        {/* Child 1: Sticky Jump-to-Meal Mini-Nav */}
+        <View style={styles.stickyNavContainer}>
+          <View style={styles.stickyNavRow}>
+            {mealCategories.map((cat) => {
+              const isActive = activeMealNav === cat.key;
+              const count = log.meals.filter((m) => m.mealType === cat.key).length;
+              return (
+                <TouchableOpacity
+                  key={cat.key}
+                  style={[styles.mealNavPill, isActive && styles.mealNavPillActive]}
+                  onPress={() => handleJumpToMeal(cat.key)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${cat.label}${count > 0 ? ` (${count})` : ''}`}
+                >
+                  <Text
+                    style={[styles.mealNavPillText, isActive && styles.mealNavPillTextActive]}
+                    numberOfLines={1}
+                  >
+                    {cat.label}
+                    {count > 0 ? ` · ${count}` : ''}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Meal Categories */}
         {mealCategories.map((cat) => {
           const categoryMeals = log.meals.filter((m) => m.mealType === cat.key);
           const categoryKcal = categoryMeals.reduce((s, m) => s + m.calories, 0);
+          const hasItems = categoryMeals.length > 0;
+          const isExpanded = collapsedOverrides[cat.key] ?? !hasItems;
 
           return (
             <View
               key={cat.key}
+              onLayout={(e) => {
+                mealOffsets.current[cat.key] = e.nativeEvent.layout.y;
+              }}
               style={[
                 styles.mealSection,
                 { borderLeftWidth: 3, borderLeftColor: mealBorderColors[cat.key] },
@@ -448,15 +549,32 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
             >
               {/* Category Header */}
               <View style={styles.mealSectionHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                <TouchableOpacity
+                  style={styles.mealHeaderTitleArea}
+                  onPress={() => toggleMealExpanded(cat.key, isExpanded)}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${cat.label}, ${isExpanded ? t('Collapse') : t('Expand')}`}
+                >
                   {getMealHeaderIcon(cat.key)}
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.categoryTitle}>{cat.label}</Text>
-                    {categoryKcal > 0 && (
-                      <Text style={styles.categoryKcal}>{formatKcal(categoryKcal, t)}</Text>
-                    )}
+                  <View style={styles.mealHeaderInfo}>
+                    <View style={styles.mealTitleRow}>
+                      <Text style={styles.categoryTitle}>{cat.label}</Text>
+                      <View style={styles.chevronWrap}>
+                        {isExpanded ? (
+                          <ChevronUp size={16} color={theme.colors.textSecondary} />
+                        ) : (
+                          <ChevronDown size={16} color={theme.colors.textSecondary} />
+                        )}
+                      </View>
+                    </View>
+                    <Text style={styles.categorySummarySub}>
+                      {hasItems
+                        ? `${formatKcal(categoryKcal, t)} · ${categoryMeals.length} ${t(categoryMeals.length > 1 ? 'items' : 'item')}`
+                        : t('No items yet')}
+                    </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
 
                 {!isFuture && (
                   <AnimatedPressable
@@ -472,55 +590,60 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
                 )}
               </View>
 
-              {/* Quick Log Circular Carousel */}
-              {!isFuture && (
-                <MealQuickLogCarousel
-                  mealType={cat.key}
-                  recentFoods={getRecentFoodsForMeal(cat.key)}
-                  onQuickLog={(food) => handleQuickLogFood(food, cat.key)}
-                />
-              )}
-
-              {/* Items List */}
-              {categoryMeals.length === 0 ? (
-                <AnimatedPressable
-                  style={styles.emptyPromptBox}
-                  onPress={() => openAddSheet(cat.key)}
-                  disabled={isFuture}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${t('Tap + to log your first meal')} ${t('Add food')}`}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <View style={styles.emptyPlateBadge}>
-                    <Utensils size={18} color={theme.colors.primary} />
-                  </View>
-                  <Text style={styles.emptyPromptText}>
-                    {t('Tap + to log your first meal')}
-                  </Text>
+              {/* Collapsible Content */}
+              {isExpanded && (
+                <>
+                  {/* Quick Log Circular Carousel */}
                   {!isFuture && (
-                    <View style={styles.emptyAddActionPill}>
-                      <Plus size={13} color={theme.colors.primary} strokeWidth={2.4} />
-                      <Text style={styles.emptyAddActionText}>{t('Add food')}</Text>
+                    <MealQuickLogCarousel
+                      mealType={cat.key}
+                      recentFoods={getRecentFoodsForMeal(cat.key)}
+                      onQuickLog={(food) => handleQuickLogFood(food, cat.key)}
+                    />
+                  )}
+
+                  {/* Items List */}
+                  {categoryMeals.length === 0 ? (
+                    <AnimatedPressable
+                      style={styles.emptyPromptBox}
+                      onPress={() => openAddSheet(cat.key)}
+                      disabled={isFuture}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('Tap + to log your first meal')} ${t('Add food')}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <View style={styles.emptyPlateBadge}>
+                        <Utensils size={18} color={theme.colors.primary} />
+                      </View>
+                      <Text style={styles.emptyPromptText}>
+                        {t('Tap + to log your first meal')}
+                      </Text>
+                      {!isFuture && (
+                        <View style={styles.emptyAddActionPill}>
+                          <Plus size={13} color={theme.colors.primary} strokeWidth={2.4} />
+                          <Text style={styles.emptyAddActionText}>{t('Add food')}</Text>
+                        </View>
+                      )}
+                    </AnimatedPressable>
+                  ) : (
+                    <View style={styles.foodListContainer}>
+                      {categoryMeals.map((item, idx) => (
+                        <AnimatedFoodRow key={item.id} isNew={userAddedMealIds.has(item.id)} delay={idx * 30}>
+                          <FoodLogSwipeableRow
+                            item={item}
+                            language={language}
+                            t={t}
+                            theme={theme}
+                            isRtl={isRtl}
+                            onInspect={setInspectingMeal}
+                            onDelete={handleDelete}
+                            idx={idx}
+                          />
+                        </AnimatedFoodRow>
+                      ))}
                     </View>
                   )}
-                </AnimatedPressable>
-              ) : (
-                <View style={styles.foodListContainer}>
-                  {categoryMeals.map((item, idx) => (
-                    <AnimatedFoodRow key={item.id} isNew={userAddedMealIds.has(item.id)} delay={idx * 30}>
-                      <FoodLogSwipeableRow
-                        item={item}
-                        language={language}
-                        t={t}
-                        theme={theme}
-                        isRtl={isRtl}
-                        onInspect={setInspectingMeal}
-                        onDelete={handleDelete}
-                        idx={idx}
-                      />
-                    </AnimatedFoodRow>
-                  ))}
-                </View>
+                </>
               )}
             </View>
           );
@@ -629,20 +752,97 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     fontWeight: '700',
     textDecorationLine: 'underline',
   },
+  topSummaryContainer: {
+    marginHorizontal: -theme.spacing.md,
+  },
+  stickyNavContainer: {
+    backgroundColor: theme.colors.background,
+    paddingVertical: 8,
+    paddingHorizontal: theme.spacing.md,
+    marginHorizontal: -theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    zIndex: 10,
+  },
+  stickyNavRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  mealNavPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 4,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    minHeight: 34,
+    ...theme.shadow.subtle,
+  },
+  mealNavPillActive: {
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primary,
+  },
+  mealNavPillText: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+  mealNavPillTextActive: {
+    color: theme.colors.primary,
+    fontWeight: '700',
+  },
   scrollContent: {
     paddingHorizontal: theme.spacing.md,
-    paddingTop: 8,
-    gap: 12,
+    paddingTop: 4,
+    gap: 8,
   },
   mealSection: {
-    gap: 4,
+    gap: 2,
+    marginBottom: 4,
   },
   mealSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 4,
-    paddingVertical: 6,
+    paddingVertical: 4,
+  },
+  mealHeaderTitleArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 2,
+  },
+  mealHeaderInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  mealTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  chevronWrap: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categorySummarySub: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
+    marginTop: 1,
   },
   categoryIconCircle: {
     width: 32,
@@ -653,7 +853,7 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   },
   categoryTitle: {
     fontFamily: theme.fonts.serif,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
