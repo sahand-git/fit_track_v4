@@ -61,15 +61,16 @@ export const AiReview: React.FC<AiReviewProps> = ({
   }
 
   const handleUpdateGrams = (index: number, newGrams: number) => {
-    const val = Math.max(5, Math.min(2000, newGrams));
+    const val = newGrams === 0 ? 0 : Math.max(5, Math.min(2000, newGrams));
     setItems((prev) =>
       prev.map((el, idx) => (idx === index ? { ...el, currentGrams: val } : el))
     );
   };
 
   const calculateItemNutrients = (baseItem: PlateAnalysisItem, currentGrams: number) => {
+    const safeGrams = currentGrams > 0 ? currentGrams : (baseItem.grams || 100);
     const baseG = baseItem.grams > 0 ? baseItem.grams : 100;
-    const ratio = currentGrams / baseG;
+    const ratio = safeGrams / baseG;
     return {
       calories: Math.round(baseItem.calories * ratio),
       protein: Math.round(baseItem.protein * ratio * 10) / 10,
@@ -98,15 +99,16 @@ export const AiReview: React.FC<AiReviewProps> = ({
     if (it.isLogged) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
-    const nut = calculateItemNutrients(it.item, it.currentGrams);
+    const safeGrams = it.currentGrams > 0 ? it.currentGrams : (it.item.grams || 100);
+    const nut = calculateItemNutrients(it.item, safeGrams);
     const meal: LoggedMeal = {
       id: `ai_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       foodId: 'ai-estimate',
       name: it.item.name,
       mealType,
       servings: 1,
-      servingSize: `${it.currentGrams}g`,
-      servingGrams: it.currentGrams,
+      servingSize: `${safeGrams}g`,
+      servingGrams: safeGrams,
       calories: nut.calories,
       protein: nut.protein,
       carbs: nut.carbs,
@@ -117,7 +119,7 @@ export const AiReview: React.FC<AiReviewProps> = ({
     };
 
     setItems((prev) =>
-      prev.map((el, idx) => (idx === index ? { ...el, isLogged: true } : el))
+      prev.map((el, idx) => (idx === index ? { ...el, currentGrams: safeGrams, isLogged: true } : el))
     );
     onLogItem(meal);
   };
@@ -128,15 +130,16 @@ export const AiReview: React.FC<AiReviewProps> = ({
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
     const meals: LoggedMeal[] = unlogged.map((it, idx) => {
-      const nut = calculateItemNutrients(it.item, it.currentGrams);
+      const safeGrams = it.currentGrams > 0 ? it.currentGrams : (it.item.grams || 100);
+      const nut = calculateItemNutrients(it.item, safeGrams);
       return {
         id: `ai_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
         foodId: 'ai-estimate',
         name: it.item.name,
         mealType,
         servings: 1,
-        servingSize: `${it.currentGrams}g`,
-        servingGrams: it.currentGrams,
+        servingSize: `${safeGrams}g`,
+        servingGrams: safeGrams,
         calories: nut.calories,
         protein: nut.protein,
         carbs: nut.carbs,
@@ -219,39 +222,50 @@ export const AiReview: React.FC<AiReviewProps> = ({
 
               {/* Portion adjustment controls */}
               <View style={styles.adjustRow}>
-                <Text style={styles.portionLabel}>{t('Portion (g)')}:</Text>
-                <View style={styles.portionControls}>
-                  <TouchableOpacity
-                    style={styles.stepBtn}
-                    onPress={() => handleUpdateGrams(idx, entry.currentGrams - 25)}
-                    disabled={entry.isLogged}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Decrease portion')}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Minus size={13} color={theme.colors.textPrimary} />
-                  </TouchableOpacity>
-                  <TextInput
-                    style={styles.gramsInput}
-                    value={String(entry.currentGrams)}
-                    keyboardType="numeric"
-                    editable={!entry.isLogged}
-                    onChangeText={(val) => {
-                      const num = parseInt(val, 10);
-                      if (!isNaN(num)) handleUpdateGrams(idx, num);
-                    }}
-                  />
-                  <Text style={styles.unitText}>g</Text>
-                  <TouchableOpacity
-                    style={styles.stepBtn}
-                    onPress={() => handleUpdateGrams(idx, entry.currentGrams + 25)}
-                    disabled={entry.isLogged}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('Increase portion')}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Plus size={13} color={theme.colors.textPrimary} />
-                  </TouchableOpacity>
+                <View style={styles.portionLeft}>
+                  <Text style={styles.portionLabel}>{t('Portion (g)')}:</Text>
+                  <View style={styles.portionControls}>
+                    <TouchableOpacity
+                      style={styles.stepBtn}
+                      onPress={() => handleUpdateGrams(idx, (entry.currentGrams > 0 ? entry.currentGrams : (entry.item.grams || 100)) - 25)}
+                      disabled={entry.isLogged}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Decrease portion')}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Minus size={15} color={theme.colors.textPrimary} strokeWidth={2.2} />
+                    </TouchableOpacity>
+                    <TextInput
+                      style={styles.gramsInput}
+                      value={entry.currentGrams > 0 ? String(entry.currentGrams) : ''}
+                      placeholder="0"
+                      placeholderTextColor={theme.colors.textMuted}
+                      keyboardType="numeric"
+                      editable={!entry.isLogged}
+                      selectTextOnFocus
+                      onChangeText={(val) => {
+                        const clean = val.replace(/[^0-9]/g, '');
+                        const num = parseInt(clean, 10);
+                        handleUpdateGrams(idx, isNaN(num) ? 0 : num);
+                      }}
+                      onBlur={() => {
+                        if (entry.currentGrams <= 0) {
+                          handleUpdateGrams(idx, entry.item.grams || 100);
+                        }
+                      }}
+                    />
+                    <Text style={styles.unitText}>g</Text>
+                    <TouchableOpacity
+                      style={styles.stepBtn}
+                      onPress={() => handleUpdateGrams(idx, (entry.currentGrams > 0 ? entry.currentGrams : (entry.item.grams || 100)) + 25)}
+                      disabled={entry.isLogged}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Increase portion')}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Plus size={15} color={theme.colors.textPrimary} strokeWidth={2.2} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {/* Per-item log button */}
@@ -264,10 +278,10 @@ export const AiReview: React.FC<AiReviewProps> = ({
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   {entry.isLogged ? (
-                    <Check size={14} color={theme.colors.primary} />
+                    <Check size={16} color={theme.colors.primary} strokeWidth={2.5} />
                   ) : (
                     <>
-                      <Plus size={13} color={theme.colors.textInverted} />
+                      <Plus size={14} color={theme.colors.textInverted} strokeWidth={2.5} />
                       <Text style={styles.singleLogBtnText}>{t('Add')}</Text>
                     </>
                   )}
@@ -418,13 +432,19 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 6,
-    paddingTop: 8,
+    marginTop: 8,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
+  portionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
+  },
   portionLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },
@@ -434,8 +454,8 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     gap: 4,
   },
   stepBtn: {
-    width: 28,
-    height: 28,
+    width: 36,
+    height: 36,
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
@@ -444,37 +464,42 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     justifyContent: 'center',
   },
   gramsInput: {
-    minWidth: 42,
-    height: 28,
-    paddingHorizontal: 6,
+    minWidth: 54,
+    height: 36,
+    paddingHorizontal: 8,
+    paddingVertical: 0,
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.sm,
     textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '600',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    fontSize: 14,
+    fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   unitText: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    marginRight: 2,
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    marginHorizontal: 2,
   },
   singleLogBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    height: 36,
+    paddingHorizontal: 14,
     borderRadius: theme.radius.sm,
   },
   singleLogBtnDone: {
     backgroundColor: theme.colors.primaryLight,
   },
   singleLogBtnText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: theme.colors.textInverted,
   },
