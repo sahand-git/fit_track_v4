@@ -42,7 +42,7 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'scan',
       label: t('Scan Food'),
-      icon: <Camera size={24} color={theme.colors.primary} strokeWidth={2.2} />,
+      icon: <Camera size={20} color={theme.colors.primary} strokeWidth={2.2} />,
       iconBg: theme.colors.primaryLight,
       borderColor: theme.colors.primary,
       onPress: onScanPlate,
@@ -50,7 +50,7 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'describe',
       label: t('AI Describe'),
-      icon: <Sparkles size={24} color={theme.colors.amber} strokeWidth={2.2} />,
+      icon: <Sparkles size={20} color={theme.colors.amber} strokeWidth={2.2} />,
       iconBg: theme.colors.amberLight,
       borderColor: theme.colors.amber,
       onPress: onDescribeMeal,
@@ -58,7 +58,7 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'barcode',
       label: t('Barcode'),
-      icon: <Barcode size={24} color={theme.colors.purple} strokeWidth={2.2} />,
+      icon: <Barcode size={20} color={theme.colors.purple} strokeWidth={2.2} />,
       iconBg: theme.colors.purpleLight,
       borderColor: theme.colors.purple,
       onPress: onScanBarcode,
@@ -66,7 +66,7 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'supplements',
       label: t('Vitamins'),
-      icon: <Pill size={24} color={theme.colors.crimson} strokeWidth={2.2} />,
+      icon: <Pill size={20} color={theme.colors.crimson} strokeWidth={2.2} />,
       iconBg: theme.colors.crimsonLight,
       borderColor: theme.colors.crimson,
       onPress: onOpenSupplements,
@@ -74,7 +74,7 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'workouts',
       label: t('Workouts'),
-      icon: <Dumbbell size={24} color={theme.colors.accent} strokeWidth={2.2} />,
+      icon: <Dumbbell size={20} color={theme.colors.accent} strokeWidth={2.2} />,
       iconBg: `${theme.colors.accent}18`,
       borderColor: theme.colors.accent,
       onPress: onOpenWorkouts,
@@ -82,7 +82,7 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'steps',
       label: t('Steps'),
-      icon: <Footprints size={24} color={theme.colors.water} strokeWidth={2.2} />,
+      icon: <Footprints size={20} color={theme.colors.water} strokeWidth={2.2} />,
       iconBg: theme.colors.waterLight,
       borderColor: theme.colors.water,
       onPress: onOpenSteps,
@@ -101,23 +101,25 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
         {actions.map((act) => (
           <AnimatedPressable
             key={act.id}
-            style={styles.actionItem}
+            style={styles.actionTile}
             onPress={() => handlePress(act.onPress)}
-            minScale={0.93}
+            minScale={0.95}
             accessibilityRole="button"
             accessibilityLabel={act.label}
           >
             <View
               style={[
-                styles.circleButton,
+                styles.iconBadge,
                 { backgroundColor: act.iconBg, borderColor: act.borderColor },
               ]}
             >
               {act.icon}
             </View>
-            <Text style={styles.actionLabel} numberOfLines={2}>
-              {act.label}
-            </Text>
+            <View style={styles.labelContainer}>
+              <Text style={styles.actionLabel} numberOfLines={2}>
+                {act.label}
+              </Text>
+            </View>
           </AnimatedPressable>
         ))}
       </View>
@@ -129,34 +131,46 @@ const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
     container: {
       paddingHorizontal: theme.spacing.md,
-      marginVertical: 12,
+      marginVertical: 10,
     },
     grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'space-between',
-      rowGap: 14,
+      rowGap: 8,
     },
-    actionItem: {
-      width: '31%',
-      alignItems: 'center',
-      justifyContent: 'flex-start',
-      paddingVertical: 2,
-    },
-    circleButton: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
+    actionTile: {
+      width: '31.5%',
+      height: 82,
+      backgroundColor: theme.colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 6,
-      borderWidth: 1.5,
+      paddingHorizontal: 4,
+      paddingVertical: 6,
       ...theme.shadow.subtle,
     },
+    iconBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+      borderWidth: 1.2,
+    },
+    labelContainer: {
+      height: 26,
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: '100%',
+    },
     actionLabel: {
-      fontSize: 11.5,
-      lineHeight: 15,
-      fontWeight: '600',
+      fontSize: 11,
+      lineHeight: 13,
+      fontWeight: '700',
       color: theme.colors.textPrimary,
       textAlign: 'center',
       includeFontPadding: false,

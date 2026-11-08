@@ -242,6 +242,16 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   const burnedCalories = activityBudget.grossWorkoutCalories;
   const effectiveCalorieTarget = activityBudget.effectiveTarget;
 
+  const handleToggleIncludeWorkouts = useCallback(async () => {
+    if (!onUpdateProfile) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    const updated: UserProfile = {
+      ...profile,
+      includeWorkoutsInCalorieBudget: !profile.includeWorkoutsInCalorieBudget,
+    };
+    await onUpdateProfile(updated);
+  }, [onUpdateProfile, profile]);
+
   const getMealIcon = (mealType: MealType) => {
     switch (mealType) {
       case 'breakfast':
@@ -474,46 +484,102 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
             onPress={() => setSelectedNutrientForDetail('calories')}
           />
 
-          {/* Calorie Ring Activity & Steps Summary Bar */}
-          <View style={styles.activityHeroRow}>
-            {/* Steps Pill */}
-            <TouchableOpacity
-              style={styles.activityHeroPill}
-              onPress={onOpenSteps}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={`${(log.steps || 0).toLocaleString()} ${t('steps')}`}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Footprints size={14} color={theme.colors.water} />
-              <Text style={styles.activityHeroPillText}>
-                {(log.steps || 0).toLocaleString()} <Text style={styles.activityHeroPillSub}>{t('steps')}</Text>
-              </Text>
-            </TouchableOpacity>
+          {/* Activity & Energy Balance Card */}
+          <View style={styles.activityCard}>
+            {/* Top row: Summary + Toggle Button */}
+            <View style={[styles.activityHeaderRow, isRtl && styles.rowRtl]}>
+              <View style={[styles.activityHeaderLeft, isRtl && styles.rowRtl]}>
+                <View style={styles.activityFlameIcon}>
+                  <Flame size={16} color={theme.colors.warning} />
+                </View>
+                <View>
+                  <Text style={styles.activityCardTitle}>{t('Active Burn')}</Text>
+                  <Text style={styles.activityTotalKcal}>
+                    {activityBudget.workoutCalories + activityBudget.stepCalories} <Text style={styles.activityKcalUnit}>{t('kcal total')}</Text>
+                  </Text>
+                </View>
+              </View>
 
-            {/* Burned Kcal Pill */}
-            <TouchableOpacity
-              style={styles.activityHeroPill}
-              onPress={onOpenWorkouts}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={`${burnedCalories} ${t('kcal burned')}`}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Flame size={14} color={theme.colors.warning} />
-              <Text style={styles.activityHeroPillText}>
-                ~{burnedCalories} <Text style={styles.activityHeroPillSub}>{t('kcal burned')}</Text>
-              </Text>
-            </TouchableOpacity>
-          </View>
+              {/* In-place Budget Toggle Button */}
+              {onUpdateProfile && (
+                <TouchableOpacity
+                  style={[
+                    styles.budgetToggleBtn,
+                    profile.includeWorkoutsInCalorieBudget && styles.budgetToggleBtnActive,
+                    isRtl && styles.rowRtl,
+                  ]}
+                  onPress={handleToggleIncludeWorkouts}
+                  activeOpacity={0.8}
+                  accessibilityRole="switch"
+                  accessibilityLabel={t('Include activity burn in calorie budget')}
+                  accessibilityState={{ checked: !!profile.includeWorkoutsInCalorieBudget }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <View style={[
+                    styles.toggleSwitchKnob,
+                    profile.includeWorkoutsInCalorieBudget && styles.toggleSwitchKnobActive,
+                  ]} />
+                  <Text style={[
+                    styles.budgetToggleBtnText,
+                    profile.includeWorkoutsInCalorieBudget && styles.budgetToggleBtnTextActive,
+                  ]}>
+                    {profile.includeWorkoutsInCalorieBudget ? t('In Budget: ON') : t('In Budget: OFF')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
-          {/* Calorie Budget Extraction Notice */}
-          <View style={styles.budgetStatusPill}>
-            <Text style={styles.budgetStatusText}>
-              {profile.includeWorkoutsInCalorieBudget
-                ? `+${activityBudget.eligibleActivityCalories || 0} ${t('kcal added to budget')}`
-                : t('tracked as burn, not in food budget')}
-            </Text>
+            {/* Split Metrics: Workouts vs Steps */}
+            <View style={[styles.activitySplitRow, isRtl && styles.rowRtl]}>
+              {/* Workouts Burn Box */}
+              <TouchableOpacity
+                style={styles.activityMetricBox}
+                onPress={onOpenWorkouts}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('Workouts')}: ${activityBudget.workoutCalories} ${t('kcal')}`}
+              >
+                <View style={[styles.metricBoxHeader, isRtl && styles.rowRtl]}>
+                  <Dumbbell size={14} color={theme.colors.accent} />
+                  <Text style={styles.metricBoxLabel}>{t('Workouts')}</Text>
+                </View>
+                <Text style={styles.metricBoxValue}>
+                  {activityBudget.workoutCalories} <Text style={styles.metricBoxSub}>{t('kcal')}</Text>
+                </Text>
+                <Text style={styles.metricBoxHint}>
+                  {log.workouts?.length ? `${log.workouts.length} ${t('logged')}` : t('0 logged')}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Steps Burn Box */}
+              <TouchableOpacity
+                style={styles.activityMetricBox}
+                onPress={onOpenSteps}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('Steps')}: ${(log.steps || 0).toLocaleString()}, ${activityBudget.stepCalories} ${t('kcal')}`}
+              >
+                <View style={[styles.metricBoxHeader, isRtl && styles.rowRtl]}>
+                  <Footprints size={14} color={theme.colors.water} />
+                  <Text style={styles.metricBoxLabel}>{t('Steps')}</Text>
+                </View>
+                <Text style={styles.metricBoxValue}>
+                  {activityBudget.stepCalories} <Text style={styles.metricBoxSub}>{t('kcal')}</Text>
+                </Text>
+                <Text style={styles.metricBoxHint}>
+                  {(log.steps || 0).toLocaleString()} / {(profile.stepGoal || 8000).toLocaleString()}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Reconciled Budget Footer Explanation */}
+            <View style={[styles.activityFooterBanner, isRtl && styles.rowRtl]}>
+              <Text style={styles.activityFooterText}>
+                {profile.includeWorkoutsInCalorieBudget
+                  ? `${t('Active burn added to food budget')}: +${activityBudget.workoutCalories + activityBudget.stepCalories} ${t('kcal')} (${activityBudget.workoutCalories} ${t('Workouts')} + ${activityBudget.stepCalories} ${t('Steps')})`
+                  : `${activityBudget.workoutCalories + activityBudget.stepCalories} ${t('kcal burned')} · ${t('tracked as burn, not in food budget')}`}
+              </Text>
+            </View>
           </View>
         </Animated.View>
 
@@ -730,6 +796,9 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   stepsTrack: { height: 6, overflow: 'hidden', borderRadius: 4, backgroundColor: theme.colors.surfaceSubtle },
   stepsFill: { height: '100%', backgroundColor: theme.colors.secondary, borderRadius: 4 },
   stepsHint: { color: theme.colors.textMuted, fontSize: 12 },
+  rowRtl: {
+    flexDirection: 'row-reverse',
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -752,47 +821,135 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.terracottaDark,
   },
-  activityHeroRow: {
+  activityCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginTop: 12,
+    gap: 10,
+    ...theme.shadow.subtle,
+  },
+  activityHeaderRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  activityHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  activityFlameIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.colors.warningLight,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 8,
   },
-  activityHeroPill: {
+  activityCardTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  activityTotalKcal: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: theme.colors.textPrimary,
+  },
+  activityKcalUnit: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.textMuted,
+  },
+  budgetToggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
+    gap: 6,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  activityHeroPillText: {
-    fontSize: 12,
+  budgetToggleBtnActive: {
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primary,
+  },
+  toggleSwitchKnob: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: theme.colors.textMuted,
+  },
+  toggleSwitchKnobActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  budgetToggleBtnText: {
+    fontSize: 11,
     fontWeight: '700',
-    color: theme.colors.textPrimary,
+    color: theme.colors.textSecondary,
     includeFontPadding: false,
   },
-  activityHeroPillSub: {
+  budgetToggleBtnTextActive: {
+    color: theme.colors.primary,
+  },
+  activitySplitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  activityMetricBox: {
+    flex: 1,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 2,
+  },
+  metricBoxHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  metricBoxLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  metricBoxValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: theme.colors.textPrimary,
+  },
+  metricBoxSub: {
     fontSize: 11,
     fontWeight: '500',
     color: theme.colors.textMuted,
   },
-  budgetStatusPill: {
-    marginTop: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.background,
-  },
-  budgetStatusText: {
+  metricBoxHint: {
     fontSize: 11,
     fontWeight: '500',
     color: theme.colors.textMuted,
-    textAlign: 'center',
+    marginTop: 1,
+  },
+  activityFooterBanner: {
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  activityFooterText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+    lineHeight: 15,
   },
   burnBanner: {
     flexDirection: 'row',

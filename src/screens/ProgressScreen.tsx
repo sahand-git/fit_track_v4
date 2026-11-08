@@ -483,6 +483,37 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
               </View>
             </View>
 
+            {/* Goal Progress Bar */}
+            {profile?.targetWeightKg && startWeight !== profile.targetWeightKg && (
+              <View style={styles.goalProgressContainer}>
+                <View style={[styles.goalProgressHeader, isRTL && styles.rowRtl]}>
+                  <Text style={styles.goalProgressLabel}>{t('Progress')}</Text>
+                  <Text style={styles.goalProgressPct}>
+                    {(() => {
+                      const totalToLose = Math.abs(startWeight - profile.targetWeightKg);
+                      const lostSoFar = Math.abs(startWeight - currentWeight);
+                      const pct = totalToLose > 0 ? Math.min(100, Math.round((lostSoFar / totalToLose) * 100)) : 100;
+                      return `${pct}% ${t('of goal reached')}`;
+                    })()}
+                  </Text>
+                </View>
+                <View style={styles.goalTrack}>
+                  <View
+                    style={[
+                      styles.goalFill,
+                      {
+                        width: `${(() => {
+                          const totalToLose = Math.abs(startWeight - profile.targetWeightKg);
+                          const lostSoFar = Math.abs(startWeight - currentWeight);
+                          return totalToLose > 0 ? Math.min(100, Math.max(5, Math.round((lostSoFar / totalToLose) * 100))) : 100;
+                        })()}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+            )}
+
             {/* Visual BMI Gauge */}
             <View style={styles.bmiGaugeContainer}>
               <View style={[styles.bmiHeaderRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
@@ -632,6 +663,9 @@ const createStyles = (theme: ThemeType) =>
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  rowRtl: {
+    flexDirection: 'row-reverse',
   },
   segmentBar: {
     flexDirection: 'row',
@@ -808,6 +842,42 @@ const createStyles = (theme: ThemeType) =>
     width: 1,
     height: 22,
     backgroundColor: theme.colors.border,
+  },
+  goalProgressContainer: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: theme.radius.md,
+    marginTop: 8,
+    gap: 6,
+  },
+  goalProgressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  goalProgressLabel: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  goalProgressPct: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.primary,
+  },
+  goalTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.border,
+    overflow: 'hidden',
+  },
+  goalFill: {
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+    borderRadius: 4,
   },
   bmiGaugeContainer: {
     backgroundColor: theme.colors.surfaceSubtle,
