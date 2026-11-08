@@ -164,7 +164,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
               : t('Not enough data')
           }`}
         >
-          <Text style={styles.pillCombinedText} numberOfLines={2}>
+          <Text style={styles.pillCombinedText} numberOfLines={1}>
             <Text style={styles.secondaryLabel}>{t('Fiber')}: </Text>
             <Text style={styles.secondaryValue}>
               {typeof fiberConsumed === 'number' && Number.isFinite(fiberConsumed)
@@ -198,7 +198,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
               : t('Not enough data')
           }`}
         >
-          <Text style={styles.pillCombinedText} numberOfLines={2}>
+          <Text style={styles.pillCombinedText} numberOfLines={1}>
             <Text style={styles.secondaryLabel}>{t('Total Sugar')}: </Text>
             <Text style={styles.secondaryValue}>
               {typeof sugarConsumed === 'number' && Number.isFinite(sugarConsumed)
@@ -220,7 +220,7 @@ export const MacroCards: React.FC<MacroCardsProps> = ({
         {/* Vitamins & RDA Explorer Button */}
         <TouchableOpacity
           style={[styles.vitaminsBtn, isRtl && styles.rowRtl]}
-          onPress={() => onSelectNutrient?.('vitaminC')}
+          onPress={() => onSelectNutrient?.('calories')}
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
@@ -289,37 +289,41 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
-    gap: 6,
-    flexWrap: 'wrap',
+    gap: 4,
+    flexWrap: 'nowrap',
   },
   secondaryPill: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
+    justifyContent: 'center',
+    gap: 2,
+    paddingHorizontal: 6,
     paddingVertical: 5,
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.surfaceSubtle,
-    flexShrink: 1,
     minWidth: 0,
   },
   pillCombinedText: {
-    fontSize: 12,
-    flexShrink: 1,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   secondaryLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: theme.colors.textSecondary,
+    includeFontPadding: false,
   },
   secondaryValue: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: theme.colors.textPrimary,
+    includeFontPadding: false,
   },
   incompleteAsterisk: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: theme.colors.amberText,
   },
@@ -328,15 +332,15 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     alignItems: 'center',
     gap: 3,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: theme.radius.sm,
-    backgroundColor: `${theme.colors.primary}12`,
-    marginStart: 'auto',
+    backgroundColor: `${theme.colors.primary}15`,
     flexShrink: 0,
   },
   vitaminsBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: theme.colors.primary,
+    includeFontPadding: false,
   },
 });

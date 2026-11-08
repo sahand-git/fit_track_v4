@@ -474,20 +474,47 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
             onPress={() => setSelectedNutrientForDetail('calories')}
           />
 
-          {(burnedCalories > 0 || (profile.includeWorkoutsInCalorieBudget && activityBudget.eligibleActivityCalories > 0)) && (
-            <View style={styles.burnBanner}>
-              <Flame size={14} color={theme.colors.warning} />
-              <Text style={styles.burnBannerText}>
-                {!profile.includeWorkoutsInCalorieBudget
-                  ? `${burnedCalories} ${t('kcal burned in active workouts (est.)')} · ${t('tracked as burn, not in food budget')}`
-                  : activityBudget.workoutCalories > 0 && activityBudget.stepCalories > 0
-                  ? `${t('Est. active burn:')} +${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.workoutCalories} ${t('net workout est.')} + ${activityBudget.stepCalories} kcal · ${(log.steps || 0).toLocaleString()} ${t('steps est.')})`
-                  : activityBudget.workoutCalories > 0
-                  ? `${t('Est. active burn:')} +${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${activityBudget.workoutCalories} ${t('net workout est.')})`
-                  : `${t('Est. active burn:')} +${activityBudget.eligibleActivityCalories} ${t('kcal added to budget')} (${(log.steps || 0).toLocaleString()} ${t('steps est.')})`}
+          {/* Calorie Ring Activity & Steps Summary Bar */}
+          <View style={styles.activityHeroRow}>
+            {/* Steps Pill */}
+            <TouchableOpacity
+              style={styles.activityHeroPill}
+              onPress={onOpenSteps}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${(log.steps || 0).toLocaleString()} ${t('steps')}`}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Footprints size={14} color={theme.colors.water} />
+              <Text style={styles.activityHeroPillText}>
+                {(log.steps || 0).toLocaleString()} <Text style={styles.activityHeroPillSub}>{t('steps')}</Text>
               </Text>
-            </View>
-          )}
+            </TouchableOpacity>
+
+            {/* Burned Kcal Pill */}
+            <TouchableOpacity
+              style={styles.activityHeroPill}
+              onPress={onOpenWorkouts}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${burnedCalories} ${t('kcal burned')}`}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Flame size={14} color={theme.colors.warning} />
+              <Text style={styles.activityHeroPillText}>
+                ~{burnedCalories} <Text style={styles.activityHeroPillSub}>{t('kcal burned')}</Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Calorie Budget Extraction Notice */}
+          <View style={styles.budgetStatusPill}>
+            <Text style={styles.budgetStatusText}>
+              {profile.includeWorkoutsInCalorieBudget
+                ? `+${activityBudget.eligibleActivityCalories || 0} ${t('kcal added to budget')}`
+                : t('tracked as burn, not in food budget')}
+            </Text>
+          </View>
         </Animated.View>
 
         {/* Nutrients Bar */}
@@ -513,12 +540,15 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           />
         </Animated.View>
 
-        {/* 1.3 Quick Action Grid (3 Iconic Choices: Scan Food, AI Describe, Barcode) */}
+        {/* 1.3 Quick Action Grid (6 Choices: Scan Food, AI Describe, Barcode, Vitamins, Workouts, Steps) */}
         <Animated.View entering={getStaggeredCardEntry(2)}>
           <DashboardQuickGrid
             onScanPlate={() => onOpenAddFood(undefined, 'photo')}
             onDescribeMeal={() => onOpenAddFood(undefined, 'describe')}
             onScanBarcode={() => onOpenAddFood(undefined, 'search', true)}
+            onOpenSupplements={onOpenSupplements}
+            onOpenWorkouts={onOpenWorkouts}
+            onOpenSteps={onOpenSteps}
           />
         </Animated.View>
 
@@ -610,231 +640,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
             target={profile.waterTargetGlasses}
             onUpdate={onUpdateWater}
           />
-        </Animated.View>
-
-        {/* Steps Activity Card */}
-        <Animated.View entering={getStaggeredCardEntry(4)}>
-          <AnimatedPressable style={styles.stepsCard} onPress={onOpenSteps} minScale={0.98} accessibilityRole="button" accessibilityLabel={t('Steps')}>
-            <View style={[styles.stepsIcon, (log.steps || 0) >= (profile.stepGoal || 8000) && (profile.stepGoal || 8000) > 0 && { backgroundColor: theme.colors.primaryLight }]}>
-              {(log.steps || 0) >= (profile.stepGoal || 8000) && (profile.stepGoal || 8000) > 0 ? (
-                <CheckCircle2 size={20} color={theme.colors.success} />
-              ) : (
-                <Footprints size={19} color={theme.colors.primary} />
-              )}
-            </View>
-            <View style={styles.stepsInfo}>
-              <View style={styles.stepsTitleRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.stepsTitle}>{t('Steps')}</Text>
-                  {(log.steps || 0) >= (profile.stepGoal || 8000) && (profile.stepGoal || 8000) > 0 && (
-                    <CheckCircle2 size={15} color={theme.colors.success} />
-                  )}
-                </View>
-                <Text style={styles.stepsCount}>{(log.steps || 0).toLocaleString()} / {(profile.stepGoal || 8000).toLocaleString()}</Text>
-              </View>
-              <View style={styles.stepsTrack}>
-                <View
-                  style={[
-                    styles.stepsFill,
-                    { width: `${Math.min(100, ((log.steps || 0) / (profile.stepGoal || 8000)) * 100)}%` },
-                    (log.steps || 0) >= (profile.stepGoal || 8000) && (profile.stepGoal || 8000) > 0 && { backgroundColor: theme.colors.success },
-                  ]}
-                />
-              </View>
-              <Text style={styles.stepsHint}>
-                {(log.steps || 0) >= (profile.stepGoal || 8000) && (profile.stepGoal || 8000) > 0
-                  ? t('Goal reached!')
-                  : t('Tap to view activity details')}
-              </Text>
-            </View>
-            <DirectionalIcon name="ChevronRight" size={17} color={theme.colors.textMuted} />
-          </AnimatedPressable>
-        </Animated.View>
-
-        {/* Vitamins & Supplements Section (Clean, dedicated checklist) */}
-        <Animated.View entering={getStaggeredCardEntry(5)} style={styles.supplementsContainer}>
-          {activeSupplements.length === 0 ? (
-            /* Slim row if routine/daily log is empty */
-            <AnimatedPressable
-              style={styles.slimRoutineRow}
-              onPress={onOpenSupplements}
-              minScale={0.98}
-              accessibilityRole="button"
-              accessibilityLabel={t('Track vitamins & supplements')}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <View style={styles.slimRoutineLeft}>
-                <View style={styles.pillIconBox}>
-                  <Pill size={15} color={theme.colors.primary} />
-                </View>
-                <Text style={styles.slimRoutineText}>{t('Track vitamins & supplements')}</Text>
-              </View>
-              <DirectionalIcon name="ChevronRight" size={16} color={theme.colors.textMuted} />
-            </AnimatedPressable>
-          ) : (
-            /* Checklists with small Manage link if items exist */
-            <View style={styles.routineCard}>
-              <View style={styles.routineHeader}>
-                <View style={styles.routineTitleRow}>
-                  <Pill size={16} color={theme.colors.primary} />
-                  <Text style={styles.routineTitle}>{t('Vitamins & supplements')}</Text>
-                  <Text style={styles.routineCount}>
-                    {takenSupplementsCount}/{activeSupplements.length}
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  onPress={onOpenSupplements}
-                  style={styles.manageBtn}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${t('Manage')} ${t('Vitamins & supplements')}`}
-                  hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
-                >
-                  <Text style={styles.manageBtnText}>{t('Manage')}</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.routineItemsList}>
-                {activeSupplements.map((item) => {
-                  return (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={styles.routineItemRow}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                        onToggleSupplement(item.id, !item.isTaken);
-                      }}
-                      disabled={isFuture}
-                      activeOpacity={0.7}
-                      accessibilityRole="checkbox"
-                      accessibilityLabel={`${item.name}${item.doseText ? ` (${item.doseText})` : ''}, ${item.isTaken ? t('taken') : t('not taken')}`}
-                      accessibilityState={{ checked: item.isTaken }}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <View style={styles.checkboxCircle}>
-                        <AnimatedCheckbox checked={item.isTaken} size={19} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.routineItemName, item.isTaken && styles.routineItemNameTaken]}>
-                          {item.name}
-                        </Text>
-                        {item.doseText ? (
-                          <Text style={styles.routineItemDose}>{item.doseText}</Text>
-                        ) : null}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-        </Animated.View>
-
-        {/* Workouts Section */}
-        <Animated.View entering={getStaggeredCardEntry(6)} style={styles.workoutContainer}>
-          <View style={styles.workoutCard}>
-            <View style={styles.workoutHeader}>
-              <View style={styles.workoutHeaderTop}>
-                <View style={styles.workoutTitleRow}>
-                  <Dumbbell size={17} color={theme.colors.primary} />
-                  <Text style={styles.workoutTitle}>{t('Workouts')}</Text>
-                </View>
-                <AnimatedPressable
-                  onPress={onOpenWorkouts}
-                  style={styles.manageBtn}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('History')}
-                  hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
-                >
-                  <Text style={styles.manageBtnText}>{t('History')}</Text>
-                </AnimatedPressable>
-              </View>
-              {burnedCalories > 0 && (
-                <Text style={styles.workoutBurnBadge}>
-                  {t('Burned')}: ~{burnedCalories} {t('kcal')}
-                </Text>
-              )}
-              <AnimatedPressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setWorkoutSheetVisible(true);
-                }}
-                style={styles.addWorkoutBtn}
-                disabled={isFuture}
-                accessibilityRole="button"
-                accessibilityLabel={t('Add workout')}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Plus size={14} color={theme.colors.primary} />
-                <Text style={styles.addWorkoutBtnText}>{t('Add workout')}</Text>
-              </AnimatedPressable>
-            </View>
-
-            {(!log.workouts || log.workouts.length === 0) ? (
-              <TouchableOpacity
-                style={styles.emptyWorkoutRow}
-                onPress={() => {
-                  if (!isFuture) setWorkoutSheetVisible(true);
-                }}
-                disabled={isFuture}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  isFuture
-                    ? t('Workouts cannot be logged for future dates.')
-                    : t('No workouts logged yet. Tap to log exercise.')
-                }
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={styles.emptyWorkoutText}>
-                  {isFuture
-                    ? t('Workouts cannot be logged for future dates.')
-                    : t('No workouts logged yet. Tap to log exercise.')}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.workoutItemsList}>
-                {log.workouts.map((w) => (
-                  <Animated.View
-                    key={w.id}
-                    exiting={getItemExitAnimation()}
-                    layout={getListLayoutTransition()}
-                    style={styles.workoutItemRow}
-                  >
-                    <View style={styles.workoutItemInfo}>
-                      <Text style={styles.workoutItemName} numberOfLines={2}>{t(w.name)}</Text>
-                      <View style={styles.workoutItemMetaList}>
-                        {Object.values(getWorkoutDisplayMeta(w, t)).map((label, index) => (
-                          <Text key={`${w.id}_meta_${index}`} style={styles.workoutItemMeta}>{label}</Text>
-                        ))}
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      onPress={async () => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                        const confirmed = await dialog.confirm({
-                          title: t('Delete workout'),
-                          message: t('Are you sure you want to delete this workout?'),
-                          confirmText: t('Delete'),
-                          cancelText: t('Cancel'),
-                          destructive: true,
-                        });
-                        if (confirmed) {
-                          onDeleteWorkout(w.id);
-                        }
-                      }}
-                      style={styles.deleteWorkoutBtn}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${t('Delete workout')}: ${t(w.name)}`}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Trash2 size={16} color={theme.colors.textMuted} />
-                    </TouchableOpacity>
-                  </Animated.View>
-                ))}
-              </View>
-            )}
-          </View>
         </Animated.View>
       </ScrollView>
 
@@ -946,6 +751,48 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: theme.colors.terracottaDark,
+  },
+  activityHeroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  activityHeroPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  activityHeroPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    includeFontPadding: false,
+  },
+  activityHeroPillSub: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: theme.colors.textMuted,
+  },
+  budgetStatusPill: {
+    marginTop: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.background,
+  },
+  budgetStatusText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: theme.colors.textMuted,
+    textAlign: 'center',
   },
   burnBanner: {
     flexDirection: 'row',

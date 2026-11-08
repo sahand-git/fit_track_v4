@@ -5,9 +5,9 @@ import {
   Camera,
   Sparkles,
   Barcode,
-  Zap,
   Dumbbell,
   Pill,
+  Footprints,
 } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
@@ -20,25 +20,29 @@ interface DashboardQuickGridProps {
   onScanPlate: () => void;
   onDescribeMeal: () => void;
   onScanBarcode: () => void;
-  onQuickAdd?: () => void;
-  onExploreFood?: () => void;
+  onOpenSupplements?: () => void;
+  onOpenWorkouts?: () => void;
+  onOpenSteps?: () => void;
 }
 
 export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
   onScanPlate,
   onDescribeMeal,
   onScanBarcode,
+  onOpenSupplements,
+  onOpenWorkouts,
+  onOpenSteps,
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (key: string) => translate(language, key);
 
-  const actions = [
+  const actions = useMemo(() => [
     {
       id: 'scan',
       label: t('Scan Food'),
-      icon: <Camera size={26} color={theme.colors.primary} strokeWidth={2.3} />,
+      icon: <Camera size={24} color={theme.colors.primary} strokeWidth={2.2} />,
       iconBg: theme.colors.primaryLight,
       borderColor: theme.colors.primary,
       onPress: onScanPlate,
@@ -46,7 +50,7 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'describe',
       label: t('AI Describe'),
-      icon: <Sparkles size={26} color={theme.colors.amber} strokeWidth={2.3} />,
+      icon: <Sparkles size={24} color={theme.colors.amber} strokeWidth={2.2} />,
       iconBg: theme.colors.amberLight,
       borderColor: theme.colors.amber,
       onPress: onDescribeMeal,
@@ -54,14 +58,39 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'barcode',
       label: t('Barcode'),
-      icon: <Barcode size={26} color={theme.colors.purple} strokeWidth={2.3} />,
+      icon: <Barcode size={24} color={theme.colors.purple} strokeWidth={2.2} />,
       iconBg: theme.colors.purpleLight,
       borderColor: theme.colors.purple,
       onPress: onScanBarcode,
     },
-  ];
+    {
+      id: 'supplements',
+      label: t('Vitamins'),
+      icon: <Pill size={24} color={theme.colors.crimson} strokeWidth={2.2} />,
+      iconBg: theme.colors.crimsonLight,
+      borderColor: theme.colors.crimson,
+      onPress: onOpenSupplements,
+    },
+    {
+      id: 'workouts',
+      label: t('Workouts'),
+      icon: <Dumbbell size={24} color={theme.colors.accent} strokeWidth={2.2} />,
+      iconBg: `${theme.colors.accent}18`,
+      borderColor: theme.colors.accent,
+      onPress: onOpenWorkouts,
+    },
+    {
+      id: 'steps',
+      label: t('Steps'),
+      icon: <Footprints size={24} color={theme.colors.water} strokeWidth={2.2} />,
+      iconBg: theme.colors.waterLight,
+      borderColor: theme.colors.water,
+      onPress: onOpenSteps,
+    },
+  ], [t, theme, onScanPlate, onDescribeMeal, onScanBarcode, onOpenSupplements, onOpenWorkouts, onOpenSteps]);
 
-  const handlePress = (fn: () => void) => {
+  const handlePress = (fn?: () => void) => {
+    if (!fn) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     fn();
   };
@@ -74,7 +103,7 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
             key={act.id}
             style={styles.actionItem}
             onPress={() => handlePress(act.onPress)}
-            minScale={0.92}
+            minScale={0.93}
             accessibilityRole="button"
             accessibilityLabel={act.label}
           >
@@ -100,34 +129,33 @@ const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
     container: {
       paddingHorizontal: theme.spacing.md,
-      marginVertical: theme.spacing.sm,
+      marginVertical: 12,
     },
     grid: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-around',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      rowGap: 14,
     },
     actionItem: {
-      flex: 1,
+      width: '31%',
       alignItems: 'center',
       justifyContent: 'flex-start',
-      paddingVertical: 4,
-      paddingHorizontal: 4,
+      paddingVertical: 2,
     },
     circleButton: {
-      width: 58,
-      height: 58,
-      borderRadius: 29,
+      width: 52,
+      height: 52,
+      borderRadius: 26,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 8,
+      marginBottom: 6,
       borderWidth: 1.5,
       ...theme.shadow.subtle,
     },
     actionLabel: {
-      fontSize: 12,
-      lineHeight: 16,
-      minHeight: 34,
+      fontSize: 11.5,
+      lineHeight: 15,
       fontWeight: '600',
       color: theme.colors.textPrimary,
       textAlign: 'center',

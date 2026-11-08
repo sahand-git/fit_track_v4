@@ -150,9 +150,9 @@ const createStyles = (theme: ThemeType) =>
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: theme.spacing.xs,
-      paddingHorizontal: theme.spacing.md,
+      paddingHorizontal: 8,
       backgroundColor: theme.colors.background,
-      gap: 6,
+      gap: 4,
     },
     daysRow: {
       flex: 1,
@@ -163,7 +163,7 @@ const createStyles = (theme: ThemeType) =>
     },
     dayPill: {
       flex: 1,
-      height: 60,
+      height: 56,
       borderRadius: theme.radius.md,
       backgroundColor: theme.colors.surface,
       borderWidth: 1,
@@ -171,7 +171,7 @@ const createStyles = (theme: ThemeType) =>
       alignItems: 'center',
       justifyContent: 'center',
       paddingVertical: 4,
-      paddingHorizontal: 2,
+      paddingHorizontal: 1,
     },
     dayPillSelected: {
       backgroundColor: theme.colors.primary,
@@ -182,12 +182,14 @@ const createStyles = (theme: ThemeType) =>
       borderWidth: 1.5,
     },
     dayAbbr: {
-      fontSize: 11,
-      fontWeight: '600',
+      fontSize: 10.5,
+      fontWeight: '700',
       color: theme.colors.textMuted,
       textTransform: 'uppercase',
-      letterSpacing: 0.3,
+      letterSpacing: 0,
       marginBottom: 2,
+      textAlign: 'center',
+      includeFontPadding: false,
     },
     dayAbbrSelected: {
       color: theme.colors.textInverted,
@@ -196,9 +198,11 @@ const createStyles = (theme: ThemeType) =>
       color: theme.colors.primary,
     },
     dayNum: {
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: '700',
       color: theme.colors.textPrimary,
+      textAlign: 'center',
+      includeFontPadding: false,
     },
     dayNumSelected: {
       color: theme.colors.textInverted,
@@ -224,8 +228,8 @@ const createStyles = (theme: ThemeType) =>
       backgroundColor: theme.colors.primary,
     },
     calendarBtn: {
-      width: 38,
-      height: 60,
+      width: 34,
+      height: 56,
       borderRadius: theme.radius.md,
       backgroundColor: theme.colors.surface,
       borderWidth: 1,

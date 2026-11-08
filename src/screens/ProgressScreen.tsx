@@ -259,7 +259,7 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
           accessibilityLabel={t('Body Weight')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Scale size={14} color={subTab === 'weight' ? theme.colors.primary : theme.colors.textMuted} />
+          <Scale size={15} color={subTab === 'weight' ? theme.colors.textInverted : theme.colors.textMuted} />
           <Text style={[styles.segmentText, subTab === 'weight' && styles.segmentTextActive]}>
             {t('Body Weight')}
           </Text>
@@ -276,7 +276,7 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
           accessibilityLabel={t('Weekly Nutrition')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Flame size={14} color={subTab === 'nutrition' ? theme.colors.primary : theme.colors.textMuted} />
+          <Flame size={15} color={subTab === 'nutrition' ? theme.colors.textInverted : theme.colors.textMuted} />
           <Text style={[styles.segmentText, subTab === 'nutrition' && styles.segmentTextActive]}>
             {t('Weekly Nutrition')}
           </Text>
@@ -459,6 +459,30 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
               </View>
             </View>
 
+            {/* Target & Start Comparison Sub-bar */}
+            <View style={[styles.heroStatsRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <View style={styles.heroSubStat}>
+                <Text style={styles.heroSubStatLabel}>{t('Start')}</Text>
+                <Text style={styles.heroSubStatValue}>{startWeight} kg</Text>
+              </View>
+              <View style={styles.heroSubStatDivider} />
+              <View style={styles.heroSubStat}>
+                <Text style={styles.heroSubStatLabel}>{t('Target')}</Text>
+                <Text style={styles.heroSubStatValue}>
+                  {profile?.targetWeightKg ? `${profile.targetWeightKg} kg` : '—'}
+                </Text>
+              </View>
+              <View style={styles.heroSubStatDivider} />
+              <View style={styles.heroSubStat}>
+                <Text style={styles.heroSubStatLabel}>{t('Remaining')}</Text>
+                <Text style={styles.heroSubStatValue}>
+                  {profile?.targetWeightKg
+                    ? `${Math.abs(Math.round((currentWeight - profile.targetWeightKg) * 10) / 10)} kg`
+                    : '—'}
+                </Text>
+              </View>
+            </View>
+
             {/* Visual BMI Gauge */}
             <View style={styles.bmiGaugeContainer}>
               <View style={[styles.bmiHeaderRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
@@ -616,7 +640,7 @@ const createStyles = (theme: ThemeType) =>
     marginTop: 10,
     marginBottom: 6,
     padding: 3,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
@@ -625,22 +649,23 @@ const createStyles = (theme: ThemeType) =>
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 7,
-    borderRadius: theme.radius.sm,
+    paddingVertical: 8,
+    borderRadius: theme.radius.full,
     gap: 6,
   },
   segmentBtnActive: {
-    backgroundColor: theme.colors.primaryLight,
+    backgroundColor: theme.colors.primary,
+    ...theme.shadow.subtle,
   },
   segmentText: {
     fontFamily: theme.fonts.sans,
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
     color: theme.colors.textMuted,
   },
   segmentTextActive: {
-    color: theme.colors.primary,
-    fontWeight: '600',
+    color: theme.colors.textInverted,
+    fontWeight: '700',
   },
   content: {
     paddingHorizontal: theme.spacing.md,
@@ -749,6 +774,40 @@ const createStyles = (theme: ThemeType) =>
     fontFamily: theme.fonts.sans,
     fontSize: 12,
     color: theme.colors.textMuted,
+  },
+  heroStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: 10,
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.md,
+  },
+  heroSubStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  heroSubStatLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  heroSubStatValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginTop: 2,
+  },
+  heroSubStatDivider: {
+    width: 1,
+    height: 22,
+    backgroundColor: theme.colors.border,
   },
   bmiGaugeContainer: {
     backgroundColor: theme.colors.surfaceSubtle,
