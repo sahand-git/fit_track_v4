@@ -219,6 +219,8 @@ const FoodListItemRow = React.memo<FoodListItemRowProps>(
         >
           <FoodThumbnail
             name={displayName}
+            englishName={item.name}
+            foodId={item.id}
             category={item.category}
             imageUrl={item.imageUrl}
             size="medium"
@@ -782,6 +784,8 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
       id: createUniqueId('meal'),
       foodId: selectedFood.id,
       name: selectedFood.name,
+      nameAr: selectedFood.nameAr,
+      nameCkb: selectedFood.nameCkb,
       brand: selectedFood.brand,
       category: selectedFood.category,
       mealType: selectedMeal,
@@ -2422,7 +2426,8 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
             message={sessionState.toast?.message ?? ''}
             onUndo={handleUndoSession}
             onDismiss={() => setSessionState((prev) => dismissSessionToast(prev))}
-            bottomInset={insets.bottom}
+            topInset={insets.top}
+            durationMs={2500}
             isRTL={language === 'ar' || language === 'ckb'}
             t={t}
           />
@@ -2516,9 +2521,17 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
             accessibilityLabel={t('Close')}
           />
           <View style={[styles.portionModalSheet, { paddingBottom: Math.max(insets.bottom + 16, 28) }]}>
-            {/* Drag Handle Indicator (BUG 2) */}
-            <View style={styles.dragHandleContainer}>
-              <View style={styles.dragHandle} />
+            {/* Top Close Header with prominent X button (Item 14) */}
+            <View style={styles.sheetTopCloseRow}>
+              <TouchableOpacity
+                onPress={() => setSelectedFood(null)}
+                style={styles.sheetLargeCloseBtn}
+                accessibilityRole="button"
+                accessibilityLabel={t('Close')}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <X size={20} color={theme.colors.textPrimary} strokeWidth={2.5} />
+              </TouchableOpacity>
             </View>
 
             <ScrollView
@@ -2571,6 +2584,23 @@ const createStyles = (theme: ThemeType) =>
     maxHeight: '85%',
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.xs,
+  },
+  sheetTopCloseRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingTop: 6,
+    paddingBottom: 4,
+  },
+  sheetLargeCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dragHandleContainer: {
     alignItems: 'center',

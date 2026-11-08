@@ -53,7 +53,13 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
 
   const shiftMonth = (delta: number) => setMonth(current => new Date(current.getFullYear(), current.getMonth() + delta, 1));
   const canMoveForward = month < new Date(parseLocalDateString(today).getFullYear(), parseLocalDateString(today).getMonth(), 1);
-  const monthLabel = month.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+  const KURDISH_MONTHS = ['کانوونی دووەم', 'شوبات', 'ئازار', 'نیسان', 'ئایار', 'حوزەیران', 'تەممووز', 'ئاب', 'ئەیلوول', 'تشرینی یەکەم', 'تشرینی دووەم', 'کانوونی یەکەم'];
+  const ARABIC_MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  const monthLabel = language === 'ckb'
+    ? `${KURDISH_MONTHS[month.getMonth()]} ${month.getFullYear()}`
+    : language === 'ar'
+    ? `${ARABIC_MONTHS[month.getMonth()]} ${month.getFullYear()}`
+    : month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => t(day));
 
   return (

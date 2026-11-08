@@ -222,8 +222,8 @@ export const AiReview: React.FC<AiReviewProps> = ({
 
               {/* Portion adjustment controls */}
               <View style={styles.adjustRow}>
-                <View style={styles.portionLeft}>
-                  <Text style={styles.portionLabel}>{t('Portion (g)')}:</Text>
+                <View style={styles.portionWrapper}>
+                  <Text style={styles.portionLabel}>{t('Portion')}</Text>
                   <View style={styles.portionControls}>
                     <TouchableOpacity
                       style={styles.stepBtn}
@@ -430,28 +430,27 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   },
   adjustRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
-  portionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flexShrink: 1,
+  portionWrapper: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 4,
   },
   portionLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.textSecondary,
   },
   portionControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   stepBtn: {
     width: 36,
@@ -464,9 +463,9 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     justifyContent: 'center',
   },
   gramsInput: {
-    minWidth: 54,
+    width: 64,
     height: 36,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 0,
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
@@ -475,13 +474,13 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     textAlign: 'center',
     textAlignVertical: 'center',
     includeFontPadding: false,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   unitText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: theme.colors.textSecondary,
     marginHorizontal: 2,
   },

@@ -25,6 +25,7 @@ export interface AddFoodToastProps {
   onUndo: () => void;
   onDismiss: () => void;
   durationMs?: number;
+  topInset?: number;
   bottomInset?: number;
   isRTL?: boolean;
   t: (key: string) => string;
@@ -35,7 +36,8 @@ export const AddFoodToast: React.FC<AddFoodToastProps> = ({
   message,
   onUndo,
   onDismiss,
-  durationMs = 5000,
+  durationMs = 2600,
+  topInset,
   bottomInset,
   isRTL = false,
   t,
@@ -45,7 +47,7 @@ export const AddFoodToast: React.FC<AddFoodToastProps> = ({
   const reduced = isReducedMotion();
 
   const opacity = useSharedValue(0);
-  const translateY = useSharedValue(reduced ? 0 : 20);
+  const translateY = useSharedValue(reduced ? 0 : -20);
 
   useEffect(() => {
     if (visible) {
@@ -68,7 +70,7 @@ export const AddFoodToast: React.FC<AddFoodToastProps> = ({
         opacity.value = withTiming(0, { duration: 100 });
       } else {
         opacity.value = withTiming(0, { duration: 180, easing: Easing.in(Easing.ease) });
-        translateY.value = withTiming(15, { duration: 180 });
+        translateY.value = withTiming(-20, { duration: 180 });
       }
     }
   }, [visible, message, durationMs, onDismiss, reduced, opacity, translateY]);
@@ -84,7 +86,7 @@ export const AddFoodToast: React.FC<AddFoodToastProps> = ({
     <Animated.View
       style={[
         styles.container,
-        { bottom: Math.max(68, (bottomInset ?? 0) + 60) },
+        { top: Math.max(16, (topInset ?? 0) + 12) },
         animatedStyle,
       ]}
       accessibilityRole="alert"
@@ -129,7 +131,7 @@ const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
     container: {
       position: 'absolute',
-      bottom: 60,
+      top: 16,
       left: theme.spacing.md,
       right: theme.spacing.md,
       zIndex: 9999,

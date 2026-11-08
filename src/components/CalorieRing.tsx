@@ -46,14 +46,14 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
 
   // Calorie percentage
   const calorieRatio = target > 0 ? Math.min(consumed / target, 1) : 0;
-  const progress = useSharedValue(calorieRatio);
+  const progress = useSharedValue(0);
 
   useEffect(() => {
     if (isReducedMotion()) {
       progress.value = calorieRatio;
     } else {
       progress.value = withTiming(calorieRatio, {
-        duration: 350,
+        duration: 750,
         easing: Easing.out(Easing.cubic),
       });
     }

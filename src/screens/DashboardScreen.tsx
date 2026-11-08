@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Image,
 } from 'react-native';
 import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -435,7 +436,16 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
               accessibilityRole="button"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <User size={18} color={theme.colors.textPrimary} />
+              {profile.avatarUrl ? (
+                <Image
+                  source={{ uri: profile.avatarUrl }}
+                  style={{ width: 28, height: 28, borderRadius: 14 }}
+                />
+              ) : profile.avatarPreset ? (
+                <Text style={{ fontSize: 18, lineHeight: 22 }}>{profile.avatarPreset}</Text>
+              ) : (
+                <User size={18} color={theme.colors.textPrimary} />
+              )}
             </AnimatedPressable>
           </View>
         </View>
@@ -503,7 +513,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           />
         </Animated.View>
 
-        {/* 1.3 Quick Action Grid (Sleek Single Row with Clear Labels) */}
+        {/* 1.3 Quick Action Grid (2x3 Grid with 6 Choices including Workout & Vitamins) */}
         <Animated.View entering={getStaggeredCardEntry(2)}>
           <DashboardQuickGrid
             onScanPlate={() => onOpenAddFood(undefined, 'photo')}
@@ -511,6 +521,8 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
             onScanBarcode={() => onOpenAddFood(undefined, 'search', true)}
             onQuickAdd={() => onOpenAddFood()}
             onExploreFood={() => (onExploreFood ? onExploreFood() : onOpenAddFood(undefined, 'search'))}
+            onOpenWorkout={onOpenWorkouts}
+            onOpenSupplements={onOpenSupplements}
           />
         </Animated.View>
 
@@ -830,11 +842,11 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         </Animated.View>
       </ScrollView>
 
-      {/* Floating "+ Add Food" FAB */}
+      {/* Floating "+ Add Food" Circular FAB */}
       <AnimatedPressable
         style={[
           styles.floatingAddFab,
-          { bottom: dockClearance + 16 },
+          { bottom: dockClearance + 18 },
           isRtl ? { left: 20 } : { right: 20 },
         ]}
         onPress={() => {
@@ -845,8 +857,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         accessibilityRole="button"
         accessibilityLabel={t('Add Food')}
       >
-        <Plus size={20} color={theme.colors.textInverted} strokeWidth={2.5} />
-        <Text style={styles.floatingAddFabText}>{t('Add Food')}</Text>
+        <Plus size={26} color={theme.colors.textInverted} strokeWidth={2.6} />
       </AnimatedPressable>
 
       <QuickActionSheet
@@ -1363,24 +1374,16 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   },
   floatingAddFab: {
     position: 'absolute',
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    height: 50,
-    paddingHorizontal: 18,
-    borderRadius: 25,
+    justifyContent: 'center',
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: theme.colors.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.borderFocus,
+    borderWidth: 1.5,
+    borderColor: theme.colors.primaryBorder,
     ...theme.shadow.floating,
     zIndex: 99,
-    elevation: 6,
-  },
-  floatingAddFabText: {
-    fontFamily: theme.fonts.sans,
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.colors.textInverted,
-    letterSpacing: 0.2,
+    elevation: 8,
   },
 });

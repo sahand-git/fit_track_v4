@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { AppText as Text } from '../AppText';
-import { X, Search } from 'lucide-react-native';
+import { X, Search, Sun, Moon, Clock, Sparkles, ShieldCheck } from 'lucide-react-native';
 import {
   LoggedDailySupplement,
   SupplementCategory,
@@ -372,93 +372,75 @@ export const SupplementModal: React.FC<SupplementModalProps> = ({
                   />
                 </View>
 
-                {/* Time of Day */}
+                {/* Time of Day - Prominent Card Buttons */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>{t('Time of day')}</Text>
-                  <View style={styles.pillsRow}>
-                    {timeOptions.map((slot) => (
-                      <TouchableOpacity
-                        key={slot}
-                        style={[
-                          styles.optionChip,
-                          formTime === slot && styles.optionChipActive,
-                        ]}
-                        onPress={() => setFormTime(slot)}
-                        accessibilityRole="button"
-                        accessibilityLabel={t(timeLabels[slot])}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      >
-                        <Text
+                  <View style={styles.timeGrid}>
+                    {timeOptions.map((slot) => {
+                      const isSelected = formTime === slot;
+                      return (
+                        <TouchableOpacity
+                          key={slot}
                           style={[
-                            styles.optionChipText,
-                            formTime === slot && styles.optionChipTextActive,
+                            styles.timeCardBtn,
+                            isSelected && styles.timeCardBtnActive,
                           ]}
+                          onPress={() => setFormTime(slot)}
+                          accessibilityRole="button"
+                          accessibilityLabel={t(timeLabels[slot])}
+                          activeOpacity={0.8}
                         >
-                          {t(timeLabels[slot])}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                          <View style={[styles.timeIconWrap, isSelected && styles.timeIconWrapActive]}>
+                            {slot === 'morning' && <Sun size={18} color={isSelected ? theme.colors.textInverted : theme.colors.amber} />}
+                            {slot === 'afternoon' && <Clock size={18} color={isSelected ? theme.colors.textInverted : theme.colors.primary} />}
+                            {slot === 'evening' && <Moon size={18} color={isSelected ? theme.colors.textInverted : theme.colors.purple} />}
+                            {slot === 'bedtime' && <Sparkles size={18} color={isSelected ? theme.colors.textInverted : theme.colors.accent} />}
+                          </View>
+                          <Text
+                            style={[
+                              styles.timeCardLabel,
+                              isSelected && styles.timeCardLabelActive,
+                            ]}
+                          >
+                            {t(timeLabels[slot])}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
+                </View>
+
+                {/* Prominent UL Safety Ceiling Warning */}
+                <View style={styles.safetyCeilingNotice}>
+                  <View style={styles.safetyNoticeHeader}>
+                    <ShieldCheck size={18} color={theme.colors.emerald} />
+                    <Text style={styles.safetyNoticeTitle}>{t('Safety Notice: Upper Limits are Ceilings')}</Text>
+                  </View>
+                  <Text style={styles.safetyNoticeBody}>
+                    {t('Tolerable Upper Intake Levels (UL) represent safe maximum ceilings, not daily targets to reach. You do not need to reach or max out vitamin or mineral intakes.')}
+                  </Text>
                 </View>
 
                 {/* Where to save */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>{t('Where to save')}</Text>
-                  <View style={{ gap: 6 }}>
-                    <TouchableOpacity
-                      style={[
-                        styles.targetChoiceRow,
-                        formSaveTarget === 'both' && styles.targetChoiceRowActive,
-                      ]}
-                      onPress={() => setFormSaveTarget('both')}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('Both this day and routine')}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    >
-                      <View style={styles.radioCircle}>
-                        {formSaveTarget === 'both' && <View style={styles.radioDot} />}
-                      </View>
-                      <Text style={styles.targetChoiceText}>
-                        {t('Both this day and routine')}
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.targetChoiceRow,
-                        formSaveTarget === 'day' && styles.targetChoiceRowActive,
-                      ]}
-                      onPress={() => setFormSaveTarget('day')}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('This day only')}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    >
-                      <View style={styles.radioCircle}>
-                        {formSaveTarget === 'day' && <View style={styles.radioDot} />}
-                      </View>
-                      <Text style={styles.targetChoiceText}>{t('This day only')}</Text>
-                    </TouchableOpacity>
-
-                    {!editingItem && (
-                      <TouchableOpacity
-                        style={[
-                          styles.targetChoiceRow,
-                          formSaveTarget === 'routine' && styles.targetChoiceRowActive,
-                        ]}
-                        onPress={() => setFormSaveTarget('routine')}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('Repeating routine only')}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      >
-                        <View style={styles.radioCircle}>
-                          {formSaveTarget === 'routine' && <View style={styles.radioDot} />}
-                        </View>
-                        <Text style={styles.targetChoiceText}>
-                          {t('Repeating routine only')}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.targetChoiceRow,
+                      formSaveTarget === 'both' && styles.targetChoiceRowActive,
+                    ]}
+                    onPress={() => setFormSaveTarget(formSaveTarget === 'both' ? 'day' : 'both')}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Save to daily routine & today')}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <View style={styles.radioCircle}>
+                      {formSaveTarget === 'both' && <View style={styles.radioDot} />}
+                    </View>
+                    <Text style={styles.targetChoiceText}>
+                      {t('Save to daily routine & today')}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Save Button */}
@@ -650,6 +632,73 @@ const createStyles = (theme: ThemeType) =>
   },
   optionChipTextActive: {
     color: theme.colors.textInverted,
+  },
+  timeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  timeCardBtn: {
+    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+  },
+  timeCardBtnActive: {
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primary,
+  },
+  timeIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeIconWrapActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  timeCardLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+    includeFontPadding: false,
+  },
+  timeCardLabelActive: {
+    color: theme.colors.primary,
+  },
+  safetyCeilingNotice: {
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.emeraldBorder,
+    padding: 12,
+    marginVertical: 4,
+    gap: 6,
+  },
+  safetyNoticeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  safetyNoticeTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.emerald,
+    includeFontPadding: false,
+  },
+  safetyNoticeBody: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
+    includeFontPadding: false,
   },
   amountUnitRow: {
     flexDirection: 'row',

@@ -275,6 +275,8 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
               >
                 <FoodThumbnail
                   name={item.name}
+                  englishName={item.name}
+                  foodId={item.id}
                   category={item.category}
                   imageUrl={item.imageUrl}
                   size="medium"
@@ -310,6 +312,8 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({
             >
               <FoodThumbnail
                 name={item.name}
+                englishName={item.name}
+                foodId={item.id}
                 category={item.category}
                 imageUrl={item.imageUrl}
                 size="small"

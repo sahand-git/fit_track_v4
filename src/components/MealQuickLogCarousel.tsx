@@ -59,6 +59,8 @@ export const MealQuickLogCarousel: React.FC<MealQuickLogCarouselProps> = ({
               <View style={styles.thumbnailWrapper}>
                 <FoodThumbnail
                   name={food.name}
+                  englishName={food.name}
+                  foodId={food.id}
                   category={food.category}
                   imageUrl={food.imageUrl}
                   size="small"

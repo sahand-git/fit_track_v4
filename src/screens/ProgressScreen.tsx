@@ -171,13 +171,34 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
     : '22.4';
 
   const bmiNum = parseFloat(bmi);
-  const bmiCategory = bmiNum < 18.5
-    ? t('Underweight')
-    : bmiNum < 25
-    ? t('Healthy Weight')
-    : bmiNum < 30
-    ? t('Overweight')
-    : t('Obese');
+  const { bmiCategory, bmiColor, bmiColorLight } = useMemo(() => {
+    if (bmiNum < 18.5) {
+      return {
+        bmiCategory: t('Underweight'),
+        bmiColor: theme.colors.water,
+        bmiColorLight: theme.colors.waterLight,
+      };
+    }
+    if (bmiNum < 25) {
+      return {
+        bmiCategory: t('Healthy Weight'),
+        bmiColor: theme.colors.emerald,
+        bmiColorLight: theme.colors.emeraldLight,
+      };
+    }
+    if (bmiNum < 30) {
+      return {
+        bmiCategory: t('Overweight'),
+        bmiColor: theme.colors.amber,
+        bmiColorLight: theme.colors.amberLight,
+      };
+    }
+    return {
+      bmiCategory: t('Obese'),
+      bmiColor: theme.colors.crimson,
+      bmiColorLight: theme.colors.crimsonLight,
+    };
+  }, [bmiNum, theme, t]);
 
   const handleSaveWeight = async () => {
     const num = parseFloat(inputWeight);
@@ -438,11 +459,31 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
               </View>
             </View>
 
-            {/* BMI Meta */}
-            <View style={styles.bmiStrip}>
-              <Text style={styles.bmiText}>
-                {t('BMI')}: <Text style={styles.boldText}>{bmi}</Text> • {bmiCategory}
-              </Text>
+            {/* Visual BMI Gauge */}
+            <View style={styles.bmiGaugeContainer}>
+              <View style={[styles.bmiHeaderRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                <Text style={styles.bmiLabel}>
+                  {t('BMI')}: <Text style={styles.boldText}>{bmi}</Text>
+                </Text>
+                <View style={[styles.bmiCategoryBadge, { backgroundColor: bmiColorLight }]}>
+                  <Text style={[styles.bmiCategoryBadgeText, { color: bmiColor }]}>
+                    {bmiCategory}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.bmiBarTrack}>
+                <View style={[styles.bmiSegment, { flex: 18.5, backgroundColor: theme.colors.water }]} />
+                <View style={[styles.bmiSegment, { flex: 6.5, backgroundColor: theme.colors.emerald }]} />
+                <View style={[styles.bmiSegment, { flex: 5.0, backgroundColor: theme.colors.amber }]} />
+                <View style={[styles.bmiSegment, { flex: 10.0, backgroundColor: theme.colors.crimson }]} />
+              </View>
+
+              <View style={[styles.bmiScaleLabels, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                <Text style={styles.bmiScaleText}>18.5</Text>
+                <Text style={styles.bmiScaleText}>25.0</Text>
+                <Text style={styles.bmiScaleText}>30.0</Text>
+              </View>
             </View>
           </View>
 
@@ -709,21 +750,58 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 12,
     color: theme.colors.textMuted,
   },
-  bmiStrip: {
+  bmiGaugeContainer: {
     backgroundColor: theme.colors.surfaceSubtle,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: theme.radius.sm,
-    marginTop: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: theme.radius.md,
+    marginTop: 8,
+    gap: 6,
   },
-  bmiText: {
+  bmiHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bmiLabel: {
     fontFamily: theme.fonts.sans,
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.textSecondary,
+    includeFontPadding: false,
+  },
+  bmiCategoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: theme.radius.full,
+  },
+  bmiCategoryBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  bmiBarTrack: {
+    flexDirection: 'row',
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+    backgroundColor: theme.colors.border,
+    marginVertical: 2,
+  },
+  bmiSegment: {
+    height: '100%',
+  },
+  bmiScaleLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  bmiScaleText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    includeFontPadding: false,
   },
   boldText: {
     color: theme.colors.textPrimary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   rangeRow: {
     flexDirection: 'row',

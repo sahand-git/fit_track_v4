@@ -12,7 +12,7 @@ import Animated, {
   withSpring,
   Easing,
 } from 'react-native-reanimated';
-import Svg, { Path, Rect, Defs, ClipPath } from 'react-native-svg';
+import Svg, { Path, Rect, Defs, ClipPath, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { AppText as Text } from './AppText';
 import { Droplet, Plus, Minus, Check, Sparkles } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';
@@ -56,6 +56,7 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
   const isGoalReached = target > 0 && glasses >= target;
   const progressRatio = target > 0 ? Math.min(1.0, currentMl / targetMl) : 0;
   const percentText = `${Math.round(progressRatio * 100)}%`;
+  const liquidTopY = 73 - Math.min(68, Math.max(0, progressRatio * 66));
 
   // Reanimated fill height (0 to 76)
   const fillHeight = useSharedValue(progressRatio * 76);
@@ -119,31 +120,69 @@ export const WaterTracker: React.FC<WaterTrackerProps> = ({
           <Svg width={54} height={76} viewBox="0 0 54 76">
             <Defs>
               <ClipPath id="glassClip">
-                <Path d="M 5 4 L 49 4 L 42 70 Q 42 74 38 74 L 16 74 Q 12 74 12 70 Z" />
+                <Path d="M 6 4 L 48 4 L 41 69 Q 41 73 37 73 L 17 73 Q 13 73 13 69 Z" />
               </ClipPath>
+              <LinearGradient id="waterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <Stop offset="0%" stopColor={isGoalReached ? theme.colors.emeraldLight : theme.colors.waterLight} stopOpacity="0.9" />
+                <Stop offset="100%" stopColor={isGoalReached ? theme.colors.emerald : theme.colors.water} stopOpacity="1" />
+              </LinearGradient>
+              <LinearGradient id="glassShine" x1="0%" y1="0%" x2="100%" y2="0%">
+                <Stop offset="0%" stopColor={theme.colors.white} stopOpacity="0.25" />
+                <Stop offset="100%" stopColor={theme.colors.white} stopOpacity="0.02" />
+              </LinearGradient>
             </Defs>
 
             {/* Glass Background Track */}
             <Path
-              d="M 5 4 L 49 4 L 42 70 Q 42 74 38 74 L 16 74 Q 12 74 12 70 Z"
+              d="M 6 4 L 48 4 L 41 69 Q 41 73 37 73 L 17 73 Q 13 73 13 69 Z"
               fill={theme.colors.surfaceSubtle}
               stroke={isGoalReached ? theme.colors.emeraldBorder : theme.colors.borderStrong}
               strokeWidth={1.5}
             />
 
-            {/* Rising Liquid Fill */}
-            <Rect
-              x={0}
-              y={74 - progressRatio * 70}
-              width={54}
-              height={progressRatio * 70}
+            {/* Liquid Fill with Wave Meniscus */}
+            {progressRatio > 0 && (
+              <Path
+                d={`M 0 ${liquidTopY} Q 13.5 ${liquidTopY - 2.5} 27 ${liquidTopY} T 54 ${liquidTopY} L 54 76 L 0 76 Z`}
+                clipPath="url(#glassClip)"
+                fill="url(#waterGrad)"
+              />
+            )}
+
+            {/* Subtle effervescent liquid bubbles */}
+            {progressRatio > 0.25 && (
+              <Circle
+                cx={20}
+                cy={Math.min(64, liquidTopY + 16)}
+                r={2}
+                fill={theme.colors.white}
+                opacity={0.35}
+                clipPath="url(#glassClip)"
+              />
+            )}
+            {progressRatio > 0.5 && (
+              <Circle
+                cx={34}
+                cy={Math.min(66, liquidTopY + 28)}
+                r={1.5}
+                fill={theme.colors.white}
+                opacity={0.3}
+                clipPath="url(#glassClip)"
+              />
+            )}
+
+            {/* Glass Left Shine Reflection */}
+            <Path
+              d="M 10 10 L 15 65"
+              stroke="url(#glassShine)"
+              strokeWidth={2}
+              strokeLinecap="round"
               clipPath="url(#glassClip)"
-              fill={isGoalReached ? theme.colors.emerald : theme.colors.water}
             />
 
             {/* Glass Top Rim */}
             <Path
-              d="M 5 4 L 49 4"
+              d="M 6 4 L 48 4"
               stroke={isGoalReached ? theme.colors.emerald : theme.colors.borderStrong}
               strokeWidth={2}
               strokeLinecap="round"

@@ -29,7 +29,6 @@ import { AddFoodSheet } from '../components/addfood/AddFoodSheet';
 import { AnimatedFoodRow } from '../components/AnimatedFoodRow';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { FoodLogSwipeableRow } from '../components/FoodLogSwipeableRow';
-import { MacroSummaryBar } from '../components/MacroSummaryBar';
 import { MealQuickLogCarousel } from '../components/MealQuickLogCarousel';
 import { VERIFIED_FOOD_DATABASE } from '../data/foodDatabase';
 import { addDaysToDateString, formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
@@ -487,18 +486,39 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
             </TouchableOpacity>
           )}
 
-          <MacroSummaryBar
-            totalKcal={totalKcal}
-            effectiveCalorieTarget={effectiveCalorieTarget}
-            totalProtein={totalProtein}
-            targetProtein={profile?.targetProtein ?? 130}
-            totalCarbs={totalCarbs}
-            targetCarbs={profile?.targetCarbs ?? 220}
-            totalFat={totalFat}
-            targetFat={profile?.targetFat ?? 65}
-            theme={theme}
-            t={t}
-          />
+          {/* Compact Daily Macro & Calorie Strip (Clean & elegant, replaces bulky graph card) */}
+          {(() => {
+            const safeCalorieTarget = effectiveCalorieTarget ?? profile?.targetCalories ?? 2000;
+            return (
+              <View style={styles.compactDaySummary}>
+                <View style={styles.summaryKcalCol}>
+                  <Text style={styles.summaryKcalMain}>
+                    {formatKcal(totalKcal, t)}{' '}
+                    <Text style={styles.summaryKcalTarget}>/ {formatKcal(safeCalorieTarget, t)}</Text>
+                  </Text>
+                  <Text style={styles.summaryKcalSub}>
+                    {totalKcal <= safeCalorieTarget
+                      ? `${formatKcal(safeCalorieTarget - totalKcal, t)} ${t('remaining')}`
+                      : `${formatKcal(totalKcal - safeCalorieTarget, t)} ${t('Over')}`}
+                  </Text>
+                </View>
+                <View style={styles.summaryMacrosCol}>
+                  <View style={styles.miniMacroPill}>
+                    <View style={[styles.macroDot, { backgroundColor: theme.colors.macroProtein }]} />
+                    <Text style={styles.miniMacroText}>P: {Math.round(totalProtein)}g</Text>
+                  </View>
+                  <View style={styles.miniMacroPill}>
+                    <View style={[styles.macroDot, { backgroundColor: theme.colors.macroCarbs }]} />
+                    <Text style={styles.miniMacroText}>C: {Math.round(totalCarbs)}g</Text>
+                  </View>
+                  <View style={styles.miniMacroPill}>
+                    <View style={[styles.macroDot, { backgroundColor: theme.colors.macroFat }]} />
+                    <Text style={styles.miniMacroText}>F: {Math.round(totalFat)}g</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })()}
         </View>
 
         {/* Child 1: Sticky Jump-to-Meal Mini-Nav */}
@@ -544,7 +564,9 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
               }}
               style={[
                 styles.mealSection,
-                { borderLeftWidth: 3, borderLeftColor: mealBorderColors[cat.key] },
+                isRtl
+                  ? { borderRightWidth: 4, borderRightColor: mealBorderColors[cat.key], borderLeftWidth: 0, paddingRight: 10, paddingLeft: 4 }
+                  : { borderLeftWidth: 4, borderLeftColor: mealBorderColors[cat.key], borderRightWidth: 0, paddingLeft: 10, paddingRight: 4 },
               ]}
             >
               {/* Category Header */}
@@ -754,6 +776,66 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   },
   topSummaryContainer: {
     marginHorizontal: -theme.spacing.md,
+  },
+  compactDaySummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: theme.spacing.sm + 4,
+    paddingVertical: 10,
+    marginTop: 6,
+    ...theme.shadow.subtle,
+  },
+  summaryKcalCol: {
+    flexShrink: 0,
+  },
+  summaryKcalMain: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 15,
+    fontWeight: '800',
+    color: theme.colors.textPrimary,
+  },
+  summaryKcalTarget: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+  },
+  summaryKcalSub: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.primary,
+    marginTop: 1,
+  },
+  summaryMacrosCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  miniMacroPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  macroDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  miniMacroText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+    includeFontPadding: false,
   },
   stickyNavContainer: {
     backgroundColor: theme.colors.background,

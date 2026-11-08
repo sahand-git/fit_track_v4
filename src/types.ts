@@ -72,6 +72,8 @@ export interface UserProfile {
   streakFreezes?: number; // max 5 stored
   frozenDates?: string[]; // dates preserved by freeze
   unlockedAchievements?: string[]; // IDs of unlocked badges
+  avatarUrl?: string; // custom chosen photo URI
+  avatarPreset?: string; // preset avatar emoji/symbol
 }
 
 export type ExerciseCategory = 'strength' | 'cardio' | 'hiit' | 'sports' | 'flexibility';

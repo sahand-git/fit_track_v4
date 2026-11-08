@@ -340,29 +340,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                 </View>
               )}
 
-              {/* Data Completeness */}
-              <View style={[styles.completenessBanner, isRtl && styles.rowRtl]}>
-                <Info size={14} color={theme.colors.textSecondary} style={{ marginTop: 1 }} />
-                <Text style={styles.completenessBannerText}>
-                  {formatDataCompleteness(progress.foodsWithDataCount, progress.totalMealsCount, t)}
-                </Text>
-              </View>
-
-              {/* Incomplete Data Marker Warning (Item 3 requirement) */}
-              {progress.isIncomplete && (
-                <View style={[styles.incompleteBanner, isRtl && styles.rowRtl]}>
-                  <AlertCircle size={15} color={theme.colors.amber} style={{ marginTop: 1 }} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.incompleteTitle}>
-                      * {t('Incomplete data')} ({progress.missingCount}{' '}
-                      {progress.missingCount > 1 ? t('foods') : t('food')})
-                    </Text>
-                    <Text style={styles.incompleteText}>
-                      {t('Some logged foods do not have data for this nutrient.')}
-                    </Text>
-                  </View>
-                </View>
-              )}
+              {/* Goal Progress Ring & Stats */}
             </View>
 
             {/* Reference Upper Intake Limit (Item 6 requirement: neutral reference, not medical advice) */}
@@ -566,7 +544,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                             </Text>
                           </View>
 
-                          <View style={styles.contributorValueCol}>
+                          <View style={[styles.contributorValueCol, isRtl && { alignItems: 'flex-start' }]}>
                             <Text style={styles.contributorAmount}>
                               {c.amount} {c.unit}
                             </Text>
@@ -592,29 +570,6 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                 </View>
               )}
             </View>
-
-            {/* Foods Without Data (Item 3 requirement: show "not available", never zero) */}
-            {progress.missingItems.length > 0 && (
-              <View style={styles.missingSection}>
-                <Text style={styles.missingSectionTitle}>
-                  {t('Foods lacking this nutrient data')} ({progress.missingItems.length})
-                </Text>
-                <View style={styles.missingList}>
-                  {progress.missingItems.map((m, idx) => (
-                    <View key={`${m.id}_miss_${idx}`} style={[styles.missingRow, isRtl && styles.rowRtl]}>
-                      <Text style={styles.missingFoodName} numberOfLines={1}>
-                        {m.name}
-                      </Text>
-                      <View style={styles.notAvailBadge}>
-                        <Text style={styles.notAvailText}>
-                          {formattedNutrientValue(undefined, progress.unit, t)}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
 
             {/* Dietary Sources & Science Info */}
             {(progress.description || progress.foodSources) && (
@@ -1200,7 +1155,9 @@ const createStyles = (theme: ThemeType) =>
     marginTop: 1,
   },
   contributorValueCol: {
+    minWidth: 70,
     alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   contributorAmount: {
     fontSize: 13,

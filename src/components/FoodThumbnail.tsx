@@ -6,6 +6,8 @@ import { getFoodEmoji } from '../utils/foodCategories';
 
 export interface FoodThumbnailProps {
   name: string;
+  englishName?: string;
+  foodId?: string;
   category?: string;
   imageUrl?: string;
   size?: 'small' | 'medium' | 'large';
@@ -41,6 +43,8 @@ const SIZE_DIMENSIONS = {
 
 export const FoodThumbnail: React.FC<FoodThumbnailProps> = ({
   name,
+  englishName,
+  foodId,
   category,
   imageUrl,
   size = 'small',
@@ -50,7 +54,7 @@ export const FoodThumbnail: React.FC<FoodThumbnailProps> = ({
   const styles = getThumbnailStyles(theme);
   const [imageFailed, setImageFailed] = useState(false);
 
-  const emoji = getFoodEmoji(name, category);
+  const emoji = getFoodEmoji(englishName || name, category);
   const showImage = Boolean(imageUrl && !imageFailed && imageUrl.startsWith('http'));
 
   const sizeDimensions = SIZE_DIMENSIONS[size];

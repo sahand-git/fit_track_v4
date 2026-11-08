@@ -7,11 +7,13 @@ import {
   TextInput,
   Platform,
   BackHandler,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText, Moon, Award } from 'lucide-react-native';
+import { Check, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText, Moon, Award, Camera } from 'lucide-react-native';
 import { DirectionalIcon } from '../components/DirectionalIcon';
 import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
 import { calculateTargets } from '../utils/calculator';
@@ -102,6 +104,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     return () => sub.remove();
   }, [remindersModalVisible, backupModalVisible, disclaimerModalVisible, referencesModalVisible, crashModalVisible]);
   const [name, setName] = useState(profile.name);
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl || '');
+  const [avatarPreset, setAvatarPreset] = useState(profile.avatarPreset || '');
   const [age, setAge] = useState(profile.age.toString());
   const [gender, setGender] = useState<Gender>(profile.gender);
   const [weightKg, setWeightKg] = useState(profile.weightKg.toString());
@@ -137,6 +141,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     const updated: UserProfile = {
       ...profile,
       name: name.trim() || 'Athlete',
+      avatarUrl: avatarUrl || undefined,
+      avatarPreset: avatarPreset || undefined,
       age: numericAge,
       gender,
       weightKg: numericWeight,
@@ -168,6 +174,35 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     { key: 'muscle_gain', label: t('Muscle Gain'), desc: t('+450 kcal muscle building') },
   ];
 
+  const PRESET_AVATARS = ['🏃‍♂️', '🏋️', '🧘', '🥑', '⚡', '🦁', '🎯', '💧'];
+
+  const handlePickPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        const uri = result.assets[0].uri;
+        setAvatarUrl(uri);
+        setAvatarPreset('');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        onSaveProfile({ ...profile, avatarUrl: uri, avatarPreset: undefined });
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleSelectPreset = (preset: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setAvatarPreset(preset);
+    setAvatarUrl('');
+    onSaveProfile({ ...profile, avatarPreset: preset, avatarUrl: undefined });
+  };
+
   return (
     <KeyboardAvoidingView
       behavior="padding"
@@ -194,6 +229,61 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <Text style={styles.screenSubtitle}>
         {t('Calibrated with the Mifflin-St Jeor metabolic formula.')}
       </Text>
+
+      {/* Avatar & Profile Photo Section */}
+      <View style={styles.avatarCard}>
+        <View style={styles.avatarTopRow}>
+          <TouchableOpacity
+            style={styles.avatarCircle}
+            onPress={handlePickPhoto}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={t('Profile Picture & Avatar')}
+          >
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            ) : avatarPreset ? (
+              <Text style={styles.avatarEmoji}>{avatarPreset}</Text>
+            ) : (
+              <UserRound size={34} color={theme.colors.primary} />
+            )}
+            <View style={styles.avatarCameraBadge}>
+              <Camera size={13} color={theme.colors.textInverted} />
+            </View>
+          </TouchableOpacity>
+
+          <View style={styles.avatarActionCol}>
+            <TouchableOpacity
+              style={styles.pickPhotoBtn}
+              onPress={handlePickPhoto}
+              accessibilityRole="button"
+              accessibilityLabel={t('Choose Photo')}
+            >
+              <Camera size={15} color={theme.colors.primary} />
+              <Text style={styles.pickPhotoBtnText}>{t('Choose Photo')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.avatarHelpText}>{t('Custom photo or tap an avatar below')}</Text>
+          </View>
+        </View>
+
+        {/* Preset Avatars Row */}
+        <View style={styles.presetsRow}>
+          {PRESET_AVATARS.map((emoji) => {
+            const isSelected = avatarPreset === emoji && !avatarUrl;
+            return (
+              <TouchableOpacity
+                key={emoji}
+                style={[styles.presetChip, isSelected && styles.presetChipActive]}
+                onPress={() => handleSelectPreset(emoji)}
+                accessibilityRole="button"
+                accessibilityLabel={emoji}
+              >
+                <Text style={styles.presetEmojiText}>{emoji}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
 
       {onOpenAccount && (
         <AnimatedPressable
@@ -757,6 +847,104 @@ const createStyles = (theme: ThemeType) =>
     fontSize: 13,
     color: theme.colors.textMuted,
     marginTop: -8,
+  },
+  avatarCard: {
+    padding: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.surface,
+    ...theme.shadow.subtle,
+  },
+  avatarTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  avatarCircle: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  avatarImage: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+  },
+  avatarEmoji: {
+    fontSize: 32,
+  },
+  avatarCameraBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: theme.colors.surface,
+  },
+  avatarActionCol: {
+    flex: 1,
+    gap: 4,
+  },
+  pickPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryBorder,
+  },
+  pickPhotoBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.primary,
+    includeFontPadding: false,
+  },
+  avatarHelpText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    includeFontPadding: false,
+  },
+  presetsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  presetChip: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  presetChipActive: {
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primary,
+    transform: [{ scale: 1.1 }],
+  },
+  presetEmojiText: {
+    fontSize: 18,
   },
   languageCard: {
     padding: 14,

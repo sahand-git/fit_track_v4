@@ -136,7 +136,9 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
 
       <View style={styles.selectedTop}>
         <FoodThumbnail
-          name={food.name}
+          name={getLocalizedFoodName(food, language)}
+          englishName={food.name}
+          foodId={food.id}
           category={food.category}
           imageUrl={food.imageUrl}
           size="medium"

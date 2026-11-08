@@ -30,6 +30,56 @@ export function addDaysToDateString(dateStr: string, days: number): string {
   return formatDateToLocalString(date);
 }
 
+const KURDISH_DAYS_FULL = [
+  'یەکشەممە',
+  'دووشەممە',
+  'سێشەممە',
+  'چوارشەممە',
+  'پێنجشەممە',
+  'هەینی',
+  'شەممە',
+];
+
+const KURDISH_MONTHS = [
+  'کانوونی دووەم',
+  'شوبات',
+  'ئازار',
+  'نیسان',
+  'ئایار',
+  'حوزەیران',
+  'تەممووز',
+  'ئاب',
+  'ئەیلوول',
+  'تشرینی یەکەم',
+  'تشرینی دووەم',
+  'کانوونی یەکەم',
+];
+
+const ARABIC_DAYS_SHORT = [
+  'الأحد',
+  'الإثنين',
+  'الثلاثاء',
+  'الأربعاء',
+  'الخميس',
+  'الجمعة',
+  'السبت',
+];
+
+const ARABIC_MONTHS = [
+  'يناير',
+  'فبراير',
+  'مارس',
+  'أبريل',
+  'مايو',
+  'يونيو',
+  'يوليو',
+  'أغسطس',
+  'سبتمبر',
+  'أكتوبر',
+  'نوفمبر',
+  'ديسمبر',
+];
+
 export function formatDisplayDate(dateStr: string, language: AppLanguage = 'en'): string {
   const today = getTodayDateString();
   const yesterday = addDaysToDateString(today, -1);
@@ -40,9 +90,18 @@ export function formatDisplayDate(dateStr: string, language: AppLanguage = 'en')
   if (dateStr === tomorrow) return translate(language, 'Tomorrow');
 
   const date = parseLocalDateString(dateStr);
-  const locale = language === 'ar' ? 'ar-IQ' : language === 'ckb' ? 'ckb-IQ' : undefined;
+  if (language === 'ckb') {
+    const dayOfWeek = KURDISH_DAYS_FULL[date.getDay()] || '';
+    const monthName = KURDISH_MONTHS[date.getMonth()] || '';
+    return `${dayOfWeek}، ${date.getDate()}ی ${monthName}`;
+  }
+  if (language === 'ar') {
+    const dayOfWeek = ARABIC_DAYS_SHORT[date.getDay()] || '';
+    const monthName = ARABIC_MONTHS[date.getMonth()] || '';
+    return `${dayOfWeek}، ${date.getDate()} ${monthName}`;
+  }
   try {
-    return date.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   } catch {
     return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   }

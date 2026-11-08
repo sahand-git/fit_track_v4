@@ -39,14 +39,14 @@ interface MacroCardsProps {
 
 const AnimatedProgressBar: React.FC<{ pct: number; color: string; trackColor?: string }> = ({ pct, color, trackColor }) => {
   const { theme } = useTheme();
-  const width = useSharedValue(pct);
+  const width = useSharedValue(0);
 
   useEffect(() => {
     if (isReducedMotion()) {
       width.value = pct;
     } else {
       width.value = withTiming(pct, {
-        duration: 320,
+        duration: 700,
         easing: Easing.out(Easing.cubic),
       });
     }
