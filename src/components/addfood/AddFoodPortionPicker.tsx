@@ -124,14 +124,6 @@ export const AddFoodPortionPicker: React.FC<AddFoodPortionPickerProps> = ({
             </View>
           ) : null}
         </View>
-        <TouchableOpacity
-          onPress={onCancel}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityLabel={t('Cancel')}
-          accessibilityRole="button"
-        >
-          <X size={16} color={theme.colors.textMuted} />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.selectedTop}>

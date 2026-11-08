@@ -194,13 +194,21 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
     >
       <View style={[styles.backdrop, { direction: isRtl ? 'rtl' : 'ltr' }]}>
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 16, 28) }]}>
-          {/* Drag Handle Indicator */}
-          <View style={styles.dragHandleContainer}>
-            <View style={styles.dragHandle} />
+          {/* Top Close Row with prominent X button (replaced minus handle) */}
+          <View style={styles.topCloseRow}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.largeCloseBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t('Close')}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <X size={20} color={theme.colors.textPrimary} strokeWidth={2.5} />
+            </TouchableOpacity>
           </View>
 
           {/* Header */}
-          <View style={[styles.header, isRtl && styles.rowRtl]}>
+          <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <Text style={styles.foodName}>{getLocalizedFoodName(item, language)}</Text>
               {item.brand && <Text style={styles.brand}>{item.brand}</Text>}
@@ -210,20 +218,11 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
                 </View>
               )}
             </View>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.closeBtn}
-              accessibilityRole="button"
-              accessibilityLabel={t('Close')}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <X size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
           </View>
 
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             {/* Energy Overview */}
-            <View style={[styles.energyCard, isRtl && styles.rowRtl]}>
+            <View style={styles.energyCard}>
               <View>
                 <Text style={styles.kcalValue}>{currentKcal}</Text>
                 <Text style={styles.kcalLabel}>{t('Total Calories (kcal)')}</Text>
@@ -234,7 +233,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
             </View>
 
             {/* Macronutrients Row */}
-            <View style={[styles.macroRow, isRtl && styles.rowRtl]}>
+            <View style={styles.macroRow}>
               <View style={styles.macroCard}>
                 <Text style={styles.macroTitle}>{t('Protein')}</Text>
                 <Text style={[styles.macroValue, { color: theme.colors.macroProtein }]}>
@@ -256,7 +255,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
             </View>
 
             {/* Servings Stepper */}
-            <View style={[styles.stepperContainer, isRtl && styles.rowRtl]}>
+            <View style={styles.stepperContainer}>
               <Text style={styles.stepperLabel}>{t('Portion Multiplier')}</Text>
               <View style={styles.stepper}>
                 <TouchableOpacity
@@ -289,7 +288,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
               {availableNutrients.length > 0 ? (
                 <View style={styles.nutrientsGrid}>
                   {availableNutrients.map((n) => (
-                    <View key={n.label} style={[styles.nutrientRowItem, isRtl && styles.rowRtl]}>
+                    <View key={n.label} style={styles.nutrientRowItem}>
                       <Text style={styles.nutrientItemLabel}>{t(n.label)}</Text>
                       <Text style={styles.nutrientItemValue}>
                         {n.value} {n.unit}
@@ -306,7 +305,7 @@ export const FoodDetailsModal: React.FC<FoodDetailsModalProps> = ({
           </ScrollView>
 
           {/* Actions Bottom Bar */}
-          <View style={[styles.footer, isRtl && styles.rowRtl]}>
+          <View style={styles.footer}>
             {isLogged && onDelete && (
               <TouchableOpacity
                 style={styles.deleteBtn}
@@ -355,16 +354,21 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.xs,
   },
-  dragHandleContainer: {
-    alignItems: 'center',
-    paddingTop: 6,
-    paddingBottom: 8,
+  topCloseRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingTop: 8,
+    paddingBottom: 6,
   },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: theme.colors.border,
+  largeCloseBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: theme.colors.surfaceSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   header: {
     flexDirection: 'row',

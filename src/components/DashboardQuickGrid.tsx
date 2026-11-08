@@ -22,18 +22,12 @@ interface DashboardQuickGridProps {
   onScanBarcode: () => void;
   onQuickAdd?: () => void;
   onExploreFood?: () => void;
-  onOpenWorkout?: () => void;
-  onOpenSupplements?: () => void;
 }
 
 export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
   onScanPlate,
   onDescribeMeal,
   onScanBarcode,
-  onQuickAdd,
-  onExploreFood,
-  onOpenWorkout,
-  onOpenSupplements,
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
@@ -44,7 +38,7 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'scan',
       label: t('Scan Food'),
-      icon: <Camera size={24} color={theme.colors.primary} strokeWidth={2.2} />,
+      icon: <Camera size={26} color={theme.colors.primary} strokeWidth={2.3} />,
       iconBg: theme.colors.primaryLight,
       borderColor: theme.colors.primary,
       onPress: onScanPlate,
@@ -52,7 +46,7 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'describe',
       label: t('AI Describe'),
-      icon: <Sparkles size={24} color={theme.colors.amber} strokeWidth={2.2} />,
+      icon: <Sparkles size={26} color={theme.colors.amber} strokeWidth={2.3} />,
       iconBg: theme.colors.amberLight,
       borderColor: theme.colors.amber,
       onPress: onDescribeMeal,
@@ -60,34 +54,10 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
     {
       id: 'barcode',
       label: t('Barcode'),
-      icon: <Barcode size={24} color={theme.colors.purple} strokeWidth={2.2} />,
+      icon: <Barcode size={26} color={theme.colors.purple} strokeWidth={2.3} />,
       iconBg: theme.colors.purpleLight,
       borderColor: theme.colors.purple,
       onPress: onScanBarcode,
-    },
-    {
-      id: 'quick_add',
-      label: t('Quick Add'),
-      icon: <Zap size={24} color={theme.colors.water} strokeWidth={2.2} fill={theme.colors.waterLight} />,
-      iconBg: theme.colors.waterLight,
-      borderColor: theme.colors.water,
-      onPress: onQuickAdd || onExploreFood || onScanPlate,
-    },
-    {
-      id: 'workout',
-      label: t('Workouts'),
-      icon: <Dumbbell size={24} color={theme.colors.accent} strokeWidth={2.2} />,
-      iconBg: theme.colors.accentLight,
-      borderColor: theme.colors.accent,
-      onPress: onOpenWorkout || onScanPlate,
-    },
-    {
-      id: 'vitamins',
-      label: t('Vitamins'),
-      icon: <Pill size={24} color={theme.colors.rose} strokeWidth={2.2} />,
-      iconBg: theme.colors.roseLight,
-      borderColor: theme.colors.rose,
-      onPress: onOpenSupplements || onScanPlate,
     },
   ];
 
@@ -116,7 +86,7 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
             >
               {act.icon}
             </View>
-            <Text style={styles.actionLabel} numberOfLines={1}>
+            <Text style={styles.actionLabel} numberOfLines={2}>
               {act.label}
             </Text>
           </AnimatedPressable>
@@ -129,33 +99,35 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
 const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
     container: {
-      paddingHorizontal: theme.spacing.sm,
-      marginVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.md,
+      marginVertical: theme.spacing.sm,
     },
     grid: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      justifyContent: 'space-around',
     },
     actionItem: {
-      width: '33.33%',
+      flex: 1,
       alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 8,
+      justifyContent: 'flex-start',
+      paddingVertical: 4,
       paddingHorizontal: 4,
     },
     circleButton: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
+      width: 58,
+      height: 58,
+      borderRadius: 29,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 6,
+      marginBottom: 8,
       borderWidth: 1.5,
       ...theme.shadow.subtle,
     },
     actionLabel: {
       fontSize: 12,
+      lineHeight: 16,
+      minHeight: 34,
       fontWeight: '600',
       color: theme.colors.textPrimary,
       textAlign: 'center',

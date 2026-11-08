@@ -152,10 +152,6 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
     return [];
   }, [dateList, history, profile]);
 
-  if (isLoading || loading) {
-    return <ProgressSkeleton />;
-  }
-
   const currentWeight = history.length > 0 
     ? history[history.length - 1].weightKg 
     : (profile?.weightKg ?? 75);
@@ -199,6 +195,10 @@ export const ProgressScreen = React.memo<ProgressScreenProps>(({ profile, isLoad
       bmiColorLight: theme.colors.crimsonLight,
     };
   }, [bmiNum, theme, t]);
+
+  if (isLoading || loading) {
+    return <ProgressSkeleton />;
+  }
 
   const handleSaveWeight = async () => {
     const num = parseFloat(inputWeight);

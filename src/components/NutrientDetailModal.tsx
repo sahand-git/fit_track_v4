@@ -176,9 +176,9 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
         >
           <View style={[styles.sheet, { paddingBottom: insets.bottom > 0 ? insets.bottom : 0 }]}>
           {/* Header */}
-          <View style={[styles.header, isRtl && styles.rowRtl]}>
+          <View style={[styles.header]}>
             <View style={{ flex: 1 }}>
-              <View style={[styles.titleRow, isRtl && styles.rowRtl]}>
+              <View style={[styles.titleRow]}>
                 <Text style={styles.sheetTitle}>{t(progress.label)}</Text>
                 <View style={[styles.unitPill, { backgroundColor: `${progressColor}20` }]}>
                   <Text style={[styles.unitText, { color: progressColor }]}>{progress.unit}</Text>
@@ -258,9 +258,9 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
           >
             {/* Primary Progress Card */}
             <View style={styles.progressCard}>
-              <View style={[styles.progressTopRow, isRtl && styles.rowRtl]}>
+              <View style={[styles.progressTopRow]}>
                 <View style={styles.progressLeftCol}>
-                  <View style={[styles.amountRow, isRtl && styles.rowRtl]}>
+                  <View style={[styles.amountRow]}>
                     <Text style={styles.currentAmount}>
                       {progress.hasData ? progress.current : '—'}
                     </Text>
@@ -346,7 +346,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             {/* Reference Upper Intake Limit (Item 6 requirement: neutral reference, not medical advice) */}
             {progress.upperLimit !== undefined && (
               <View style={styles.upperLimitCard}>
-                <View style={[styles.upperLimitHeader, isRtl && styles.rowRtl]}>
+                <View style={[styles.upperLimitHeader]}>
                   <Info size={15} color={theme.colors.textSecondary} />
                   <Text style={styles.upperLimitTitle}>
                     {t('Reference Upper Limit')}: {progress.upperLimit} {progress.unit}
@@ -368,7 +368,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
 
             {/* Goal Management Card (Item 2 requirement: edit the goal stored safely) */}
             <View style={styles.goalCard}>
-              <View style={[styles.goalHeaderRow, isRtl && styles.rowRtl]}>
+              <View style={[styles.goalHeaderRow]}>
                 <View style={{ flex: 1, minWidth: 140 }}>
                   <Text style={[styles.goalSectionTitle, isRtl && styles.textRtl]}>{t('Daily Goal')}</Text>
                   <Text style={[styles.goalSubtitle, isRtl && styles.textRtl]}>
@@ -386,7 +386,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
 
                 {!isEditingGoal && (
                   <TouchableOpacity
-                    style={[styles.editGoalBtn, isRtl && styles.rowRtl]}
+                    style={[styles.editGoalBtn]}
                     onPress={handleStartEdit}
                     accessibilityRole="button"
                     accessibilityLabel={t('Edit Goal')}
@@ -398,7 +398,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
               </View>
 
               {progress.isGeneralAdultTarget && !progress.isCustomTarget && progress.hasTarget && (
-                <View style={[styles.generalAdultNotice, isRtl && styles.rowRtl]}>
+                <View style={[styles.generalAdultNotice]}>
                   <Info size={14} color={theme.colors.primary} style={{ marginTop: 2, flexShrink: 0 }} />
                   <Text style={[styles.generalAdultNoticeText, isRtl && styles.textRtl]}>
                     {t(
@@ -410,7 +410,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
 
               {isEditingGoal ? (
                 <View style={styles.goalEditForm}>
-                  <View style={[styles.inputRow, isRtl && styles.rowRtl]}>
+                  <View style={[styles.inputRow]}>
                     <TextInput
                       style={[styles.goalInput, isRtl && styles.textRtl]}
                       keyboardType="numeric"
@@ -423,7 +423,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                     <Text style={styles.inputUnit}>{progress.unit}</Text>
                   </View>
 
-                  <View style={[styles.editActionsRow, isRtl && styles.rowRtl]}>
+                  <View style={[styles.editActionsRow]}>
                     {progress.isCustomTarget && (
                       <TouchableOpacity
                         style={styles.resetBtn}
@@ -438,7 +438,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                       </TouchableOpacity>
                     )}
 
-                    <View style={[styles.commitActionsGroup, isRtl && styles.rowRtl]}>
+                    <View style={[styles.commitActionsGroup]}>
                       <TouchableOpacity
                         style={styles.cancelBtn}
                         onPress={handleCancelEdit}
@@ -467,7 +467,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                   </View>
                 </View>
               ) : (
-                <View style={[styles.goalStaticRow, isRtl && styles.rowRtl]}>
+                <View style={[styles.goalStaticRow]}>
                   <Text style={styles.goalStaticValue}>
                     {progress.hasTarget
                       ? `${progress.target} ${progress.unit} ${t('per day')}`
@@ -489,7 +489,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
 
             {/* Top Contributors Ranked List (Item 2 requirement: sorted by contribution) */}
             <View style={styles.contributorsSection}>
-              <View style={[styles.sectionTitleRow, isRtl && styles.rowRtl]}>
+              <View style={[styles.sectionTitleRow]}>
                 <Text style={styles.sectionTitle}>{t('Top Contributors Today')}</Text>
                 <Text style={styles.contributorCount}>
                   {progress.contributors.length}{' '}
@@ -510,7 +510,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                     const isSupp = c.isSupplement;
                     return (
                       <View key={`${c.id}_${index}`} style={styles.contributorRow}>
-                        <View style={[styles.contributorInfo, isRtl && styles.rowRtl]}>
+                        <View style={[styles.contributorInfo]}>
                           <View
                             style={[
                               styles.contributorRank,
@@ -528,7 +528,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                           </View>
 
                           <View style={{ flex: 1 }}>
-                            <View style={[styles.contributorNameRow, isRtl && styles.rowRtl]}>
+                            <View style={[styles.contributorNameRow]}>
                               <Text style={styles.contributorName} numberOfLines={1}>
                                 {c.name}
                               </Text>
@@ -583,7 +583,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
                 )}
                 {progress.foodSources && (
                   <>
-                    <View style={[styles.sourcesHeader, isRtl && styles.rowRtl]}>
+                    <View style={[styles.sourcesHeader]}>
                       <Sparkles size={15} color={theme.colors.primary} />
                       <Text style={[styles.sourcesTitle, isRtl && styles.textRtl]}>{t('Natural Dietary Sources')}</Text>
                     </View>
@@ -595,7 +595,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
 
             {/* National Academies DRI & Medical Disclaimer */}
             <View style={styles.disclaimerCard}>
-              <View style={[styles.disclaimerHeader, isRtl && styles.rowRtl]}>
+              <View style={[styles.disclaimerHeader]}>
                 <Info size={14} color={theme.colors.textMuted} />
                 <Text style={[styles.disclaimerTitle, isRtl && styles.textRtl]}>
                   {t('Dietary Reference Intakes (DRIs)')}

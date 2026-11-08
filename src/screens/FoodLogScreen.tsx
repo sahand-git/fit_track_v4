@@ -485,40 +485,6 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
               </Text>
             </TouchableOpacity>
           )}
-
-          {/* Compact Daily Macro & Calorie Strip (Clean & elegant, replaces bulky graph card) */}
-          {(() => {
-            const safeCalorieTarget = effectiveCalorieTarget ?? profile?.targetCalories ?? 2000;
-            return (
-              <View style={styles.compactDaySummary}>
-                <View style={styles.summaryKcalCol}>
-                  <Text style={styles.summaryKcalMain}>
-                    {formatKcal(totalKcal, t)}{' '}
-                    <Text style={styles.summaryKcalTarget}>/ {formatKcal(safeCalorieTarget, t)}</Text>
-                  </Text>
-                  <Text style={styles.summaryKcalSub}>
-                    {totalKcal <= safeCalorieTarget
-                      ? `${formatKcal(safeCalorieTarget - totalKcal, t)} ${t('remaining')}`
-                      : `${formatKcal(totalKcal - safeCalorieTarget, t)} ${t('Over')}`}
-                  </Text>
-                </View>
-                <View style={styles.summaryMacrosCol}>
-                  <View style={styles.miniMacroPill}>
-                    <View style={[styles.macroDot, { backgroundColor: theme.colors.macroProtein }]} />
-                    <Text style={styles.miniMacroText}>P: {Math.round(totalProtein)}g</Text>
-                  </View>
-                  <View style={styles.miniMacroPill}>
-                    <View style={[styles.macroDot, { backgroundColor: theme.colors.macroCarbs }]} />
-                    <Text style={styles.miniMacroText}>C: {Math.round(totalCarbs)}g</Text>
-                  </View>
-                  <View style={styles.miniMacroPill}>
-                    <View style={[styles.macroDot, { backgroundColor: theme.colors.macroFat }]} />
-                    <Text style={styles.miniMacroText}>F: {Math.round(totalFat)}g</Text>
-                  </View>
-                </View>
-              </View>
-            );
-          })()}
         </View>
 
         {/* Child 1: Sticky Jump-to-Meal Mini-Nav */}

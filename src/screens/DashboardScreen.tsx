@@ -513,16 +513,12 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           />
         </Animated.View>
 
-        {/* 1.3 Quick Action Grid (2x3 Grid with 6 Choices including Workout & Vitamins) */}
+        {/* 1.3 Quick Action Grid (3 Iconic Choices: Scan Food, AI Describe, Barcode) */}
         <Animated.View entering={getStaggeredCardEntry(2)}>
           <DashboardQuickGrid
             onScanPlate={() => onOpenAddFood(undefined, 'photo')}
             onDescribeMeal={() => onOpenAddFood(undefined, 'describe')}
             onScanBarcode={() => onOpenAddFood(undefined, 'search', true)}
-            onQuickAdd={() => onOpenAddFood()}
-            onExploreFood={() => (onExploreFood ? onExploreFood() : onOpenAddFood(undefined, 'search'))}
-            onOpenWorkout={onOpenWorkouts}
-            onOpenSupplements={onOpenSupplements}
           />
         </Animated.View>
 
