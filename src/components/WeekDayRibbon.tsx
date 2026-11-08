@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   View,
+  ScrollView,
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
@@ -10,6 +11,7 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 import { AnimatedPressable } from './AnimatedPressable';
 import {
@@ -24,7 +26,15 @@ interface WeekDayRibbonProps {
   onOpenDatePicker?: () => void;
 }
 
-const DAY_KEYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+const FULL_DAY_KEYS = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+] as const;
 
 export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
   selectedDate,
@@ -33,8 +43,10 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
+  const isRtl = useIsRTL();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (key: string) => translate(language, key);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const todayStr = useMemo(() => getTodayDateString(), []);
 
@@ -60,6 +72,27 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
     return list;
   }, [todayStr, selectedDate]);
 
+  const scrollToSelected = useCallback((animated: boolean = false) => {
+    if (!scrollViewRef.current) return;
+    const selectedIdx = dates.indexOf(selectedDate);
+    const targetIdx = selectedIdx >= 0 ? selectedIdx : dates.length - 1;
+
+    // Each item is 72px width + 8px gap = 80px total step
+    if (targetIdx === dates.length - 1) {
+      scrollViewRef.current.scrollToEnd({ animated });
+    } else {
+      const targetOffset = Math.max(0, targetIdx * 80 - 40);
+      scrollViewRef.current.scrollTo({ x: targetOffset, animated });
+    }
+  }, [dates, selectedDate]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      scrollToSelected(false);
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [selectedDate, language, scrollToSelected]);
+
   const handleSelect = (dateStr: string) => {
     if (dateStr === selectedDate) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -67,13 +100,19 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.daysRow}>
+    <View style={[styles.container, isRtl && styles.containerRtl]}>
+      <ScrollView
+        ref={scrollViewRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        onContentSizeChange={() => scrollToSelected(false)}
+      >
         {dates.map((dateStr) => {
           const dateObj = parseLocalDateString(dateStr);
           const dayOfWeekIndex = dateObj.getDay();
-          const dayNameKey = DAY_KEYS[dayOfWeekIndex];
-          const dayAbbr = t(dayNameKey);
+          const dayNameKey = FULL_DAY_KEYS[dayOfWeekIndex];
+          const dayName = t(dayNameKey);
           const dayNum = dateObj.getDate();
           const isSelected = dateStr === selectedDate;
           const isToday = dateStr === todayStr;
@@ -89,7 +128,7 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
               onPress={() => handleSelect(dateStr)}
               minScale={0.94}
               accessibilityRole="button"
-              accessibilityLabel={`${dayAbbr} ${dayNum}${isToday ? `, ${t('Today')}` : ''}`}
+              accessibilityLabel={`${dayName} ${dayNum}${isToday ? `, ${t('Today')}` : ''}`}
               accessibilityState={{ selected: isSelected }}
             >
               <Text
@@ -99,8 +138,10 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
                   !isSelected && isToday && styles.dayAbbrToday,
                 ]}
                 numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
               >
-                {dayAbbr}
+                {dayName}
               </Text>
               <Text
                 style={[
@@ -108,6 +149,7 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
                   isSelected && styles.dayNumSelected,
                   !isSelected && isToday && styles.dayNumToday,
                 ]}
+                numberOfLines={1}
               >
                 {dayNum}
               </Text>
@@ -124,7 +166,7 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
             </AnimatedPressable>
           );
         })}
-      </View>
+      </ScrollView>
 
       {onOpenDatePicker && (
         <TouchableOpacity
@@ -137,7 +179,7 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
           accessibilityLabel={t('Choose date')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Calendar size={18} color={theme.colors.primary} />
+          <Calendar size={20} color={theme.colors.primary} />
         </TouchableOpacity>
       )}
     </View>
@@ -149,34 +191,37 @@ const createStyles = (theme: ThemeType) =>
     container: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: theme.spacing.xs,
+      paddingVertical: 8,
       paddingHorizontal: 8,
       backgroundColor: theme.colors.background,
-      gap: 4,
+      gap: 8,
     },
-    daysRow: {
-      flex: 1,
+    containerRtl: {
+      flexDirection: 'row-reverse',
+    },
+    scrollContent: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 4,
+      gap: 8,
+      paddingHorizontal: 2,
     },
     dayPill: {
-      flex: 1,
-      height: 68,
-      borderRadius: 16,
+      width: 72,
+      height: 78,
+      borderRadius: 18,
       backgroundColor: theme.colors.surface,
       borderWidth: 1,
       borderColor: theme.colors.border,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 6,
-      paddingHorizontal: 2,
+      paddingVertical: 8,
+      paddingHorizontal: 4,
       ...theme.shadow.subtle,
     },
     dayPillSelected: {
       backgroundColor: theme.colors.primary,
       borderColor: theme.colors.primary,
+      ...theme.shadow.floating,
     },
     dayPillToday: {
       borderColor: theme.colors.primary,
@@ -186,9 +231,7 @@ const createStyles = (theme: ThemeType) =>
       fontSize: 12,
       fontWeight: '700',
       color: theme.colors.textMuted,
-      textTransform: 'uppercase',
-      letterSpacing: 0,
-      marginBottom: 3,
+      marginBottom: 4,
       textAlign: 'center',
       includeFontPadding: false,
     },
@@ -199,11 +242,12 @@ const createStyles = (theme: ThemeType) =>
       color: theme.colors.primary,
     },
     dayNum: {
-      fontSize: 18,
+      fontSize: 20,
       fontWeight: '800',
       color: theme.colors.textPrimary,
       textAlign: 'center',
       includeFontPadding: false,
+      lineHeight: 24,
     },
     dayNumSelected: {
       color: theme.colors.textInverted,
@@ -215,12 +259,12 @@ const createStyles = (theme: ThemeType) =>
       width: 5,
       height: 5,
       borderRadius: 2.5,
-      marginTop: 3,
+      marginTop: 4,
     },
     emptyDot: {
       width: 5,
       height: 5,
-      marginTop: 3,
+      marginTop: 4,
     },
     todayDotSelected: {
       backgroundColor: theme.colors.textInverted,
@@ -229,9 +273,9 @@ const createStyles = (theme: ThemeType) =>
       backgroundColor: theme.colors.primary,
     },
     calendarBtn: {
-      width: 38,
-      height: 68,
-      borderRadius: 16,
+      width: 44,
+      height: 78,
+      borderRadius: 18,
       backgroundColor: theme.colors.surface,
       borderWidth: 1,
       borderColor: theme.colors.border,
