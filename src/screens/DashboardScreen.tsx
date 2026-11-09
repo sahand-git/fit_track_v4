@@ -7,7 +7,6 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
@@ -18,21 +17,17 @@ import {
   Moon,
   Apple,
   User,
-  Pill,
   Flame,
   Dumbbell,
-  Trash2,
   Footprints,
-  CheckCircle2,
 } from 'lucide-react-native';
-import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { UserProfile, DailyLog, MealType, SupplementRoutineItem, WorkoutEntry } from '../types';
 import { CalorieRing } from '../components/CalorieRing';
 import { MacroCards } from '../components/MacroCards';
 import { WaterTracker } from '../components/WaterTracker';
 import { WeekDayRibbon } from '../components/WeekDayRibbon';
 import { DashboardQuickGrid } from '../components/DashboardQuickGrid';
-import { WeightJourneyCard } from '../components/WeightJourneyCard';
+
 import { AddWorkoutSheet } from '../components/AddWorkoutSheet';
 import { QuickActionSheet } from '../components/QuickActionSheet';
 import { AnimatedPressable } from '../components/AnimatedPressable';
@@ -47,8 +42,6 @@ import {
 import Animated from 'react-native-reanimated';
 import {
   getStaggeredCardEntry,
-  getListLayoutTransition,
-  getItemExitAnimation,
 } from '../utils/reanimatedMotion';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
@@ -60,7 +53,6 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { getScopedStorageKey, saveUserProfile } from '../storage/storage';
 import { formatDisplayDate, formatFullCalendarDate, getTodayDateString } from '../utils/dateUtils';
-import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
 import { calculateActivityBudget } from '../utils/activityBudget';
 import { formatKcal } from '../utils/formatKcal';
 import { getCalorieRingSize } from '../utils/dashboardLayout';
@@ -127,7 +119,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   const language = useLanguage();
   const isRtl = useIsRTL();
   const { theme, isDark } = useTheme();
-  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const t = useCallback((str: string) => translate(language, str), [language]);
@@ -239,7 +230,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     workouts: log.workouts || [],
     steps: log.steps || 0,
   }), [profile, log.workouts, log.steps]);
-  const burnedCalories = activityBudget.grossWorkoutCalories;
   const effectiveCalorieTarget = activityBudget.effectiveTarget;
 
   const handleToggleIncludeWorkouts = useCallback(async () => {
@@ -282,35 +272,8 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   const screenTitle = log.date === todayStr ? t('Today') : formatDisplayDate(log.date, language);
 
 
-  const takenSupplementIds = useMemo(
-    () => new Set((log.supplements || []).filter((c) => c.taken).map((c) => c.itemId)),
-    [log.supplements]
-  );
 
-  const activeSupplements = useMemo(() => {
-    if (log.dailySupplements !== undefined) {
-      return log.dailySupplements.map((s) => ({
-        id: s.id,
-        name: s.name,
-        doseText: s.dose || (s.amount && s.unit ? `${s.amount} ${t(s.unit)}` : s.amount ? `${s.amount}` : ''),
-        isTaken: !!s.taken,
-      }));
-    }
-    if (supplementRoutine && supplementRoutine.length > 0) {
-      return supplementRoutine.map((r) => ({
-        id: r.id,
-        name: r.name,
-        doseText: r.dose || (r.amount && r.unit ? `${r.amount} ${t(r.unit)}` : r.amount ? `${r.amount}` : ''),
-        isTaken: takenSupplementIds.has(r.id),
-      }));
-    }
-    return [];
-  }, [log.dailySupplements, supplementRoutine, takenSupplementIds, t]);
 
-  const takenSupplementsCount = useMemo(
-    () => activeSupplements.filter((s) => s.isTaken).length,
-    [activeSupplements]
-  );
 
   const [activeMilestoneBanner, setActiveMilestoneBanner] = useState<{
     visible: boolean;
@@ -576,7 +539,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
 
             {/* Reconciled Budget Footer Explanation */}
             <View style={[styles.activityFooterBanner, isRtl && styles.rowRtl]}>
-              <Text style={styles.activityFooterText}>
+              <Text style={styles.activityFooterText} numberOfLines={2}>
                 {profile.includeWorkoutsInCalorieBudget
                   ? `${t('Active burn added to food budget')}: +${activityBudget.workoutCalories + activityBudget.stepCalories} ${t('kcal')} (${activityBudget.workoutCalories} ${t('Workouts')} + ${activityBudget.stepCalories} ${t('Steps')})`
                   : `${activityBudget.workoutCalories + activityBudget.stepCalories} ${t('kcal burned')} · ${t('tracked as burn, not in food budget')}`}
@@ -691,18 +654,9 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           </View>
         </Animated.View>
 
-        {/* 6.1 Weight Journey Card */}
-        <Animated.View entering={getStaggeredCardEntry(4)}>
-          <WeightJourneyCard
-            currentWeightKg={profile.weightKg}
-            targetWeightKg={profile.targetWeightKg}
-            heightCm={profile.heightCm}
-            onLogWeight={onOpenLogWeight}
-          />
-        </Animated.View>
 
         {/* Hydration Row */}
-        <Animated.View entering={getStaggeredCardEntry(5)}>
+        <Animated.View entering={getStaggeredCardEntry(4)}>
           <WaterTracker
             glasses={log.waterGlasses}
             target={profile.waterTargetGlasses}
@@ -871,9 +825,11 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   budgetToggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
+    minWidth: 126,
+    height: 32,
     paddingHorizontal: 10,
-    paddingVertical: 6,
     borderRadius: theme.radius.full,
     backgroundColor: theme.colors.surfaceSubtle,
     borderWidth: 1,
@@ -946,12 +902,14 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
+    minHeight: 38,
+    justifyContent: 'center',
   },
   activityFooterText: {
     fontSize: 11,
     fontWeight: '600',
     color: theme.colors.textMuted,
-    lineHeight: 15,
+    lineHeight: 16,
   },
   burnBanner: {
     flexDirection: 'row',
