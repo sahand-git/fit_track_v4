@@ -16,6 +16,7 @@ import {
   Edit2,
   Check,
   RotateCcw,
+  AlertCircle,
   Sparkles,
   Info,
   Pill,
@@ -25,6 +26,8 @@ import {
   SupportedNutrientKey,
   ORDERED_NUTRIENT_KEYS,
   calculateNutrientDayProgress,
+  formattedNutrientValue,
+  formatDataCompleteness,
   formatIntakeBreakdown,
 } from '../utils/nutrientTotals';
 import { useLanguage } from '../i18n/I18nContext';

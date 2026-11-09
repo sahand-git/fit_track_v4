@@ -27,7 +27,6 @@ const sampleBackup: FitTrackBackup = {
     language: 'en',
     isOnboarded: true,
     includeWorkoutsInCalorieBudget: false,
-    weekStartDay: 'saturday',
   },
   dailyLogs: {
     '2026-10-12': {
@@ -161,7 +160,6 @@ assert(parsed.supplementRoutine[0]?.name === 'Creatine Monohydrate', 'supplement
 assert(parsed.recentFoods?.[0]?.name === 'Oatmeal', 'recent foods round-trip preserved');
 assert(parsed.favoriteFoods?.[0]?.name === 'Greek Yogurt', 'favorite foods round-trip preserved');
 assert(parsed.customFoods?.[0]?.name === 'Special Protein Shake', 'custom foods round-trip preserved');
-assert(parsed.profile?.weekStartDay === 'saturday', 'weekStartDay round-trip preserved in backup');
 
 // Test B: Secrets and unauthorized fields are strictly stripped
 const untrustedData = {

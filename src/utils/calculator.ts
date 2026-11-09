@@ -106,7 +106,6 @@ export function getDefaultProfile(): UserProfile {
     includeWorkoutsInCalorieBudget: false,
     stepGoal: 8000,
     hasAcceptedMedicalDisclaimer: false,
-    weekStartDay: 'monday',
   };
 }
 

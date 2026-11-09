@@ -12,7 +12,7 @@ import Animated, {
   withSpring,
   Easing,
 } from 'react-native-reanimated';
-import Svg, { Path, Defs, ClipPath, LinearGradient, Stop, Circle } from 'react-native-svg';
+import Svg, { Path, Rect, Defs, ClipPath, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { AppText as Text } from './AppText';
 import { Droplet, Plus, Minus, Check, Sparkles } from 'lucide-react-native';
 import { useLanguage } from '../i18n/I18nContext';

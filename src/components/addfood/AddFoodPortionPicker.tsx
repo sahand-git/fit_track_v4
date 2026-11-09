@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { AppText as Text } from '../AppText';
 import {
+  X,
   Plus,
   Minus,
   Check,

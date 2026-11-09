@@ -21,7 +21,6 @@ import { validateBackup } from '../utils/backupCore';
 import { calculateStreakByWalkback, getPreviousDayString } from '../utils/streak';
 import { normalizeSearch } from '../utils/localeUtils';
 import { resolveCanonicalFoodId, migrateLoggedMeal } from '../utils/foodMigration';
-import { getDefaultWeekStartDay } from '../utils/weekStripCore';
 
 const PROFILE_KEY = '@fittrack_profile';
 const DAILY_LOG_PREFIX = '@fittrack_log_';
@@ -141,15 +140,7 @@ export async function loadUserProfile(): Promise<UserProfile> {
       return { ...getDefaultProfile(), isOnboarded: false };
     }
     const def = { ...getDefaultProfile(), isOnboarded: false };
-    const parsed = safeParseObject<UserProfile>(raw, def);
-    let rawObj: Record<string, unknown> | null = null;
-    try {
-      rawObj = JSON.parse(raw);
-    } catch {}
-    if (!rawObj || !rawObj.weekStartDay) {
-      parsed.weekStartDay = getDefaultWeekStartDay(parsed.language);
-    }
-    return parsed;
+    return safeParseObject<UserProfile>(raw, def);
   } catch (err) {
     console.error('Error loading profile:', err);
     return getDefaultProfile();
