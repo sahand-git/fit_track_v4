@@ -74,7 +74,10 @@ export interface UserProfile {
   unlockedAchievements?: string[]; // IDs of unlocked badges
   avatarUrl?: string; // custom chosen photo URI
   avatarPreset?: string; // preset avatar emoji/symbol
+  weekStartDay?: WeekStartDay;
 }
+
+export type WeekStartDay = 'saturday' | 'sunday' | 'monday';
 
 export type ExerciseCategory = 'strength' | 'cardio' | 'hiit' | 'sports' | 'flexibility';
 

@@ -923,7 +923,7 @@ function FitTrackApp() {
       title: t('Food Logged'),
       message: `${food.name} ${t('added to today’s meals.')}`,
     });
-  }, [handleAddMeal, appDialog, t]);
+  }, [handleAddMeal, t]);
 
   if (initError) {
     return (

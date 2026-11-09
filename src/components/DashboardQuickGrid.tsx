@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { AppText as Text } from './AppText';
 import {
@@ -36,7 +36,7 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
   const language = useLanguage();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const t = (key: string) => translate(language, key);
+  const t = useCallback((key: string) => translate(language, key), [language]);
 
   const actions = useMemo(() => [
     {

@@ -323,6 +323,43 @@ async function runStorageTests() {
     assert(await AsyncStorage.getItem(key) === corrupt, 'Corrupt source data is preserved for recovery instead of overwritten');
   }
 
+  // =========================================================================
+  // Profile weekStartDay migration and persistence test
+  // =========================================================================
+  {
+    console.log('Testing User profile weekStartDay migration and persistence...');
+    const legacyProfile = {
+      name: 'Legacy User',
+      age: 30,
+      gender: 'male',
+      weightKg: 75,
+      heightCm: 175,
+      activityLevel: 'moderate',
+      goal: 'maintenance',
+      bmr: 1700,
+      tdee: 2300,
+      targetCalories: 2300,
+      targetProtein: 150,
+      targetCarbs: 250,
+      targetFat: 70,
+      waterTargetGlasses: 8,
+      language: 'ckb',
+    };
+    await AsyncStorage.setItem('@fittrack_profile', JSON.stringify(legacyProfile));
+    const loadedLegacy = await loadUserProfile();
+    assert(loadedLegacy.weekStartDay === 'saturday', 'Kurdish legacy profile migrates to saturday start');
+
+    const englishLegacy = { ...legacyProfile, language: 'en' };
+    await AsyncStorage.setItem('@fittrack_profile', JSON.stringify(englishLegacy));
+    const loadedEnglish = await loadUserProfile();
+    assert(loadedEnglish.weekStartDay === 'monday', 'English legacy profile migrates to monday start');
+
+    const explicitProfile = { ...legacyProfile, weekStartDay: 'sunday' as const };
+    await AsyncStorage.setItem('@fittrack_profile', JSON.stringify(explicitProfile));
+    const loadedExplicit = await loadUserProfile();
+    assert(loadedExplicit.weekStartDay === 'sunday', 'Explicit weekStartDay is preserved');
+  }
+
   console.log('All storage, account isolation, step tracking, and backup rollback tests passed successfully!');
 }
 

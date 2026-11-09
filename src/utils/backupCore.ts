@@ -221,6 +221,7 @@ const profileShape = shape<UserProfile>({
   includeWorkoutsInCalorieBudget: optional(bool),
   targetWeightKg: optional(num),
   hasAcceptedMedicalDisclaimer: optional(bool),
+  weekStartDay: optional(choice('saturday', 'sunday', 'monday')),
 });
 
 // Reminders

@@ -24,7 +24,6 @@ export function CalendarPickerModal({ visible, selectedDate, onClose, onSelect }
   });
   const [monthLogs, setMonthLogs] = useState<Record<string, DailyLog>>({});
   const today = getTodayDateString();
-  const locale = language === 'ar' ? 'ar' : language === 'ckb' ? 'ckb-IQ' : undefined;
   const firstDate = useMemo(() => {
     const first = formatDateToLocalString(new Date(month.getFullYear(), month.getMonth(), 1));
     return addDaysToDateString(first, -new Date(month.getFullYear(), month.getMonth(), 1).getDay());

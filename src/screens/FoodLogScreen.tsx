@@ -41,7 +41,6 @@ import { DirectionalIcon } from '../components/DirectionalIcon';
 import * as Haptics from 'expo-haptics';
 import { MealsSkeleton } from '../components/SkeletonLoader';
 import { formatKcal } from '../utils/formatKcal';
-import { getDailyEffectiveCalorieTarget } from '../utils/activityBudget';
 
 interface FoodLogScreenProps {
   profile?: UserProfile;
@@ -205,12 +204,6 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
     [onSelectDate]
   );
 
-  // Daily Totals & Targets
-  const totalKcal = log.meals.reduce((sum, m) => sum + m.calories, 0);
-  const totalProtein = Math.round(log.meals.reduce((sum, m) => sum + m.protein, 0) * 10) / 10;
-  const totalCarbs = Math.round(log.meals.reduce((sum, m) => sum + m.carbs, 0) * 10) / 10;
-  const totalFat = Math.round(log.meals.reduce((sum, m) => sum + m.fat, 0) * 10) / 10;
-  const effectiveCalorieTarget = profile ? getDailyEffectiveCalorieTarget(profile, log) : null;
 
   const openAddSheet = (mealType: MealType) => {
     if (isFuture) return;

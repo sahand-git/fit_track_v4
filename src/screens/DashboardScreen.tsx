@@ -7,7 +7,6 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import { useAppDialog } from '../components/dialogs/AppDialogProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
@@ -18,14 +17,10 @@ import {
   Moon,
   Apple,
   User,
-  Pill,
   Flame,
   Dumbbell,
-  Trash2,
   Footprints,
-  CheckCircle2,
 } from 'lucide-react-native';
-import { AnimatedCheckbox } from '../components/AnimatedCheckbox';
 import { UserProfile, DailyLog, MealType, SupplementRoutineItem, WorkoutEntry } from '../types';
 import { CalorieRing } from '../components/CalorieRing';
 import { MacroCards } from '../components/MacroCards';
@@ -47,8 +42,6 @@ import {
 import Animated from 'react-native-reanimated';
 import {
   getStaggeredCardEntry,
-  getListLayoutTransition,
-  getItemExitAnimation,
 } from '../utils/reanimatedMotion';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
@@ -59,8 +52,9 @@ import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { getScopedStorageKey, saveUserProfile } from '../storage/storage';
-import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
-import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
+import { getTodayDateString } from '../utils/dateUtils';
+import { formatFullDateHeader, getRelativeDayTitle } from '../utils/weekStripCore';
+import { CalendarPickerModal } from '../components/CalendarPickerModal';
 import { calculateActivityBudget } from '../utils/activityBudget';
 import { formatKcal } from '../utils/formatKcal';
 import { getCalorieRingSize } from '../utils/dashboardLayout';
@@ -127,7 +121,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   const language = useLanguage();
   const isRtl = useIsRTL();
   const { theme, isDark } = useTheme();
-  const dialog = useAppDialog();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const t = useCallback((str: string) => translate(language, str), [language]);
@@ -163,7 +156,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const dockClearance = dockBottom + 72;
-  const scrollBottomPadding = Math.max(300, dockClearance + 200);
+  const scrollBottomPadding = Math.max(120, dockClearance + 32);
 
   const fiberProgress = useMemo(
     () => calculateNutrientDayProgress('fiber', log.meals, log.dailySupplements, profile),
@@ -239,7 +232,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     workouts: log.workouts || [],
     steps: log.steps || 0,
   }), [profile, log.workouts, log.steps]);
-  const burnedCalories = activityBudget.grossWorkoutCalories;
   const effectiveCalorieTarget = activityBudget.effectiveTarget;
 
   const handleToggleIncludeWorkouts = useCallback(async () => {
@@ -277,38 +269,20 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     [t]
   );
 
-  const todayLabel = formatDisplayDate(log.date, language);
-  const isFuture = log.date > getTodayDateString();
+  const currentDate = selectedDate || log.date;
+  const todayStr = useMemo(() => getTodayDateString(), []);
+  const fullDateHeader = useMemo(() => formatFullDateHeader(currentDate, language), [currentDate, language]);
+  const relativeTitle = useMemo(() => getRelativeDayTitle(currentDate, todayStr, language), [currentDate, todayStr, language]);
+  const isNotToday = currentDate !== todayStr;
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false);
 
-  const takenSupplementIds = useMemo(
-    () => new Set((log.supplements || []).filter((c) => c.taken).map((c) => c.itemId)),
-    [log.supplements]
-  );
-
-  const activeSupplements = useMemo(() => {
-    if (log.dailySupplements !== undefined) {
-      return log.dailySupplements.map((s) => ({
-        id: s.id,
-        name: s.name,
-        doseText: s.dose || (s.amount && s.unit ? `${s.amount} ${t(s.unit)}` : s.amount ? `${s.amount}` : ''),
-        isTaken: !!s.taken,
-      }));
+  const handleOpenCalendar = useCallback(() => {
+    if (onOpenDatePicker) {
+      onOpenDatePicker();
+    } else {
+      setCalendarModalVisible(true);
     }
-    if (supplementRoutine && supplementRoutine.length > 0) {
-      return supplementRoutine.map((r) => ({
-        id: r.id,
-        name: r.name,
-        doseText: r.dose || (r.amount && r.unit ? `${r.amount} ${t(r.unit)}` : r.amount ? `${r.amount}` : ''),
-        isTaken: takenSupplementIds.has(r.id),
-      }));
-    }
-    return [];
-  }, [log.dailySupplements, supplementRoutine, takenSupplementIds, t]);
-
-  const takenSupplementsCount = useMemo(
-    () => activeSupplements.filter((s) => s.isTaken).length,
-    [activeSupplements]
-  );
+  }, [onOpenDatePicker]);
 
   const [activeMilestoneBanner, setActiveMilestoneBanner] = useState<{
     visible: boolean;
@@ -417,10 +391,32 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         {/* Editorial Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.dateLabel}>{todayLabel}</Text>
+            <TouchableOpacity
+              onPress={handleOpenCalendar}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${fullDateHeader}, ${t('Choose date')}`}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.dateLabel}>{fullDateHeader}</Text>
+            </TouchableOpacity>
             <View style={styles.titleRow}>
-              <Text style={styles.screenTitle}>{t('Today')}</Text>
+              <Text style={styles.screenTitle}>{relativeTitle}</Text>
               <StreakBadge streak={streak} />
+              {isNotToday && onSelectDate && (
+                <TouchableOpacity
+                  style={styles.todayReturnPill}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                    onSelectDate(todayStr);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Today')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.todayReturnPillText}>{t('Today')}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -463,9 +459,11 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         {/* 1.1 Horizontal Week Day Ribbon */}
         {onSelectDate && (
           <WeekDayRibbon
-            selectedDate={selectedDate || log.date}
+            selectedDate={currentDate}
             onSelectDate={onSelectDate}
-            onOpenDatePicker={onOpenDatePicker}
+            onOpenDatePicker={handleOpenCalendar}
+            weekStartDay={profile.weekStartDay}
+            loggedDates={log.meals?.length ? [currentDate] : undefined}
           />
         )}
 
@@ -483,6 +481,21 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
             size={getCalorieRingSize(heroWidth)}
             onPress={() => setSelectedNutrientForDetail('calories')}
           />
+
+          {/* Primary Inline Add Food Button */}
+          <AnimatedPressable
+            style={styles.heroAddFoodBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+              onOpenAddFood();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Add food')}
+            minScale={0.96}
+          >
+            <Plus size={18} color={theme.colors.textInverted} strokeWidth={2.5} />
+            <Text style={styles.heroAddFoodBtnText}>{t('Add food')}</Text>
+          </AnimatedPressable>
 
           {/* Activity & Energy Balance Card */}
           <View style={styles.activityCard}>
@@ -709,23 +722,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         </Animated.View>
       </ScrollView>
 
-      {/* Floating "+ Add Food" Circular FAB */}
-      <AnimatedPressable
-        style={[
-          styles.floatingAddFab,
-          { bottom: dockClearance + 18 },
-          isRtl ? { left: 20 } : { right: 20 },
-        ]}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-          onOpenAddFood();
-        }}
-        minScale={0.92}
-        accessibilityRole="button"
-        accessibilityLabel={t('Add Food')}
-      >
-        <Plus size={26} color={theme.colors.textInverted} strokeWidth={2.6} />
-      </AnimatedPressable>
+
 
       <QuickActionSheet
         visible={quickActionVisible}
@@ -766,6 +763,15 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         onClose={() => setSelectedNutrientForDetail(null)}
         onSaveGoal={handleSaveNutrientGoal}
         onResetGoal={handleResetNutrientGoal}
+      />
+      <CalendarPickerModal
+        visible={calendarModalVisible}
+        selectedDate={currentDate}
+        onClose={() => setCalendarModalVisible(false)}
+        onSelect={(newDate) => {
+          setCalendarModalVisible(false);
+          onSelectDate?.(newDate);
+        }}
       />
     </View>
   );
@@ -1372,18 +1378,38 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     justifyContent: 'center',
     ...theme.shadow.subtle,
   },
-  floatingAddFab: {
-    position: 'absolute',
+  todayReturnPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.primaryLight,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    marginStart: 8,
+    alignSelf: 'center',
+  },
+  todayReturnPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.primary,
+    includeFontPadding: false,
+  },
+  heroAddFoodBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    gap: 8,
+    marginTop: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: theme.radius.full,
     backgroundColor: theme.colors.primary,
-    borderWidth: 1.5,
-    borderColor: theme.colors.primaryBorder,
-    ...theme.shadow.floating,
-    zIndex: 99,
-    elevation: 8,
+    ...theme.shadow.subtle,
+  },
+  heroAddFoodBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.textInverted,
+    includeFontPadding: false,
   },
 });

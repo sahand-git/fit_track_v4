@@ -13,9 +13,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
-import { Check, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText, Moon, Award, Camera } from 'lucide-react-native';
+import { Check, Globe2, Bell, Database, Flame, UserRound, ShieldAlert, BookOpen, ShieldCheck, MessageSquare, FileText, Moon, Award, Camera, CalendarDays } from 'lucide-react-native';
 import { DirectionalIcon } from '../components/DirectionalIcon';
-import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem } from '../types';
+import { UserProfile, Gender, ActivityLevel, FitnessGoal, AppLanguage, SupplementRoutineItem, WeekStartDay } from '../types';
+import { resolveWeekStartDay } from '../utils/weekStripCore';
 import { calculateTargets } from '../utils/calculator';
 import { formatKcal } from '../utils/formatKcal';
 import { GeminiKeyManager } from '../components/GeminiKeyManager';
@@ -407,6 +408,51 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <Text style={styles.restartNote}>
           {t('Matches device system appearance settings.')}
         </Text>
+      </View>
+
+      {/* Week Starts On Selector */}
+      <View style={styles.languageCard}>
+        <View style={styles.languageHeader}>
+          <CalendarDays size={18} color={theme.colors.secondary} />
+          <Text style={styles.languageTitle}>{t('Week starts on')}</Text>
+        </View>
+        <View style={styles.languageOptions}>
+          {(['saturday', 'sunday', 'monday'] as const).map((day) => {
+            const activeWeekStart = resolveWeekStartDay(profile.weekStartDay, language);
+            const isSelected = activeWeekStart === day;
+            const dayLabels: Record<WeekStartDay, string> = {
+              saturday: t('Saturday'),
+              sunday: t('Sunday'),
+              monday: t('Monday'),
+            };
+            return (
+              <TouchableOpacity
+                key={day}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  onSaveProfile({ ...profile, weekStartDay: day });
+                }}
+                style={[
+                  styles.languageOption,
+                  isSelected && styles.languageOptionActive,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={dayLabels[day]}
+                accessibilityState={{ selected: isSelected }}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Text
+                  style={[
+                    styles.languageOptionText,
+                    isSelected && styles.languageOptionTextActive,
+                  ]}
+                >
+                  {dayLabels[day]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       {/* Shared Gemini API Key Manager */}
