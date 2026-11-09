@@ -20,11 +20,13 @@ import {
   Flame,
   Dumbbell,
   Footprints,
+  Calendar,
 } from 'lucide-react-native';
 import { UserProfile, DailyLog, MealType, SupplementRoutineItem, WorkoutEntry } from '../types';
 import { CalorieRing } from '../components/CalorieRing';
 import { MacroCards } from '../components/MacroCards';
 import { WaterTracker } from '../components/WaterTracker';
+import { CalendarPickerModal } from '../components/CalendarPickerModal';
 import { WeekDayRibbon } from '../components/WeekDayRibbon';
 import { DashboardQuickGrid } from '../components/DashboardQuickGrid';
 
@@ -52,7 +54,7 @@ import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { getScopedStorageKey, saveUserProfile } from '../storage/storage';
-import { formatDisplayDate, formatFullCalendarDate, getTodayDateString } from '../utils/dateUtils';
+import { formatFullCalendarDate, getTodayDateString, parseLocalDateString } from '../utils/dateUtils';
 import { calculateActivityBudget } from '../utils/activityBudget';
 import { formatKcal } from '../utils/formatKcal';
 import { getCalorieRingSize } from '../utils/dashboardLayout';
@@ -124,6 +126,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   const t = useCallback((str: string) => translate(language, str), [language]);
 
   const [workoutSheetVisible, setWorkoutSheetVisible] = useState(false);
+  const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [quickActionVisible, setQuickActionVisible] = useState(false);
   const [heroWidth, setHeroWidth] = useState(0);
   const [selectedNutrientForDetail, setSelectedNutrientForDetail] = useState<SupportedNutrientKey | string | null>(null);
@@ -268,8 +271,18 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   );
 
   const todayStr = useMemo(() => getTodayDateString(), []);
-  const todayLabel = formatFullCalendarDate(log.date, language);
-  const screenTitle = log.date === todayStr ? t('Today') : formatDisplayDate(log.date, language);
+  const parsedDate = useMemo(() => parseLocalDateString(log.date), [log.date]);
+  const dayNamesEn = useMemo(() => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], []);
+  const dayOfWeekName = t(dayNamesEn[parsedDate.getDay()] || 'Today');
+  const headerTitle = log.date === todayStr ? t('Today') : dayOfWeekName;
+  const headerSubtitle = formatFullCalendarDate(log.date, language);
+
+  const mealThemeStyles: Record<MealType, { color: string; lightBg: string }> = useMemo(() => ({
+    breakfast: { color: theme.colors.amber, lightBg: theme.colors.amberLight },
+    lunch: { color: theme.colors.crimson, lightBg: theme.colors.crimsonLight },
+    dinner: { color: theme.colors.emerald, lightBg: theme.colors.emeraldLight },
+    snack: { color: theme.colors.water, lightBg: theme.colors.waterLight },
+  }), [theme.colors]);
 
 
 
@@ -379,17 +392,24 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}>
-        {/* Editorial Header */}
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.dateLabel}>{todayLabel}</Text>
-            <View style={styles.titleRow}>
-              <Text style={styles.screenTitle}>{screenTitle}</Text>
-              <StreakBadge streak={streak} />
+        {/* Editorial Header (Picture 2 Reference) */}
+        <View style={[styles.header, isRtl && styles.rowRtl]}>
+          <TouchableOpacity
+            style={styles.headerTitleContainer}
+            onPress={() => setShowCalendarPicker(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('Choose date')}
+          >
+            <Text style={styles.screenTitle}>{headerTitle}</Text>
+            <View style={[styles.headerSubtitleRow, isRtl && styles.rowRtl]}>
+              <Text style={styles.dateLabel}>{headerSubtitle}</Text>
+              <Calendar size={13} color={theme.colors.textMuted} style={isRtl ? { marginRight: 4 } : { marginLeft: 4 }} />
             </View>
-          </View>
+          </TouchableOpacity>
 
-          <View style={styles.headerActions}>
+          <View style={[styles.headerActions, isRtl && styles.rowRtl]}>
+            <StreakBadge streak={streak} />
             <AnimatedPressable
               style={styles.profileBtn}
               onPress={handleToggleTheme}
@@ -425,12 +445,12 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           </View>
         </View>
 
-        {/* 1.1 Horizontal Week Day Ribbon */}
+        {/* 1.1 Horizontal Week Day Ribbon (Picture 2 Reference) */}
         {onSelectDate && (
           <WeekDayRibbon
             selectedDate={selectedDate || log.date}
             onSelectDate={onSelectDate}
-            onOpenDatePicker={onOpenDatePicker}
+            onOpenDatePicker={() => setShowCalendarPicker(true)}
           />
         )}
 
@@ -600,63 +620,85 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
             </TouchableOpacity>
           </View>
 
-          {/* Meals Ledger List */}
-          <View style={styles.mealsList}>
-            {mealTypes.map((m, index) => {
+          {/* Meals Ledger List (Picture 4 Reference) */}
+          <View style={styles.mealsContainer}>
+            {mealTypes.map((m) => {
               const mealsOfCategory = log.meals.filter((item) => item.mealType === m.key);
               const cals = mealsOfCategory.reduce((sum, item) => sum + item.calories, 0);
-              const isLast = index === mealTypes.length - 1;
-              const isEmpty = mealsOfCategory.length === 0;
+              const mealStyle = mealThemeStyles[m.key] || { color: theme.colors.primary, lightBg: theme.colors.primaryLight };
+              const mealColor = mealStyle.color;
 
               return (
-                <AnimatedPressable
-                  key={m.key}
-                  style={[
-                    styles.mealRow,
-                    isLast && styles.mealRowLast,
-                    isEmpty && styles.mealRowEmpty,
-                  ]}
-                  onPress={() => handleQuickAdd(m.key)}
-                  minScale={0.97}
-                  accessibilityLabel={`${t('Add to')} ${m.label}`}
-                  accessibilityRole="button"
-                >
-                  <View style={styles.mealLeft}>
-                    <View style={[styles.mealIconBox, isEmpty && styles.mealIconBoxEmpty]}>
-                      {getMealIcon(m.key)}
-                    </View>
-                    <View style={styles.mealTextWrapper}>
-                      <Text style={styles.mealName}>{m.label}</Text>
-                      <View style={styles.mealSubRow}>
-                        {isEmpty && (
-                          <Plus size={12} color={theme.colors.primary} strokeWidth={2.5} style={styles.mealSubPlus} />
-                        )}
-                        <Text style={[styles.mealSub, isEmpty && styles.mealSubEmpty]}>
-                          {mealsOfCategory.length > 0
-                            ? `${mealsOfCategory.length} ${t(mealsOfCategory.length > 1 ? 'items' : 'item')}`
-                            : t('Tap to log food')}
-                        </Text>
+                <View key={m.key} style={styles.mealCard}>
+                  {/* Meal Header Row */}
+                  <View style={[styles.mealCardHeader, isRtl && styles.rowRtl]}>
+                    <View style={[styles.mealLeft, isRtl && styles.rowRtl]}>
+                      <View style={[styles.mealIconBox, { backgroundColor: mealStyle.lightBg }]}>
+                        {getMealIcon(m.key)}
                       </View>
+                      <Text style={styles.mealName}>{m.label}</Text>
+                    </View>
+
+                    <View style={[styles.mealCardRight, isRtl && styles.rowRtl]}>
+                      <Text style={styles.mealCals}>
+                        {cals} <Text style={styles.mealCalsUnit}>{t('kcal')}</Text>
+                        {'  '}
+                        <Text style={styles.mealItemsCount}>{mealsOfCategory.length} {t(mealsOfCategory.length === 1 ? 'item' : 'items')}</Text>
+                      </Text>
+                      <TouchableOpacity
+                        style={[styles.mealPlusCircle, { backgroundColor: mealColor }]}
+                        onPress={() => handleQuickAdd(m.key)}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('Add to')} ${m.label}`}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      >
+                        <Plus size={16} color={theme.colors.white} strokeWidth={2.6} />
+                      </TouchableOpacity>
                     </View>
                   </View>
 
-                  <View style={styles.mealRight}>
-                    {cals > 0 && <Text style={styles.mealCals}>{formatKcal(cals, t)}</Text>}
-                    <View style={styles.plusIconWrapper}>
-                      <View style={styles.plusIconCircle}>
-                        <Plus size={20} color={theme.colors.textInverted} strokeWidth={2.5} />
-                      </View>
+                  {/* Logged Foods List (if any) */}
+                  {mealsOfCategory.length > 0 && (
+                    <View style={styles.mealItemsList}>
+                      {mealsOfCategory.map((item) => (
+                        <View key={item.id} style={[styles.mealItemRow, isRtl && styles.rowRtl]}>
+                          <Text style={styles.mealItemName} numberOfLines={1}>
+                            {item.name}
+                          </Text>
+                          <Text style={styles.mealItemCals}>
+                            {formatKcal(item.calories, t)}
+                          </Text>
+                        </View>
+                      ))}
                     </View>
-                  </View>
-                </AnimatedPressable>
+                  )}
+
+                  {/* Dashed "+ Add food" Button (Picture 4 Reference) */}
+                  <TouchableOpacity
+                    style={[
+                      styles.mealDashedAddBtn,
+                      { borderColor: mealColor, backgroundColor: mealStyle.lightBg },
+                      isRtl && styles.rowRtl,
+                    ]}
+                    onPress={() => handleQuickAdd(m.key)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t('Add food')} - ${m.label}`}
+                  >
+                    <Plus size={14} color={mealColor} strokeWidth={2.4} style={isRtl ? { marginLeft: 6 } : { marginRight: 6 }} />
+                    <Text style={[styles.mealDashedAddText, { color: mealColor }]}>
+                      {t('Add food')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               );
             })}
           </View>
         </Animated.View>
 
-
-        {/* Hydration Row */}
-        <Animated.View entering={getStaggeredCardEntry(4)}>
+        {/* Hydration Row (Fix 1: Water & Food Clean Separation) */}
+        <Animated.View entering={getStaggeredCardEntry(4)} style={styles.waterTrackerSection}>
           <WaterTracker
             glasses={log.waterGlasses}
             target={profile.waterTargetGlasses}
@@ -713,6 +755,16 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         onDismiss={() => setActiveMilestoneBanner(null)}
       />
 
+      <CalendarPickerModal
+        visible={showCalendarPicker}
+        selectedDate={selectedDate || log.date}
+        onClose={() => setShowCalendarPicker(false)}
+        onSelect={(date) => {
+          onSelectDate?.(date);
+          setShowCalendarPicker(false);
+        }}
+      />
+
       <NutrientDetailModal
         visible={!!selectedNutrientForDetail}
         initialNutrientKey={selectedNutrientForDetail || 'calories'}
@@ -729,6 +781,110 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
 DashboardScreen.displayName = 'DashboardScreen';
 
 const createStyles = (theme: ThemeType) => StyleSheet.create({
+  headerTitleContainer: {
+    flex: 1,
+  },
+  headerSubtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  primaryAddFoodBtn: {
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: theme.colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 10,
+    ...theme.shadow.subtle,
+  },
+  primaryAddFoodText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: theme.colors.black,
+  },
+  mealsContainer: {
+    gap: 10,
+  },
+  mealCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+    ...theme.shadow.subtle,
+  },
+  mealCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  mealCardRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mealPlusCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mealCalsUnit: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: theme.colors.textMuted,
+  },
+  mealItemsCount: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.textMuted,
+  },
+  mealItemsList: {
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.border,
+    gap: 4,
+  },
+  mealItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 3,
+  },
+  mealItemName: {
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+    flex: 1,
+  },
+  mealItemCals: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    marginLeft: 8,
+  },
+  mealDashedAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    marginTop: 10,
+  },
+  mealDashedAddText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  waterTrackerSection: {
+    marginTop: 20,
+    marginBottom: 16,
+  },
   scroll: {
     flex: 1,
   },

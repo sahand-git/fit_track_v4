@@ -30,8 +30,6 @@ interface QuickActionItem {
   id: string;
   label: string;
   icon: React.ReactNode;
-  iconBg: string;
-  borderColor: string;
   onPress: () => void;
 }
 
@@ -49,61 +47,49 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = useCallback((key: string) => translate(language, key), [language]);
 
-  // Row 1: Scan Food, AI Describe, Barcode (3 on top)
+  // Row 1: Scan Food, AI Describe, Barcode (Picture 3 Reference)
   const row1: QuickActionItem[] = useMemo(() => [
     {
       id: 'scan',
       label: t('Scan Food'),
-      icon: <Camera size={20} color={theme.colors.primary} strokeWidth={2.2} />,
-      iconBg: theme.colors.primaryLight,
-      borderColor: theme.colors.primary,
+      icon: <Camera size={26} color={theme.colors.textPrimary} strokeWidth={1.8} />,
       onPress: onScanPlate,
     },
     {
       id: 'describe',
       label: t('AI Describe'),
-      icon: <Sparkles size={20} color={theme.colors.amber} strokeWidth={2.2} />,
-      iconBg: theme.colors.amberLight,
-      borderColor: theme.colors.amber,
+      icon: <Sparkles size={26} color={theme.colors.textPrimary} strokeWidth={1.8} />,
       onPress: onDescribeMeal,
     },
     {
       id: 'barcode',
       label: t('Barcode'),
-      icon: <Barcode size={20} color={theme.colors.purple} strokeWidth={2.2} />,
-      iconBg: theme.colors.purpleLight,
-      borderColor: theme.colors.purple,
+      icon: <Barcode size={26} color={theme.colors.textPrimary} strokeWidth={1.8} />,
       onPress: onScanBarcode,
     },
-  ], [t, theme, onScanPlate, onDescribeMeal, onScanBarcode]);
+  ], [t, theme.colors.textPrimary, onScanPlate, onDescribeMeal, onScanBarcode]);
 
-  // Row 2: Vitamins, Workouts, Steps (3 on the other 3)
+  // Row 2: Vitamins, Workouts, Steps (Picture 3 Reference)
   const row2: QuickActionItem[] = useMemo(() => [
     {
       id: 'supplements',
       label: t('Vitamins'),
-      icon: <Pill size={20} color={theme.colors.crimson} strokeWidth={2.2} />,
-      iconBg: theme.colors.crimsonLight,
-      borderColor: theme.colors.crimson,
+      icon: <Pill size={26} color={theme.colors.textPrimary} strokeWidth={1.8} />,
       onPress: () => onOpenSupplements?.(),
     },
     {
       id: 'workouts',
       label: t('Workouts'),
-      icon: <Dumbbell size={20} color={theme.colors.accent} strokeWidth={2.2} />,
-      iconBg: `${theme.colors.accent}18`,
-      borderColor: theme.colors.accent,
+      icon: <Dumbbell size={26} color={theme.colors.textPrimary} strokeWidth={1.8} />,
       onPress: () => onOpenWorkouts?.(),
     },
     {
       id: 'steps',
       label: t('Steps'),
-      icon: <Footprints size={20} color={theme.colors.water} strokeWidth={2.2} />,
-      iconBg: theme.colors.waterLight,
-      borderColor: theme.colors.water,
+      icon: <Footprints size={26} color={theme.colors.textPrimary} strokeWidth={1.8} />,
       onPress: () => onOpenSteps?.(),
     },
-  ], [t, theme, onOpenSupplements, onOpenWorkouts, onOpenSteps]);
+  ], [t, theme.colors.textPrimary, onOpenSupplements, onOpenWorkouts, onOpenSteps]);
 
   const handlePress = (fn?: () => void) => {
     if (!fn) return;
@@ -116,27 +102,20 @@ export const DashboardQuickGrid: React.FC<DashboardQuickGridProps> = ({
       <AnimatedPressable
         style={styles.actionTile}
         onPress={() => handlePress(act.onPress)}
-        minScale={0.92}
+        minScale={0.93}
         accessibilityRole="button"
         accessibilityLabel={act.label}
       >
-        <View
-          style={[
-            styles.iconBadge,
-            { backgroundColor: act.iconBg, borderColor: act.borderColor },
-          ]}
+        <Text
+          style={styles.actionLabel}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
         >
+          {act.label}
+        </Text>
+        <View style={styles.iconContainer}>
           {act.icon}
-        </View>
-        <View style={styles.labelContainer}>
-          <Text
-            style={styles.actionLabel}
-            numberOfLines={2}
-            adjustsFontSizeToFit
-            minimumFontScale={0.78}
-          >
-            {act.label}
-          </Text>
         </View>
       </AnimatedPressable>
     </View>
@@ -175,7 +154,7 @@ const createStyles = (theme: ThemeType) =>
     },
     actionTile: {
       width: '100%',
-      height: 84,
+      height: 82,
       backgroundColor: theme.colors.surface,
       borderRadius: 16,
       borderWidth: 1,
@@ -183,32 +162,19 @@ const createStyles = (theme: ThemeType) =>
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 6,
-      paddingVertical: 8,
+      paddingVertical: 10,
       ...theme.shadow.subtle,
-    },
-    iconBadge: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 6,
-      borderWidth: 1.5,
-      ...theme.shadow.subtle,
-    },
-    labelContainer: {
-      height: 24,
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: '100%',
-      paddingHorizontal: 2,
     },
     actionLabel: {
-      fontSize: 11.5,
-      lineHeight: 14,
-      fontWeight: '700',
-      color: theme.colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.colors.textSecondary,
       textAlign: 'center',
+      marginBottom: 6,
       includeFontPadding: false,
+    },
+    iconContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
     },
   });
