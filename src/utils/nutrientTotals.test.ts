@@ -245,6 +245,21 @@ assert(directResolvedVitA !== undefined && directResolvedVitA > 0, 'Direct resol
 assert(dayEggProgress.current === directResolvedVitA, `Food detail direct resolution (${directResolvedVitA}) must match daily totals (${dayEggProgress.current})`);
 console.log('✓ Food detail resolution and daily totals agree 100%.');
 
+// 10. Water Progress Calculation Tests
+console.log('Testing Water Progress Calculation...');
+const metaWater = getNutrientMetadata('water', mockProfile);
+assert(metaWater.unit === 'L' && metaWater.defaultTarget === 2, 'Default water target for 8 glasses is 2.0 L');
+const waterProgress = calculateNutrientDayProgress('water', [], [], mockProfile, 4);
+assert(waterProgress.current === 1, '4 glasses yields 1.0 L');
+assert(waterProgress.target === 2, 'Target is 2.0 L');
+assert(waterProgress.percent === 50, '4 of 8 glasses is 50%');
+assert(waterProgress.remaining === 1, '1.0 L remaining');
+assert(waterProgress.contributors.length === 1, 'Water intake contributor added');
+const waterCompleteProgress = calculateNutrientDayProgress('water', [], [], mockProfile, 8);
+assert(waterCompleteProgress.percent === 100, '8 of 8 glasses is 100%');
+assert(waterCompleteProgress.status === 'optimal', '100% water is optimal');
+console.log('✓ Water progress calculations verified.');
+
 console.log('======================================================');
 console.log('All Nutrient Totals & Missing Data Unit Tests Passed Cleanly!');
 console.log('======================================================');

@@ -60,6 +60,7 @@ import { formatKcal } from '../utils/formatKcal';
 import { getCalorieRingSize } from '../utils/dashboardLayout';
 import { NutrientDetailModal } from '../components/NutrientDetailModal';
 import { SupportedNutrientKey, calculateNutrientDayProgress } from '../utils/nutrientTotals';
+import { formatStepCaloriePill } from '../services/stepTrackingCore';
 import { calculateTargets } from '../utils/calculator';
 import { TodaySkeleton } from '../components/SkeletonLoader';
 
@@ -234,6 +235,15 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     steps: log.steps || 0,
   }), [profile, log.workouts, log.steps]);
   const effectiveCalorieTarget = activityBudget.effectiveTarget;
+
+  const stepPillData = useMemo(() => {
+    return formatStepCaloriePill(
+      log.steps,
+      profile.weightKg || 70,
+      profile.stepGoal || 8000,
+      t
+    );
+  }, [log.steps, profile.weightKg, profile.stepGoal, t]);
 
   const handleToggleIncludeWorkouts = useCallback(async () => {
     if (!onUpdateProfile) return;
@@ -460,6 +470,26 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           onLayout={(event) => setHeroWidth(event.nativeEvent.layout.width)}
           style={styles.heroSection}
         >
+          {/* Step-Calorie Deduction Pill */}
+          <TouchableOpacity
+            style={[styles.stepDeductionPill, isRtl && styles.rowRtl]}
+            onPress={onOpenSteps}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('Steps')}: ${stepPillData.formattedText}`}
+            hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+          >
+            <Footprints
+              size={13}
+              color={stepPillData.isGoalMet ? theme.colors.primary : theme.colors.water}
+            />
+            <Text style={styles.stepDeductionText} numberOfLines={1}>
+              {stepPillData.isOfflineOrUnavailable && stepPillData.steps === 0
+                ? stepPillData.formattedText
+                : `${stepPillData.steps.toLocaleString()} · ${stepPillData.formattedText}`}
+            </Text>
+          </TouchableOpacity>
+
           <CalorieRing
             consumed={consumedCalories}
             target={effectiveCalorieTarget}
@@ -579,6 +609,8 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
             carbsConsumed={consumedCarbs}
             fatTarget={profile.customNutrientGoals?.fat ?? profile.targetFat}
             fatConsumed={consumedFat}
+            waterGlasses={log.waterGlasses}
+            waterTargetGlasses={profile.waterTargetGlasses}
             fiberConsumed={fiberProgress.current}
             fiberTarget={fiberProgress.target}
             fiberHasTarget={fiberProgress.hasTarget}
@@ -770,6 +802,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         initialNutrientKey={selectedNutrientForDetail || 'calories'}
         meals={log.meals}
         supplements={log.dailySupplements}
+        waterGlasses={log.waterGlasses}
         profile={profile}
         onClose={() => setSelectedNutrientForDetail(null)}
         onSaveGoal={handleSaveNutrientGoal}
@@ -1260,6 +1293,25 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     borderColor: theme.colors.border,
     marginBottom: 6,
     ...theme.shadow.subtle,
+  },
+  stepDeductionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: 10,
+  },
+  stepDeductionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    includeFontPadding: false,
   },
   supplementsContainer: {
     marginTop: 10,

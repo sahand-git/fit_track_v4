@@ -51,3 +51,48 @@ export async function syncStepsForDate(
   await saveTotal(date, total);
   return total;
 }
+
+export interface StepCaloriePillData {
+  steps: number;
+  burnedKcal: number;
+  stepGoal: number;
+  isGoalMet: boolean;
+  formattedText: string;
+  isOfflineOrUnavailable: boolean;
+}
+
+/**
+ * Pure calculation logic for the Dashboard step-calorie deduction pill.
+ * Formats active steps and net calorie burn deduction against the daily calorie budget.
+ */
+export function formatStepCaloriePill(
+  steps: number | null | undefined,
+  weightKg: number = 70,
+  stepGoal: number = 8000,
+  t: (key: string) => string = (k) => k,
+  isOffline: boolean = false
+): StepCaloriePillData {
+  const isOfflineOrUnavailable = isOffline || steps === null || steps === undefined;
+  const safeSteps = Math.max(0, Number.isFinite(steps) ? (steps as number) : 0);
+  const safeGoal = Math.max(1, Number.isFinite(stepGoal) ? stepGoal : 8000);
+  const burnedKcal = estimateStepCalories(safeSteps, weightKg);
+  const isGoalMet = safeSteps >= safeGoal;
+
+  let formattedText: string;
+  if (isOfflineOrUnavailable && safeSteps === 0) {
+    formattedText = t('Steps unavailable offline');
+  } else if (safeSteps === 0) {
+    formattedText = `0 ${t('steps')} · 0 ${t('kcal')}`;
+  } else {
+    formattedText = `-${burnedKcal} ${t('kcal from steps')}`;
+  }
+
+  return {
+    steps: safeSteps,
+    burnedKcal,
+    stepGoal: safeGoal,
+    isGoalMet,
+    formattedText,
+    isOfflineOrUnavailable,
+  };
+}

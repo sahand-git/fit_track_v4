@@ -18,6 +18,7 @@ export type SupportedNutrientKey =
   | 'protein'
   | 'carbs'
   | 'fat'
+  | 'water'
   | 'fiber'
   | 'sugar'
   | 'sodium'
@@ -36,6 +37,7 @@ export const ORDERED_NUTRIENT_KEYS: SupportedNutrientKey[] = [
   'protein',
   'carbs',
   'fat',
+  'water',
   'fiber',
   'sugar',
   'vitaminA',
@@ -53,7 +55,7 @@ export const ORDERED_NUTRIENT_KEYS: SupportedNutrientKey[] = [
 export interface NutrientMetadata {
   key: SupportedNutrientKey;
   label: string;
-  unit: 'kcal' | 'g' | 'mg' | 'mcg';
+  unit: 'kcal' | 'g' | 'mg' | 'mcg' | 'L';
   colorToken: ThemeColorKey;
   defaultTarget: number;
   targetType?: DriTargetType | 'CDRR' | 'Limit' | string;
@@ -189,6 +191,19 @@ export function getNutrientMetadata(
         description: 'Essential for hormone production and fat-soluble vitamin absorption.',
         foodSources: 'Olive oil, avocados, nuts, seeds, fatty fish, eggs.',
       };
+    case 'water': {
+      const glasses = profile?.waterTargetGlasses ?? 8;
+      const defaultLiters = Math.round(((glasses * 250) / 1000) * 10) / 10;
+      return {
+        key: 'water',
+        label: 'Water',
+        unit: 'L',
+        colorToken: 'water',
+        defaultTarget: defaultLiters,
+        description: 'Crucial for cellular hydration, nutrient transport, joint lubrication, and physical performance.',
+        foodSources: 'Water, tea, beverages, hydrating fruits and vegetables.',
+      };
+    }
     case 'fiber': {
       const dri = getDriTarget('fiber', profile?.age, profile?.gender);
       return {
@@ -310,13 +325,60 @@ export function calculateNutrientDayProgress(
   nutrientKey: SupportedNutrientKey,
   meals: LoggedMeal[] = [],
   supplements: LoggedDailySupplement[] = [],
-  profile?: UserProfile
+  profile?: UserProfile,
+  waterGlasses?: number
 ): NutrientDayProgress {
   const meta = getNutrientMetadata(nutrientKey, profile);
   const customTarget = profile?.customNutrientGoals?.[nutrientKey];
   const isMinor = meta.isMinor ?? false;
   const isCustomTarget = typeof customTarget === 'number' && customTarget > 0;
   const isLimitNutrient = Boolean(meta.isLimitNutrient || nutrientKey === 'sodium' || nutrientKey === 'sugar');
+
+  if (nutrientKey === 'water') {
+    const target = isCustomTarget ? customTarget : meta.defaultTarget;
+    const current = Math.round((((waterGlasses ?? 0) * 250) / 1000) * 10) / 10;
+    const remaining = Math.max(0, Math.round((target - current) * 10) / 10);
+    const percent = target > 0 ? Math.round((current / target) * 100) : 0;
+    const status: NutrientDayProgress['status'] =
+      percent >= 100 ? 'optimal' : percent >= 75 ? 'good' : 'under';
+    const contributingItems: NutrientContributor[] = [];
+    if (current > 0) {
+      contributingItems.push({
+        id: 'water-log',
+        name: 'Water Intake',
+        mealType: 'water',
+        amount: current,
+        unit: 'L',
+        percentage: 100,
+        isMissing: false,
+      });
+    }
+    return {
+      key: 'water',
+      label: 'Water',
+      unit: 'L',
+      colorToken: 'water',
+      target,
+      hasTarget: true,
+      isCustomTarget,
+      current,
+      remaining,
+      foodAmount: current,
+      supplementAmount: 0,
+      percent,
+      hasData: true,
+      isIncomplete: false,
+      missingCount: 0,
+      foodsWithDataCount: meals.length,
+      totalMealsCount: meals.length,
+      dataCompletenessText: '100%',
+      contributors: contributingItems,
+      missingItems: [],
+      status,
+      description: meta.description,
+      foodSources: meta.foodSources,
+    };
+  }
 
   // Determine hasTarget:
   // For minors (<19), no adult targets exist unless user sets a custom goal.

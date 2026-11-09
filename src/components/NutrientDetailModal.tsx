@@ -16,7 +16,6 @@ import {
   Edit2,
   Check,
   RotateCcw,
-  AlertCircle,
   Sparkles,
   Info,
   Pill,
@@ -26,8 +25,6 @@ import {
   SupportedNutrientKey,
   ORDERED_NUTRIENT_KEYS,
   calculateNutrientDayProgress,
-  formattedNutrientValue,
-  formatDataCompleteness,
   formatIntakeBreakdown,
 } from '../utils/nutrientTotals';
 import { useLanguage } from '../i18n/I18nContext';
@@ -43,6 +40,7 @@ interface NutrientDetailModalProps {
   initialNutrientKey?: SupportedNutrientKey | string;
   meals: LoggedMeal[];
   supplements?: LoggedDailySupplement[];
+  waterGlasses?: number;
   profile?: UserProfile;
   onClose: () => void;
   onSaveGoal?: (nutrientKey: SupportedNutrientKey, newTarget: number) => Promise<void> | void;
@@ -54,6 +52,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   initialNutrientKey = 'calories',
   meals = [],
   supplements = [],
+  waterGlasses,
   profile,
   onClose,
   onSaveGoal,
@@ -95,8 +94,8 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
   const [isSavingGoal, setIsSavingGoal] = useState(false);
 
   const progress = useMemo(() => {
-    return calculateNutrientDayProgress(activeKey, meals, supplements, profile);
-  }, [activeKey, meals, supplements, profile]);
+    return calculateNutrientDayProgress(activeKey, meals, supplements, profile, waterGlasses);
+  }, [activeKey, meals, supplements, profile, waterGlasses]);
 
   const intakeBreakdown = useMemo(() => {
     return formatIntakeBreakdown(progress, t);
@@ -209,7 +208,7 @@ export const NutrientDetailModal: React.FC<NutrientDetailModalProps> = ({
             >
               {ORDERED_NUTRIENT_KEYS.map((key) => {
                 const isActive = key === activeKey;
-                const tabMeta = calculateNutrientDayProgress(key, meals, supplements, profile);
+                const tabMeta = calculateNutrientDayProgress(key, meals, supplements, profile, waterGlasses);
                 const tabColor = theme.colors[tabMeta.colorToken] || theme.colors.primary;
                 return (
                   <TouchableOpacity

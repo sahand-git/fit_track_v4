@@ -1,4 +1,11 @@
-import { getLocalDateBounds, normalizeStepTotal, syncStepsForDate, estimateStepCalories, KCAL_PER_STEP_BASE } from './stepTrackingCore';
+import {
+  getLocalDateBounds,
+  normalizeStepTotal,
+  syncStepsForDate,
+  estimateStepCalories,
+  KCAL_PER_STEP_BASE,
+  formatStepCaloriePill,
+} from './stepTrackingCore';
 
 function assert(value: boolean, message: string): void { if (!value) throw new Error(message); }
 
@@ -29,6 +36,46 @@ async function run() {
   assert(estimateStepCalories(100, 105) === 6, '100 steps for heavier user scales proportionally');
   assert(estimateStepCalories(0, 70) === 0, '0 steps burns 0 kcal');
   assert(estimateStepCalories(-50, 70) === 0, 'Negative steps clamped to 0');
+
+  // Step-Calorie Deduction Pill Pure Logic Tests
+  // 1. Zero-step state
+  const zeroState = formatStepCaloriePill(0, 70, 8000);
+  assert(zeroState.steps === 0, 'Zero steps gives 0 count');
+  assert(zeroState.burnedKcal === 0, 'Zero steps gives 0 burned kcal');
+  assert(zeroState.isGoalMet === false, 'Zero steps means goal is not met');
+  assert(zeroState.isOfflineOrUnavailable === false, 'Explicit 0 is not marked offline');
+  assert(zeroState.formattedText.includes('0'), 'Zero state text formatted correctly');
+
+  // 2. Goal-met state
+  const goalMetState = formatStepCaloriePill(10000, 70, 8000);
+  assert(goalMetState.steps === 10000, 'Goal-met state retains step count');
+  assert(goalMetState.burnedKcal === 420, '10,000 steps burned kcal is 420');
+  assert(goalMetState.isGoalMet === true, 'Goal is met when steps >= goal');
+  assert(goalMetState.formattedText.includes('-420'), 'Formatted deduction shows -420 kcal');
+
+  // Exactly at goal
+  const exactGoalState = formatStepCaloriePill(8000, 70, 8000);
+  assert(exactGoalState.isGoalMet === true, 'Goal met when steps exactly equals goal');
+
+  // 3. Offline / unavailable state
+  const offlineState = formatStepCaloriePill(null, 70, 8000, undefined, true);
+  assert(offlineState.isOfflineOrUnavailable === true, 'Offline flag set correctly');
+  assert(offlineState.steps === 0, 'Null steps safe fallback to 0');
+  assert(offlineState.burnedKcal === 0, 'Null steps burned kcal fallback to 0');
+  assert(offlineState.isGoalMet === false, 'Offline fallback isGoalMet is false');
+  assert(offlineState.formattedText === 'Steps unavailable offline', 'Offline state shows offline message');
+
+  // Cached steps in offline mode
+  const cachedOfflineState = formatStepCaloriePill(5000, 70, 8000, undefined, true);
+  assert(cachedOfflineState.isOfflineOrUnavailable === true, 'Cached offline state flagged');
+  assert(cachedOfflineState.steps === 5000, 'Cached offline preserves steps');
+  assert(cachedOfflineState.burnedKcal === 210, 'Cached offline computes calories');
+  assert(cachedOfflineState.isGoalMet === false, '5,000 is below 8,000 goal');
+
+  // 4. Boundary and negative steps clamping
+  const negativeState = formatStepCaloriePill(-500, 70, 8000);
+  assert(negativeState.steps === 0, 'Negative steps clamped to 0');
+  assert(negativeState.burnedKcal === 0, 'Negative steps yields 0 kcal');
 
   console.log('Step tracking service core tests passed.');
 }
