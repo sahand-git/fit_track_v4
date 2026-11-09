@@ -11,7 +11,6 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
-import { useIsRTL } from '../hooks/useIsRTL';
 import * as Haptics from 'expo-haptics';
 import { AnimatedPressable } from './AnimatedPressable';
 import {
@@ -43,15 +42,15 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
-  const isRtl = useIsRTL();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (key: string) => translate(language, key);
   const scrollViewRef = useRef<ScrollView>(null);
+  const contentWidthRef = useRef<number>(0);
+  const layoutWidthRef = useRef<number>(0);
 
   const todayStr = useMemo(() => getTodayDateString(), []);
 
-  // Generate 7-day strip: always ends on today unless selectedDate is outside the 7-day window
-  // In RTL languages (Kurdish, Arabic), reverse so Today is at index 0 and opens in full view immediately
+  // Generate 7-day strip ending on today (Today is always at the right end)
   const dates = useMemo(() => {
     const list: string[] = [];
     const baseDate = selectedDate || todayStr;
@@ -70,42 +69,39 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
     for (let i = 6; i >= 0; i--) {
       list.push(addDaysToDateString(endDate, -i));
     }
-    if (isRtl) {
-      return list.reverse();
-    }
     return list;
-  }, [todayStr, selectedDate, isRtl]);
+  }, [todayStr, selectedDate]);
 
   const scrollToSelected = useCallback((animated: boolean = false) => {
     if (!scrollViewRef.current) return;
     const selectedIdx = dates.indexOf(selectedDate);
+    const isTargetToday = selectedIdx === -1 || selectedIdx === dates.length - 1;
 
-    // Each item is 62px width + 6px gap = 68px step
-    if (isRtl) {
-      const targetIdx = selectedIdx >= 0 ? selectedIdx : 0;
-      if (targetIdx === 0) {
-        scrollViewRef.current.scrollTo({ x: 0, animated });
+    // Today is at the right end: scroll to max offset so Today is immediately visible on the right
+    if (isTargetToday) {
+      if (contentWidthRef.current > 0 && layoutWidthRef.current > 0) {
+        const maxOffset = Math.max(0, contentWidthRef.current - layoutWidthRef.current);
+        scrollViewRef.current.scrollTo({ x: maxOffset, animated });
       } else {
-        const targetOffset = Math.max(0, targetIdx * 68 - 30);
-        scrollViewRef.current.scrollTo({ x: targetOffset, animated });
+        scrollViewRef.current.scrollToEnd({ animated });
       }
     } else {
-      const targetIdx = selectedIdx >= 0 ? selectedIdx : dates.length - 1;
-      if (targetIdx === dates.length - 1) {
-        scrollViewRef.current.scrollToEnd({ animated });
-      } else {
-        const targetOffset = Math.max(0, targetIdx * 68 - 30);
-        scrollViewRef.current.scrollTo({ x: targetOffset, animated });
-      }
+      // Each item is 62px width + 6px gap = 68px step
+      const targetOffset = Math.max(0, selectedIdx * 68 - 30);
+      scrollViewRef.current.scrollTo({ x: targetOffset, animated });
     }
-  }, [dates, selectedDate, isRtl]);
+  }, [dates, selectedDate]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      scrollToSelected(false);
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [selectedDate, language, isRtl, scrollToSelected]);
+    const t1 = setTimeout(() => scrollToSelected(false), 20);
+    const t2 = setTimeout(() => scrollToSelected(false), 80);
+    const t3 = setTimeout(() => scrollToSelected(false), 200);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [selectedDate, language, scrollToSelected]);
 
   const handleSelect = (dateStr: string) => {
     if (dateStr === selectedDate) return;
@@ -114,14 +110,21 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
   };
 
   return (
-    <View style={[styles.container, isRtl && styles.containerRtl]}>
+    <View style={styles.container}>
       <ScrollView
-        key={`week-ribbon-${language}-${isRtl ? 'rtl' : 'ltr'}`}
+        key={`week-ribbon-${language}`}
         ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        onContentSizeChange={() => scrollToSelected(false)}
+        onLayout={(e) => {
+          layoutWidthRef.current = e.nativeEvent.layout.width;
+          scrollToSelected(false);
+        }}
+        onContentSizeChange={(w) => {
+          contentWidthRef.current = w;
+          scrollToSelected(false);
+        }}
       >
         {dates.map((dateStr) => {
           const dateObj = parseLocalDateString(dateStr);
@@ -210,9 +213,6 @@ const createStyles = (theme: ThemeType) =>
       paddingHorizontal: 8,
       backgroundColor: theme.colors.background,
       gap: 6,
-    },
-    containerRtl: {
-      flexDirection: 'row-reverse',
     },
     scrollContent: {
       flexDirection: 'row',
