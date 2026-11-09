@@ -182,6 +182,18 @@ const synthetic1000Foods: FoodItem[] = Array.from({ length: 1000 }, (_, i) => ({
   source: 'verified_database',
 }));
 
+// Warmup JIT
+filterFoodCatalog({
+  searchQuery: 'Food Item 1',
+  foodFilter: 'all',
+  recentFoods: [],
+  frequentFoods: [],
+  favoriteFoods: [],
+  customFoods: synthetic1000Foods.slice(0, 50),
+  barcodeCache: [],
+  t: mockT,
+});
+
 const searchStart = performance.now();
 const searchFiltered1000 = filterFoodCatalog({
   searchQuery: 'Food Item 99',

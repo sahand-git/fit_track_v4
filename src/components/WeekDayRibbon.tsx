@@ -69,22 +69,35 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
     for (let i = 6; i >= 0; i--) {
       list.push(addDaysToDateString(endDate, -i));
     }
+    if (isRtl) {
+      return list.reverse();
+    }
     return list;
-  }, [todayStr, selectedDate]);
+  }, [todayStr, selectedDate, isRtl]);
 
   const scrollToSelected = useCallback((animated: boolean = false) => {
     if (!scrollViewRef.current) return;
     const selectedIdx = dates.indexOf(selectedDate);
-    const targetIdx = selectedIdx >= 0 ? selectedIdx : dates.length - 1;
 
-    // Each item is 72px width + 8px gap = 80px total step
-    if (targetIdx === dates.length - 1) {
-      scrollViewRef.current.scrollToEnd({ animated });
+    if (isRtl) {
+      const targetIdx = selectedIdx >= 0 ? selectedIdx : 0;
+      if (targetIdx === 0) {
+        scrollViewRef.current.scrollTo({ x: 0, animated });
+      } else {
+        const targetOffset = Math.max(0, targetIdx * 80 - 40);
+        scrollViewRef.current.scrollTo({ x: targetOffset, animated });
+      }
     } else {
-      const targetOffset = Math.max(0, targetIdx * 80 - 40);
-      scrollViewRef.current.scrollTo({ x: targetOffset, animated });
+      const targetIdx = selectedIdx >= 0 ? selectedIdx : dates.length - 1;
+      // Each item is 72px width + 8px gap = 80px total step
+      if (targetIdx === dates.length - 1) {
+        scrollViewRef.current.scrollToEnd({ animated });
+      } else {
+        const targetOffset = Math.max(0, targetIdx * 80 - 40);
+        scrollViewRef.current.scrollTo({ x: targetOffset, animated });
+      }
     }
-  }, [dates, selectedDate]);
+  }, [dates, selectedDate, isRtl]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
