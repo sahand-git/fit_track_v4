@@ -51,6 +51,7 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
   const todayStr = useMemo(() => getTodayDateString(), []);
 
   // Generate 7-day strip: always ends on today unless selectedDate is outside the 7-day window
+  // In RTL languages (Kurdish, Arabic), reverse so Today is at index 0 and opens in full view immediately
   const dates = useMemo(() => {
     const list: string[] = [];
     const baseDate = selectedDate || todayStr;
@@ -79,21 +80,21 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
     if (!scrollViewRef.current) return;
     const selectedIdx = dates.indexOf(selectedDate);
 
+    // Each item is 62px width + 6px gap = 68px step
     if (isRtl) {
       const targetIdx = selectedIdx >= 0 ? selectedIdx : 0;
       if (targetIdx === 0) {
         scrollViewRef.current.scrollTo({ x: 0, animated });
       } else {
-        const targetOffset = Math.max(0, targetIdx * 80 - 40);
+        const targetOffset = Math.max(0, targetIdx * 68 - 30);
         scrollViewRef.current.scrollTo({ x: targetOffset, animated });
       }
     } else {
       const targetIdx = selectedIdx >= 0 ? selectedIdx : dates.length - 1;
-      // Each item is 72px width + 8px gap = 80px total step
       if (targetIdx === dates.length - 1) {
         scrollViewRef.current.scrollToEnd({ animated });
       } else {
-        const targetOffset = Math.max(0, targetIdx * 80 - 40);
+        const targetOffset = Math.max(0, targetIdx * 68 - 30);
         scrollViewRef.current.scrollTo({ x: targetOffset, animated });
       }
     }
@@ -102,9 +103,9 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       scrollToSelected(false);
-    }, 60);
+    }, 50);
     return () => clearTimeout(timer);
-  }, [selectedDate, language, scrollToSelected]);
+  }, [selectedDate, language, isRtl, scrollToSelected]);
 
   const handleSelect = (dateStr: string) => {
     if (dateStr === selectedDate) return;
@@ -115,6 +116,7 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
   return (
     <View style={[styles.container, isRtl && styles.containerRtl]}>
       <ScrollView
+        key={`week-ribbon-${language}-${isRtl ? 'rtl' : 'ltr'}`}
         ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -152,7 +154,7 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.72}
+                minimumFontScale={0.6}
               >
                 {dayName}
               </Text>
@@ -192,7 +194,7 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
           accessibilityLabel={t('Choose date')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Calendar size={20} color={theme.colors.primary} />
+          <Calendar size={18} color={theme.colors.primary} />
         </TouchableOpacity>
       )}
     </View>
@@ -204,10 +206,10 @@ const createStyles = (theme: ThemeType) =>
     container: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 8,
+      paddingVertical: 4,
       paddingHorizontal: 8,
       backgroundColor: theme.colors.background,
-      gap: 8,
+      gap: 6,
     },
     containerRtl: {
       flexDirection: 'row-reverse',
@@ -215,20 +217,20 @@ const createStyles = (theme: ThemeType) =>
     scrollContent: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: 6,
       paddingHorizontal: 2,
     },
     dayPill: {
-      width: 72,
-      height: 78,
-      borderRadius: 18,
+      width: 62,
+      height: 60,
+      borderRadius: 14,
       backgroundColor: theme.colors.surface,
       borderWidth: 1,
       borderColor: theme.colors.border,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 8,
-      paddingHorizontal: 4,
+      paddingVertical: 5,
+      paddingHorizontal: 2,
       ...theme.shadow.subtle,
     },
     dayPillSelected: {
@@ -241,10 +243,10 @@ const createStyles = (theme: ThemeType) =>
       borderWidth: 1.5,
     },
     dayAbbr: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '700',
-      color: theme.colors.textMuted,
-      marginBottom: 4,
+      color: theme.colors.textSecondary,
+      marginBottom: 2,
       textAlign: 'center',
       includeFontPadding: false,
     },
@@ -255,12 +257,12 @@ const createStyles = (theme: ThemeType) =>
       color: theme.colors.primary,
     },
     dayNum: {
-      fontSize: 20,
+      fontSize: 18,
       fontWeight: '800',
       color: theme.colors.textPrimary,
       textAlign: 'center',
       includeFontPadding: false,
-      lineHeight: 24,
+      lineHeight: 22,
     },
     dayNumSelected: {
       color: theme.colors.textInverted,
@@ -269,15 +271,15 @@ const createStyles = (theme: ThemeType) =>
       color: theme.colors.primary,
     },
     todayDot: {
-      width: 5,
-      height: 5,
-      borderRadius: 2.5,
-      marginTop: 4,
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      marginTop: 2,
     },
     emptyDot: {
-      width: 5,
-      height: 5,
-      marginTop: 4,
+      width: 4,
+      height: 4,
+      marginTop: 2,
     },
     todayDotSelected: {
       backgroundColor: theme.colors.textInverted,
@@ -286,9 +288,9 @@ const createStyles = (theme: ThemeType) =>
       backgroundColor: theme.colors.primary,
     },
     calendarBtn: {
-      width: 44,
-      height: 78,
-      borderRadius: 18,
+      width: 38,
+      height: 60,
+      borderRadius: 14,
       backgroundColor: theme.colors.surface,
       borderWidth: 1,
       borderColor: theme.colors.border,

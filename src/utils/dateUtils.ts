@@ -80,6 +80,25 @@ const ARABIC_MONTHS = [
   'ديسمبر',
 ];
 
+export function formatFullCalendarDate(dateStr: string, language: AppLanguage = 'en'): string {
+  const date = parseLocalDateString(dateStr);
+  if (language === 'ckb') {
+    const dayOfWeek = KURDISH_DAYS_FULL[date.getDay()] || '';
+    const monthName = KURDISH_MONTHS[date.getMonth()] || '';
+    return `${dayOfWeek}، ${date.getDate()}ی ${monthName}`;
+  }
+  if (language === 'ar') {
+    const dayOfWeek = ARABIC_DAYS_SHORT[date.getDay()] || '';
+    const monthName = ARABIC_MONTHS[date.getMonth()] || '';
+    return `${dayOfWeek}، ${date.getDate()} ${monthName}`;
+  }
+  try {
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  } catch {
+    return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+}
+
 export function formatDisplayDate(dateStr: string, language: AppLanguage = 'en'): string {
   const today = getTodayDateString();
   const yesterday = addDaysToDateString(today, -1);

@@ -59,7 +59,7 @@ import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { getScopedStorageKey, saveUserProfile } from '../storage/storage';
-import { formatDisplayDate, getTodayDateString } from '../utils/dateUtils';
+import { formatDisplayDate, formatFullCalendarDate, getTodayDateString } from '../utils/dateUtils';
 import { getWorkoutDisplayMeta } from '../utils/workoutDisplay';
 import { calculateActivityBudget } from '../utils/activityBudget';
 import { formatKcal } from '../utils/formatKcal';
@@ -277,8 +277,10 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     [t]
   );
 
-  const todayLabel = formatDisplayDate(log.date, language);
-  const isFuture = log.date > getTodayDateString();
+  const todayStr = useMemo(() => getTodayDateString(), []);
+  const todayLabel = formatFullCalendarDate(log.date, language);
+  const screenTitle = log.date === todayStr ? t('Today') : formatDisplayDate(log.date, language);
+
 
   const takenSupplementIds = useMemo(
     () => new Set((log.supplements || []).filter((c) => c.taken).map((c) => c.itemId)),
@@ -419,7 +421,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           <View style={{ flex: 1 }}>
             <Text style={styles.dateLabel}>{todayLabel}</Text>
             <View style={styles.titleRow}>
-              <Text style={styles.screenTitle}>{t('Today')}</Text>
+              <Text style={styles.screenTitle}>{screenTitle}</Text>
               <StreakBadge streak={streak} />
             </View>
           </View>
