@@ -1,51 +1,46 @@
-import React, { useMemo, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import React, { useMemo, useCallback, useEffect, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import { Calendar } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { AppText as Text } from './AppText';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { DirectionalIcon } from './DirectionalIcon';
+import { AnimatedPressable } from './AnimatedPressable';
 import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
 import { useIsRTL } from '../hooks/useIsRTL';
-import * as Haptics from 'expo-haptics';
-import { AnimatedPressable } from './AnimatedPressable';
+import { DailyLog, UserProfile } from '../types';
+import { loadLogsForDates } from '../storage/storage';
 import {
   getTodayDateString,
   parseLocalDateString,
-  formatDateToLocalString,
   addDaysToDateString,
 } from '../utils/dateUtils';
+import {
+  WEEK_FULL_DAY_KEYS,
+  WEEK_SHORT_DAY_NAMES,
+  WeekDayStatus,
+  getWeekDatesForDate,
+  formatWeekHeaderTitle,
+  evaluateWeekDayStatus,
+} from '../utils/weekCalendarCore';
 
 interface WeekDayRibbonProps {
   selectedDate: string;
   onSelectDate: (dateStr: string) => void;
   onOpenDatePicker?: () => void;
+  currentLog?: DailyLog;
+  profile?: UserProfile;
 }
 
-const SHORT_DAY_NAMES: Record<string, string[]> = {
-  en: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'],
-  ar: ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'],
-  ckb: ['یەک', 'دوو', 'سێ', 'چوار', 'پێنج', 'هەینی', 'شەم'],
-};
-
-const FULL_DAY_KEYS = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-] as const;
-
-export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
+export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = React.memo(({
   selectedDate,
   onSelectDate,
   onOpenDatePicker,
+  currentLog,
+  profile,
 }) => {
   const language = useLanguage();
   const { theme } = useTheme();
@@ -53,51 +48,59 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = useCallback((key: string) => translate(language, key), [language]);
 
-  const todayStr = useMemo(() => getTodayDateString(), []);
+  const todayStr = getTodayDateString();
   const activeDate = selectedDate || todayStr;
 
-  // In Arabic and Kurdish, week starts on Saturday (day 6). In English, on Sunday (day 0).
-  const weekStartDay = (language === 'ar' || language === 'ckb') ? 6 : 0;
+  const weekDates = useMemo(
+    () => getWeekDatesForDate(activeDate, language),
+    [activeDate, language]
+  );
 
-  // Generate the 7 days of the calendar week containing activeDate
-  const weekDates = useMemo(() => {
-    const target = parseLocalDateString(activeDate);
-    const dayOfWeek = target.getDay(); // 0 = Sun ... 6 = Sat
-    const diff = (dayOfWeek - weekStartDay + 7) % 7;
-    const start = new Date(target);
-    start.setDate(target.getDate() - diff);
+  const isCurrentWeek = useMemo(() => weekDates.includes(todayStr), [weekDates, todayStr]);
+  const isViewingToday = activeDate === todayStr;
 
-    const list: string[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      list.push(formatDateToLocalString(d));
-    }
-    return list;
-  }, [activeDate, weekStartDay]);
+  const { monthYearLabel, weekRangeLabel } = useMemo(
+    () => formatWeekHeaderTitle(activeDate, weekDates, language),
+    [activeDate, weekDates, language]
+  );
 
-  const isCurrentWeek = useMemo(() => {
-    return weekDates.includes(todayStr);
-  }, [weekDates, todayStr]);
+  const [weekLogs, setWeekLogs] = useState<Record<string, DailyLog>>({});
+
+  useEffect(() => {
+    let active = true;
+    loadLogsForDates(weekDates)
+      .then((logs) => {
+        if (active) setWeekLogs(logs);
+      })
+      .catch(() => {
+        // Keep previously cached logs if read fails
+      });
+    return () => {
+      active = false;
+    };
+  }, [weekDates, currentLog]);
+
+  const mergedWeekLogs = useMemo(() => {
+    if (!currentLog?.date) return weekLogs;
+    return { ...weekLogs, [currentLog.date]: currentLog };
+  }, [weekLogs, currentLog]);
 
   const handleSelect = (dateStr: string) => {
-    if (dateStr === selectedDate || dateStr > todayStr) return;
+    if (dateStr === activeDate || dateStr > todayStr) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onSelectDate(dateStr);
   };
 
   const handlePrevWeek = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    const newDate = addDaysToDateString(activeDate, -7);
-    onSelectDate(newDate);
+    onSelectDate(addDaysToDateString(activeDate, -7));
   };
 
   const handleNextWeek = () => {
+    if (isCurrentWeek) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const candidate = addDaysToDateString(activeDate, 7);
-    // Do not jump past today
-    const finalDate = candidate > todayStr ? todayStr : candidate;
-    onSelectDate(finalDate);
+    onSelectDate(candidate > todayStr ? todayStr : candidate);
   };
 
   const handleJumpToToday = () => {
@@ -105,275 +108,435 @@ export const WeekDayRibbon: React.FC<WeekDayRibbonProps> = ({
     onSelectDate(todayStr);
   };
 
-  const dayAbbrList = SHORT_DAY_NAMES[language] || SHORT_DAY_NAMES.en;
+  const dayAbbrList = WEEK_SHORT_DAY_NAMES[language] || WEEK_SHORT_DAY_NAMES.en;
+
+  const getStatusLabel = (status: WeekDayStatus): string => {
+    if (status === 'on_target') return t('On target');
+    if (status === 'partial') return t('Partial');
+    if (status === 'over_limit') return t('Over limit');
+    return '';
+  };
 
   return (
-    <View style={styles.container}>
-      {/* Week Navigation Sub-Bar */}
-      <View style={[styles.navRow, isRtl && styles.rowRtl]}>
+    <View style={styles.glassCard}>
+      {/* Top Bar: Month & Year + Week Range | Conditional Today Reset | Glass Chevrons */}
+      <View style={[styles.topBar, isRtl && styles.rowRtl]}>
         <TouchableOpacity
-          style={styles.navArrowBtn}
-          onPress={isRtl ? handleNextWeek : handlePrevWeek}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel={t('Previous week')}
-        >
-          {isRtl ? (
-            <ChevronRight size={18} color={theme.colors.textMuted} />
-          ) : (
-            <ChevronLeft size={18} color={theme.colors.textMuted} />
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.dateRangeBtn, isRtl && styles.rowRtl]}
+          style={[styles.dateTriggerPill, isRtl && styles.rowRtl]}
           onPress={onOpenDatePicker}
-          activeOpacity={0.7}
+          activeOpacity={0.75}
           accessibilityRole="button"
           accessibilityLabel={t('Choose date')}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
-          <Calendar size={14} color={theme.colors.primary} />
-          <Text style={styles.dateRangeText}>
-            {parseLocalDateString(weekDates[0]).toLocaleDateString(language === 'ckb' ? 'en-US' : language, { month: 'short', day: 'numeric' })}
-            {' – '}
-            {parseLocalDateString(weekDates[6]).toLocaleDateString(language === 'ckb' ? 'en-US' : language, { month: 'short', day: 'numeric' })}
-          </Text>
+          <View style={styles.calendarIconBadge}>
+            <Calendar size={14} color={theme.colors.emerald} />
+          </View>
+          <View style={styles.dateTitleGroup}>
+            <Text style={styles.monthYearText} numberOfLines={1}>
+              {monthYearLabel}
+            </Text>
+            <Text style={styles.weekRangeText} numberOfLines={1}>
+              {weekRangeLabel}
+            </Text>
+          </View>
         </TouchableOpacity>
 
-        <View style={styles.navRightGroup}>
-          {!isCurrentWeek && (
+        <View style={[styles.topControlsRow, isRtl && styles.rowRtl]}>
+          {!isViewingToday && (
             <TouchableOpacity
-              style={styles.todayJumpBtn}
+              style={styles.todayResetPill}
               onPress={handleJumpToToday}
+              activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel={t('Today')}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
-              <Text style={styles.todayJumpText}>{t('Today')}</Text>
+              <Text style={styles.todayResetText} numberOfLines={1}>
+                {t('Today')}
+              </Text>
             </TouchableOpacity>
           )}
 
+          {/* Previous Week Chevron (visually Left in LTR, Right in RTL via rowRtl + DirectionalIcon) */}
           <TouchableOpacity
-            style={[styles.navArrowBtn, isCurrentWeek && styles.navArrowBtnDisabled]}
-            onPress={isRtl ? handlePrevWeek : handleNextWeek}
+            style={styles.glassChevronBtn}
+            onPress={handlePrevWeek}
+            activeOpacity={0.75}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Previous week')}
+          >
+            <DirectionalIcon
+              name="ChevronLeft"
+              size={16}
+              color={theme.colors.calendarDayText}
+            />
+          </TouchableOpacity>
+
+          {/* Next Week Chevron (visually Right in LTR, Left in RTL; disabled during current week) */}
+          <TouchableOpacity
+            style={[styles.glassChevronBtn, isCurrentWeek && styles.glassChevronBtnDisabled]}
+            onPress={handleNextWeek}
             disabled={isCurrentWeek}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.75}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             accessibilityRole="button"
             accessibilityLabel={t('Next week')}
           >
-            {isRtl ? (
-              <ChevronLeft size={18} color={isCurrentWeek ? theme.colors.border : theme.colors.textMuted} />
-            ) : (
-              <ChevronRight size={18} color={isCurrentWeek ? theme.colors.border : theme.colors.textMuted} />
-            )}
+            <DirectionalIcon
+              name="ChevronRight"
+              size={16}
+              color={isCurrentWeek ? theme.colors.textMuted : theme.colors.calendarDayText}
+            />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* 7-Cell Responsive Week Row (Picture 2 Reference) */}
+      {/* 7-Day High-Contrast Capsule Row */}
       <View style={[styles.weekGrid, isRtl && styles.rowRtl]}>
         {weekDates.map((dateStr) => {
           const dateObj = parseLocalDateString(dateStr);
           const dayOfWeekIndex = dateObj.getDay();
-          const dayAbbr = dayAbbrList[dayOfWeekIndex] || SHORT_DAY_NAMES.en[dayOfWeekIndex];
-          const dayNameKey = FULL_DAY_KEYS[dayOfWeekIndex];
-          const fullDayName = t(dayNameKey);
+          const dayAbbr = dayAbbrList[dayOfWeekIndex] || WEEK_SHORT_DAY_NAMES.en[dayOfWeekIndex];
+          const fullDayName = t(WEEK_FULL_DAY_KEYS[dayOfWeekIndex]);
           const dayNum = dateObj.getDate();
-          const isSelected = dateStr === selectedDate;
+          const isSelected = dateStr === activeDate;
           const isToday = dateStr === todayStr;
           const isFuture = dateStr > todayStr;
 
+          const dayStatus: WeekDayStatus = isFuture
+            ? 'none'
+            : evaluateWeekDayStatus(mergedWeekLogs[dateStr], profile);
+          const statusLabel = getStatusLabel(dayStatus);
+
           return (
-            <AnimatedPressable
+            <View
               key={dateStr}
               style={[
-                styles.dayCell,
-                isSelected && styles.dayCellSelected,
-                !isSelected && isToday && styles.dayCellToday,
-                isFuture && styles.dayCellFuture,
+                styles.dayColWrapper,
+                isSelected && styles.dayColSelectedGlow,
               ]}
-              onPress={() => handleSelect(dateStr)}
-              disabled={isFuture}
-              minScale={0.93}
-              accessibilityRole="button"
-              accessibilityLabel={`${fullDayName} ${dayNum}${isToday ? `, ${t('Today')}` : ''}${isSelected ? `, ${t('Selected')}` : ''}`}
-              accessibilityState={{ selected: isSelected, disabled: isFuture }}
             >
-              <Text
+              <AnimatedPressable
                 style={[
-                  styles.dayAbbr,
-                  isSelected && styles.dayAbbrSelected,
-                  !isSelected && isToday && styles.dayAbbrToday,
-                  isFuture && styles.textFuture,
+                  styles.dayCell,
+                  isSelected && styles.dayCellSelected,
+                  !isSelected && isToday && styles.dayCellToday,
+                  !isSelected && isFuture && styles.dayCellFuture,
                 ]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
+                onPress={() => handleSelect(dateStr)}
+                disabled={isFuture}
+                minScale={0.94}
+                hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
+                accessibilityRole="button"
+                accessibilityLabel={`${fullDayName} ${dayNum}${isToday ? `, ${t('Today')}` : ''}${isSelected ? `, ${t('Selected')}` : ''}${statusLabel ? `, ${statusLabel}` : ''}`}
+                accessibilityState={{ selected: isSelected, disabled: isFuture }}
               >
-                {dayAbbr}
-              </Text>
-              <Text
-                style={[
-                  styles.dayNum,
-                  isSelected && styles.dayNumSelected,
-                  !isSelected && isToday && styles.dayNumToday,
-                  isFuture && styles.textFuture,
-                ]}
-                numberOfLines={1}
-              >
-                {dayNum}
-              </Text>
-              {isToday && (
-                <View
+                {isSelected && (
+                  <View style={styles.gradientBackdrop} pointerEvents="none">
+                    <Svg
+                      width="100%"
+                      height="100%"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                    >
+                      <Defs>
+                        <LinearGradient id={`selGrad_${dateStr}`} x1="0" y1="0" x2="1" y2="1">
+                          <Stop offset="0" stopColor={theme.colors.calendarSelectedStart} />
+                          <Stop offset="1" stopColor={theme.colors.calendarSelectedEnd} />
+                        </LinearGradient>
+                      </Defs>
+                      <Rect
+                        x="0"
+                        y="0"
+                        width="100"
+                        height="100"
+                        rx="16"
+                        ry="16"
+                        fill={`url(#selGrad_${dateStr})`}
+                      />
+                    </Svg>
+                  </View>
+                )}
+
+                <Text
                   style={[
-                    styles.todayIndicatorDot,
-                    isSelected ? styles.todayIndicatorDotSelected : styles.todayIndicatorDotUnselected,
+                    styles.dayAbbr,
+                    language === 'ar' && styles.dayAbbrArabic,
+                    isSelected && styles.dayAbbrSelected,
+                    !isSelected && isToday && styles.dayAbbrToday,
+                    !isSelected && isFuture && styles.dayAbbrFuture,
                   ]}
-                />
-              )}
-            </AnimatedPressable>
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.62}
+                  maxFontSizeMultiplier={1.2}
+                >
+                  {dayAbbr}
+                </Text>
+
+                <Text
+                  style={[
+                    styles.dayNum,
+                    isSelected && styles.dayNumSelected,
+                    !isSelected && isToday && styles.dayNumToday,
+                    !isSelected && isFuture && styles.dayNumFuture,
+                  ]}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.2}
+                >
+                  {dayNum}
+                </Text>
+
+                {/* Status Indicator Slot (fixed height keeps all 7 date rows aligned) */}
+                <View style={styles.statusDotSlot}>
+                  {dayStatus !== 'none' ? (
+                    <View
+                      style={[
+                        styles.statusDot,
+                        dayStatus === 'on_target' && (isSelected ? styles.dotOnTargetSelected : styles.dotOnTarget),
+                        dayStatus === 'partial' && styles.dotPartial,
+                        dayStatus === 'over_limit' && styles.dotOverLimit,
+                        isSelected && styles.statusDotSelectedBorder,
+                      ]}
+                    />
+                  ) : isToday && !isSelected ? (
+                    <View style={styles.dotTodayOutline} />
+                  ) : null}
+                </View>
+              </AnimatedPressable>
+            </View>
           );
         })}
       </View>
     </View>
   );
-};
+});
+WeekDayRibbon.displayName = 'WeekDayRibbon';
 
 const createStyles = (theme: ThemeType) =>
   StyleSheet.create({
-    container: {
-      marginVertical: 6,
-      paddingHorizontal: 2,
-    },
-    navRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 4,
-      marginBottom: 8,
+    glassCard: {
+      backgroundColor: theme.colors.glassCardBg,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: theme.colors.glassCardBorder,
+      paddingVertical: 10,
+      paddingHorizontal: 10,
+      marginTop: 2,
+      marginBottom: 10,
+      ...theme.shadow.subtle,
     },
     rowRtl: {
       flexDirection: 'row-reverse',
     },
-    navArrowBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+      gap: 8,
+    },
+    dateTriggerPill: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      minWidth: 0,
+    },
+    calendarIconBadge: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      backgroundColor: theme.colors.glassControlBg,
+      borderWidth: 1,
+      borderColor: theme.colors.glassControlBorder,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.colors.surfaceSubtle,
     },
-    navArrowBtnDisabled: {
-      opacity: 0.35,
+    dateTitleGroup: {
+      flex: 1,
+      minWidth: 0,
     },
-    dateRangeBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: theme.radius.full,
-      backgroundColor: theme.colors.surfaceSubtle,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    dateRangeText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.colors.textPrimary,
-    },
-    navRightGroup: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    todayJumpBtn: {
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: theme.radius.full,
-      backgroundColor: theme.colors.primaryLight,
-      borderWidth: 1,
-      borderColor: theme.colors.primary,
-    },
-    todayJumpText: {
-      fontSize: 11,
+    monthYearText: {
+      fontFamily: theme.fonts.sans,
+      fontSize: 13,
       fontWeight: '700',
-      color: theme.colors.primary,
+      color: theme.colors.calendarDayText,
+      includeFontPadding: false,
+    },
+    weekRangeText: {
+      fontFamily: theme.fonts.sans,
+      fontSize: 12,
+      fontWeight: '500',
+      color: theme.colors.calendarDaySubText,
+      marginTop: 1,
+      includeFontPadding: false,
+    },
+    topControlsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexShrink: 0,
+    },
+    todayResetPill: {
+      paddingHorizontal: 10,
+      height: 30,
+      borderRadius: theme.radius.full,
+      backgroundColor: theme.colors.budgetOnBg,
+      borderWidth: 1,
+      borderColor: theme.colors.budgetOnBorder,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    todayResetText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.colors.budgetOnText,
+      includeFontPadding: false,
+    },
+    glassChevronBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.glassControlBg,
+      borderWidth: 1,
+      borderColor: theme.colors.glassControlBorder,
+    },
+    glassChevronBtnDisabled: {
+      opacity: 0.45,
     },
     weekGrid: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      gap: 6,
+      gap: 4,
+    },
+    dayColWrapper: {
+      flex: 1,
+      minWidth: 0,
+      borderRadius: 14,
+    },
+    dayColSelectedGlow: {
+      shadowColor: theme.colors.calendarSelectedGlow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.42,
+      shadowRadius: 8,
+      elevation: 6,
     },
     dayCell: {
-      flex: 1,
-      height: 66,
+      width: '100%',
+      height: 60,
       borderRadius: 14,
-      backgroundColor: theme.colors.surface,
+      backgroundColor: theme.colors.calendarDayCellBg,
       borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderColor: theme.colors.calendarDayCellBorder,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 6,
+      paddingVertical: 5,
       paddingHorizontal: 2,
-      ...theme.shadow.subtle,
+      overflow: 'hidden',
+      position: 'relative',
     },
     dayCellSelected: {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
-      ...theme.shadow.floating,
+      borderColor: theme.colors.calendarSelectedStart,
+      borderWidth: 1,
+      backgroundColor: theme.colors.calendarSelectedEnd,
     },
     dayCellToday: {
-      borderColor: theme.colors.primary,
+      borderColor: theme.colors.emerald,
       borderWidth: 1.5,
     },
     dayCellFuture: {
-      opacity: 0.35,
-      backgroundColor: theme.colors.surfaceSubtle,
+      backgroundColor: theme.colors.calendarFutureBg,
+      borderColor: theme.colors.calendarDayCellBorder,
+      borderStyle: 'dashed',
+    },
+    gradientBackdrop: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      borderRadius: 14,
+      overflow: 'hidden',
     },
     dayAbbr: {
-      fontSize: 11,
+      width: '100%',
+      fontSize: 12,
       fontWeight: '700',
-      color: theme.colors.textMuted,
-      marginBottom: 3,
-      letterSpacing: 0.3,
+      color: theme.colors.calendarDaySubText,
+      marginBottom: 2,
       textAlign: 'center',
+      includeFontPadding: false,
+    },
+    dayAbbrArabic: {
+      fontSize: 12,
     },
     dayAbbrSelected: {
-      color: theme.colors.black,
+      color: theme.colors.calendarSelectedText,
       fontWeight: '800',
     },
     dayAbbrToday: {
-      color: theme.colors.primary,
+      color: theme.colors.emerald,
       fontWeight: '800',
+    },
+    dayAbbrFuture: {
+      color: theme.colors.calendarFutureText,
     },
     dayNum: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '800',
-      color: theme.colors.textPrimary,
+      color: theme.colors.calendarDayText,
       textAlign: 'center',
+      includeFontPadding: false,
     },
     dayNumSelected: {
-      color: theme.colors.black,
+      color: theme.colors.calendarSelectedText,
       fontWeight: '900',
     },
     dayNumToday: {
-      color: theme.colors.primary,
+      color: theme.colors.calendarDayText,
       fontWeight: '900',
     },
-    textFuture: {
-      color: theme.colors.textMuted,
+    dayNumFuture: {
+      color: theme.colors.calendarFutureText,
+      fontWeight: '700',
     },
-    todayIndicatorDot: {
-      width: 4,
-      height: 4,
-      borderRadius: 2,
+    statusDotSlot: {
+      height: 7,
       marginTop: 3,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    todayIndicatorDotSelected: {
-      backgroundColor: theme.colors.black,
+    statusDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
     },
-    todayIndicatorDotUnselected: {
-      backgroundColor: theme.colors.primary,
+    statusDotSelectedBorder: {
+      borderWidth: 1,
+      borderColor: theme.colors.calendarSelectedText,
+    },
+    dotOnTarget: {
+      backgroundColor: theme.colors.emerald,
+    },
+    dotOnTargetSelected: {
+      backgroundColor: theme.colors.calendarSelectedText,
+    },
+    dotPartial: {
+      backgroundColor: theme.colors.calorieOverflowAmber,
+    },
+    dotOverLimit: {
+      backgroundColor: theme.colors.calorieOverflowRed,
+    },
+    dotTodayOutline: {
+      width: 5,
+      height: 5,
+      borderRadius: 2.5,
+      backgroundColor: theme.colors.emerald,
     },
   });

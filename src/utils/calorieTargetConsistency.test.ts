@@ -1,7 +1,8 @@
 import { calculateActivityBudget, getDailyEffectiveCalorieTarget } from './activityBudget';
 import { getDefaultProfile } from './calculator';
 import { DailyLog, UserProfile, WorkoutEntry } from '../types';
-import { calculateCalorieRingMetrics } from './calorieRingCalculations';
+import { calculateCalorieRingMetrics, interpolateHexColor } from './calorieRingCalculations';
+import { darkTheme } from '../theme';
 import { getStreakDayUnit, getStreakAccessibilityLabel } from './streak';
 
 function assert(condition: boolean, message: string): void {
@@ -187,5 +188,38 @@ const ringC = calculateCalorieRingMetrics(consumedCalories, budgetC.effectiveTar
 assert(budgetC.workoutCalories === 200, 'State C workout calories is 200');
 assert(budgetC.effectiveTarget === 2100, 'State C Daily Target increases to 2100');
 assert(ringC.isOver === false && ringC.overBy === 0 && ringC.remaining === 0, 'State C reduces Over from 200 -> 0');
+
+// 7. Progressive Calorie Ring Arc Ratios at 0%, 50%, 100%, 104.2%, 105%, 150%, 250%
+const arc0 = calculateCalorieRingMetrics(0, 2000);
+assert(arc0.baseRatio === 0 && arc0.overflowRatio === 0 && arc0.surplusSeverity === 'none', '0% intake ratios verified');
+
+const arc50 = calculateCalorieRingMetrics(1000, 2000);
+assert(arc50.baseRatio === 0.5 && arc50.overflowRatio === 0 && arc50.surplusSeverity === 'none', '50% intake ratios verified');
+
+const arc100 = calculateCalorieRingMetrics(2000, 2000);
+assert(arc100.baseRatio === 1 && arc100.overflowRatio === 0 && arc100.surplusSeverity === 'none', '100% intake keeps base at 1 and overflow at 0');
+
+// +100 kcal over 2394 target -> ~4.18% overflow ratio, minor amber severity
+const arcMinorPlus100 = calculateCalorieRingMetrics(2494, 2394);
+assert(arcMinorPlus100.baseRatio === 1, 'Over-limit keeps base green ring at 100% (1.0)');
+assert(Math.abs(arcMinorPlus100.overflowRatio - 100 / 2394) < 0.0001, 'Overflow ratio scales proportionally (+100/2394 ~ 0.0418)');
+assert(arcMinorPlus100.surplusSeverity === 'minor', '+100 over 2394 (<10%) has minor surplus severity');
+
+const arc105 = calculateCalorieRingMetrics(2100, 2000);
+assert(arc105.baseRatio === 1 && Math.abs(arc105.overflowRatio - 0.05) < 0.0001 && arc105.surplusSeverity === 'minor', '105% intake ratios verified');
+assert(Math.abs(arc105.surplusColorMix - 0.5) < 0.0001, '105% intake color mix is halfway between amber and red');
+
+const arc150 = calculateCalorieRingMetrics(3000, 2000);
+assert(arc150.baseRatio === 1 && arc150.overflowRatio === 0.5 && arc150.surplusSeverity === 'major' && arc150.surplusColorMix === 1, '150% intake gives 50% red overflow and major severity');
+
+const arc250 = calculateCalorieRingMetrics(5000, 2000);
+assert(arc250.baseRatio === 1 && arc250.overflowRatio === 1 && arc250.surplusSeverity === 'major', '250% intake caps overflow arc at 1.0');
+
+const startHex = interpolateHexColor(darkTheme.colors.calorieOverflowAmber, darkTheme.colors.calorieOverflowRed, 0);
+const endHex = interpolateHexColor(darkTheme.colors.calorieOverflowAmber, darkTheme.colors.calorieOverflowRed, 1);
+const midHex = interpolateHexColor(darkTheme.colors.calorieOverflowAmber, darkTheme.colors.calorieOverflowRed, 0.5);
+assert(startHex.toUpperCase() === darkTheme.colors.calorieOverflowAmber.toUpperCase(), 't=0 returns amber hex');
+assert(endHex.toUpperCase() === darkTheme.colors.calorieOverflowRed.toUpperCase(), 't=1 returns red hex');
+assert(midHex !== startHex && midHex !== endHex, 't=0.5 interpolates between amber and red');
 
 console.log('✓ All Calorie Target Consistency & Ring Balance Unit Tests PASSED Cleanly!');

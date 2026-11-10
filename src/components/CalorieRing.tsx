@@ -13,8 +13,13 @@ import { useLanguage } from '../i18n/I18nContext';
 import { translate } from '../i18n/strings';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
+import { useIsRTL } from '../hooks/useIsRTL';
 import { isReducedMotion } from '../utils/motion';
-import { calculateCalorieRingMetrics, CalorieRingMetrics } from '../utils/calorieRingCalculations';
+import {
+  calculateCalorieRingMetrics,
+  CalorieRingMetrics,
+  interpolateHexColor,
+} from '../utils/calorieRingCalculations';
 
 export { calculateCalorieRingMetrics, CalorieRingMetrics };
 
@@ -36,6 +41,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
   onPress,
 }) => {
   const language = useLanguage();
+  const isRtl = useIsRTL();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (key: string) => translate(language, key);
@@ -43,36 +49,58 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
   const strokeWidth = 10;
   const radius = (size - strokeWidth * 2) / 2;
   const circumference = 2 * Math.PI * radius;
+  const center = size / 2;
 
-  // Calorie percentage
-  const calorieRatio = target > 0 ? Math.min(consumed / target, 1) : 0;
-  const progress = useSharedValue(0);
+  const metrics = useMemo(
+    () => calculateCalorieRingMetrics(consumed, target),
+    [consumed, target]
+  );
+
+  const progress = useSharedValue(metrics.baseRatio);
+  const overflowProgress = useSharedValue(metrics.overflowRatio);
 
   useEffect(() => {
     if (isReducedMotion()) {
-      progress.value = calorieRatio;
+      progress.value = metrics.baseRatio;
+      overflowProgress.value = metrics.overflowRatio;
     } else {
-      progress.value = withTiming(calorieRatio, {
+      progress.value = withTiming(metrics.baseRatio, {
+        duration: 750,
+        easing: Easing.out(Easing.cubic),
+      });
+      overflowProgress.value = withTiming(metrics.overflowRatio, {
         duration: 750,
         easing: Easing.out(Easing.cubic),
       });
     }
-  }, [calorieRatio, progress]);
+  }, [metrics.baseRatio, metrics.overflowRatio, progress, overflowProgress]);
 
-  const animatedCircleProps = useAnimatedProps(() => {
+  const animatedBaseCircleProps = useAnimatedProps(() => {
     'worklet';
     return {
       strokeDashoffset: circumference - progress.value * circumference,
     };
   });
 
-  const { isOver, displayedValue } = useMemo(
-    () => calculateCalorieRingMetrics(consumed, target),
-    [consumed, target]
-  );
+  const animatedOverflowProps = useAnimatedProps(() => {
+    'worklet';
+    return {
+      strokeDashoffset: circumference - overflowProgress.value * circumference,
+    };
+  });
+
+  const overTextColor = useMemo(() => {
+    if (!metrics.isOver) return theme.colors.primary;
+    return interpolateHexColor(
+      theme.colors.calorieOverflowAmber,
+      theme.colors.calorieOverflowRed,
+      metrics.surplusColorMix
+    );
+  }, [metrics.isOver, metrics.surplusColorMix, theme]);
 
   const tolerance = Math.max(25, Math.round(target * 0.02));
   const isInTolerance = target > 0 && Math.abs(consumed - target) <= tolerance;
+  const showOverflowArc = metrics.isOver && metrics.overflowRatio > 0;
 
   return (
     <View style={styles.wrapper}>
@@ -82,43 +110,88 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
         disabled={!onPress}
         activeOpacity={0.82}
         accessibilityRole="button"
-        accessibilityLabel={`${t('Calories')} · ${displayedValue} ${isOver ? t('kcal over budget') : t('kcal remaining')}`}
+        accessibilityLabel={`${t('Calories')} · ${metrics.isOver ? '+' : ''}${metrics.displayedValue} ${metrics.isOver ? t('kcal over') : t('kcal remaining')}`}
       >
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           {/* Track */}
           <Circle
-            cx={size / 2}
-            cy={size / 2}
+            cx={center}
+            cy={center}
             r={radius}
             stroke={theme.colors.surfaceSubtle}
             strokeWidth={strokeWidth}
             fill="none"
           />
 
-          {/* Botanical Green Progress Arc (Driven natively via Reanimated) */}
+          {/* Base Emerald Progress Arc (stays 100% green when daily budget reached or exceeded) */}
           <AnimatedCircle
-            cx={size / 2}
-            cy={size / 2}
+            cx={center}
+            cy={center}
             r={radius}
-            stroke={isOver ? theme.colors.accent : theme.colors.primary}
+            stroke={theme.colors.calorieBaseGreen}
             strokeWidth={strokeWidth}
             fill="none"
             strokeDasharray={`${circumference}`}
-            animatedProps={animatedCircleProps}
+            animatedProps={animatedBaseCircleProps}
             strokeLinecap="round"
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            transform={`rotate(-90 ${center} ${center})`}
           />
+
+          {/* Layered Progressive Overflow Glow + Crimson Arc (only rendered when over limit) */}
+          {showOverflowArc && (
+            <>
+              <AnimatedCircle
+                cx={center}
+                cy={center}
+                r={radius}
+                stroke={theme.colors.calorieOverflowRed}
+                strokeOpacity={0.28}
+                strokeWidth={strokeWidth + 8}
+                fill="none"
+                strokeDasharray={`${circumference}`}
+                animatedProps={animatedOverflowProps}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${center} ${center})`}
+              />
+              <AnimatedCircle
+                cx={center}
+                cy={center}
+                r={radius}
+                stroke={theme.colors.calorieOverflowRed}
+                strokeWidth={strokeWidth}
+                fill="none"
+                strokeDasharray={`${circumference}`}
+                animatedProps={animatedOverflowProps}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${center} ${center})`}
+              />
+            </>
+          )}
         </Svg>
 
-        {/* Center Metrics: Natural, calm typography with count-up */}
+        {/* Center Metrics: Natural typography with progressive surplus alert */}
         <View style={styles.centerContent}>
           <AnimatedCount
-            value={displayedValue}
-            style={[styles.remainingValue, isOver && { color: theme.colors.accent }]}
+            value={metrics.displayedValue}
+            formatter={(v) =>
+              metrics.isOver
+                ? `+${Math.round(v).toLocaleString()}`
+                : Math.round(v).toLocaleString()
+            }
+            style={[
+              styles.remainingValue,
+              metrics.isOver && { color: overTextColor },
+            ]}
           />
-          <Text style={styles.remainingLabel} numberOfLines={2}>
-            {isOver
-              ? t('kcal over budget')
+          <Text
+            style={[
+              styles.remainingLabel,
+              metrics.isOver && { color: overTextColor },
+            ]}
+            numberOfLines={2}
+          >
+            {metrics.isOver
+              ? t('kcal over')
               : isInTolerance
               ? t("You've reached today's calorie goal.")
               : t('kcal remaining')}
@@ -127,7 +200,7 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
       </TouchableOpacity>
 
       {/* 3-Point Calorie Ledger: Consumed | Remaining/Over | Daily Target */}
-      <View style={styles.ledgerRow}>
+      <View style={[styles.ledgerRow, isRtl && styles.rowRtl]}>
         <View style={styles.ledgerCol}>
           <AnimatedCount value={consumed} style={styles.ledgerVal} />
           <Text style={styles.ledgerLbl}>{t('Consumed')}</Text>
@@ -137,11 +210,16 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
 
         <View style={styles.ledgerCol}>
           <AnimatedCount
-            value={displayedValue}
-            style={[styles.ledgerVal, isOver && { color: theme.colors.accent }]}
+            value={metrics.displayedValue}
+            formatter={(v) =>
+              metrics.isOver
+                ? `+${Math.round(v).toLocaleString()}`
+                : Math.round(v).toLocaleString()
+            }
+            style={[styles.ledgerVal, metrics.isOver && { color: overTextColor }]}
           />
           <Text style={styles.ledgerLbl}>
-            {isOver ? t('Over') : t('Remaining')}
+            {metrics.isOver ? t('Over') : t('Remaining')}
           </Text>
         </View>
 
@@ -161,6 +239,9 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
+  rowRtl: {
+    flexDirection: 'row-reverse',
+  },
   container: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -170,19 +251,19 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
   },
   remainingValue: {
     fontFamily: theme.fonts.serif,
-    fontSize: 40,
+    fontSize: 38,
     fontWeight: '700',
-    color: theme.colors.primary,
+    color: theme.colors.calorieBaseGreen,
     letterSpacing: -0.6,
   },
   remainingLabel: {
     fontFamily: theme.fonts.sans,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     color: theme.colors.textSecondary,
     marginTop: 2,
     textTransform: 'uppercase',
@@ -196,8 +277,8 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     maxWidth: 320,
-    marginTop: 18,
-    paddingTop: 14,
+    marginTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     paddingHorizontal: 16,

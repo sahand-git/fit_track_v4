@@ -17,13 +17,11 @@ import {
   Moon,
   Apple,
   User,
-  Flame,
-  Dumbbell,
-  Footprints,
   Calendar,
 } from 'lucide-react-native';
 import { UserProfile, DailyLog, MealType, SupplementRoutineItem, WorkoutEntry } from '../types';
 import { CalorieRing } from '../components/CalorieRing';
+import { ActiveBurnCard } from '../components/ActiveBurnCard';
 import { MacroCards } from '../components/MacroCards';
 import { WaterTracker } from '../components/WaterTracker';
 import { CalendarPickerModal } from '../components/CalendarPickerModal';
@@ -60,7 +58,6 @@ import { formatKcal } from '../utils/formatKcal';
 import { getCalorieRingSize } from '../utils/dashboardLayout';
 import { NutrientDetailModal } from '../components/NutrientDetailModal';
 import { SupportedNutrientKey, calculateNutrientDayProgress } from '../utils/nutrientTotals';
-import { formatStepCaloriePill } from '../services/stepTrackingCore';
 import { calculateTargets } from '../utils/calculator';
 import { TodaySkeleton } from '../components/SkeletonLoader';
 
@@ -235,15 +232,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     steps: log.steps || 0,
   }), [profile, log.workouts, log.steps]);
   const effectiveCalorieTarget = activityBudget.effectiveTarget;
-
-  const stepPillData = useMemo(() => {
-    return formatStepCaloriePill(
-      log.steps,
-      profile.weightKg || 70,
-      profile.stepGoal || 8000,
-      t
-    );
-  }, [log.steps, profile.weightKg, profile.stepGoal, t]);
 
   const handleToggleIncludeWorkouts = useCallback(async () => {
     if (!onUpdateProfile) return;
@@ -455,41 +443,23 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           </View>
         </View>
 
-        {/* 1.1 Horizontal Week Day Ribbon (Picture 2 Reference) */}
+        {/* 1.1 Glassmorphic Calendar Header & 7-Day Strip */}
         {onSelectDate && (
           <WeekDayRibbon
             selectedDate={selectedDate || log.date}
             onSelectDate={onSelectDate}
             onOpenDatePicker={() => setShowCalendarPicker(true)}
+            currentLog={log}
+            profile={profile}
           />
         )}
 
-        {/* Hero Calorie Budget Focus */}
+        {/* Hero Calorie Budget Focus (cleanly directly below Calendar Header) */}
         <Animated.View
           entering={getStaggeredCardEntry(0)}
           onLayout={(event) => setHeroWidth(event.nativeEvent.layout.width)}
           style={styles.heroSection}
         >
-          {/* Step-Calorie Deduction Pill */}
-          <TouchableOpacity
-            style={[styles.stepDeductionPill, isRtl && styles.rowRtl]}
-            onPress={onOpenSteps}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel={`${t('Steps')}: ${stepPillData.formattedText}`}
-            hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
-          >
-            <Footprints
-              size={13}
-              color={stepPillData.isGoalMet ? theme.colors.primary : theme.colors.water}
-            />
-            <Text style={styles.stepDeductionText} numberOfLines={1}>
-              {stepPillData.isOfflineOrUnavailable && stepPillData.steps === 0
-                ? stepPillData.formattedText
-                : `${stepPillData.steps.toLocaleString()} · ${stepPillData.formattedText}`}
-            </Text>
-          </TouchableOpacity>
-
           <CalorieRing
             consumed={consumedCalories}
             target={effectiveCalorieTarget}
@@ -498,108 +468,29 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
             size={getCalorieRingSize(heroWidth)}
             onPress={() => setSelectedNutrientForDetail('calories')}
           />
+        </Animated.View>
 
-          {/* Activity & Energy Balance Card */}
-          <View style={styles.activityCard}>
-            {/* Top row: Summary + Toggle Button */}
-            <View style={[styles.activityHeaderRow, isRtl && styles.rowRtl]}>
-              <View style={[styles.activityHeaderLeft, isRtl && styles.rowRtl]}>
-                <View style={styles.activityFlameIcon}>
-                  <Flame size={16} color={theme.colors.warning} />
-                </View>
-                <View>
-                  <Text style={styles.activityCardTitle}>{t('Active Burn')}</Text>
-                  <Text style={styles.activityTotalKcal}>
-                    {activityBudget.workoutCalories + activityBudget.stepCalories} <Text style={styles.activityKcalUnit}>{t('kcal total')}</Text>
-                  </Text>
-                </View>
-              </View>
-
-              {/* In-place Budget Toggle Button */}
-              {onUpdateProfile && (
-                <TouchableOpacity
-                  style={[
-                    styles.budgetToggleBtn,
-                    profile.includeWorkoutsInCalorieBudget && styles.budgetToggleBtnActive,
-                    isRtl && styles.rowRtl,
-                  ]}
-                  onPress={handleToggleIncludeWorkouts}
-                  activeOpacity={0.8}
-                  accessibilityRole="switch"
-                  accessibilityLabel={t('Include activity burn in calorie budget')}
-                  accessibilityState={{ checked: !!profile.includeWorkoutsInCalorieBudget }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <View style={[
-                    styles.toggleSwitchKnob,
-                    profile.includeWorkoutsInCalorieBudget && styles.toggleSwitchKnobActive,
-                  ]} />
-                  <Text style={[
-                    styles.budgetToggleBtnText,
-                    profile.includeWorkoutsInCalorieBudget && styles.budgetToggleBtnTextActive,
-                  ]}>
-                    {profile.includeWorkoutsInCalorieBudget ? t('In Budget: ON') : t('In Budget: OFF')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Split Metrics: Workouts vs Steps */}
-            <View style={[styles.activitySplitRow, isRtl && styles.rowRtl]}>
-              {/* Workouts Burn Box */}
-              <TouchableOpacity
-                style={styles.activityMetricBox}
-                onPress={onOpenWorkouts}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={`${t('Workouts')}: ${activityBudget.workoutCalories} ${t('kcal')}`}
-              >
-                <View style={[styles.metricBoxHeader, isRtl && styles.rowRtl]}>
-                  <Dumbbell size={14} color={theme.colors.accent} />
-                  <Text style={styles.metricBoxLabel}>{t('Workouts')}</Text>
-                </View>
-                <Text style={styles.metricBoxValue}>
-                  {activityBudget.workoutCalories} <Text style={styles.metricBoxSub}>{t('kcal')}</Text>
-                </Text>
-                <Text style={styles.metricBoxHint}>
-                  {log.workouts?.length ? `${log.workouts.length} ${t('logged')}` : t('0 logged')}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Steps Burn Box */}
-              <TouchableOpacity
-                style={styles.activityMetricBox}
-                onPress={onOpenSteps}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={`${t('Steps')}: ${(log.steps || 0).toLocaleString()}, ${activityBudget.stepCalories} ${t('kcal')}`}
-              >
-                <View style={[styles.metricBoxHeader, isRtl && styles.rowRtl]}>
-                  <Footprints size={14} color={theme.colors.water} />
-                  <Text style={styles.metricBoxLabel}>{t('Steps')}</Text>
-                </View>
-                <Text style={styles.metricBoxValue}>
-                  {activityBudget.stepCalories} <Text style={styles.metricBoxSub}>{t('kcal')}</Text>
-                </Text>
-                <Text style={styles.metricBoxHint}>
-                  {(log.steps || 0).toLocaleString()} / {(profile.stepGoal || 8000).toLocaleString()}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Reconciled Budget Footer Explanation */}
-            <View style={[styles.activityFooterBanner, isRtl && styles.rowRtl]}>
-              <Text style={styles.activityFooterText} numberOfLines={2}>
-                {profile.includeWorkoutsInCalorieBudget
-                  ? `${t('Active burn added to food budget')}: +${activityBudget.workoutCalories + activityBudget.stepCalories} ${t('kcal')} (${activityBudget.workoutCalories} ${t('Workouts')} + ${activityBudget.stepCalories} ${t('Steps')})`
-                  : `${activityBudget.workoutCalories + activityBudget.stepCalories} ${t('kcal burned')} · ${t('tracked as burn, not in food budget')}`}
-              </Text>
-            </View>
-          </View>
+        {/* Active Burn Telemetry Card (Workouts + Steps Progress + In-Budget Toggle) */}
+        <Animated.View entering={getStaggeredCardEntry(1)}>
+          <ActiveBurnCard
+            steps={log.steps || 0}
+            nonWorkoutSteps={activityBudget.nonWorkoutSteps}
+            stepGoal={profile.stepGoal || 8000}
+            weightKg={profile.weightKg || 70}
+            stepCalories={activityBudget.stepCalories}
+            workoutCalories={activityBudget.workoutCalories}
+            workouts={log.workouts || []}
+            includeInBudget={!!profile.includeWorkoutsInCalorieBudget}
+            canToggleBudget={Boolean(onUpdateProfile)}
+            onToggleBudget={handleToggleIncludeWorkouts}
+            onOpenSteps={onOpenSteps}
+            onOpenWorkouts={onOpenWorkouts}
+            onQuickLogWorkout={() => setWorkoutSheetVisible(true)}
+          />
         </Animated.View>
 
         {/* Nutrients Bar */}
-        <Animated.View entering={getStaggeredCardEntry(1)}>
+        <Animated.View entering={getStaggeredCardEntry(2)}>
           <MacroCards
             calorieTarget={effectiveCalorieTarget}
             calorieConsumed={consumedCalories}
@@ -624,7 +515,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         </Animated.View>
 
         {/* 1.3 Quick Action Grid (6 Choices: Scan Food, AI Describe, Barcode, Vitamins, Workouts, Steps) */}
-        <Animated.View entering={getStaggeredCardEntry(2)}>
+        <Animated.View entering={getStaggeredCardEntry(3)}>
           <DashboardQuickGrid
             onScanPlate={() => onOpenAddFood(undefined, 'photo')}
             onDescribeMeal={() => onOpenAddFood(undefined, 'describe')}
@@ -636,7 +527,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         </Animated.View>
 
         {/* Meals Ledger (Positioned directly below macros for fast, seamless food logging) */}
-        <Animated.View entering={getStaggeredCardEntry(3)}>
+        <Animated.View entering={getStaggeredCardEntry(4)}>
           <View style={styles.mealsHeader}>
             <Text style={styles.sectionHeading}>{t('Today’s Meals')}</Text>
             <TouchableOpacity
@@ -730,7 +621,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         </Animated.View>
 
         {/* Hydration Row (Fix 1: Water & Food Clean Separation) */}
-        <Animated.View entering={getStaggeredCardEntry(4)} style={styles.waterTrackerSection}>
+        <Animated.View entering={getStaggeredCardEntry(5)} style={styles.waterTrackerSection}>
           <WaterTracker
             glasses={log.waterGlasses}
             target={profile.waterTargetGlasses}
@@ -739,12 +630,12 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         </Animated.View>
       </ScrollView>
 
-      {/* Floating "+ Add Food" Circular FAB */}
+      {/* Floating "+ Add Food" Circular FAB tucked cleanly above bottom dock */}
       <AnimatedPressable
         style={[
           styles.floatingAddFab,
-          { bottom: dockClearance + 18 },
-          isRtl ? { left: 20 } : { right: 20 },
+          { bottom: dockBottom + 68 },
+          isRtl ? { left: 16 } : { right: 16 },
         ]}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -754,7 +645,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
         accessibilityRole="button"
         accessibilityLabel={t('Add Food')}
       >
-        <Plus size={26} color={theme.colors.textInverted} strokeWidth={2.6} />
+        <Plus size={24} color={theme.colors.textInverted} strokeWidth={2.6} />
       </AnimatedPressable>
 
       <QuickActionSheet
@@ -1242,14 +1133,14 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   },
   content: {
     paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.md,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
     paddingHorizontal: 2,
   },
   headerActions: {
@@ -1278,40 +1169,21 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
   },
   screenTitle: {
     fontFamily: theme.fonts.serif,
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: theme.colors.textPrimary,
     letterSpacing: -0.5,
-    marginTop: 2,
+    marginTop: 1,
   },
   heroSection: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.xl,
-    paddingVertical: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border,
-    marginBottom: 6,
+    marginBottom: 4,
     ...theme.shadow.subtle,
-  },
-  stepDeductionPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceSubtle,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 10,
-  },
-  stepDeductionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-    includeFontPadding: false,
   },
   supplementsContainer: {
     marginTop: 10,
@@ -1544,9 +1416,9 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: theme.colors.primary,
     borderWidth: 1.5,
     borderColor: theme.colors.primaryBorder,
