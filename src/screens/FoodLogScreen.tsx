@@ -7,9 +7,6 @@ import {
   Platform,
   BackHandler,
   PanResponder,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
-  LayoutChangeEvent,
 } from 'react-native';
 import Animated, {
   FadeIn,
@@ -72,7 +69,6 @@ import {
   calculateDiaryBudgetSummary,
   computeHeaderClearanceOffset,
   DiaryMealFilter,
-  getMealAccentThemeKey,
   getQuickLogFoodsForMeal,
   groupMealsByType,
   resolveTargetMealForQuickAction,
@@ -100,9 +96,7 @@ interface AddSheetConfig {
 
 interface DiaryToastState {
   id: string;
-  kind: 'added' | 'removed';
   meal: LoggedMeal;
-  date: string;
   message: string;
 }
 
@@ -123,7 +117,7 @@ const RotatingChevron: React.FC<{ expanded: boolean; color: string }> = React.me
 
     return (
       <Animated.View style={animatedStyle}>
-        <ChevronDown size={16} color={color} strokeWidth={2.2} />
+        <ChevronDown size={16} color={color} strokeWidth={2.1} />
       </Animated.View>
     );
   },
@@ -133,15 +127,15 @@ RotatingChevron.displayName = 'RotatingChevron';
 const renderMealGlyph = (mealType: DiaryMealFilter, size: number, color: string) => {
   switch (mealType) {
     case 'all':
-      return <LayoutGrid size={size} color={color} strokeWidth={2.1} />;
+      return <LayoutGrid size={size} color={color} strokeWidth={1.9} />;
     case 'breakfast':
-      return <Coffee size={size} color={color} strokeWidth={2.1} />;
+      return <Coffee size={size} color={color} strokeWidth={1.9} />;
     case 'lunch':
-      return <Utensils size={size} color={color} strokeWidth={2.1} />;
+      return <Utensils size={size} color={color} strokeWidth={1.9} />;
     case 'dinner':
-      return <Moon size={size} color={color} strokeWidth={2.1} />;
+      return <Moon size={size} color={color} strokeWidth={1.9} />;
     case 'snack':
-      return <Apple size={size} color={color} strokeWidth={2.1} />;
+      return <Apple size={size} color={color} strokeWidth={1.9} />;
   }
 };
 
@@ -168,7 +162,6 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
   const [userAddedMealIds, setUserAddedMealIds] = useState<Set<string>>(() => new Set());
   const [collapsedOverrides, setCollapsedOverrides] = useState<Partial<Record<MealType, boolean>>>({});
   const [activeFilter, setActiveFilter] = useState<DiaryMealFilter>('all');
-  const [stickyHeaderHeight, setStickyHeaderHeight] = useState<number>(172);
   const [favoriteFoods, setFavoriteFoods] = useState<FoodItem[]>([]);
   const [recentFoods, setRecentFoods] = useState<FoodItem[]>([]);
   const [inspectingMeal, setInspectingMeal] = useState<LoggedMeal | null>(null);
@@ -222,7 +215,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
       if (isMountedRef.current) {
         setToast(null);
       }
-    }, 3600);
+    }, 3400);
   }, []);
 
   const dismissToast = useCallback(() => {
@@ -259,12 +252,10 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
   const isPast = selectedDate < todayStr;
   const isFuture = selectedDate > todayStr;
 
-  // Dock clearance ensures bottom meal cards clear BOTH the bottom nav and floating action dock
   const dockBottom =
     insets.bottom > 0 ? insets.bottom + 8 : Platform.OS === 'ios' ? 18 : 10;
   const dockClearance = dockBottom + 72;
-  const floatingDockBottom = dockClearance + 2;
-  const scrollBottomPadding = Math.max(180, dockClearance + 115);
+  const scrollBottomPadding = Math.max(120, dockClearance + 28);
 
   const selectedDateRef = useRef(selectedDate);
   const isRtlRef = useRef(isRtl);
@@ -279,10 +270,10 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         onStartShouldSetPanResponder: () => false,
         onStartShouldSetPanResponderCapture: () => false,
         onMoveShouldSetPanResponder: (_, gs) =>
-          Math.abs(gs.dx) > 36 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.9,
+          Math.abs(gs.dx) > 38 && Math.abs(gs.dx) > Math.abs(gs.dy) * 2,
         onMoveShouldSetPanResponderCapture: () => false,
         onPanResponderRelease: (_, gs) => {
-          if (Math.abs(gs.dx) <= 52) return;
+          if (Math.abs(gs.dx) <= 55) return;
           const movingForward = isRtlRef.current ? gs.dx > 0 : gs.dx < 0;
           if (movingForward) {
             if (selectedDateRef.current < getTodayDateString()) {
@@ -332,14 +323,14 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         if (sectionY !== undefined) {
           requestAnimationFrame(() => {
             scrollViewRef.current?.scrollTo({
-              y: computeHeaderClearanceOffset(sectionY, stickyHeaderHeight, 10),
+              y: computeHeaderClearanceOffset(sectionY, 0, 12),
               animated: true,
             });
           });
         }
       }
     },
-    [activeFilter, onAddMeal, stickyHeaderHeight],
+    [activeFilter, onAddMeal],
   );
 
   const openAddSheet = useCallback(
@@ -414,9 +405,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         .catch(() => {});
       showToast({
         id: newMeal.id,
-        kind: 'added',
         meal: newMeal,
-        date: selectedDate,
         message: `${t('Added')} ${getLocalizedFoodName(food, language)}`,
       });
     },
@@ -424,21 +413,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
   );
 
   const handleDeleteMeal = useCallback(
-    async (id: string, viaSwipe = false) => {
-      const targetMeal = log.meals.find((m) => m.id === id);
-
-      if (viaSwipe && targetMeal) {
-        onRemoveMeal(id);
-        showToast({
-          id: targetMeal.id,
-          kind: 'removed',
-          meal: targetMeal,
-          date: selectedDate,
-          message: `${t('Removed')} ${getLocalizedFoodName(targetMeal, language)}`,
-        });
-        return;
-      }
-
+    async (id: string) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       const confirmed = await dialog.confirm({
         title: t('Delete food item'),
@@ -451,7 +426,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         onRemoveMeal(id);
       }
     },
-    [dialog, language, log.meals, onRemoveMeal, selectedDate, showToast, t],
+    [dialog, onRemoveMeal, t],
   );
 
   const handleUndoToast = useCallback(() => {
@@ -459,12 +434,8 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
     Haptics.selectionAsync().catch(() => {});
     const pending = toast;
     dismissToast();
-    if (pending.kind === 'added') {
-      onRemoveMeal(pending.meal.id);
-    } else {
-      handleAddMeal(pending.meal, pending.date);
-    }
-  }, [dismissToast, handleAddMeal, onRemoveMeal, toast]);
+    onRemoveMeal(pending.meal.id);
+  }, [dismissToast, onRemoveMeal, toast]);
 
   const handleUpdateInspectingServings = useCallback(
     (newServings: number) => {
@@ -592,17 +563,6 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
     [activeFilter, mealMetaList],
   );
 
-  const handleStickyHeaderLayout = useCallback((e: LayoutChangeEvent) => {
-    const h = Math.round(e.nativeEvent.layout.height);
-    if (h > 40) {
-      setStickyHeaderHeight((prev) => (Math.abs(prev - h) > 2 ? h : prev));
-    }
-  }, []);
-
-  const handleScroll = useCallback((_e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    // Reserved for smooth sticky header elevation/scroll tracking without setState churn
-  }, []);
-
   if (isLoading) {
     return <MealsSkeleton />;
   }
@@ -615,9 +575,9 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
-      {/* Unified Blurred Glassmorphic Sticky Top Header */}
-      <View style={styles.stickyHeader} onLayout={handleStickyHeaderLayout}>
-        {/* Row 1: Date Navigation Bar */}
+      {/* Solid Opaque Luxury Top Header (Zero Scroll Bleed-Through) */}
+      <View style={styles.stickyHeader}>
+        {/* Row 1: Date Navigation (No Truncation on Today / AR / CKB Dates) */}
         <View style={[styles.dateRow, isRtl && styles.rowRtl]}>
           <AnimatedPressable
             style={styles.dateNavBtn}
@@ -629,42 +589,30 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
             <DirectionalIcon
               name="ChevronLeft"
               size={20}
-              color={theme.colors.textPrimary}
+              color={theme.colors.diaryBodyLight}
             />
           </AnimatedPressable>
 
-          <View style={[styles.dateCenterGroup, isRtl && styles.rowRtl]}>
-            <AnimatedPressable
-              style={[styles.datePickPill, isRtl && styles.rowRtl]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                setCalendarVisible(true);
-              }}
-              accessibilityLabel={t('Choose date')}
-              accessibilityRole="button"
-              minScale={0.95}
+          <AnimatedPressable
+            style={[styles.datePickPill, isRtl && styles.rowRtl]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              setCalendarVisible(true);
+            }}
+            accessibilityLabel={t('Choose date')}
+            accessibilityRole="button"
+            minScale={0.96}
+          >
+            <CalendarDays size={16} color={theme.colors.calorieBaseGreen} />
+            <Text
+              style={[styles.dateTitle, isPast && styles.dateTitleLong]}
+              numberOfLines={isPast ? 1 : undefined}
+              adjustsFontSizeToFit={isPast}
+              minimumFontScale={0.82}
             >
-              <CalendarDays size={16} color={theme.colors.emeraldDark} />
-              <Text style={styles.dateTitle} numberOfLines={1}>
-                {formatDisplayDate(selectedDate, language)}
-              </Text>
-            </AnimatedPressable>
-
-            {isPast && (
-              <AnimatedPressable
-                style={[styles.todayResetPill, isRtl && styles.rowRtl]}
-                onPress={handleBackToToday}
-                accessibilityRole="button"
-                accessibilityLabel={t('Today')}
-                minScale={0.93}
-              >
-                <RotateCcw size={12} color={theme.colors.emeraldDark} strokeWidth={2.5} />
-                <Text style={styles.todayResetText} numberOfLines={1}>
-                  {t('Today')}
-                </Text>
-              </AnimatedPressable>
-            )}
-          </View>
+              {formatDisplayDate(selectedDate, language)}
+            </Text>
+          </AnimatedPressable>
 
           <AnimatedPressable
             style={[
@@ -682,76 +630,121 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
               size={20}
               color={
                 selectedDate >= todayStr
-                  ? theme.colors.textMuted
-                  : theme.colors.textPrimary
+                  ? theme.colors.diarySubtleSlate
+                  : theme.colors.diaryBodyLight
               }
             />
           </AnimatedPressable>
         </View>
 
-        {/* Row 2: Mini Daily Budget Strip */}
-        <View style={[styles.budgetStrip, isRtl && styles.rowRtl]}>
-          <View style={styles.budgetLeftCol}>
-            <View style={[styles.budgetTextRow, isRtl && styles.rowRtl]}>
-              <Text style={styles.budgetKcalRatio} numberOfLines={1}>
+        {/* Conditional Jump to Today Bar (separate row so date pill never shrinks to T...) */}
+        {isPast && (
+          <View style={styles.todayResetRow}>
+            <AnimatedPressable
+              style={[styles.todayResetPill, isRtl && styles.rowRtl]}
+              onPress={handleBackToToday}
+              accessibilityRole="button"
+              accessibilityLabel={t('Today')}
+              minScale={0.95}
+            >
+              <RotateCcw size={12} color={theme.colors.calorieBaseGreen} strokeWidth={2.4} />
+              <Text style={styles.todayResetText}>{t('Today')}</Text>
+            </AnimatedPressable>
+          </View>
+        )}
+
+        {/* Row 2: 2-Row Luxury Telemetry Strip */}
+        <View style={styles.telemetryCard}>
+          {/* Telemetry Row 1: Consumed / Target & Remaining */}
+          <View style={[styles.telemetryTopRow, isRtl && styles.rowRtl]}>
+            <View style={[styles.telemetryKcalGroup, isRtl && styles.rowRtl]}>
+              <Text style={styles.telemetryKcalValue}>
                 {budgetSummary.consumedCalories.toLocaleString()}
-                <Text style={styles.budgetKcalTarget}>
-                  {' '}
-                  / {budgetSummary.targetCalories.toLocaleString()} {t('kcal')}
-                </Text>
               </Text>
-              <Text
-                style={[
-                  styles.budgetDeltaText,
-                  budgetSummary.isOverBudget
-                    ? styles.budgetOverText
-                    : styles.budgetRemainText,
-                ]}
-                numberOfLines={1}
-              >
-                {remainingOrOverValue.toLocaleString()}{' '}
-                {budgetSummary.isOverBudget ? t('Over') : t('Remaining')}
+              <Text style={styles.telemetryKcalTarget}>
+                / {budgetSummary.targetCalories.toLocaleString()} {t('kcal')}
               </Text>
             </View>
 
-            <View style={[styles.progressTrack, isRtl && styles.rowRtl]}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: budgetProgressPct,
-                    backgroundColor: budgetSummary.isOverBudget
-                      ? theme.colors.calorieOverflowRed
-                      : theme.colors.calorieBaseGreen,
-                  },
-                ]}
-              />
-            </View>
+            <Text
+              style={[
+                styles.telemetryRemainText,
+                budgetSummary.isOverBudget && styles.telemetryOverText,
+              ]}
+            >
+              {remainingOrOverValue.toLocaleString()}{' '}
+              {budgetSummary.isOverBudget ? t('kcal over') : t('kcal left')}
+            </Text>
           </View>
 
-          <View style={[styles.budgetMacroPills, isRtl && styles.rowRtl]}>
-            <View style={[styles.miniMacroPill, styles.proteinPill]}>
-              <Text style={[styles.miniMacroText, styles.proteinText]}>
-                {t('P')} {budgetSummary.protein}
+          {/* Middle: 4px Ultra-Thin Full-Width Progress Bar */}
+          <View style={[styles.progressTrack, isRtl && styles.rowRtl]}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: budgetProgressPct,
+                  backgroundColor: budgetSummary.isOverBudget
+                    ? theme.colors.calorieOverflowRed
+                    : theme.colors.calorieBaseGreen,
+                },
+              ]}
+            />
+          </View>
+
+          {/* Telemetry Row 2: 3 Evenly Spaced Minimalist Macro Dots */}
+          <View style={[styles.macroTelemetryRow, isRtl && styles.rowRtl]}>
+            <View style={[styles.macroDotItem, isRtl && styles.rowRtl]}>
+              <View style={[styles.macroDot, { backgroundColor: theme.colors.macroPillProteinText }]} />
+              <Text
+                style={styles.macroDotLabel}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.78}
+              >
+                {t('Protein')}
+              </Text>
+              <Text style={styles.macroDotValue}>
+                {budgetSummary.protein}
                 {gramUnit}
               </Text>
             </View>
-            <View style={[styles.miniMacroPill, styles.carbsPill]}>
-              <Text style={[styles.miniMacroText, styles.carbsText]}>
-                {t('C')} {budgetSummary.carbs}
+
+            <View style={[styles.macroDotItem, isRtl && styles.rowRtl]}>
+              <View style={[styles.macroDot, { backgroundColor: theme.colors.macroPillCarbsText }]} />
+              <Text
+                style={styles.macroDotLabel}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.78}
+              >
+                {t('Carbs')}
+              </Text>
+              <Text style={styles.macroDotValue}>
+                {budgetSummary.carbs}
                 {gramUnit}
               </Text>
             </View>
-            <View style={[styles.miniMacroPill, styles.fatPill]}>
-              <Text style={[styles.miniMacroText, styles.fatText]}>
-                {t('F')} {budgetSummary.fat}
+
+            <View style={[styles.macroDotItem, isRtl && styles.rowRtl]}>
+              <View style={[styles.macroDot, { backgroundColor: theme.colors.macroPillFatText }]} />
+              <Text
+                style={styles.macroDotLabel}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.78}
+              >
+                {t('Fat')}
+              </Text>
+              <Text style={styles.macroDotValue}>
+                {budgetSummary.fat}
                 {gramUnit}
               </Text>
             </View>
           </View>
         </View>
 
-        {/* Row 3: Smart Meal Filter Segmented Bar (zero truncation) */}
+        {/* Row 3: Smart Meal Filter Segmented Bar */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -765,7 +758,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
             const isActive = activeFilter === tab.key;
             const iconColor = isActive
               ? theme.colors.calendarSelectedText
-              : theme.colors.textSecondary;
+              : theme.colors.diaryMutedLabel;
 
             return (
               <TouchableOpacity
@@ -812,127 +805,162 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         </ScrollView>
       </View>
 
-      {/* Main Meal Sections Scroll Area */}
-      <ScrollView
-        ref={scrollViewRef}
-        onScroll={handleScroll}
-        scrollEventThrottle={32}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: stickyHeaderHeight + 10,
-            paddingBottom: scrollBottomPadding,
-          },
-        ]}
-      >
-        {visibleMeals.map((cat) => {
-          const categoryMeals = groupedMeals[cat.key];
-          const mealStats = budgetSummary.mealStats[cat.key];
-          const hasItems = categoryMeals.length > 0;
-          const isExpanded =
-            activeFilter === cat.key
-              ? true
-              : (collapsedOverrides[cat.key] ?? true);
-          const { accentKey, tintKey } = getMealAccentThemeKey(cat.key);
-          const accentColor = theme.colors[accentKey];
-          const tintColor = theme.colors[tintKey];
-
-          return (
-            <View
-              key={cat.key}
-              onLayout={(e) => {
-                if (activeFilter === 'all') {
-                  mealOffsets.current[cat.key] = e.nativeEvent.layout.y;
-                }
-              }}
-              style={styles.mealCard}
-            >
-              {/* Section Header */}
-              <View style={[styles.mealHeaderRow, isRtl && styles.rowRtl]}>
-                <TouchableOpacity
-                  style={[styles.mealHeaderMain, isRtl && styles.rowRtl]}
-                  onPress={() => toggleMealExpanded(cat.key, isExpanded)}
-                  activeOpacity={0.78}
+      {/* Main Scroll Area (starts cleanly below opaque Sticky Header) */}
+      <View style={styles.scrollWrapper}>
+        <ScrollView
+          ref={scrollViewRef}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: scrollBottomPadding },
+          ]}
+        >
+          {/* Relocated Top Quick Action Bar (Search | AI Plate | Barcode) */}
+          {!isFuture && (
+            <View style={[styles.quickActionBar, isRtl && styles.rowRtl]}>
+              <View style={styles.quickActionSlot}>
+                <AnimatedPressable
+                  style={[styles.quickActionBtn, isRtl && styles.rowRtl]}
+                  onPress={() => openAddSheet(undefined, 'search', false)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${cat.label}, ${isExpanded ? t('Collapse') : t('Expand')}`}
+                  accessibilityLabel={t('Search')}
+                  minScale={0.95}
                 >
-                  {/* Internal subtle left/start accent indicator */}
-                  <View
-                    style={[
-                      styles.internalAccentBar,
-                      { backgroundColor: accentColor },
-                    ]}
-                  />
-
-                  <View
-                    style={[
-                      styles.mealIconSquircle,
-                      { backgroundColor: tintColor },
-                    ]}
-                  >
-                    {renderMealGlyph(cat.key, 17, accentColor)}
-                  </View>
-
-                  <View style={styles.mealTitleBlock}>
-                    <Text
-                      style={[styles.mealTitleText, isRtl && styles.rtlText]}
-                      numberOfLines={1}
-                    >
-                      {cat.label}
-                    </Text>
-                    <Text
-                      style={[styles.mealSubBadge, isRtl && styles.rtlText]}
-                      numberOfLines={1}
-                    >
-                      {hasItems
-                        ? `${formatKcal(mealStats.calories, t)} • ${mealStats.count} ${t(mealStats.count === 1 ? 'item' : 'items')}`
-                        : formatKcal(0, t)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <View style={[styles.mealHeaderActions, isRtl && styles.rowRtl]}>
-                  {!isFuture && (
-                    <AnimatedPressable
-                      style={[styles.addMealPillBtn, isRtl && styles.rowRtl]}
-                      onPress={() => openAddSheet(cat.key, 'search', false)}
-                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${t('Add food to')} ${cat.label}`}
-                      minScale={0.94}
-                    >
-                      <Plus size={14} color={theme.colors.emeraldDark} strokeWidth={2.6} />
-                      <Text style={styles.addMealPillText}>{t('Add')}</Text>
-                    </AnimatedPressable>
-                  )}
-
-                  {activeFilter === 'all' && (
-                    <TouchableOpacity
-                      style={styles.chevronBtn}
-                      onPress={() => toggleMealExpanded(cat.key, isExpanded)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${cat.label} ${isExpanded ? t('Collapse') : t('Expand')}`}
-                    >
-                      <RotatingChevron
-                        expanded={isExpanded}
-                        color={theme.colors.textSecondary}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
+                  <Search size={15} color={theme.colors.macroPillProteinText} strokeWidth={2.2} />
+                  <Text style={styles.quickActionLabel} numberOfLines={1}>
+                    {t('Search')}
+                  </Text>
+                </AnimatedPressable>
               </View>
 
-              {/* Collapsible Section Body */}
-              {isExpanded && (
-                <View style={styles.mealCardBody}>
-                  <View style={styles.sectionDivider} />
+              <View style={styles.quickActionDivider} />
 
-                  {/* Quick-Log Horizontal Pill Strip */}
-                  {!isFuture && (
-                    <View style={styles.quickLogWrap}>
+              <View style={styles.quickActionSlot}>
+                <AnimatedPressable
+                  style={[styles.quickActionBtn, isRtl && styles.rowRtl]}
+                  onPress={() => openAddSheet(undefined, 'photo', false)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('AI Plate')}
+                  minScale={0.95}
+                >
+                  <Sparkles size={15} color={theme.colors.macroPillCarbsText} strokeWidth={2.2} />
+                  <Text style={styles.quickActionLabel} numberOfLines={1}>
+                    {t('AI Plate')}
+                  </Text>
+                </AnimatedPressable>
+              </View>
+
+              <View style={styles.quickActionDivider} />
+
+              <View style={styles.quickActionSlot}>
+                <AnimatedPressable
+                  style={[styles.quickActionBtn, isRtl && styles.rowRtl]}
+                  onPress={() => openAddSheet(undefined, 'search', true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Barcode')}
+                  minScale={0.95}
+                >
+                  <BarcodeIcon size={15} color={theme.colors.macroPillFatText} strokeWidth={2.2} />
+                  <Text style={styles.quickActionLabel} numberOfLines={1}>
+                    {t('Barcode')}
+                  </Text>
+                </AnimatedPressable>
+              </View>
+            </View>
+          )}
+
+          {/* Luxury Elevated Meal Cards */}
+          {visibleMeals.map((cat) => {
+            const categoryMeals = groupedMeals[cat.key];
+            const mealStats = budgetSummary.mealStats[cat.key];
+            const hasItems = categoryMeals.length > 0;
+            const isExpanded =
+              activeFilter === cat.key
+                ? true
+                : (collapsedOverrides[cat.key] ?? true);
+
+            return (
+              <View
+                key={cat.key}
+                onLayout={(e) => {
+                  if (activeFilter === 'all') {
+                    mealOffsets.current[cat.key] = e.nativeEvent.layout.y;
+                  }
+                }}
+                style={styles.mealCard}
+              >
+                {/* Clean Luxury Meal Header (zero harsh colored bar) */}
+                <View style={[styles.mealHeaderRow, isRtl && styles.rowRtl]}>
+                  <TouchableOpacity
+                    style={[styles.mealHeaderMain, isRtl && styles.rowRtl]}
+                    onPress={() => toggleMealExpanded(cat.key, isExpanded)}
+                    activeOpacity={0.78}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${cat.label}, ${isExpanded ? t('Collapse') : t('Expand')}`}
+                  >
+                    <View style={styles.mealIconSquircle}>
+                      {renderMealGlyph(cat.key, 18, theme.colors.diaryMutedLabel)}
+                    </View>
+
+                    <View style={styles.mealTitleBlock}>
+                      <Text
+                        style={[styles.mealTitleText, isRtl && styles.rtlText]}
+                        numberOfLines={1}
+                      >
+                        {cat.label}
+                      </Text>
+                      <Text
+                        style={[styles.mealSubBadge, isRtl && styles.rtlText]}
+                        numberOfLines={1}
+                      >
+                        {hasItems
+                          ? `${formatKcal(mealStats.calories, t)} · ${mealStats.count} ${t(mealStats.count === 1 ? 'item' : 'items')}`
+                          : formatKcal(0, t)}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <View style={[styles.mealHeaderActions, isRtl && styles.rowRtl]}>
+                    {!isFuture && (
+                      <AnimatedPressable
+                        style={[styles.addMealPillBtn, isRtl && styles.rowRtl]}
+                        onPress={() => openAddSheet(cat.key, 'search', false)}
+                        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('Add food to')} ${cat.label}`}
+                        minScale={0.94}
+                      >
+                        <Plus
+                          size={14}
+                          color={theme.colors.macroPillProteinText}
+                          strokeWidth={2.5}
+                        />
+                        <Text style={styles.addMealPillText}>{t('Add')}</Text>
+                      </AnimatedPressable>
+                    )}
+
+                    {activeFilter === 'all' && (
+                      <TouchableOpacity
+                        style={styles.chevronBtn}
+                        onPress={() => toggleMealExpanded(cat.key, isExpanded)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${cat.label} ${isExpanded ? t('Collapse') : t('Expand')}`}
+                      >
+                        <RotatingChevron
+                          expanded={isExpanded}
+                          color={theme.colors.diarySubtleSlate}
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+
+                {/* Collapsible Body */}
+                {isExpanded && (
+                  <View style={styles.mealCardBody}>
+                    {!isFuture && (
                       <MealQuickLogCarousel
                         foods={quickLogByMeal[cat.key]}
                         onQuickLog={(food) => handleQuickLogFood(food, cat.key)}
@@ -940,49 +968,45 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
                         language={language}
                         isRtl={isRtl}
                       />
-                    </View>
-                  )}
+                    )}
 
-                  {/* Compact Smart Empty State OR Logged Food Cards */}
-                  {hasItems ? (
-                    <View style={styles.foodListStack}>
-                      {categoryMeals.map((item, idx) => (
-                        <AnimatedFoodRow
-                          key={item.id}
-                          isNew={userAddedMealIds.has(item.id)}
-                          index={idx}
-                        >
-                          <FoodLogSwipeableRow
-                            item={item}
-                            language={language}
-                            isRtl={isRtl}
-                            disabled={isFuture}
-                            onPress={setInspectingMeal}
-                            onDelete={handleDeleteMeal}
-                          />
-                        </AnimatedFoodRow>
-                      ))}
-                    </View>
-                  ) : (
-                    <Text style={[styles.compactEmptyPrompt, isRtl && styles.rtlText]}>
-                      {isFuture ? t('No items yet') : t('Tap to quick log or add above')}
-                    </Text>
-                  )}
-                </View>
-              )}
-            </View>
-          );
-        })}
-      </ScrollView>
+                    {hasItems ? (
+                      <View style={styles.foodGroupContainer}>
+                        {categoryMeals.map((item, idx) => (
+                          <AnimatedFoodRow
+                            key={item.id}
+                            isNew={userAddedMealIds.has(item.id)}
+                            index={idx}
+                          >
+                            <FoodLogSwipeableRow
+                              item={item}
+                              language={language}
+                              isRtl={isRtl}
+                              disabled={isFuture}
+                              isLast={idx === categoryMeals.length - 1}
+                              onPress={setInspectingMeal}
+                              onDelete={handleDeleteMeal}
+                            />
+                          </AnimatedFoodRow>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
 
-      {/* Inline Undo Toast for Quick Log & Swipe Delete */}
+      {/* Brief Transient Inline Undo Toast after Quick-Log */}
       {toast && (
         <Animated.View
           entering={isReducedMotion() ? undefined : FadeIn.duration(180)}
           exiting={isReducedMotion() ? undefined : FadeOut.duration(150)}
           style={[
             styles.toastWrapper,
-            { bottom: floatingDockBottom + 56 },
+            { bottom: dockClearance + 10 },
             isRtl && styles.rowRtl,
           ]}
         >
@@ -999,62 +1023,6 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
             <Text style={styles.toastUndoText}>{t('Undo')}</Text>
           </TouchableOpacity>
         </Animated.View>
-      )}
-
-      {/* Floating Bottom Quick-Action Pill Bar (clears nav dock) */}
-      {!isFuture && (
-        <View
-          style={[
-            styles.floatingDockOuter,
-            { bottom: floatingDockBottom },
-          ]}
-          pointerEvents="box-none"
-        >
-          <View style={[styles.floatingDockPill, isRtl && styles.rowRtl]}>
-            <AnimatedPressable
-              style={[styles.dockActionBtn, isRtl && styles.rowRtl]}
-              onPress={() => openAddSheet(undefined, 'search', false)}
-              accessibilityRole="button"
-              accessibilityLabel={t('Search')}
-              minScale={0.94}
-            >
-              <Search size={15} color={theme.colors.emeraldDark} strokeWidth={2.3} />
-              <Text style={styles.dockActionLabel} numberOfLines={1}>
-                {t('Search')}
-              </Text>
-            </AnimatedPressable>
-
-            <View style={styles.dockSeparator} />
-
-            <AnimatedPressable
-              style={[styles.dockActionBtn, isRtl && styles.rowRtl]}
-              onPress={() => openAddSheet(undefined, 'photo', false)}
-              accessibilityRole="button"
-              accessibilityLabel={t('AI Plate')}
-              minScale={0.94}
-            >
-              <Sparkles size={15} color={theme.colors.amberText} strokeWidth={2.3} />
-              <Text style={styles.dockActionLabel} numberOfLines={1}>
-                {t('AI Plate')}
-              </Text>
-            </AnimatedPressable>
-
-            <View style={styles.dockSeparator} />
-
-            <AnimatedPressable
-              style={[styles.dockActionBtn, isRtl && styles.rowRtl]}
-              onPress={() => openAddSheet(undefined, 'search', true)}
-              accessibilityRole="button"
-              accessibilityLabel={t('Barcode')}
-              minScale={0.94}
-            >
-              <BarcodeIcon size={15} color={theme.colors.stepsAccent} strokeWidth={2.3} />
-              <Text style={styles.dockActionLabel} numberOfLines={1}>
-                {t('Barcode')}
-              </Text>
-            </AnimatedPressable>
-          </View>
-        </View>
       )}
 
       {/* Calendar Picker Modal */}
@@ -1087,7 +1055,7 @@ export const FoodLogScreen = React.memo<FoodLogScreenProps>(({
         onSave={handleUpdateInspectingServings}
         onDelete={() => {
           if (inspectingMeal) {
-            handleDeleteMeal(inspectingMeal.id, false);
+            handleDeleteMeal(inspectingMeal.id);
             setInspectingMeal(null);
           }
         }}
@@ -1112,25 +1080,13 @@ const createStyles = (theme: ThemeType) =>
       writingDirection: 'rtl',
     },
     stickyHeader: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 20,
       backgroundColor: theme.colors.diaryStickyHeaderBg,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.diaryStickyHeaderBorder,
-      paddingTop: 8,
-      paddingBottom: 10,
-      gap: 9,
-      ...Platform.select({
-        web: {
-          backdropFilter: 'blur(16px)',
-        },
-        default: {
-          elevation: 4,
-        },
-      }),
+      paddingTop: 10,
+      paddingBottom: 12,
+      gap: 10,
+      zIndex: 10,
     },
     dateRow: {
       flexDirection: 'row',
@@ -1143,167 +1099,159 @@ const createStyles = (theme: ThemeType) =>
       width: 36,
       height: 36,
       borderRadius: 12,
-      backgroundColor: theme.colors.glassControlBg,
+      backgroundColor: theme.colors.diaryTelemetryBg,
       borderWidth: 1,
-      borderColor: theme.colors.glassControlBorder,
+      borderColor: theme.colors.diaryTelemetryBorder,
       alignItems: 'center',
       justifyContent: 'center',
+      flexShrink: 0,
     },
     disabledControl: {
-      opacity: 0.38,
+      opacity: 0.36,
     },
-    dateCenterGroup: {
-      flex: 1,
+    datePickPill: {
+      flexShrink: 0,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
-    },
-    datePickPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 7,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 7,
       borderRadius: 999,
-      backgroundColor: theme.colors.glassSubCardBg,
+      backgroundColor: theme.colors.diaryTelemetryBg,
       borderWidth: 1,
-      borderColor: theme.colors.glassSubCardBorder,
-      maxWidth: '78%',
+      borderColor: theme.colors.diaryTelemetryBorder,
     },
     dateTitle: {
       fontSize: 15,
       fontWeight: '700',
-      color: theme.colors.textPrimary,
-      flexShrink: 1,
+      color: theme.colors.diaryHeadingText,
+    },
+    dateTitleLong: {
+      maxWidth: 210,
+    },
+    todayResetRow: {
+      alignItems: 'center',
     },
     todayResetPill: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 9,
-      paddingVertical: 5,
+      gap: 5,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
       borderRadius: 999,
-      backgroundColor: theme.colors.emeraldLight,
+      backgroundColor: theme.colors.diaryAddBtnBg,
       borderWidth: 1,
-      borderColor: theme.colors.emeraldBorder,
+      borderColor: theme.colors.diaryAddBtnBorder,
     },
     todayResetText: {
       fontSize: 12,
-      fontWeight: '700',
-      color: theme.colors.emeraldDark,
+      fontWeight: '600',
+      color: theme.colors.calorieBaseGreen,
     },
-    budgetStrip: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+    telemetryCard: {
+      backgroundColor: theme.colors.diaryTelemetryBg,
+      borderRadius: 16,
+      padding: 14,
       marginHorizontal: 14,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 14,
-      backgroundColor: theme.colors.glassSubCardBg,
       borderWidth: 1,
-      borderColor: theme.colors.glassSubCardBorder,
-      gap: 10,
+      borderColor: theme.colors.diaryTelemetryBorder,
     },
-    budgetLeftCol: {
-      flex: 1,
-      minWidth: 150,
-      gap: 5,
-    },
-    budgetTextRow: {
+    telemetryTopRow: {
       flexDirection: 'row',
       alignItems: 'baseline',
       justifyContent: 'space-between',
-      gap: 6,
+      gap: 8,
     },
-    budgetKcalRatio: {
-      fontSize: 13,
-      fontWeight: '800',
-      color: theme.colors.textPrimary,
-      fontVariant: ['tabular-nums'],
+    telemetryKcalGroup: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 4,
+      flexShrink: 1,
     },
-    budgetKcalTarget: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.colors.textSecondary,
-    },
-    budgetDeltaText: {
-      fontSize: 12,
+    telemetryKcalValue: {
+      fontSize: 18,
       fontWeight: '700',
+      color: theme.colors.diaryHeadingText,
       fontVariant: ['tabular-nums'],
     },
-    budgetRemainText: {
-      color: theme.colors.emeraldDark,
+    telemetryKcalTarget: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: theme.colors.diaryMutedLabel,
+      fontVariant: ['tabular-nums'],
     },
-    budgetOverText: {
+    telemetryRemainText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.colors.calorieBaseGreen,
+      fontVariant: ['tabular-nums'],
+      flexShrink: 0,
+    },
+    telemetryOverText: {
       color: theme.colors.calorieOverflowRed,
     },
     progressTrack: {
-      height: 5,
-      borderRadius: 3,
-      backgroundColor: theme.colors.glassControlBg,
+      marginTop: 8,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.colors.diaryProgressTrack,
       overflow: 'hidden',
       flexDirection: 'row',
     },
     progressFill: {
       height: '100%',
-      borderRadius: 3,
+      borderRadius: 2,
     },
-    budgetMacroPills: {
+    macroTelemetryRow: {
+      marginTop: 10,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    macroDotItem: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 5,
+      minWidth: 0,
+    },
+    macroDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
       flexShrink: 0,
     },
-    miniMacroPill: {
-      paddingHorizontal: 6,
-      paddingVertical: 3,
-      borderRadius: 7,
-      borderWidth: 1,
+    macroDotLabel: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: theme.colors.diaryMutedLabel,
+      flexShrink: 1,
     },
-    miniMacroText: {
+    macroDotValue: {
       fontSize: 12,
       fontWeight: '700',
+      color: theme.colors.diaryBodyLight,
       fontVariant: ['tabular-nums'],
-    },
-    proteinPill: {
-      backgroundColor: theme.colors.macroPillProteinBg,
-      borderColor: theme.colors.macroPillProteinBorder,
-    },
-    proteinText: {
-      color: theme.colors.macroPillProteinText,
-    },
-    carbsPill: {
-      backgroundColor: theme.colors.macroPillCarbsBg,
-      borderColor: theme.colors.macroPillCarbsBorder,
-    },
-    carbsText: {
-      color: theme.colors.macroPillCarbsText,
-    },
-    fatPill: {
-      backgroundColor: theme.colors.macroPillFatBg,
-      borderColor: theme.colors.macroPillFatBorder,
-    },
-    fatText: {
-      color: theme.colors.macroPillFatText,
+      flexShrink: 0,
     },
     filterBarContent: {
       paddingHorizontal: 14,
-      gap: 7,
+      gap: 8,
       alignItems: 'center',
     },
     filterPill: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      paddingHorizontal: 11,
+      paddingHorizontal: 12,
       paddingVertical: 7,
       borderRadius: 999,
-      backgroundColor: theme.colors.glassSubCardBg,
+      backgroundColor: theme.colors.diaryTelemetryBg,
       borderWidth: 1,
-      borderColor: theme.colors.glassSubCardBorder,
+      borderColor: theme.colors.diaryTelemetryBorder,
     },
     filterPillActive: {
       backgroundColor: theme.colors.calendarSelectedStart,
@@ -1312,7 +1260,7 @@ const createStyles = (theme: ThemeType) =>
     filterPillLabel: {
       fontSize: 13,
       fontWeight: '600',
-      color: theme.colors.textSecondary,
+      color: theme.colors.diaryMutedLabel,
     },
     filterPillLabelActive: {
       color: theme.colors.calendarSelectedText,
@@ -1323,7 +1271,7 @@ const createStyles = (theme: ThemeType) =>
       height: 20,
       borderRadius: 10,
       paddingHorizontal: 5,
-      backgroundColor: theme.colors.glassControlBg,
+      backgroundColor: theme.colors.diaryProgressTrack,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1333,50 +1281,80 @@ const createStyles = (theme: ThemeType) =>
     filterCountText: {
       fontSize: 12,
       fontWeight: '700',
-      color: theme.colors.textPrimary,
+      color: theme.colors.diaryBodyLight,
       fontVariant: ['tabular-nums'],
     },
     filterCountTextActive: {
       color: theme.colors.calendarSelectedText,
     },
+    scrollWrapper: {
+      flex: 1,
+      overflow: 'hidden',
+    },
     scrollContent: {
       paddingHorizontal: 14,
-      gap: 14,
+      paddingTop: 14,
+    },
+    quickActionBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.diaryActionDockBg,
+      borderColor: theme.colors.diaryActionDockBorder,
+      borderWidth: 1,
+      borderRadius: 16,
+      paddingVertical: 6,
+      paddingHorizontal: 4,
+      marginBottom: 16,
+    },
+    quickActionSlot: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    quickActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 7,
+      paddingHorizontal: 8,
+    },
+    quickActionLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: theme.colors.diaryBodyLight,
+    },
+    quickActionDivider: {
+      width: 1,
+      height: 18,
+      backgroundColor: theme.colors.diaryHairlineDivider,
     },
     mealCard: {
       backgroundColor: theme.colors.diaryMealCardBg,
       borderColor: theme.colors.diaryMealCardBorder,
       borderWidth: 1,
-      borderRadius: 20,
-      overflow: 'hidden',
+      borderRadius: 22,
+      padding: 16,
+      marginBottom: 16,
     },
     mealHeaderRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      gap: 8,
+      gap: 10,
     },
     mealHeaderMain: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
+      gap: 12,
       minWidth: 0,
-    },
-    internalAccentBar: {
-      width: 3.5,
-      height: 28,
-      borderRadius: 2,
-      flexShrink: 0,
     },
     mealIconSquircle: {
       width: 38,
       height: 38,
       borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.colors.glassSubCardBorder,
+      backgroundColor: theme.colors.diarySquircleBg,
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
@@ -1387,68 +1365,56 @@ const createStyles = (theme: ThemeType) =>
       gap: 2,
     },
     mealTitleText: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '700',
-      color: theme.colors.textPrimary,
+      color: theme.colors.diaryHeadingText,
     },
     mealSubBadge: {
-      fontSize: 12.5,
-      fontWeight: '600',
-      color: theme.colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '500',
+      color: theme.colors.diarySubtleSlate,
       fontVariant: ['tabular-nums'],
     },
     mealHeaderActions: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 8,
       flexShrink: 0,
     },
     addMealPillBtn: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      paddingHorizontal: 10,
+      paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 999,
-      backgroundColor: theme.colors.emeraldLight,
+      backgroundColor: theme.colors.diaryAddBtnBg,
       borderWidth: 1,
-      borderColor: theme.colors.emeraldBorder,
+      borderColor: theme.colors.diaryAddBtnBorder,
     },
     addMealPillText: {
       fontSize: 13,
       fontWeight: '700',
-      color: theme.colors.emeraldDark,
+      color: theme.colors.macroPillProteinText,
     },
     chevronBtn: {
       width: 30,
       height: 30,
       borderRadius: 15,
-      backgroundColor: theme.colors.glassControlBg,
+      backgroundColor: theme.colors.diarySquircleBg,
       alignItems: 'center',
       justifyContent: 'center',
     },
     mealCardBody: {
-      paddingBottom: 12,
+      marginTop: 12,
+      gap: 12,
     },
-    sectionDivider: {
-      height: 1,
-      backgroundColor: theme.colors.diaryLoggedRowBorder,
-      marginHorizontal: 14,
-      marginBottom: 8,
-    },
-    quickLogWrap: {
-      marginBottom: 8,
-    },
-    foodListStack: {
-      paddingHorizontal: 10,
-      gap: 8,
-    },
-    compactEmptyPrompt: {
-      fontSize: 12,
-      fontWeight: '500',
-      color: theme.colors.textMuted,
-      paddingHorizontal: 16,
-      paddingTop: 2,
+    foodGroupContainer: {
+      backgroundColor: theme.colors.diaryLoggedRowBg,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.diaryLoggedRowBorder,
+      overflow: 'hidden',
     },
     toastWrapper: {
       position: 'absolute',
@@ -1458,8 +1424,8 @@ const createStyles = (theme: ThemeType) =>
       alignItems: 'center',
       gap: 12,
       maxWidth: '90%',
-      backgroundColor: theme.colors.diaryActionDockBg,
-      borderColor: theme.colors.emeraldBorder,
+      backgroundColor: theme.colors.diaryTelemetryBg,
+      borderColor: theme.colors.diaryAddBtnBorder,
       borderWidth: 1,
       borderRadius: 999,
       paddingHorizontal: 16,
@@ -1473,58 +1439,18 @@ const createStyles = (theme: ThemeType) =>
     toastText: {
       fontSize: 13,
       fontWeight: '600',
-      color: theme.colors.textPrimary,
+      color: theme.colors.diaryHeadingText,
       flexShrink: 1,
     },
     toastUndoBtn: {
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 999,
-      backgroundColor: theme.colors.emeraldLight,
+      backgroundColor: theme.colors.diaryAddBtnBg,
     },
     toastUndoText: {
       fontSize: 13,
       fontWeight: '700',
-      color: theme.colors.emeraldDark,
-    },
-    floatingDockOuter: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      alignItems: 'center',
-      zIndex: 25,
-    },
-    floatingDockPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.colors.diaryActionDockBg,
-      borderColor: theme.colors.diaryActionDockBorder,
-      borderWidth: 1,
-      borderRadius: 999,
-      paddingHorizontal: 8,
-      paddingVertical: 6,
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.2,
-      shadowRadius: 14,
-      elevation: 8,
-    },
-    dockActionBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-      borderRadius: 999,
-    },
-    dockActionLabel: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.colors.textPrimary,
-    },
-    dockSeparator: {
-      width: 1,
-      height: 18,
-      backgroundColor: theme.colors.diaryLoggedRowBorder,
+      color: theme.colors.macroPillProteinText,
     },
   });

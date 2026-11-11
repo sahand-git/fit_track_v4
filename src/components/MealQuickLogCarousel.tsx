@@ -64,31 +64,30 @@ export const MealQuickLogCarousel: React.FC<MealQuickLogCarouselProps> = React.m
           ]}
           onPress={() => handlePress(item)}
           disabled={disabled}
-          minScale={0.94}
+          minScale={0.95}
           hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
           accessibilityRole="button"
           accessibilityLabel={`${t('Quick Log')}: ${displayName}, ${kcalRounded} ${t('kcal')}`}
         >
-          <View style={styles.emojiBadge}>
-            <Text style={styles.emojiText}>{emoji}</Text>
-          </View>
+          <Text style={styles.emojiText}>{emoji}</Text>
           <Text
-            style={[styles.chipName, isRtl && styles.rtlText]}
+            style={[styles.chipLabel, isRtl && styles.rtlText]}
             numberOfLines={1}
             ellipsizeMode="tail"
           >
-            {displayName}
+            <Text style={styles.chipName}>{displayName}</Text>
+            <Text style={styles.chipMeta}>
+              {' · '}
+              {kcalRounded} {t('kcal')}
+            </Text>
           </Text>
-          <Text style={styles.chipMeta} numberOfLines={1}>
-            • {kcalRounded} {t('kcal')}
-          </Text>
-          <View style={styles.plusBadge}>
-            <Plus size={13} color={theme.colors.emeraldDark} strokeWidth={2.75} />
+          <View style={styles.plusWrap}>
+            <Plus size={13} color={theme.colors.calorieBaseGreen} strokeWidth={2.4} />
           </View>
         </AnimatedPressable>
       );
     },
-    [disabled, handlePress, isRtl, language, styles, t, theme.colors.emeraldDark],
+    [disabled, handlePress, isRtl, language, styles, t, theme.colors.calorieBaseGreen],
   );
 
   const keyExtractor = useCallback((item: FoodItem) => item.id, []);
@@ -116,10 +115,9 @@ MealQuickLogCarousel.displayName = 'MealQuickLogCarousel';
 function createStyles(theme: ThemeType) {
   return StyleSheet.create({
     container: {
-      paddingVertical: 4,
+      paddingVertical: 2,
     },
     listContent: {
-      paddingHorizontal: 14,
       gap: 8,
       alignItems: 'center',
     },
@@ -138,44 +136,36 @@ function createStyles(theme: ThemeType) {
       borderColor: theme.colors.diaryQuickChipBorder,
       borderWidth: 1,
       borderRadius: 999,
-      paddingHorizontal: 10,
-      paddingVertical: 7,
-      maxWidth: 270,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      maxWidth: 276,
     },
     chipDisabled: {
-      opacity: 0.48,
-    },
-    emojiBadge: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: theme.colors.glassSubCardBg,
-      alignItems: 'center',
-      justifyContent: 'center',
+      opacity: 0.45,
     },
     emojiText: {
-      fontSize: 14,
+      fontSize: 15,
+    },
+    chipLabel: {
+      maxWidth: 204,
+      flexShrink: 1,
     },
     chipName: {
       fontSize: 13,
       fontWeight: '600',
-      color: theme.colors.textPrimary,
-      maxWidth: 138,
-      flexShrink: 1,
+      color: theme.colors.diaryBodyLight,
     },
     chipMeta: {
       fontSize: 12,
-      fontWeight: '600',
-      color: theme.colors.textSecondary,
+      fontWeight: '500',
+      color: theme.colors.diaryMutedLabel,
       fontVariant: ['tabular-nums'],
     },
-    plusBadge: {
-      width: 22,
-      height: 22,
-      borderRadius: 11,
-      backgroundColor: theme.colors.emeraldLight,
-      borderWidth: 1,
-      borderColor: theme.colors.emeraldBorder,
+    plusWrap: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: theme.colors.diaryAddBtnBg,
       alignItems: 'center',
       justifyContent: 'center',
     },
