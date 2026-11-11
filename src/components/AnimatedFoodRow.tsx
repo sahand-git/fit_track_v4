@@ -1,43 +1,57 @@
 import React from 'react';
 import { ViewProps } from 'react-native';
-import Animated, { FadeInDown, FadeOutRight } from 'react-native-reanimated';
-import { isReducedMotion } from '../utils/motion';
+import Animated, {
+  FadeInDown,
+  FadeOutLeft,
+  FadeOut,
+  LinearTransition,
+  ReduceMotion,
+} from 'react-native-reanimated';
 import { MOTION } from '../utils/reanimatedMotion';
+import { isReducedMotion } from '../utils/motion';
 
 interface AnimatedFoodRowProps extends ViewProps {
   children: React.ReactNode;
-  delay?: number;
   isNew?: boolean;
+  index?: number;
 }
 
-/**
- * Editorial Ledger Animated Food Row
- * Smooth Reanimated entry and exit transitions for adding and deleting meal items.
- * Layout transition removed to prevent Android initial height calculation clipping.
- * Bulk list rows omit entering animation; user-added rows animate cleanly.
- */
 export const AnimatedFoodRow: React.FC<AnimatedFoodRowProps> = ({
   children,
-  style,
-  delay = 0,
   isNew = false,
+  index = 0,
+  style,
   ...rest
 }) => {
-  const enterAnim = isReducedMotion()
-    ? undefined
-    : FadeInDown.duration(isNew ? MOTION.duration.base : 240)
-        .delay(Math.min(delay, 240))
-        .easing(MOTION.easing.outCubic);
+  const reduced = isReducedMotion();
 
-  const exitAnim = isReducedMotion()
-    ? undefined
-    : FadeOutRight.duration(MOTION.duration.quick)
-        .easing(MOTION.easing.outCubic);
+  const enteringAnimation =
+    isNew && !reduced
+      ? FadeInDown.duration(MOTION.duration.base)
+          .delay(Math.min(index, 5) * 35)
+          .easing(MOTION.easing.outCubic)
+          .reduceMotion(ReduceMotion.System)
+      : undefined;
+
+  const exitingAnimation = !reduced
+    ? FadeOutLeft.duration(MOTION.duration.quick)
+        .easing(MOTION.easing.outCubic)
+        .reduceMotion(ReduceMotion.System)
+    : FadeOut.duration(0);
+
+  const layoutTransition = !reduced
+    ? LinearTransition.springify()
+        .damping(MOTION.spring.tactile.damping)
+        .stiffness(MOTION.spring.tactile.stiffness)
+        .mass(MOTION.spring.tactile.mass)
+        .reduceMotion(ReduceMotion.System)
+    : undefined;
 
   return (
     <Animated.View
-      entering={enterAnim}
-      exiting={exitAnim}
+      entering={enteringAnimation}
+      exiting={exitingAnimation}
+      layout={layoutTransition}
       style={style}
       {...rest}
     >

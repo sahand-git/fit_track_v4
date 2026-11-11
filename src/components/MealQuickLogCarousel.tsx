@@ -1,147 +1,183 @@
-import React, { useMemo } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
-import { AppText as Text } from './AppText';
+import React, { useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Plus } from 'lucide-react-native';
-import { FoodItem, MealType } from '../types';
-import { FoodThumbnail } from './FoodThumbnail';
-import { useLanguage } from '../i18n/I18nContext';
-import { translate } from '../i18n/strings';
-import { getLocalizedFoodName } from '../utils/foodLocalization';
+import { AppLanguage, FoodItem } from '../types';
 import { useTheme } from '../theme/ThemeContext';
 import { ThemeType } from '../theme';
-import * as Haptics from 'expo-haptics';
+import { getLocalizedFoodName } from '../utils/foodLocalization';
+import { getFoodEmoji } from '../utils/foodCategories';
+import { translate } from '../i18n/strings';
 import { AnimatedPressable } from './AnimatedPressable';
 
 interface MealQuickLogCarouselProps {
-  mealType: MealType;
-  recentFoods: FoodItem[];
+  foods: FoodItem[];
   onQuickLog: (food: FoodItem) => void;
+  disabled?: boolean;
+  language: AppLanguage;
+  isRtl?: boolean;
 }
 
-export const MealQuickLogCarousel: React.FC<MealQuickLogCarouselProps> = ({
-  mealType,
-  recentFoods,
-  onQuickLog,
-}) => {
-  const language = useLanguage();
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
-  const t = (key: string) => translate(language, key);
+const styleCache = new Map<ThemeType, ReturnType<typeof createStyles>>();
 
-  if (!recentFoods || recentFoods.length === 0) {
-    return null;
+function getQuickLogStyles(theme: ThemeType): ReturnType<typeof createStyles> {
+  let cached = styleCache.get(theme);
+  if (!cached) {
+    cached = createStyles(theme);
+    styleCache.set(theme, cached);
   }
+  return cached;
+}
 
-  const handleQuickLog = (food: FoodItem) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    onQuickLog(food);
-  };
+export const MealQuickLogCarousel: React.FC<MealQuickLogCarouselProps> = React.memo(({
+  foods,
+  onQuickLog,
+  disabled = false,
+  language,
+  isRtl = false,
+}) => {
+  const { theme } = useTheme();
+  const styles = getQuickLogStyles(theme);
+  const t = useCallback((value: string) => translate(language, value), [language]);
+
+  const handlePress = useCallback(
+    (food: FoodItem) => {
+      if (disabled) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      onQuickLog(food);
+    },
+    [disabled, onQuickLog],
+  );
+
+  const renderChip = useCallback(
+    ({ item }: { item: FoodItem }) => {
+      const displayName = getLocalizedFoodName(item, language);
+      const emoji = getFoodEmoji(item.name, item.category);
+      const kcalRounded = Math.round(item.calories);
+
+      return (
+        <AnimatedPressable
+          style={[
+            styles.chipCard,
+            isRtl && styles.rowRtl,
+            disabled && styles.chipDisabled,
+          ]}
+          onPress={() => handlePress(item)}
+          disabled={disabled}
+          minScale={0.94}
+          hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
+          accessibilityRole="button"
+          accessibilityLabel={`${t('Quick Log')}: ${displayName}, ${kcalRounded} ${t('kcal')}`}
+        >
+          <View style={styles.emojiBadge}>
+            <Text style={styles.emojiText}>{emoji}</Text>
+          </View>
+          <Text
+            style={[styles.chipName, isRtl && styles.rtlText]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {displayName}
+          </Text>
+          <Text style={styles.chipMeta} numberOfLines={1}>
+            • {kcalRounded} {t('kcal')}
+          </Text>
+          <View style={styles.plusBadge}>
+            <Plus size={13} color={theme.colors.emeraldDark} strokeWidth={2.75} />
+          </View>
+        </AnimatedPressable>
+      );
+    },
+    [disabled, handlePress, isRtl, language, styles, t, theme.colors.emeraldDark],
+  );
+
+  const keyExtractor = useCallback((item: FoodItem) => item.id, []);
+
+  if (!foods.length) return null;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>{t('Quick Log')}</Text>
-      <ScrollView
+      <FlatList
+        data={foods}
+        renderItem={renderChip}
+        keyExtractor={keyExtractor}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {recentFoods.slice(0, 8).map((food) => {
-          const localizedName = getLocalizedFoodName(food, language);
-          return (
-            <AnimatedPressable
-              key={food.id}
-              style={styles.itemCard}
-              onPress={() => handleQuickLog(food)}
-              minScale={0.92}
-              accessibilityRole="button"
-              accessibilityLabel={`${t('Quick Log')} ${localizedName}`}
-            >
-              <View style={styles.thumbnailWrapper}>
-                <FoodThumbnail
-                  name={food.name}
-                  englishName={food.name}
-                  foodId={food.id}
-                  category={food.category}
-                  imageUrl={food.imageUrl}
-                  size="small"
-                />
-                <View style={styles.addBadge}>
-                  <Plus size={12} color={theme.colors.white} strokeWidth={2.5} />
-                </View>
-              </View>
-              <Text style={styles.foodName} numberOfLines={1}>
-                {localizedName}
-              </Text>
-              <Text style={styles.foodKcal}>
-                {food.calories} {t('kcal')}
-              </Text>
-            </AnimatedPressable>
-          );
-        })}
-      </ScrollView>
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+      />
     </View>
   );
-};
+});
 
-const createStyles = (theme: ThemeType) =>
-  StyleSheet.create({
+MealQuickLogCarousel.displayName = 'MealQuickLogCarousel';
+
+function createStyles(theme: ThemeType) {
+  return StyleSheet.create({
     container: {
-      paddingVertical: 3,
-      paddingHorizontal: 2,
+      paddingVertical: 4,
     },
-    sectionTitle: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.colors.textMuted,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-      marginBottom: 3,
-      paddingHorizontal: 4,
+    listContent: {
+      paddingHorizontal: 14,
+      gap: 8,
+      alignItems: 'center',
     },
-    scrollContent: {
+    rowRtl: {
+      flexDirection: 'row-reverse',
+    },
+    rtlText: {
+      textAlign: 'right',
+      writingDirection: 'rtl',
+    },
+    chipCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 4,
+      gap: 7,
+      backgroundColor: theme.colors.diaryQuickChipBg,
+      borderColor: theme.colors.diaryQuickChipBorder,
+      borderWidth: 1,
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      maxWidth: 270,
     },
-    itemCard: {
-      width: 62,
+    chipDisabled: {
+      opacity: 0.48,
+    },
+    emojiBadge: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: theme.colors.glassSubCardBg,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    thumbnailWrapper: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
-      position: 'relative',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 2,
+    emojiText: {
+      fontSize: 14,
     },
-    addBadge: {
-      position: 'absolute',
-      bottom: -2,
-      right: -2,
-      width: 16,
-      height: 16,
-      borderRadius: 8,
-      backgroundColor: theme.colors.emerald,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1.5,
-      borderColor: theme.colors.surface,
-    },
-    foodName: {
-      fontSize: 12,
-      fontWeight: '500',
+    chipName: {
+      fontSize: 13,
+      fontWeight: '600',
       color: theme.colors.textPrimary,
-      textAlign: 'center',
-      width: '100%',
+      maxWidth: 138,
+      flexShrink: 1,
     },
-    foodKcal: {
+    chipMeta: {
       fontSize: 12,
+      fontWeight: '600',
       color: theme.colors.textSecondary,
-      textAlign: 'center',
-      marginTop: 1,
+      fontVariant: ['tabular-nums'],
+    },
+    plusBadge: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: theme.colors.emeraldLight,
+      borderWidth: 1,
+      borderColor: theme.colors.emeraldBorder,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
   });
+}

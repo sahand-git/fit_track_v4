@@ -73,3 +73,24 @@ export function getFoodSourceBadgeInfo(
       return null;
   }
 }
+
+/**
+ * Ultra-short inline source badge metadata (`Est.`, `OFF`, `Verified`, `Custom`)
+ * designed for dense Diary food rows without wrapping.
+ */
+export function getCompactFoodSourceBadgeInfo(
+  source?: FoodItem['source'] | string,
+  sourceRef?: string,
+  t?: (key: string) => string
+): FoodSourceBadgeInfo | null {
+  const base = getFoodSourceBadgeInfo(source, sourceRef, t);
+  if (!base) return null;
+  const tr = t || ((s: string) => s);
+  if (base.type === 'estimate') {
+    return { ...base, label: tr('Est.') };
+  }
+  if (base.type === 'off') {
+    return { ...base, label: tr('OFF') };
+  }
+  return base;
+}

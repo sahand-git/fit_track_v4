@@ -449,12 +449,8 @@ const AddFoodSheetComponent: React.FC<AddFoodSheetProps> = ({
       setStep(mealType ? 2 : 1);
       setSelectedMeal(mealType || getDefaultMealType());
       setSessionState(createInitialSessionState());
-      if (initialTab) {
-        setActiveTab(initialTab);
-      }
-      if (initialScanBarcode) {
-        setIsScanningBarcode(true);
-      }
+      setActiveTab(initialTab || 'search');
+      setIsScanningBarcode(Boolean(initialScanBarcode));
     }
   }
 
