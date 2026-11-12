@@ -299,6 +299,7 @@ export interface DailyLog {
   meals: LoggedMeal[];
   waterGlasses: number;
   steps: number;
+  stepCalories?: number;
   supplements?: SupplementCheck[];
   dailySupplements?: LoggedDailySupplement[];
   workouts?: WorkoutEntry[];

@@ -34,6 +34,18 @@ export const StepsScreen: React.FC<Props> = ({ date, steps, goal, weightKg, heig
   const t = (value: string) => translate(language, value);
   const [stepInput, setStepInput] = useState(String(steps));
   const [goalInput, setGoalInput] = useState(String(goal));
+  const [prevSteps, setPrevSteps] = useState(steps);
+  const [prevGoal, setPrevGoal] = useState(goal);
+
+  if (steps !== prevSteps) {
+    setPrevSteps(steps);
+    setStepInput(String(steps));
+  }
+
+  if (goal !== prevGoal) {
+    setPrevGoal(goal);
+    setGoalInput(String(goal));
+  }
   const [amountInput, setAmountInput] = useState('500');
   const [busy, setBusy] = useState(false);
   const [healthTotal, setHealthTotal] = useState<number | null>(null);

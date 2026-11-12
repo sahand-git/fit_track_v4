@@ -1,5 +1,9 @@
 import { WorkoutEntry } from '../types';
-import { formatStepCaloriePill, StepCaloriePillData } from '../services/stepTrackingCore';
+import {
+  formatStepCaloriePill,
+  resolveStepCalories,
+  StepCaloriePillData,
+} from '../services/stepTrackingCore';
 
 export interface StepTelemetrySummary {
   steps: number;
@@ -22,20 +26,40 @@ export interface WorkoutTelemetrySummary {
  * Pure telemetry calculation for the Active Burn Steps sub-card.
  * Uses total steps for daily step goal progress and net non-workout steps
  * for calorie burn reconciliation with activityBudget.
+ * Always computes step calories via resolveStepCalories when stored calories are missing or 0.
  */
 export function calculateStepTelemetry(
   totalSteps: number | null | undefined,
-  nonWorkoutSteps: number,
+  nonWorkoutSteps?: number | null,
   weightKg: number = 70,
   stepGoal: number = 8000,
-  t: (key: string) => string = (k) => k
+  t: (key: string) => string = (k) => k,
+  storedCaloriesBurned?: number | null,
 ): StepTelemetrySummary {
   const safeSteps = Math.max(0, Math.round(Number.isFinite(totalSteps) ? (totalSteps as number) : 0));
   const safeGoal = Math.max(1, Math.round(Number.isFinite(stepGoal) && stepGoal > 0 ? stepGoal : 8000));
   const progressRatio = Math.min(1, safeSteps / safeGoal);
   const completionPercent = Math.round((safeSteps / safeGoal) * 100);
   const isGoalMet = safeSteps >= safeGoal;
-  const pillData = formatStepCaloriePill(nonWorkoutSteps, weightKg, safeGoal, t);
+  const effectiveSteps =
+    typeof nonWorkoutSteps === 'number' && Number.isFinite(nonWorkoutSteps)
+      ? Math.max(0, Math.round(nonWorkoutSteps))
+      : safeSteps;
+  const burnedKcal = resolveStepCalories({
+    steps: safeSteps,
+    nonWorkoutSteps: effectiveSteps,
+    weightKg,
+    storedCaloriesBurned,
+  });
+  const basePill = formatStepCaloriePill(effectiveSteps, weightKg, safeGoal, t);
+  const pillData: StepCaloriePillData = {
+    ...basePill,
+    burnedKcal,
+    formattedText:
+      effectiveSteps === 0
+        ? basePill.formattedText
+        : `-${burnedKcal} ${t('kcal from steps')}`,
+  };
 
   return {
     steps: safeSteps,
@@ -43,7 +67,7 @@ export function calculateStepTelemetry(
     completionPercent,
     progressRatio,
     isGoalMet,
-    burnedKcal: pillData.burnedKcal,
+    burnedKcal,
     pillData,
   };
 }

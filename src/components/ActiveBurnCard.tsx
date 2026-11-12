@@ -62,16 +62,26 @@ export const ActiveBurnCard: React.FC<ActiveBurnCardProps> = React.memo(({
   const t = useCallback((key: string) => translate(language, key), [language]);
 
   const stepSummary = useMemo(
-    () => calculateStepTelemetry(steps, nonWorkoutSteps, weightKg, stepGoal, t),
-    [steps, nonWorkoutSteps, weightKg, stepGoal, t]
+    () =>
+      calculateStepTelemetry(
+        steps,
+        workouts.length === 0 ? steps : nonWorkoutSteps,
+        weightKg,
+        stepGoal,
+        t,
+        stepCalories,
+      ),
+    [steps, nonWorkoutSteps, workouts.length, weightKg, stepGoal, t, stepCalories]
   );
+
+  const resolvedStepCalories = stepCalories > 0 ? Math.round(stepCalories) : stepSummary.burnedKcal;
 
   const workoutSummary = useMemo(
     () => summarizeWorkoutsTelemetry(workouts, workoutCalories),
     [workouts, workoutCalories]
   );
 
-  const totalBurnKcal = workoutCalories + stepCalories;
+  const totalBurnKcal = workoutCalories + resolvedStepCalories;
 
   // Animated progress bar width for Steps
   const stepBarProgress = useSharedValue(stepSummary.progressRatio);
@@ -199,7 +209,7 @@ export const ActiveBurnCard: React.FC<ActiveBurnCardProps> = React.memo(({
         minScale={0.98}
         hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
         accessibilityRole="button"
-        accessibilityLabel={`${t('Steps')}: ${stepSummary.steps.toLocaleString()} / ${stepSummary.stepGoal.toLocaleString()}, ${stepCalories} ${t('kcal')}`}
+        accessibilityLabel={`${t('Steps')}: ${stepSummary.steps.toLocaleString()} / ${stepSummary.stepGoal.toLocaleString()}, ${resolvedStepCalories} ${t('kcal')}`}
       >
         <View style={[styles.subCardTopRow, isRtl && styles.rowRtl]}>
           <View style={[styles.subCardTitleGroup, isRtl && styles.rowRtl]}>
@@ -221,7 +231,7 @@ export const ActiveBurnCard: React.FC<ActiveBurnCardProps> = React.memo(({
 
           <View style={[styles.subCardRightMetrics, isRtl && styles.rowRtl]}>
             <Text style={styles.subKcalValue}>
-              {stepCalories.toLocaleString()} <Text style={styles.subKcalUnit}>{t('kcal')}</Text>
+              {resolvedStepCalories.toLocaleString()} <Text style={styles.subKcalUnit}>{t('kcal')}</Text>
             </Text>
           </View>
         </View>
@@ -309,11 +319,11 @@ export const ActiveBurnCard: React.FC<ActiveBurnCardProps> = React.memo(({
         </TouchableOpacity>
       </View>
 
-      {/* Budget Explanation Footer (padded on trailing edge to clear floating green + FAB corner) */}
+      {/* Budget Explanation Footer */}
       <View style={[styles.footerBanner, isRtl && styles.rowRtl]}>
         <Text style={styles.footerText} numberOfLines={2}>
           {includeInBudget
-            ? `${t('Active burn added to food budget')}: +${totalBurnKcal} ${t('kcal')} (${workoutCalories} ${t('Workouts')} + ${stepCalories} ${t('Steps')})`
+            ? `${t('Active burn added to food budget')}: +${totalBurnKcal} ${t('kcal')} (${workoutCalories} ${t('Workouts')} + ${resolvedStepCalories} ${t('Steps')})`
             : `${totalBurnKcal} ${t('kcal burned')} · ${t('tracked as burn, not in food budget')}`}
         </Text>
       </View>
@@ -605,7 +615,7 @@ const createStyles = (theme: ThemeType) =>
     },
     footerBanner: {
       paddingTop: 6,
-      paddingEnd: 60,
+      paddingHorizontal: 2,
       borderTopWidth: 1,
       borderTopColor: theme.colors.glassSubCardBorder,
       minHeight: 34,

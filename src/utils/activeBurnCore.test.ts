@@ -45,4 +45,13 @@ assert.strictEqual(summary.totalCalories, 395);
 assert.strictEqual(summary.totalMinutes, 70);
 assert.strictEqual(summary.primaryCategoryKey, 'Strength', 'Longest duration category becomes primary');
 
+assert.strictEqual(
+  calculateStepTelemetry(8500, 8500, 75, 10000, undefined, 0).burnedKcal,
+  383
+);
+assert.strictEqual(
+  calculateStepTelemetry(8500, 8500, 75, 10000, undefined, undefined).burnedKcal,
+  383
+);
+
 console.log('✓ All Active Burn Core unit tests passed cleanly!');

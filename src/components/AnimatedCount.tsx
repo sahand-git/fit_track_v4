@@ -21,17 +21,17 @@ export const AnimatedCount: React.FC<AnimatedCountProps> = ({
   formatter = (v) => Math.round(v).toLocaleString(),
 }) => {
   const [displayValue, setDisplayValue] = useState(value);
-  const prevValueRef = useRef(value);
+  const currentValueRef = useRef(value);
 
   const effectiveValue = isReducedMotion() || duration <= 0 ? value : displayValue;
 
   useEffect(() => {
     if (isReducedMotion() || duration <= 0) {
-      prevValueRef.current = value;
+      currentValueRef.current = value;
       return;
     }
 
-    const startVal = prevValueRef.current;
+    const startVal = currentValueRef.current;
     const diff = value - startVal;
     if (diff === 0) {
       return;
@@ -46,13 +46,14 @@ export const AnimatedCount: React.FC<AnimatedCountProps> = ({
       // Ease-out cubic curve: 1 - (1 - t)^3
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = startVal + diff * eased;
+      currentValueRef.current = current;
       setDisplayValue(current);
 
       if (progress < 1) {
         animId = requestAnimationFrame(tick);
       } else {
+        currentValueRef.current = value;
         setDisplayValue(value);
-        prevValueRef.current = value;
       }
     };
 
@@ -60,7 +61,6 @@ export const AnimatedCount: React.FC<AnimatedCountProps> = ({
 
     return () => {
       cancelAnimationFrame(animId);
-      prevValueRef.current = value;
     };
   }, [value, duration]);
 

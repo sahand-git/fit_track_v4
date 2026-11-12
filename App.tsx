@@ -13,7 +13,7 @@ import { AppText as Text } from './src/components/AppText';
 import { StatusBar } from 'expo-status-bar';
 import {
   LayoutDashboard,
-  UtensilsCrossed,
+  User,
   Bot,
   TrendingUp,
   AlertTriangle,
@@ -58,7 +58,6 @@ import { getTodayDateString } from './src/utils/dateUtils';
 import { WEB_APP_MAX_WIDTH } from './src/utils/dashboardLayout';
 import { TodaySkeleton } from './src/components/SkeletonLoader';
 import { DashboardScreen } from './src/screens/DashboardScreen';
-import { FoodLogScreen } from './src/screens/FoodLogScreen';
 import { ProgressScreen } from './src/screens/ProgressScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { SupplementsScreen } from './src/screens/SupplementsScreen';
@@ -88,8 +87,8 @@ import { AuthIdentity, watchAuthState } from './src/services/authService';
 const getScreenTopOffset = (insetsTop: number, platform: string = Platform.OS) =>
   Math.max(insetsTop, platform === 'android' ? 24 : 0);
 
-type Tab = 'today' | 'meals' | 'coach' | 'progress';
-type TemporaryScreen = 'none' | 'profile' | 'supplements' | 'steps' | 'workouts' | 'account' | 'explore' | 'achievements';
+type Tab = 'today' | 'profile' | 'coach' | 'progress';
+type TemporaryScreen = 'none' | 'supplements' | 'steps' | 'workouts' | 'account' | 'explore' | 'achievements';
 
 export default function App() {
   return (
@@ -325,12 +324,16 @@ const ThemedBottomNav: React.FC<ThemedBottomNavProps> = ({
             icon={(color) => <LayoutDashboard size={20} color={color} />}
           />
           <AnimatedBottomNavItem
-            label={t('Diary')}
-            isActive={tempScreen === 'none' && activeTab === 'meals'}
+            label={t('Profile')}
+            isActive={
+              tempScreen === 'account' ||
+              tempScreen === 'achievements' ||
+              (tempScreen === 'none' && activeTab === 'profile')
+            }
             activeTheme={activeTheme}
-            onPress={() => onSwitchTab('meals')}
-            accessibilityLabel={t('Diary')}
-            icon={(color) => <UtensilsCrossed size={20} color={color} />}
+            onPress={() => onSwitchTab('profile')}
+            accessibilityLabel={t('Profile')}
+            icon={(color) => <User size={20} color={color} />}
           />
           <AnimatedBottomNavItem
             label={t('Coach')}
@@ -506,7 +509,6 @@ function FitTrackApp() {
     workouts: [],
   });
   const [streak, setStreak] = useState<number>(0);
-  const [initialMealForAdd, setInitialMealForAdd] = useState<MealType>('breakfast');
   const [supplementRoutine, setSupplementRoutine] = useState<SupplementRoutineItem[]>([]);
 
   // AddFoodSheet modal state
@@ -706,6 +708,7 @@ function FitTrackApp() {
 
   const handleSaveProfile = async (newProfile: UserProfile) => {
     try {
+      const wasOnboarded = profile.isOnboarded;
       const prevLanguage = language;
       await saveUserProfile(newProfile);
       setProfile(newProfile);
@@ -714,9 +717,11 @@ function FitTrackApp() {
       if (prevLanguage !== nextLanguage) {
         await reconcileNotificationLanguage(nextLanguage, supplementRoutine);
       }
-      setTempScreen('none');
-      setActiveTab('today');
-      setSelectedDate(getTodayDateString());
+      if (!wasOnboarded) {
+        setTempScreen('none');
+        setActiveTab('today');
+        setSelectedDate(getTodayDateString());
+      }
     } catch (err) {
       console.error('Error saving user profile:', err);
       appDialog.notify({ title: t('Save Error'), message: t('Could not save your profile changes. Please try again.') });
@@ -807,14 +812,14 @@ function FitTrackApp() {
   const handleSaveSteps = async (total: number) => {
     const targetDate = selectedDateRef.current;
     if (targetDate > getTodayDateString()) return;
-    const updated = await setDailySteps(targetDate, total);
+    const updated = await setDailySteps(targetDate, total, profile.weightKg);
     if (selectedDateRef.current === targetDate) setLog(updated);
   };
 
   const handleAddSteps = async (amount: number) => {
     const targetDate = selectedDateRef.current;
     if (targetDate > getTodayDateString()) return;
-    const updated = await addDailySteps(targetDate, amount);
+    const updated = await addDailySteps(targetDate, amount, profile.weightKg);
     if (selectedDateRef.current === targetDate) setLog(updated);
   };
 
@@ -840,11 +845,6 @@ function FitTrackApp() {
     }
   };
 
-  const handleNavigateToMeals = useCallback((targetMeal?: MealType) => {
-    if (targetMeal) setInitialMealForAdd(targetMeal);
-    setTempScreen('none');
-    setActiveTab('meals');
-  }, []);
 
   const handleSwitchTab = useCallback((tab: Tab) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -866,7 +866,7 @@ function FitTrackApp() {
   ) => {
     setAddSheetConfig({
       visible: true,
-      targetDate: getTodayDateString(),
+      targetDate: selectedDateRef.current,
       mealType,
       initialTab,
       initialScanBarcode,
@@ -874,16 +874,17 @@ function FitTrackApp() {
   }, []);
 
   const handleOpenSupplements = useCallback(() => setTempScreen('supplements'), []);
-  const handleOpenProfile = useCallback(() => setTempScreen('profile'), []);
   const handleOpenSteps = useCallback(() => setTempScreen('steps'), []);
   const handleOpenWorkouts = useCallback(() => setTempScreen('workouts'), []);
-  const handleOpenLogWeight = useCallback(() => handleSwitchTab('progress'), [handleSwitchTab]);
   const handleUpdateProfile = useCallback(async (p: UserProfile) => {
     await saveUserProfile(p);
     setProfile(p);
   }, []);
   const handleBackToNone = useCallback(() => setTempScreen('none'), []);
-  const handleBackToProfile = useCallback(() => setTempScreen('profile'), []);
+  const handleBackToProfile = useCallback(() => {
+    setTempScreen('none');
+    setActiveTab('profile');
+  }, []);
   const handleCloseAddSheet = useCallback(() => setAddSheetConfig((prev) => ({ ...prev, visible: false })), []);
 
   const handleSelectExploreFood = useCallback((food: any, mealType: MealType = 'lunch', servings: number = 1) => {
@@ -1016,7 +1017,7 @@ function FitTrackApp() {
   }
 
   // Highlight 'today' if a temporary screen is open
-  const isHighlightToday = tempScreen !== 'none' || activeTab === 'today';
+  const isHighlightToday = (tempScreen !== 'none' && tempScreen !== 'account' && tempScreen !== 'achievements') || (tempScreen === 'none' && activeTab === 'today');
 
   return (
     <I18nProvider language={language}>
@@ -1033,21 +1034,6 @@ function FitTrackApp() {
           transitionKey={tempScreen !== 'none' ? tempScreen : activeTab}
           style={styles.main}
         >
-          {/* Temporary Screen: Profile */}
-          {tempScreen === 'profile' && (
-            <ProfileScreen
-              profile={profile}
-              language={language}
-              supplementRoutine={supplementRoutine}
-              onLanguageChange={handleLanguageChange}
-              onSaveProfile={handleSaveProfile}
-              onRestoreComplete={handleRestoreComplete}
-              onOpenAccount={() => setTempScreen('account')}
-              onOpenAchievements={() => setTempScreen('achievements')}
-              onBack={() => setTempScreen('none')}
-            />
-          )}
-
           {tempScreen === 'explore' && (
             <ExploreScreen
               onSelectFood={handleSelectExploreFood}
@@ -1125,37 +1111,36 @@ function FitTrackApp() {
               isLoading={!initialLoaded}
               onToggleSupplement={handleToggleSupplement}
               onUpdateWater={handleUpdateWater}
-              onNavigateToMeals={handleNavigateToMeals}
               onOpenAddFood={handleOpenAddFoodToday}
+              onAddMeal={handleAddMeal}
+              onUpdateMeal={handleUpdateMeal}
+              onRemoveMeal={handleRemoveMeal}
               onOpenSupplements={handleOpenSupplements}
-              onOpenProfile={handleOpenProfile}
               onOpenSteps={handleOpenSteps}
               onOpenWorkouts={handleOpenWorkouts}
               onAddWorkout={handleAddWorkout}
-              onDeleteWorkout={handleDeleteWorkout}
               onUpdateWorkout={handleUpdateWorkout}
-              onOpenLogWeight={handleOpenLogWeight}
               onUpdateProfile={handleUpdateProfile}
               isAddFoodSheetOpen={addSheetConfig.visible}
               selectedDate={selectedDate}
               onSelectDate={handleSelectDate}
-              onExploreFood={() => setTempScreen('explore')}
             />
           )}
 
-          {/* Tab 2: Meals */}
-          {tempScreen === 'none' && activeTab === 'meals' && (
-            <FoodLogScreen
+          {/* Tab 2: Profile */}
+          {tempScreen === 'none' && activeTab === 'profile' && (
+            <ProfileScreen
               profile={profile}
-              selectedDate={selectedDate}
-              onSelectDate={handleSelectDate}
-              log={log}
-              isLoading={!initialLoaded}
-              onAddMeal={handleAddMeal}
-              onUpdateMeal={handleUpdateMeal}
-              onRemoveMeal={handleRemoveMeal}
-              initialMealType={initialMealForAdd}
-              onCopyYesterdayMeals={handleCopyYesterdayMeals}
+              language={language}
+              supplementRoutine={supplementRoutine}
+              streak={streak}
+              authUser={authUser}
+              onLanguageChange={handleLanguageChange}
+              onSaveProfile={handleSaveProfile}
+              onUpdateProfile={handleUpdateProfile}
+              onRestoreComplete={handleRestoreComplete}
+              onOpenAccount={() => setTempScreen('account')}
+              onOpenAchievements={() => setTempScreen('achievements')}
             />
           )}
 

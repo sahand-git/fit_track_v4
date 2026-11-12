@@ -95,4 +95,23 @@ const stepCalc80kg = calculateActivityBudget({
 // 5000 * 0.042 * (80/70) = 240 kcal
 assert(stepCalc80kg.stepCalories === 240, `Step calories for 80kg at 5000 steps must be 240, got ${stepCalc80kg.stepCalories}`);
 
+// 8,500 steps @ 75kg = 383 kcal even when stored step calories are 0 or missing
+const budgetWithZeroStored = calculateActivityBudget({
+  profile: { ...overBudgetProfile, weightKg: 75, targetCalories: 2000 },
+  workouts: [],
+  steps: 8500,
+  storedStepCalories: 0,
+});
+assert(budgetWithZeroStored.stepCalories === 383, `Expected 383 stepCalories, got ${budgetWithZeroStored.stepCalories}`);
+assert(budgetWithZeroStored.eligibleActivityCalories === 383, `Expected 383 eligibleActivityCalories, got ${budgetWithZeroStored.eligibleActivityCalories}`);
+assert(budgetWithZeroStored.effectiveTarget === 2383, `Expected 2383 effectiveTarget, got ${budgetWithZeroStored.effectiveTarget}`);
+
+const budgetWithMissingStored = calculateActivityBudget({
+  profile: { ...overBudgetProfile, weightKg: 75, targetCalories: 2000 },
+  workouts: [],
+  steps: 8500,
+});
+assert(budgetWithMissingStored.stepCalories === 383, `Expected 383 stepCalories, got ${budgetWithMissingStored.stepCalories}`);
+assert(budgetWithMissingStored.effectiveTarget === 2383, `Expected 2383 effectiveTarget, got ${budgetWithMissingStored.effectiveTarget}`);
+
 console.log('All activity budget tests passed.');

@@ -1,8 +1,8 @@
 import { UserProfile, WorkoutEntry } from '../types';
 import { calculateNetWorkoutBurn, deduplicateWorkoutSteps } from './calculator';
-import { estimateStepCalories } from '../services/stepTrackingCore';
+import { estimateStepCalories, resolveStepCalories } from '../services/stepTrackingCore';
 
-export { estimateStepCalories };
+export { estimateStepCalories, resolveStepCalories };
 
 export interface ActivityBudget {
   model: 'fixed' | 'adaptive_net';
@@ -38,6 +38,7 @@ export function calculateActivityBudget(input: {
   profile: UserProfile;
   workouts: WorkoutEntry[];
   steps: number;
+  storedStepCalories?: number | null;
 }): ActivityBudget {
   const { profile } = input;
   const steps = Math.max(0, Math.round(Number.isFinite(input.steps) ? input.steps : 0));
@@ -49,7 +50,12 @@ export function calculateActivityBudget(input: {
     Math.max(0, Number(w.durationMinutes) || 0),
     profile.bmr,
   ), 0);
-  const grossStepCalories = estimateStepCalories(deduplicated.nonWorkoutSteps, profile.weightKg);
+  const grossStepCalories = resolveStepCalories({
+    steps,
+    nonWorkoutSteps: deduplicated.nonWorkoutSteps,
+    weightKg: profile.weightKg,
+    storedCaloriesBurned: deduplicated.workoutSteps === 0 ? input.storedStepCalories : undefined,
+  });
   const stepCalories = grossStepCalories;
   const customCal = profile.customNutrientGoals?.calories;
   const baseTarget = Math.max(0, Math.round(customCal ?? profile.targetCalories ?? 0));
@@ -79,12 +85,13 @@ export function calculateActivityBudget(input: {
  */
 export function getDailyEffectiveCalorieTarget(
   profile?: UserProfile | null,
-  log?: { workouts?: WorkoutEntry[]; steps?: number } | null
+  log?: { workouts?: WorkoutEntry[]; steps?: number; stepCalories?: number | null } | null
 ): number {
   if (!profile) return 2000;
   return calculateActivityBudget({
     profile,
     workouts: log?.workouts || [],
     steps: log?.steps || 0,
+    storedStepCalories: log?.stepCalories,
   }).effectiveTarget;
 }

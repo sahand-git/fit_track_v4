@@ -1,12 +1,16 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, {
-  useSharedValue,
-  useAnimatedProps,
-  withTiming,
   Easing,
+  interpolateColor,
+  runOnJS,
+  useAnimatedProps,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { AppText as Text } from './AppText';
 import { AnimatedCount } from './AnimatedCount';
 import { useLanguage } from '../i18n/I18nContext';
@@ -18,6 +22,8 @@ import { isReducedMotion } from '../utils/motion';
 import {
   calculateCalorieRingMetrics,
   CalorieRingMetrics,
+  getBaseRingRatioFromSignedDelta,
+  getVisualOverflowSweep,
   interpolateHexColor,
 } from '../utils/calorieRingCalculations';
 
@@ -45,6 +51,9 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const t = (key: string) => translate(language, key);
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const baseGradId = `calorieBaseGrad_${uid}`;
+  const overflowGradId = `calorieOverflowGrad_${uid}`;
 
   const strokeWidth = 10;
   const radius = (size - strokeWidth * 2) / 2;
@@ -56,51 +65,118 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
     [consumed, target]
   );
 
-  const progress = useSharedValue(metrics.baseRatio);
-  const overflowProgress = useSharedValue(metrics.overflowRatio);
+  // Single continuous signed shared value (consumed - target) drives BOTH SVG arcs,
+  // ambient glow, glowing endpoint orb, and center/ledger signed readouts in lockstep.
+  const signedDeltaSV = useSharedValue(metrics.signedDelta);
+  const targetSV = useSharedValue(Math.max(0, target));
+  const [displaySignedDelta, setDisplaySignedDelta] = useState(Math.round(metrics.signedDelta));
 
   useEffect(() => {
+    targetSV.value = Math.max(0, target);
     if (isReducedMotion()) {
-      progress.value = metrics.baseRatio;
-      overflowProgress.value = metrics.overflowRatio;
+      signedDeltaSV.value = metrics.signedDelta;
+      setDisplaySignedDelta(Math.round(metrics.signedDelta));
     } else {
-      progress.value = withTiming(metrics.baseRatio, {
-        duration: 750,
-        easing: Easing.out(Easing.cubic),
-      });
-      overflowProgress.value = withTiming(metrics.overflowRatio, {
-        duration: 750,
+      signedDeltaSV.value = withTiming(metrics.signedDelta, {
+        duration: 650,
         easing: Easing.out(Easing.cubic),
       });
     }
-  }, [metrics.baseRatio, metrics.overflowRatio, progress, overflowProgress]);
+  }, [metrics.signedDelta, target, signedDeltaSV, targetSV]);
+
+  useAnimatedReaction(
+    () => Math.round(signedDeltaSV.value),
+    (rounded, prev) => {
+      if (rounded !== prev) {
+        runOnJS(setDisplaySignedDelta)(rounded);
+      }
+    },
+    []
+  );
 
   const animatedBaseCircleProps = useAnimatedProps(() => {
     'worklet';
+    const ratio = getBaseRingRatioFromSignedDelta(signedDeltaSV.value, targetSV.value);
     return {
-      strokeDashoffset: circumference - progress.value * circumference,
+      strokeDashoffset: circumference - ratio * circumference,
+      strokeOpacity: ratio <= 0.002 ? 0 : 1,
+    };
+  });
+
+  const animatedOverflowGlowProps = useAnimatedProps(() => {
+    'worklet';
+    const sweep = getVisualOverflowSweep(signedDeltaSV.value, targetSV.value);
+    return {
+      strokeDashoffset: circumference - sweep * circumference,
+      strokeOpacity: sweep <= 0.002 ? 0 : Math.min(0.3, sweep * 35),
     };
   });
 
   const animatedOverflowProps = useAnimatedProps(() => {
     'worklet';
+    const sweep = getVisualOverflowSweep(signedDeltaSV.value, targetSV.value);
     return {
-      strokeDashoffset: circumference - overflowProgress.value * circumference,
+      strokeDashoffset: circumference - sweep * circumference,
+      strokeOpacity: sweep <= 0.002 ? 0 : Math.min(1, sweep * 120),
     };
   });
 
+  const animatedEndpointGlowProps = useAnimatedProps(() => {
+    'worklet';
+    const sweep = getVisualOverflowSweep(signedDeltaSV.value, targetSV.value);
+    const angle = -Math.PI / 2 + sweep * Math.PI * 2;
+    return {
+      cx: center + radius * Math.cos(angle),
+      cy: center + radius * Math.sin(angle),
+      opacity: sweep <= 0.004 ? 0 : 1,
+    };
+  });
+
+  const animatedEndpointCoreProps = useAnimatedProps(() => {
+    'worklet';
+    const sweep = getVisualOverflowSweep(signedDeltaSV.value, targetSV.value);
+    const angle = -Math.PI / 2 + sweep * Math.PI * 2;
+    return {
+      cx: center + radius * Math.cos(angle),
+      cy: center + radius * Math.sin(angle),
+      opacity: sweep <= 0.004 ? 0 : 1,
+    };
+  });
+
+  const emeraldGlow = theme.colors.calorieGlowEmerald;
+  const crimsonGlow = theme.colors.calorieGlowCrimson;
+  const animatedAmbientGlowStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      backgroundColor: interpolateColor(
+        signedDeltaSV.value,
+        [-150, 0, 150],
+        [emeraldGlow, emeraldGlow, crimsonGlow]
+      ),
+    };
+  }, [emeraldGlow, crimsonGlow]);
+
+  const displayIsOver = displaySignedDelta > 0;
+  const displayMagnitude = Math.abs(displaySignedDelta);
+  const displaySurplusRatio =
+    displayIsOver && target > 0 ? displayMagnitude / target : displayIsOver ? 1 : 0;
+  const displaySurplusMix = displayIsOver ? Math.min(displaySurplusRatio / 0.1, 1) : 0;
+
   const overTextColor = useMemo(() => {
-    if (!metrics.isOver) return theme.colors.primary;
+    if (!displayIsOver) return theme.colors.calorieBaseGreen;
     return interpolateHexColor(
       theme.colors.calorieOverflowAmber,
       theme.colors.calorieOverflowRed,
-      metrics.surplusColorMix
+      displaySurplusMix
     );
-  }, [metrics.isOver, metrics.surplusColorMix, theme]);
+  }, [displayIsOver, displaySurplusMix, theme]);
 
   const tolerance = Math.max(25, Math.round(target * 0.02));
   const isInTolerance = target > 0 && Math.abs(consumed - target) <= tolerance;
-  const showOverflowArc = metrics.isOver && metrics.overflowRatio > 0;
+  const formattedDeltaText = displayIsOver
+    ? `+${displayMagnitude.toLocaleString()}`
+    : displayMagnitude.toLocaleString();
+  const glowDiameter = Math.round(size * 0.84);
 
   return (
     <View style={styles.wrapper}>
@@ -112,8 +188,34 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
         accessibilityRole="button"
         accessibilityLabel={`${t('Calories')} · ${metrics.isOver ? '+' : ''}${metrics.displayedValue} ${metrics.isOver ? t('kcal over') : t('kcal remaining')}`}
       >
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.ambientGlow,
+            {
+              width: glowDiameter,
+              height: glowDiameter,
+              borderRadius: glowDiameter / 2,
+            },
+            animatedAmbientGlowStyle,
+          ]}
+        />
+
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* Track */}
+          <Defs>
+            <LinearGradient id={baseGradId} x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor={theme.colors.calorieBaseStart} />
+              <Stop offset="50%" stopColor={theme.colors.calorieBaseMid} />
+              <Stop offset="100%" stopColor={theme.colors.calorieBaseEnd} />
+            </LinearGradient>
+            <LinearGradient id={overflowGradId} x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor={theme.colors.calorieOverflowAmber} />
+              <Stop offset="55%" stopColor={theme.colors.calorieOverflowRed} />
+              <Stop offset="100%" stopColor={theme.colors.calorieOverflowDeepRed} />
+            </LinearGradient>
+          </Defs>
+
+          {/* Subtle Recessed Track */}
           <Circle
             cx={center}
             cy={center}
@@ -123,12 +225,12 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
             fill="none"
           />
 
-          {/* Base Emerald Progress Arc (stays 100% green when daily budget reached or exceeded) */}
+          {/* Base Emerald Progress Arc (remains full 100% green when budget met or exceeded) */}
           <AnimatedCircle
             cx={center}
             cy={center}
             r={radius}
-            stroke={theme.colors.calorieBaseGreen}
+            stroke={`url(#${baseGradId})`}
             strokeWidth={strokeWidth}
             fill="none"
             strokeDasharray={`${circumference}`}
@@ -137,60 +239,63 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
             transform={`rotate(-90 ${center} ${center})`}
           />
 
-          {/* Layered Progressive Overflow Glow + Crimson Arc (only rendered when over limit) */}
-          {showOverflowArc && (
-            <>
-              <AnimatedCircle
-                cx={center}
-                cy={center}
-                r={radius}
-                stroke={theme.colors.calorieOverflowRed}
-                strokeOpacity={0.28}
-                strokeWidth={strokeWidth + 8}
-                fill="none"
-                strokeDasharray={`${circumference}`}
-                animatedProps={animatedOverflowProps}
-                strokeLinecap="round"
-                transform={`rotate(-90 ${center} ${center})`}
-              />
-              <AnimatedCircle
-                cx={center}
-                cy={center}
-                r={radius}
-                stroke={theme.colors.calorieOverflowRed}
-                strokeWidth={strokeWidth}
-                fill="none"
-                strokeDasharray={`${circumference}`}
-                animatedProps={animatedOverflowProps}
-                strokeLinecap="round"
-                transform={`rotate(-90 ${center} ${center})`}
-              />
-            </>
-          )}
+          {/* Always-mounted Progressive Overflow Glow + Capped Arc (animates continuously through 0) */}
+          <AnimatedCircle
+            cx={center}
+            cy={center}
+            r={radius}
+            stroke={theme.colors.calorieOverflowRed}
+            strokeWidth={strokeWidth + 8}
+            fill="none"
+            strokeDasharray={`${circumference}`}
+            animatedProps={animatedOverflowGlowProps}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${center} ${center})`}
+          />
+          <AnimatedCircle
+            cx={center}
+            cy={center}
+            r={radius}
+            stroke={`url(#${overflowGradId})`}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={`${circumference}`}
+            animatedProps={animatedOverflowProps}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${center} ${center})`}
+          />
+
+          {/* Glowing Overflow Endpoint Orb */}
+          <AnimatedCircle
+            r={strokeWidth * 0.9}
+            fill={theme.colors.calorieEndpointGlow}
+            animatedProps={animatedEndpointGlowProps}
+          />
+          <AnimatedCircle
+            r={strokeWidth * 0.42}
+            fill={theme.colors.calorieOverflowRed}
+            animatedProps={animatedEndpointCoreProps}
+          />
         </Svg>
 
-        {/* Center Metrics: Natural typography with progressive surplus alert */}
+        {/* Center Metrics: Synchronized continuously with signedDeltaSV */}
         <View style={styles.centerContent}>
-          <AnimatedCount
-            value={metrics.displayedValue}
-            formatter={(v) =>
-              metrics.isOver
-                ? `+${Math.round(v).toLocaleString()}`
-                : Math.round(v).toLocaleString()
-            }
+          <Text
             style={[
               styles.remainingValue,
-              metrics.isOver && { color: overTextColor },
+              displayIsOver && { color: overTextColor },
             ]}
-          />
+          >
+            {formattedDeltaText}
+          </Text>
           <Text
             style={[
               styles.remainingLabel,
-              metrics.isOver && { color: overTextColor },
+              displayIsOver && { color: overTextColor },
             ]}
             numberOfLines={2}
           >
-            {metrics.isOver
+            {displayIsOver
               ? t('kcal over')
               : isInTolerance
               ? t("You've reached today's calorie goal.")
@@ -209,17 +314,13 @@ export const CalorieRing: React.FC<CalorieRingProps> = React.memo(({
         <View style={styles.ledgerDivider} />
 
         <View style={styles.ledgerCol}>
-          <AnimatedCount
-            value={metrics.displayedValue}
-            formatter={(v) =>
-              metrics.isOver
-                ? `+${Math.round(v).toLocaleString()}`
-                : Math.round(v).toLocaleString()
-            }
-            style={[styles.ledgerVal, metrics.isOver && { color: overTextColor }]}
-          />
+          <Text
+            style={[styles.ledgerVal, displayIsOver && { color: overTextColor }]}
+          >
+            {formattedDeltaText}
+          </Text>
           <Text style={styles.ledgerLbl}>
-            {metrics.isOver ? t('Over') : t('Remaining')}
+            {displayIsOver ? t('Over') : t('Remaining')}
           </Text>
         </View>
 
@@ -246,6 +347,9 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
+  },
+  ambientGlow: {
+    position: 'absolute',
   },
   centerContent: {
     position: 'absolute',

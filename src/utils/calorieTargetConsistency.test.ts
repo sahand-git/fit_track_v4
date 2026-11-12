@@ -1,7 +1,13 @@
 import { calculateActivityBudget, getDailyEffectiveCalorieTarget } from './activityBudget';
 import { getDefaultProfile } from './calculator';
 import { DailyLog, UserProfile, WorkoutEntry } from '../types';
-import { calculateCalorieRingMetrics, interpolateHexColor } from './calorieRingCalculations';
+import {
+  calculateCalorieRingMetrics,
+  interpolateHexColor,
+  MAX_OVERFLOW_SWEEP,
+  getBaseRingRatioFromSignedDelta,
+  getVisualOverflowSweep,
+} from './calorieRingCalculations';
 import { darkTheme } from '../theme';
 import { getStreakDayUnit, getStreakAccessibilityLabel } from './streak';
 
@@ -221,5 +227,21 @@ const midHex = interpolateHexColor(darkTheme.colors.calorieOverflowAmber, darkTh
 assert(startHex.toUpperCase() === darkTheme.colors.calorieOverflowAmber.toUpperCase(), 't=0 returns amber hex');
 assert(endHex.toUpperCase() === darkTheme.colors.calorieOverflowRed.toUpperCase(), 't=1 returns red hex');
 assert(midHex !== startHex && midHex !== endHex, 't=0.5 interpolates between amber and red');
+
+// 8. Continuous signedDelta transitions & capped MAX_OVERFLOW_SWEEP (0.82)
+assert(arc50.signedDelta === -1000, '50% intake signedDelta is -1000');
+assert(arc50.visualOverflowRatio === 0, 'Under-budget visualOverflowRatio is 0');
+assert(arc250.signedDelta === 3000, '250% intake signedDelta is +3000');
+assert(
+  arc250.visualOverflowRatio === MAX_OVERFLOW_SWEEP,
+  `250% intake caps visualOverflowRatio at MAX_OVERFLOW_SWEEP (${MAX_OVERFLOW_SWEEP})`
+);
+assert(getBaseRingRatioFromSignedDelta(-500, 2000) === 0.75, 'Signed delta -500 / 2000 -> baseRatio 0.75');
+assert(getBaseRingRatioFromSignedDelta(0, 2000) === 1, 'Signed delta 0 -> baseRatio 1.0');
+assert(getBaseRingRatioFromSignedDelta(2670, 2000) === 1, 'Signed delta +2670 -> baseRatio 1.0');
+assert(getVisualOverflowSweep(-212, 2000) === 0, 'Negative signedDelta -> 0 overflow sweep');
+assert(getVisualOverflowSweep(0, 2000) === 0, 'Zero signedDelta -> 0 overflow sweep');
+assert(getVisualOverflowSweep(500, 2000) === 0.25, '+500 / 2000 -> 0.25 overflow sweep');
+assert(getVisualOverflowSweep(3000, 2000) === MAX_OVERFLOW_SWEEP, '+3000 / 2000 -> capped at 0.82');
 
 console.log('✓ All Calorie Target Consistency & Ring Balance Unit Tests PASSED Cleanly!');

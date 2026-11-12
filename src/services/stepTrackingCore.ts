@@ -11,8 +11,46 @@ export const KCAL_PER_STEP_BASE = 0.042; // Standard walking burn: ~0.04 - 0.045
  */
 export function estimateStepCalories(steps: number, weightKg: number = 70): number {
   const safeSteps = Math.max(0, Number.isFinite(steps) ? steps : 0);
-  const safeWeight = Math.max(30, Math.min(300, Number.isFinite(weightKg) ? weightKg : 70));
+  const safeWeight =
+    Number.isFinite(weightKg) && weightKg > 0
+      ? Math.max(30, Math.min(300, weightKg))
+      : 70;
   return Math.round(safeSteps * KCAL_PER_STEP_BASE * (safeWeight / 70));
+}
+
+/**
+ * Deterministic step-calorie resolver shared by storage, StepsScreen, ActiveBurnCard, and activityBudget.
+ * Always computes calories from steps + body weight when stored caloriesBurned is missing or 0.
+ */
+export function resolveStepCalories(input: {
+  steps: number | null | undefined;
+  weightKg?: number | null;
+  storedCaloriesBurned?: number | null;
+  nonWorkoutSteps?: number | null;
+}): number {
+  const safeTotalSteps = Math.max(
+    0,
+    Math.round(Number.isFinite(input.steps) ? (input.steps as number) : 0),
+  );
+  if (safeTotalSteps === 0) return 0;
+
+  const effectiveSteps =
+    typeof input.nonWorkoutSteps === 'number' && Number.isFinite(input.nonWorkoutSteps)
+      ? Math.max(0, Math.round(input.nonWorkoutSteps))
+      : safeTotalSteps;
+
+  const computed = estimateStepCalories(effectiveSteps, input.weightKg ?? 70);
+  if (computed > 0) return computed;
+
+  if (
+    effectiveSteps > 0 &&
+    typeof input.storedCaloriesBurned === 'number' &&
+    Number.isFinite(input.storedCaloriesBurned) &&
+    input.storedCaloriesBurned > 0
+  ) {
+    return Math.round(input.storedCaloriesBurned);
+  }
+  return 0;
 }
 
 export interface StepStatisticsProvider {

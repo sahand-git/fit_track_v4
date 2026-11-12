@@ -5,31 +5,26 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
-  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText as Text } from '../components/AppText';
 import {
-  Plus,
-  Utensils,
-  Coffee,
   Sun,
   Moon,
-  Apple,
-  User,
   Calendar,
+  Pill,
+  Check,
 } from 'lucide-react-native';
-import { UserProfile, DailyLog, MealType, SupplementRoutineItem, WorkoutEntry } from '../types';
+import { UserProfile, DailyLog, LoggedMeal, MealType, SupplementRoutineItem, WorkoutEntry } from '../types';
 import { CalorieRing } from '../components/CalorieRing';
 import { ActiveBurnCard } from '../components/ActiveBurnCard';
 import { MacroCards } from '../components/MacroCards';
 import { WaterTracker } from '../components/WaterTracker';
 import { CalendarPickerModal } from '../components/CalendarPickerModal';
 import { WeekDayRibbon } from '../components/WeekDayRibbon';
-import { DashboardQuickGrid } from '../components/DashboardQuickGrid';
+import { MealsDiarySection } from '../components/MealsDiarySection';
 
 import { AddWorkoutSheet } from '../components/AddWorkoutSheet';
-import { QuickActionSheet } from '../components/QuickActionSheet';
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { StreakBadge } from '../components/StreakBadge';
 import { GoalCelebration } from '../components/GoalCelebration';
@@ -54,7 +49,6 @@ import { translate } from '../i18n/strings';
 import { getScopedStorageKey, saveUserProfile } from '../storage/storage';
 import { formatFullCalendarDate, getTodayDateString, parseLocalDateString } from '../utils/dateUtils';
 import { calculateActivityBudget } from '../utils/activityBudget';
-import { formatKcal } from '../utils/formatKcal';
 import { getCalorieRingSize } from '../utils/dashboardLayout';
 import { NutrientDetailModal } from '../components/NutrientDetailModal';
 import { SupportedNutrientKey, calculateNutrientDayProgress } from '../utils/nutrientTotals';
@@ -69,18 +63,21 @@ interface DashboardScreenProps {
   isLoading?: boolean;
   onToggleSupplement: (id: string, taken: boolean) => void;
   onUpdateWater: (delta: number) => void;
-  onNavigateToMeals: (targetMeal?: MealType) => void;
+  onNavigateToMeals?: (targetMeal?: MealType) => void;
   onOpenAddFood: (
     mealType?: MealType,
     initialTab?: 'search' | 'photo' | 'describe',
     initialScanBarcode?: boolean
   ) => void;
+  onAddMeal?: (meal: LoggedMeal, targetDate: string) => void;
+  onUpdateMeal?: (meal: LoggedMeal) => void;
+  onRemoveMeal?: (mealId: string) => void;
   onOpenSupplements: () => void;
-  onOpenProfile: () => void;
+  onOpenProfile?: () => void;
   onOpenSteps: () => void;
   onOpenWorkouts: () => void;
   onAddWorkout: (workout: WorkoutEntry, date: string) => void;
-  onDeleteWorkout: (workoutId: string) => void;
+  onDeleteWorkout?: (workoutId: string) => void;
   onUpdateWorkout?: (workout: WorkoutEntry, date: string) => void;
   onOpenLogWeight?: () => void;
   onUpdateProfile?: (profile: UserProfile) => Promise<void> | void;
@@ -99,22 +96,19 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   isLoading,
   onToggleSupplement,
   onUpdateWater,
-  onNavigateToMeals,
   onOpenAddFood,
+  onAddMeal,
+  onUpdateMeal,
+  onRemoveMeal,
   onOpenSupplements,
-  onOpenProfile,
   onOpenSteps,
   onOpenWorkouts,
   onAddWorkout,
-  onDeleteWorkout,
   onUpdateWorkout,
-  onOpenLogWeight,
   onUpdateProfile,
   isAddFoodSheetOpen = false,
   selectedDate,
   onSelectDate,
-  onOpenDatePicker,
-  onExploreFood,
 }) => {
   const language = useLanguage();
   const isRtl = useIsRTL();
@@ -125,7 +119,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
 
   const [workoutSheetVisible, setWorkoutSheetVisible] = useState(false);
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
-  const [quickActionVisible, setQuickActionVisible] = useState(false);
   const [heroWidth, setHeroWidth] = useState(0);
   const [selectedNutrientForDetail, setSelectedNutrientForDetail] = useState<SupportedNutrientKey | string | null>(null);
   const pendingMilestoneRef = useRef<(() => void) | null>(null);
@@ -155,7 +148,7 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
 
   const dockBottom = insets.bottom > 0 ? insets.bottom + 8 : (Platform.OS === 'ios' ? 18 : 10);
   const dockClearance = dockBottom + 72;
-  const scrollBottomPadding = Math.max(300, dockClearance + 200);
+  const scrollBottomPadding = Math.max(120, dockClearance + 28);
 
   const fiberProgress = useMemo(
     () => calculateNutrientDayProgress('fiber', log.meals, log.dailySupplements, profile),
@@ -230,7 +223,8 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     profile,
     workouts: log.workouts || [],
     steps: log.steps || 0,
-  }), [profile, log.workouts, log.steps]);
+    storedStepCalories: log.stepCalories,
+  }), [profile, log.workouts, log.steps, log.stepCalories]);
   const effectiveCalorieTarget = activityBudget.effectiveTarget;
 
   const handleToggleIncludeWorkouts = useCallback(async () => {
@@ -243,44 +237,37 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     await onUpdateProfile(updated);
   }, [onUpdateProfile, profile]);
 
-  const getMealIcon = (mealType: MealType) => {
-    switch (mealType) {
-      case 'breakfast':
-        return <Coffee size={14} color={theme.colors.secondary} />;
-      case 'lunch':
-        return <Utensils size={14} color={theme.colors.secondary} />;
-      case 'dinner':
-        return <Moon size={14} color={theme.colors.secondary} />;
-      case 'snack':
-        return <Apple size={14} color={theme.colors.secondary} />;
-      default:
-        return <Utensils size={14} color={theme.colors.secondary} />;
+  const supplementItems = useMemo(() => {
+    if (log.dailySupplements && log.dailySupplements.length > 0) {
+      return log.dailySupplements.map((s) => ({
+        id: s.routineItemId || s.id,
+        name: s.name,
+        taken: !!s.taken,
+      }));
     }
-  };
+    return supplementRoutine.map((item) => {
+      const check = (log.supplements || []).find((c) => c.itemId === item.id);
+      return {
+        id: item.id,
+        name: item.name,
+        taken: !!check?.taken,
+      };
+    });
+  }, [log.dailySupplements, log.supplements, supplementRoutine]);
 
-  const mealTypes: { key: MealType; label: string }[] = useMemo(
-    () => [
-      { key: 'breakfast', label: t('Breakfast') },
-      { key: 'lunch', label: t('Lunch') },
-      { key: 'dinner', label: t('Dinner') },
-      { key: 'snack', label: t('Snacks') },
-    ],
-    [t]
+  const takenSupplementsCount = useMemo(
+    () => supplementItems.filter((item) => item.taken).length,
+    [supplementItems]
   );
 
   const todayStr = useMemo(() => getTodayDateString(), []);
+  const activeDate = selectedDate || log.date;
+  const isFutureDate = activeDate > todayStr;
   const parsedDate = useMemo(() => parseLocalDateString(log.date), [log.date]);
   const dayNamesEn = useMemo(() => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], []);
   const dayOfWeekName = t(dayNamesEn[parsedDate.getDay()] || 'Today');
   const headerTitle = log.date === todayStr ? t('Today') : dayOfWeekName;
   const headerSubtitle = formatFullCalendarDate(log.date, language);
-
-  const mealThemeStyles: Record<MealType, { color: string; lightBg: string }> = useMemo(() => ({
-    breakfast: { color: theme.colors.amber, lightBg: theme.colors.amberLight },
-    lunch: { color: theme.colors.crimson, lightBg: theme.colors.crimsonLight },
-    dinner: { color: theme.colors.emerald, lightBg: theme.colors.emeraldLight },
-    snack: { color: theme.colors.water, lightBg: theme.colors.waterLight },
-  }), [theme.colors]);
 
 
 
@@ -378,11 +365,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
     t,
   ]);
 
-  const handleQuickAdd = (meal: MealType) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    onOpenAddFood(meal);
-  };
-
   if (isLoading) {
     return <TodaySkeleton />;
   }
@@ -421,25 +403,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
                 <Moon size={18} color={theme.colors.textPrimary} />
               )}
             </AnimatedPressable>
-
-            <AnimatedPressable
-              style={styles.profileBtn}
-              onPress={onOpenProfile}
-              accessibilityLabel={t('Profile & Goals')}
-              accessibilityRole="button"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              {profile.avatarUrl ? (
-                <Image
-                  source={{ uri: profile.avatarUrl }}
-                  style={{ width: 28, height: 28, borderRadius: 14 }}
-                />
-              ) : profile.avatarPreset ? (
-                <Text style={{ fontSize: 18, lineHeight: 22 }}>{profile.avatarPreset}</Text>
-              ) : (
-                <User size={18} color={theme.colors.textPrimary} />
-              )}
-            </AnimatedPressable>
           </View>
         </View>
 
@@ -470,27 +433,8 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           />
         </Animated.View>
 
-        {/* Active Burn Telemetry Card (Workouts + Steps Progress + In-Budget Toggle) */}
+        {/* Nutrients Bar (4-Ring Macro Row: Calories, Protein, Carbs, Fat) */}
         <Animated.View entering={getStaggeredCardEntry(1)}>
-          <ActiveBurnCard
-            steps={log.steps || 0}
-            nonWorkoutSteps={activityBudget.nonWorkoutSteps}
-            stepGoal={profile.stepGoal || 8000}
-            weightKg={profile.weightKg || 70}
-            stepCalories={activityBudget.stepCalories}
-            workoutCalories={activityBudget.workoutCalories}
-            workouts={log.workouts || []}
-            includeInBudget={!!profile.includeWorkoutsInCalorieBudget}
-            canToggleBudget={Boolean(onUpdateProfile)}
-            onToggleBudget={handleToggleIncludeWorkouts}
-            onOpenSteps={onOpenSteps}
-            onOpenWorkouts={onOpenWorkouts}
-            onQuickLogWorkout={() => setWorkoutSheetVisible(true)}
-          />
-        </Animated.View>
-
-        {/* Nutrients Bar */}
-        <Animated.View entering={getStaggeredCardEntry(2)}>
           <MacroCards
             calorieTarget={effectiveCalorieTarget}
             calorieConsumed={consumedCalories}
@@ -514,113 +458,128 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           />
         </Animated.View>
 
-        {/* 1.3 Quick Action Grid (6 Choices: Scan Food, AI Describe, Barcode, Vitamins, Workouts, Steps) */}
-        <Animated.View entering={getStaggeredCardEntry(3)}>
-          <DashboardQuickGrid
-            onScanPlate={() => onOpenAddFood(undefined, 'photo')}
-            onDescribeMeal={() => onOpenAddFood(undefined, 'describe')}
-            onScanBarcode={() => onOpenAddFood(undefined, 'search', true)}
-            onOpenSupplements={onOpenSupplements}
-            onOpenWorkouts={onOpenWorkouts}
-            onOpenSteps={onOpenSteps}
+        {/* Integrated Quick Action Bar + Collapsible Today's Meals Diary */}
+        <Animated.View entering={getStaggeredCardEntry(2)} style={styles.mealsSectionContainer}>
+          <MealsDiarySection
+            profile={profile}
+            log={log}
+            selectedDate={activeDate}
+            isFuture={isFutureDate}
+            showSectionHeading={true}
+            showQuickActionBar={true}
+            toastMode="inline"
+            onOpenAddFood={onOpenAddFood}
+            onAddMeal={onAddMeal ?? (() => {})}
+            onUpdateMeal={onUpdateMeal}
+            onRemoveMeal={onRemoveMeal ?? (() => {})}
           />
         </Animated.View>
 
-        {/* Meals Ledger (Positioned directly below macros for fast, seamless food logging) */}
+        {/* Active Burn Telemetry Card (Workouts + Steps Progress + In-Budget Toggle) */}
+        <Animated.View entering={getStaggeredCardEntry(3)}>
+          <ActiveBurnCard
+            steps={log.steps || 0}
+            nonWorkoutSteps={activityBudget.nonWorkoutSteps}
+            stepGoal={profile.stepGoal || 8000}
+            weightKg={profile.weightKg || 70}
+            stepCalories={activityBudget.stepCalories}
+            workoutCalories={activityBudget.workoutCalories}
+            workouts={log.workouts || []}
+            includeInBudget={!!profile.includeWorkoutsInCalorieBudget}
+            canToggleBudget={Boolean(onUpdateProfile)}
+            onToggleBudget={handleToggleIncludeWorkouts}
+            onOpenSteps={onOpenSteps}
+            onOpenWorkouts={onOpenWorkouts}
+            onQuickLogWorkout={() => setWorkoutSheetVisible(true)}
+          />
+        </Animated.View>
+
+        {/* Slim Interactive Supplements Routine Row */}
         <Animated.View entering={getStaggeredCardEntry(4)}>
-          <View style={styles.mealsHeader}>
-            <Text style={styles.sectionHeading}>{t('Today’s Meals')}</Text>
+          <View style={styles.supplementsSlimCard}>
             <TouchableOpacity
-              onPress={() => onNavigateToMeals()}
-              style={styles.seeAllBtn}
-              activeOpacity={0.7}
+              style={[styles.supplementsHeaderRow, isRtl && styles.rowRtl]}
+              onPress={onOpenSupplements}
+              activeOpacity={0.78}
               accessibilityRole="button"
-              accessibilityLabel={t('View diary')}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel={t('Supplements')}
             >
-              <Text style={styles.seeAllText}>{t('View diary')}</Text>
-              <DirectionalIcon name="ChevronRight" size={14} color={theme.colors.primary} />
+              <View style={[styles.supplementsTitleLeft, isRtl && styles.rowRtl]}>
+                <View style={styles.supplementsSquircle}>
+                  <Pill size={16} color={theme.colors.primary} strokeWidth={2.1} />
+                </View>
+                <View style={styles.supplementsTextGroup}>
+                  <Text style={[styles.supplementsTitle, isRtl && styles.rtlText]}>
+                    {t('Supplements')}
+                  </Text>
+                  <Text style={[styles.supplementsSubtitle, isRtl && styles.rtlText]}>
+                    {supplementSummaryText(takenSupplementsCount, supplementItems.length, t)}
+                  </Text>
+                </View>
+              </View>
+              <DirectionalIcon
+                name="ChevronRight"
+                size={18}
+                color={theme.colors.diarySubtleSlate}
+              />
             </TouchableOpacity>
-          </View>
 
-          {/* Meals Ledger List (Picture 4 Reference) */}
-          <View style={styles.mealsContainer}>
-            {mealTypes.map((m) => {
-              const mealsOfCategory = log.meals.filter((item) => item.mealType === m.key);
-              const cals = mealsOfCategory.reduce((sum, item) => sum + item.calories, 0);
-              const mealStyle = mealThemeStyles[m.key] || { color: theme.colors.primary, lightBg: theme.colors.primaryLight };
-              const mealColor = mealStyle.color;
-
-              return (
-                <View key={m.key} style={styles.mealCard}>
-                  {/* Meal Header Row */}
-                  <View style={[styles.mealCardHeader, isRtl && styles.rowRtl]}>
-                    <View style={[styles.mealLeft, isRtl && styles.rowRtl]}>
-                      <View style={[styles.mealIconBox, { backgroundColor: mealStyle.lightBg }]}>
-                        {getMealIcon(m.key)}
-                      </View>
-                      <Text style={styles.mealName}>{m.label}</Text>
-                    </View>
-
-                    <View style={[styles.mealCardRight, isRtl && styles.rowRtl]}>
-                      <Text style={styles.mealCals}>
-                        {cals} <Text style={styles.mealCalsUnit}>{t('kcal')}</Text>
-                        {'  '}
-                        <Text style={styles.mealItemsCount}>{mealsOfCategory.length} {t(mealsOfCategory.length === 1 ? 'item' : 'items')}</Text>
-                      </Text>
-                      <TouchableOpacity
-                        style={[styles.mealPlusCircle, { backgroundColor: mealColor }]}
-                        onPress={() => handleQuickAdd(m.key)}
-                        activeOpacity={0.8}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${t('Add to')} ${m.label}`}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      >
-                        <Plus size={16} color={theme.colors.white} strokeWidth={2.6} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {/* Logged Foods List (if any) */}
-                  {mealsOfCategory.length > 0 && (
-                    <View style={styles.mealItemsList}>
-                      {mealsOfCategory.map((item) => (
-                        <View key={item.id} style={[styles.mealItemRow, isRtl && styles.rowRtl]}>
-                          <Text style={styles.mealItemName} numberOfLines={1}>
-                            {item.name}
-                          </Text>
-                          <Text style={styles.mealItemCals}>
-                            {formatKcal(item.calories, t)}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  {/* Dashed "+ Add food" Button (Picture 4 Reference) */}
+            {supplementItems.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[
+                  styles.supplementsChipRow,
+                  isRtl && styles.rowRtl,
+                ]}
+              >
+                {supplementItems.map((sup) => (
                   <TouchableOpacity
+                    key={sup.id}
                     style={[
-                      styles.mealDashedAddBtn,
-                      { borderColor: mealColor, backgroundColor: mealStyle.lightBg },
+                      styles.supplementChip,
+                      sup.taken && styles.supplementChipTaken,
                       isRtl && styles.rowRtl,
                     ]}
-                    onPress={() => handleQuickAdd(m.key)}
-                    activeOpacity={0.7}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      onToggleSupplement(sup.id, !sup.taken);
+                    }}
+                    activeOpacity={0.75}
                     accessibilityRole="button"
-                    accessibilityLabel={`${t('Add food')} - ${m.label}`}
+                    accessibilityLabel={`${sup.name}, ${sup.taken ? t('Taken') : t('Tap to mark taken')}`}
                   >
-                    <Plus size={14} color={mealColor} strokeWidth={2.4} style={isRtl ? { marginLeft: 6 } : { marginRight: 6 }} />
-                    <Text style={[styles.mealDashedAddText, { color: mealColor }]}>
-                      {t('Add food')}
+                    <View
+                      style={[
+                        styles.supplementCheckCircle,
+                        sup.taken && styles.supplementCheckCircleTaken,
+                      ]}
+                    >
+                      {sup.taken && (
+                        <Check
+                          size={12}
+                          color={theme.colors.calendarSelectedText}
+                          strokeWidth={2.8}
+                        />
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        styles.supplementChipLabel,
+                        sup.taken && styles.supplementChipLabelTaken,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {sup.name}
                     </Text>
                   </TouchableOpacity>
-                </View>
-              );
-            })}
+                ))}
+              </ScrollView>
+            )}
           </View>
         </Animated.View>
 
-        {/* Hydration Row (Fix 1: Water & Food Clean Separation) */}
+        {/* Hydration Row */}
         <Animated.View entering={getStaggeredCardEntry(5)} style={styles.waterTrackerSection}>
           <WaterTracker
             glasses={log.waterGlasses}
@@ -629,37 +588,6 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
           />
         </Animated.View>
       </ScrollView>
-
-      {/* Floating "+ Add Food" Circular FAB tucked cleanly above bottom dock */}
-      <AnimatedPressable
-        style={[
-          styles.floatingAddFab,
-          { bottom: dockBottom + 68 },
-          isRtl ? { left: 16 } : { right: 16 },
-        ]}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-          onOpenAddFood();
-        }}
-        minScale={0.92}
-        accessibilityRole="button"
-        accessibilityLabel={t('Add Food')}
-      >
-        <Plus size={24} color={theme.colors.textInverted} strokeWidth={2.6} />
-      </AnimatedPressable>
-
-      <QuickActionSheet
-        visible={quickActionVisible}
-        onClose={() => setQuickActionVisible(false)}
-        onOpenBarcodeScanner={(meal) => onOpenAddFood(meal, 'search', true)}
-        onOpenPlateScanner={(meal) => onOpenAddFood(meal, 'photo', false)}
-        onOpenFoodLog={(meal) => onOpenAddFood(meal, 'search', false)}
-        onQuickWater={(glasses = 1) => onUpdateWater(glasses)}
-        onOpenAddWorkout={() => setWorkoutSheetVisible(true)}
-        onOpenStepTracker={onOpenSteps}
-        onOpenSupplements={onOpenSupplements}
-        onOpenLogWeight={onOpenLogWeight}
-      />
 
       <AddWorkoutSheet
         visible={workoutSheetVisible}
@@ -703,6 +631,17 @@ export const DashboardScreen = React.memo<DashboardScreenProps>(({
   );
 });
 DashboardScreen.displayName = 'DashboardScreen';
+
+const supplementSummaryText = (
+  takenCount: number,
+  totalCount: number,
+  t: (k: string) => string,
+) => {
+  if (totalCount === 0) {
+    return t('Add daily vitamins & supplements');
+  }
+  return `${takenCount} / ${totalCount} ${t('taken today')}`;
+};
 
 const createStyles = (theme: ThemeType) => StyleSheet.create({
   headerTitleContainer: {
@@ -1411,6 +1350,101 @@ const createStyles = (theme: ThemeType) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...theme.shadow.subtle,
+  },
+  mealsSectionContainer: {
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  supplementsSlimCard: {
+    backgroundColor: theme.colors.diaryMealCardBg,
+    borderColor: theme.colors.diaryMealCardBorder,
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 14,
+    marginTop: 12,
+  },
+  supplementsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  supplementsTitleLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  supplementsSquircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: theme.colors.diarySquircleBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  supplementsTextGroup: {
+    flex: 1,
+    gap: 1,
+  },
+  supplementsTitle: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.diaryHeadingText,
+  },
+  supplementsSubtitle: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.diarySubtleSlate,
+  },
+  rtlText: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  supplementsChipRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingTop: 12,
+  },
+  supplementChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: theme.colors.diaryLoggedRowBg,
+    borderWidth: 1,
+    borderColor: theme.colors.diaryLoggedRowBorder,
+  },
+  supplementChipTaken: {
+    backgroundColor: theme.colors.diaryAddBtnBg,
+    borderColor: theme.colors.diaryAddBtnBorder,
+  },
+  supplementCheckCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: theme.colors.diarySubtleSlate,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  supplementCheckCircleTaken: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  supplementChipLabel: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.diaryHeadingText,
+    maxWidth: 140,
+  },
+  supplementChipLabelTaken: {
+    color: theme.colors.primary,
   },
   floatingAddFab: {
     position: 'absolute',

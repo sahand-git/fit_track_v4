@@ -21,6 +21,7 @@ import { validateBackup } from '../utils/backupCore';
 import { calculateStreakByWalkback, getPreviousDayString } from '../utils/streak';
 import { normalizeSearch } from '../utils/localeUtils';
 import { resolveCanonicalFoodId, migrateLoggedMeal } from '../utils/foodMigration';
+import { estimateStepCalories } from '../services/stepTrackingCore';
 
 const PROFILE_KEY = '@fittrack_profile';
 const DAILY_LOG_PREFIX = '@fittrack_log_';
@@ -222,7 +223,8 @@ function normalizeDailyLog(dateStr: string, value: Record<string, unknown>): Dai
     date: dateStr,
     meals: Array.isArray(parsed.meals) ? parsed.meals.map(migrateLoggedMeal) : [],
     waterGlasses: typeof parsed.waterGlasses === 'number' && !isNaN(parsed.waterGlasses) ? Math.max(0, parsed.waterGlasses) : 0,
-    steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, parsed.steps) : 0,
+    steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, Math.round(parsed.steps)) : 0,
+    stepCalories: typeof parsed.stepCalories === 'number' && Number.isFinite(parsed.stepCalories) && parsed.stepCalories > 0 ? Math.round(parsed.stepCalories) : (typeof parsed.steps === 'number' && !isNaN(parsed.steps) && parsed.steps > 0 ? estimateStepCalories(Math.round(parsed.steps), 75) : 0),
     supplements: Array.isArray(parsed.supplements) ? parsed.supplements : [],
     dailySupplements: Array.isArray(parsed.dailySupplements) ? parsed.dailySupplements : undefined,
     workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
@@ -324,22 +326,44 @@ export async function updateWater(dateStr: string, delta: number): Promise<Daily
   });
 }
 
-export async function setDailySteps(dateStr: string, steps: number): Promise<DailyLog> {
+async function resolveProfileWeightKg(explicitWeightKg?: number): Promise<number> {
+  if (typeof explicitWeightKg === 'number' && Number.isFinite(explicitWeightKg) && explicitWeightKg > 0) {
+    return explicitWeightKg;
+  }
+  try {
+    const raw = await AsyncStorage.getItem(getScopedStorageKey(PROFILE_KEY));
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<UserProfile>;
+      if (typeof parsed.weightKg === 'number' && Number.isFinite(parsed.weightKg) && parsed.weightKg > 0) {
+        return parsed.weightKg;
+      }
+    }
+  } catch {
+    // Fallback to default weight if profile read is unavailable
+  }
+  return 75;
+}
+
+export async function setDailySteps(dateStr: string, steps: number, weightKg?: number): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
     const current = await loadDailyLogForUpdate(dateStr);
-    const updatedLog: DailyLog = { ...current, steps: Math.max(0, Math.round(Number.isFinite(steps) ? steps : 0)) };
+    const safeSteps = Math.max(0, Math.round(Number.isFinite(steps) ? steps : 0));
+    const resolvedWeight = await resolveProfileWeightKg(weightKg);
+    const updatedLog: DailyLog = { ...current, steps: safeSteps, stepCalories: estimateStepCalories(safeSteps, resolvedWeight) };
     await AsyncStorage.setItem(key, JSON.stringify(updatedLog));
     return updatedLog;
   });
 }
 
-export async function addDailySteps(dateStr: string, amount: number): Promise<DailyLog> {
+export async function addDailySteps(dateStr: string, amount: number, weightKg?: number): Promise<DailyLog> {
   const key = getScopedStorageKey(`${DAILY_LOG_PREFIX}${dateStr}`);
   return enqueueStorageOperation(key, async () => {
     const current = await loadDailyLogForUpdate(dateStr);
     const safeAmount = Math.max(0, Math.round(Number.isFinite(amount) ? amount : 0));
-    const updatedLog: DailyLog = { ...current, steps: current.steps + safeAmount };
+    const safeSteps = current.steps + safeAmount;
+    const resolvedWeight = await resolveProfileWeightKg(weightKg);
+    const updatedLog: DailyLog = { ...current, steps: safeSteps, stepCalories: estimateStepCalories(safeSteps, resolvedWeight) };
     await AsyncStorage.setItem(key, JSON.stringify(updatedLog));
     return updatedLog;
   });
@@ -1106,7 +1130,8 @@ export async function getAllDailyLogs(): Promise<Record<string, DailyLog>> {
         date: dateStr,
         meals: Array.isArray(parsed.meals) ? parsed.meals.map(migrateLoggedMeal) : [],
         waterGlasses: typeof parsed.waterGlasses === 'number' && !isNaN(parsed.waterGlasses) ? Math.max(0, parsed.waterGlasses) : 0,
-        steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, parsed.steps) : 0,
+        steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, Math.round(parsed.steps)) : 0,
+    stepCalories: typeof parsed.stepCalories === 'number' && Number.isFinite(parsed.stepCalories) && parsed.stepCalories > 0 ? Math.round(parsed.stepCalories) : (typeof parsed.steps === 'number' && !isNaN(parsed.steps) && parsed.steps > 0 ? estimateStepCalories(Math.round(parsed.steps), 75) : 0),
         supplements: Array.isArray(parsed.supplements) ? parsed.supplements : [],
         dailySupplements: Array.isArray(parsed.dailySupplements) ? parsed.dailySupplements : undefined,
         workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
@@ -1145,7 +1170,8 @@ export async function getDailyLogsRange(endDate: string, days: number = 90): Pro
         date: dateStr,
         meals: Array.isArray(parsed.meals) ? parsed.meals.map(migrateLoggedMeal) : [],
         waterGlasses: typeof parsed.waterGlasses === 'number' && !isNaN(parsed.waterGlasses) ? Math.max(0, parsed.waterGlasses) : 0,
-        steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, parsed.steps) : 0,
+        steps: typeof parsed.steps === 'number' && !isNaN(parsed.steps) ? Math.max(0, Math.round(parsed.steps)) : 0,
+    stepCalories: typeof parsed.stepCalories === 'number' && Number.isFinite(parsed.stepCalories) && parsed.stepCalories > 0 ? Math.round(parsed.stepCalories) : (typeof parsed.steps === 'number' && !isNaN(parsed.steps) && parsed.steps > 0 ? estimateStepCalories(Math.round(parsed.steps), 75) : 0),
         supplements: Array.isArray(parsed.supplements) ? parsed.supplements : [],
         dailySupplements: Array.isArray(parsed.dailySupplements) ? parsed.dailySupplements : undefined,
         workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],

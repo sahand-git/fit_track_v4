@@ -1,17 +1,48 @@
 export type CalorieSurplusSeverity = 'none' | 'minor' | 'major';
 
+export const MAX_OVERFLOW_SWEEP = 0.82;
+
 export interface CalorieRingMetrics {
   remaining: number;
   overBy: number;
+  signedDelta: number;
   isOver: boolean;
   displayedValue: number;
   displayedLabelKey: 'kcal over budget' | 'kcal remaining';
   ledgerLabelKey: 'Over' | 'Remaining';
   baseRatio: number;
   overflowRatio: number;
+  visualOverflowRatio: number;
   surplusRatio: number;
   surplusSeverity: CalorieSurplusSeverity;
   surplusColorMix: number;
+}
+
+/**
+ * Worklet-safe helper deriving the base emerald ring fill ratio [0, 1] from a
+ * continuous signed delta (consumed - target).
+ */
+export function getBaseRingRatioFromSignedDelta(signedDelta: number, target: number): number {
+  'worklet';
+  if (target <= 0) {
+    return signedDelta > 0 ? 1 : 0;
+  }
+  const consumed = target + signedDelta;
+  if (consumed <= 0) return 0;
+  if (consumed >= target) return 1;
+  return consumed / target;
+}
+
+/**
+ * Worklet-safe helper deriving the capped visual overflow arc sweep [0, MAX_OVERFLOW_SWEEP]
+ * from a continuous signed delta (consumed - target).
+ */
+export function getVisualOverflowSweep(signedDelta: number, target: number): number {
+  'worklet';
+  if (signedDelta <= 0) return 0;
+  if (target <= 0) return MAX_OVERFLOW_SWEEP;
+  const raw = signedDelta / target;
+  return raw >= MAX_OVERFLOW_SWEEP ? MAX_OVERFLOW_SWEEP : raw;
 }
 
 /**
@@ -53,12 +84,14 @@ export function calculateCalorieRingMetrics(consumed: number, target: number): C
     return {
       remaining: 0,
       overBy: isOver ? safeConsumed : 0,
+      signedDelta: safeConsumed,
       isOver,
       displayedValue: isOver ? safeConsumed : 0,
       displayedLabelKey: isOver ? 'kcal over budget' : 'kcal remaining',
       ledgerLabelKey: isOver ? 'Over' : 'Remaining',
       baseRatio: isOver ? 1 : 0,
       overflowRatio: isOver ? 1 : 0,
+      visualOverflowRatio: isOver ? MAX_OVERFLOW_SWEEP : 0,
       surplusRatio: isOver ? 1 : 0,
       surplusSeverity: isOver ? 'major' : 'none',
       surplusColorMix: isOver ? 1 : 0,
@@ -66,11 +99,13 @@ export function calculateCalorieRingMetrics(consumed: number, target: number): C
   }
 
   const isOver = safeConsumed > safeTarget;
+  const signedDelta = safeConsumed - safeTarget;
   const remaining = Math.max(0, safeTarget - safeConsumed);
-  const overBy = Math.max(0, safeConsumed - safeTarget);
+  const overBy = Math.max(0, signedDelta);
   const baseRatio = Math.min(safeConsumed / safeTarget, 1);
   const surplusRatio = isOver ? overBy / safeTarget : 0;
   const overflowRatio = isOver ? Math.min(surplusRatio, 1) : 0;
+  const visualOverflowRatio = isOver ? Math.min(surplusRatio, MAX_OVERFLOW_SWEEP) : 0;
   const surplusSeverity: CalorieSurplusSeverity = !isOver
     ? 'none'
     : surplusRatio < 0.1
@@ -81,12 +116,14 @@ export function calculateCalorieRingMetrics(consumed: number, target: number): C
   return {
     remaining,
     overBy,
+    signedDelta,
     isOver,
     displayedValue: isOver ? overBy : remaining,
     displayedLabelKey: isOver ? 'kcal over budget' : 'kcal remaining',
     ledgerLabelKey: isOver ? 'Over' : 'Remaining',
     baseRatio,
     overflowRatio,
+    visualOverflowRatio,
     surplusRatio,
     surplusSeverity,
     surplusColorMix,
